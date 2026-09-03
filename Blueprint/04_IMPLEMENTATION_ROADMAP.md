@@ -76,15 +76,36 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
 ---
 
 ### FASE 4: Standalone OS Distribution & Calamares Installer (v1.0)
-*Fokus: Memaketkan seluruh ekosistem menjadi file ISO mandiri yang bisa di-install di komputer fisik apa pun.*
-- **Fitur yang Dibangun:**
-  1. Modul **`nixos-generators`** untuk mengompilasi ISO mandiri dari satu file Flake.
-  2. Integrasi tema dan alur instalasi grafis **Calamares**.
-  3. Konfigurasi *out-of-the-box*: `nix-ld` bawaan, auto-TRIM aktif, dan `neuronix` CLI sudah terpasang di sistem pengguna.
-  4. Wizard *First-Boot Onboarding*: Sapaan awal yang ramah untuk mengonfigurasi profil pengguna secara otomatis.
+*Fokus: Mewujudkan "The Golden Sweet Spot" ala EndeavourOS di atas fondasi NixOS: Live ISO mandiri, installer grafis Calamares, pilihan desktop Wayland terkurasi, dan onboarding center yang ramah.*
+- **Spesifikasi Teknis Rinci:** Lihat dokumen referensi lengkap di [06_STANDALONE_DISTRIBUTION_SPECIFICATION.md](file://Blueprint/06_STANDALONE_DISTRIBUTION_SPECIFICATION.md).
+- **Fitur & Komponen Kunci yang Dibangun:**
+  1. **Kompilasi Live ISO Mandiri (`iso.nix`):**
+     - Menggunakan `nixos-generators` untuk memaketkan kernel Linux LTS, seluruh biner `neuronix`, server MCP, dan closure desktop ke dalam satu file ISO mandiri.
+     - Mode instalasi 100% Offline via local image squashfs (instalasi selesai tanpa koneksi internet).
+     - Menu boot ISO ganda: Opsi driver Open-Source (AMD/Intel/Mesa) dan Opsi NVIDIA Proprietary dengan modul kernel LTS terkunci.
+  2. **Integrasi & Branding Calamares Installer:**
+     - Tampilan grafis modern dengan palet warna *Dark Slate + Minimalist Cyan Accent* (zero AI-slop).
+     - Resep partisi otomatis cerdas: **Btrfs Subvolumes dengan Kompresi Transparan ZSTD Level 3 (`compress=zstd:3`)**, memangkas ukuran fisik `/nix/store` hingga 40-50% tanpa beban CPU.
+     - Dual-boot UEFI aman dan konfigurasi user dengan izin sudo ramah pengembang.
+  3. **Katalog Desktop Environment Wayland Terkurasi:**
+     - **KDE Plasma 6 Wayland:** Breeze Slate Glass, akselerasi GPU penuh, konsumsi RAM idle ~750 MB - 850 MB.
+     - **GNOME 47/50 Wayland:** Palet warna Tokyo Cyber / Dark Slate, tipografi Inter + JetBrains Mono, gestur touchpad 3-jari sangat fluida.
+     - **Hyprland Wayland:** Window auto-tiling, animasi fisika halus, Waybar terintegrasi dengan telemetri `neuronix`.
+     - **Cinnamon / XFCE / Minimal:** Opsi desktop tradisional yang ringan atau instalasi headless server.
+  4. **Aplikasi Sapaan Awal (NEURONIX Center ala `eos-welcome`):**
+     - Dasbor grafis yang otomatis menyapa pengguna saat pertama kali boot.
+     - Telemetri hardware instan (GPU, CPU, deteksi virtualisasi, dan kapasitas storage).
+     - Satu klik aktivasi profil modular: Gaming & Steam (Proton GE), AI Developer (PyTorch + CUDA + Ollama), Web Developer.
+     - Tombol cepat verifikasi sistem, rollback bencana (`neuronix undo`), dan simulasi RAM (`neuronix try`).
+  5. **Ergonomi Pengembang & Kompatibilitas Biner Global Out-of-the-Box:**
+     - **`nix-ld` Aktif Global:** Seluruh biner Linux standar (VS Code extensions, biner Go, Rust, script Python pip) langsung jalan tanpa error FHS.
+     - **PipeWire & WirePlumber:** Subsistem audio latensi rendah untuk produksi audio dan gaming.
+     - **Terminal Sadar Generasi:** Prompt terminal otomatis menampilkan status generasi sistem aktif (`[Gen #1] ➔ user@neuronix ~/code $`).
 - **Kriteria Kelulusan Fase (Exit Gate 4):**
-  - File ISO berhasil di-boot di mesin virtual bersih (VirtualBox / QEMU) dan di PC bare-metal.
-  - Calamares sukses mempartisi disk dan menginstal sistem hingga masuk desktop dengan sukses.
+  - File ISO sukses di-compile secara hermetis dan dapat di-boot di mesin bare-metal maupun mesin virtual bersih (QEMU / Quickemu / VirtualBox).
+  - Installer Calamares sukses mengeksekusi partisi Btrfs ZSTD:3 dan menyelesaikan instalasi hingga masuk ke desktop Wayland pilihan.
+  - Seluruh biner Linux standar (non-Nix FHS) terbukti langsung berjalan via `nix-ld` bawaan.
+  - Biner `neuronix` dan server MCP berfungsi 100% di sistem hasil instalasi.
 
 ---
 

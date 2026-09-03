@@ -84,7 +84,9 @@ Menjadi standar platform sistem operasi mandiri (*Standalone Operating System*) 
 - **`FR-003` (Automated Storage Pruning):** Sistem wajib memiliki modul internal untuk menjadwalkan *garbage collection*, *hardlink deduplication*, dan *filesystem TRIM*.
 - **`FR-004` (State Rollback):** Sistem wajib memelihara riwayat generasi deklaratif dan menyediakan fungsi pemulihan instan ke generasi sebelumnya.
 - **`FR-005` (Non-FHS Binary Compatibility):** Sistem wajib secara transparan menyematkan loader dinamis (`nix-ld`) agar biner pihak ketiga non-Nix dapat dieksekusi tanpa modifikasi manual.
-- **`FR-006` (Decoupled Cognitive Driver):** Fitur kecerdasan buatan wajib bersifat modular (*opt-in* via flag `--ai` atau perintah interaktif) dan dapat dialihkan antara model lokal (Ollama) maupun cloud provider (Google Gemini, OpenAI, Claude, xAI).
+- **`FR-006` (Decoupled Cognitive Driver):** Fitur kecerdasan buatan wajib bersifat modular (*opt-in* via Model Context Protocol JSON-RPC 2.0 over `stdio`) dengan gerbang pembuktian formal (*Formal Proof Gatekeeper*).
+- **`FR-007` (Standalone OS Distribution & Calamares Installer):** Sistem wajib menyediakan format bootable Live ISO mandiri yang dilengkapi installer grafis Calamares, partisi cerdas Btrfs ZSTD:3, serta katalog desktop Wayland terkurasi (KDE Plasma 6, GNOME Tokyo Cyber, Hyprland).
+- **`FR-008` (First-Boot Onboarding & Hardware Telemetry):** Sistem wajib menyediakan aplikasi penyambutan visual (*NEURONIX Center*) untuk memeriksa kesehatan storage, deteksi GPU otomatis (NVIDIA CUDA/AMD Mesa), dan aktivasi profil modular satu klik.
 
 ---
 

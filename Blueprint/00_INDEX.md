@@ -30,7 +30,8 @@ Blueprint/
 ├── 02_SYSTEM_ARCHITECTURE.md            # Spesifikasi Teknis, Arsitektur Dua Lapis, Diagram Data
 ├── 03_SECURITY_AND_VERIFICATION.md      # Model Ancaman, Formal Verification, & Safe Sandbox Protocol
 ├── 04_IMPLEMENTATION_ROADMAP.md         # Roadmap Fase Bertahap (MVP s/d Standalone OS)
-└── 05_QUALITY_GATES_AND_VALIDATION.md   # Metrik Kualitas, Testing Matrix, & Definition of Done (DoD)
+├── 05_QUALITY_GATES_AND_VALIDATION.md   # Metrik Kualitas, Testing Matrix, & Definition of Done (DoD)
+└── 06_STANDALONE_DISTRIBUTION_SPECIFICATION.md # Spesifikasi Distribusi ISO, Calamares, & Wayland Suites
 ```
 
 ---
@@ -44,6 +45,7 @@ Blueprint/
 | **`03_SEC`** | [Security & Verification](file://Blueprint/03_SECURITY_AND_VERIFICATION.md) | Eliminasi halusinasi AI via *pure functional compiler*, *shadow micro-VM canary*, dan isolasi namespaces. | Security Auditor, DevSecOps Leads |
 | **`04_ROAD`** | [Implementation Roadmap](file://Blueprint/04_IMPLEMENTATION_ROADMAP.md) | Rencana fase implementasi berdisiplin tinggi dari v0.1 CLI Core hingga ISO standalone Calamares. | Engineering Manager, Contributors |
 | **`05_QUAL`** | [Quality Gates & Validation](file://Blueprint/05_QUALITY_GATES_AND_VALIDATION.md) | Matriks pengujian deterministik, protokol *zero-bug*, *smoke tests*, kriteria rilis (*Release Gates*). | QA Engineers, System Integrators |
+| **`06_DISTRO`**| [Standalone Distro Spec](file://Blueprint/06_STANDALONE_DISTRIBUTION_SPECIFICATION.md) | Spesifikasi ISO bootable, Calamares, Btrfs ZSTD:3, Wayland suites (KDE 6/GNOME/Hyprland), dan NEURONIX Center. | Distro Maintainers, UI/UX, Core Team |
 
 ---
 
