@@ -105,11 +105,19 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
      - **GUI App Store Bawaan:** GNOME Software / KDE Discover terintegrasi Flathub dengan sinkronisasi portal tema Wayland.
      - **Kustomisasi Penuh Auto-TRIM:** Kendali toggle switch di GUI (Calamares & NEURONIX Center) serta CLI (`neuronix config set auto-trim on|off`).
      - **Inklusi Otomatis `allowUnfree = true`:** Mengeliminasi error lisensi proprietary pada instalasi software umum (NVIDIA, Steam, Discord).
+  7. **10 Pertahanan Perangkat Keras Kedap Peluru (*Bulletproof Hardware Shield*):**
+     - Alokasi 1.0 GiB ESP `/boot` dengan auto-rotasi batas 15 generasi (anti-overflow EFI).
+     - Firmware Wi-Fi/Bluetooth Realtek/Broadcom lengkap di ISO offline.
+     - Manajemen Hybrid GPU (NVIDIA Optimus / AMD PRIME) hemat daya & HDMI out.
+     - Dukungan Secure Boot Windows 11 via signed `shim` bootloader.
+     - Penanganan sleep laptop S0ix modern standby (anti panas di dalam tas).
+     - Pemetaan portal file-chooser Flatpak tanpa freeze DBus.
 - **Kriteria Kelulusan Fase (Exit Gate 4):**
   - File ISO sukses di-compile secara hermetis dan dapat di-boot di mesin bare-metal maupun mesin virtual bersih (QEMU / Quickemu / VirtualBox).
   - Installer Calamares sukses mengeksekusi partisi Btrfs ZSTD:3 dan menyelesaikan instalasi hingga masuk ke desktop Wayland pilihan.
   - Seluruh biner Linux standar (non-Nix FHS) terbukti langsung berjalan via `nix-ld` bawaan.
   - Biner `neuronix` dan server MCP berfungsi 100% di sistem hasil instalasi.
+  - Perangkat keras Wi-Fi, audio PipeWire, dan display manager terverifikasi berfungsi normal saat booting pertama kali tanpa internet.
 
 ---
 
