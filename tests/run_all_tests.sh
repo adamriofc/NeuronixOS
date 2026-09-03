@@ -47,6 +47,7 @@ source "$TEST_DIR/suites/12_resource_exhaustion_ulimit.sh"
 source "$TEST_DIR/suites/13_mutation_and_negative_invariants.sh"
 source "$TEST_DIR/suites/14_mcp_jsonrpc_protocol.sh"
 source "$TEST_DIR/suites/15_shadow_vm_simulation.sh"
+source "$TEST_DIR/suites/16_distro_standalone_architecture.sh"
 
 END_TIME=$(date +%s%N)
 DURATION_MS=$(( (END_TIME - START_TIME) / 1000000 ))

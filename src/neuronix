@@ -66,6 +66,7 @@ show_help() {
     echo -e "  ${GREEN}status${RESET}          Tampilkan dashboard telemetri sistem & kesehatan storage"
     echo -e "  ${GREEN}diet${RESET}            Pangkas sampah sistem, satukan file kembar & TRIM ke host SSD"
     echo -e "  ${GREEN}run${RESET} <pkgs...>   Jalankan software di ruang isolasi sekali pakai di RAM"
+    echo -e "  ${GREEN}dev${RESET} <stack>     Lingkungan pengembang satu-perintah hermetis (python/rust/node/ai/go)"
     echo -e "  ${GREEN}try${RESET} [options]   Simulasikan konfigurasi di Shadow Micro-VM di RAM (< 3 detik)"
     echo -e "  ${GREEN}verify${RESET} <pkg>    Verifikasi formal paket via dry-build (Zero-Blast Radius)"
     echo -e "  ${GREEN}mcp${RESET}             Luncurkan server Model Context Protocol (JSON-RPC 2.0 over stdio)"
@@ -223,6 +224,59 @@ cmd_run() {
     return $exit_code
 }
 
+cmd_dev() {
+    local stack="${1:-}"
+    if [[ -z "$stack" ]]; then
+        log_error "Silakan tentukan stack pengembang yang diinginkan."
+        echo -e "Pilihan yang tersedia: ${CYAN}python${RESET}, ${CYAN}rust${RESET}, ${CYAN}node${RESET}, ${CYAN}ai${RESET}, ${CYAN}go${RESET}, ${CYAN}web3${RESET}"
+        echo -e "Contoh: ${CYAN}${PROGRAM_NAME} dev python${RESET}"
+        exit 1
+    fi
+
+    local pkgs=()
+    case "${stack}" in
+        python)
+            pkgs=("python3" "uv" "ruff" "pyright" "postgresql")
+            ;;
+        rust)
+            pkgs=("rustc" "cargo" "rust-analyzer" "clippy")
+            ;;
+        node)
+            pkgs=("nodejs_20" "nodePackages.pnpm" "nodePackages.typescript" "nodePackages.eslint")
+            ;;
+        ai)
+            pkgs=("python3" "python3Packages.pytorch" "ollama" "jupyterlab" "python3Packages.pandas")
+            ;;
+        go)
+            pkgs=("go" "gopls" "golangci-lint" "delve")
+            ;;
+        web3)
+            pkgs=("rustc" "cargo" "nodejs_20" "solana-cli")
+            ;;
+        *)
+            log_error "Stack '${stack}' tidak dikenali."
+            echo -e "Pilihan yang tersedia: ${CYAN}python${RESET}, ${CYAN}rust${RESET}, ${CYAN}node${RESET}, ${CYAN}ai${RESET}, ${CYAN}go${RESET}, ${CYAN}web3${RESET}"
+            exit 1
+            ;;
+    esac
+
+    log_step "Mempersiapkan lingkungan pengembang satu-perintah: ${BOLD}${stack}${RESET}..."
+    log_info "Toolchain lengkap yang disediakan: ${BOLD}${pkgs[*]}${RESET}"
+    log_info "Lingkungan hermetis di RAM aktif. Menutup terminal akan membersihkan memori."
+    echo
+
+    if [[ "${DEV_DRY_RUN:-0}" == "1" ]]; then
+        log_success "Mode uji (dry-run) berhasil memvalidasi stack ${stack}: ${pkgs[*]}"
+        return 0
+    fi
+
+    nix-shell -p "${pkgs[@]}"
+    local exit_code=$?
+    echo
+    log_success "Sesi pengembangan ${stack} selesai. Memori telah dibersihkan."
+    return $exit_code
+}
+
 cmd_undo() {
     print_banner
     log_warn "PERINGATAN: Memulai proses Rollback atomik ke generasi sebelumnya..."
@@ -316,6 +370,9 @@ main() {
             ;;
         run)
             cmd_run "$@"
+            ;;
+        dev)
+            cmd_dev "$@"
             ;;
         try)
             cmd_try "$@"
