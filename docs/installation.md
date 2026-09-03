@@ -98,6 +98,13 @@ If installing alongside Microsoft Windows:
 3. Format the target partition as Btrfs and assign subvolumes `@`, `@nix`, and `@home`.
 4. The installation engine will automatically enable Windows dual-boot clock synchronization (`time.hardwareClockInLocalTime = true`).
 
+#### Option C: Standard Monolithic EXT4 (Alternative)
+For systems targeting traditional non-CoW filesystems (such as legacy magnetic hard drives or dedicated database storage requiring maximum raw write performance):
+1. In Calamares, select **Manual Partitioning**.
+2. Create an EFI System Partition of at least 1.0 GiB formatted as FAT32, mounted at `/boot`.
+3. Create the Root filesystem partition formatted as **EXT4**, mounted at `/`.
+4. The installation engine automatically detects the filesystem type and writes `fileSystems."/".fsType = "ext4"` to `hardware-configuration.nix`.
+
 ---
 
 ## 5. First-Boot System Verification

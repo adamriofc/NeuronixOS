@@ -110,6 +110,22 @@ Over time, Btrfs can accumulate sparsely populated block groups, causing `ENOSPC
 - A systemd timer (`btrfs-balance.timer`) runs once a month (`OnCalendar=monthly`, `Persistent=true`).
 - It filters and compacts under-allocated chunks (`btrfs balance start -dusage=10 -musage=10 /`), maintaining filesystem performance without manual intervention.
 
+### Filesystem Options: Btrfs vs EXT4
+
+While Btrfs is the default and recommended filesystem for NEURONIX, standard **EXT4** is fully supported out of the box:
+
+- **Kernel & Driver Support:** The Linux kernel includes native drivers for both filesystems via `boot.supportedFilesystems = [ "btrfs" "ntfs" "exfat" "ext4" "vfat" ]`.
+- **Automated Configuration:** When selecting EXT4 in Calamares Manual Partitioning, `nixos-generate-config` automatically captures the partition UUID and writes `fileSystems."/".fsType = "ext4"` to `hardware-configuration.nix`.
+- **Generation Rollback Independence:** System generation immutability and atomic rollback guarantees reside in the Nix store engine, not the underlying filesystem. Generation rollbacks in systemd-boot operate identically on both Btrfs and EXT4.
+
+| Architectural Dimension | Btrfs (Default) | EXT4 (Supported Alternative) |
+| :--- | :--- | :--- |
+| **Partition Structure** | Structured subvolumes (`@`, `@nix`, `@home`, `@snapshots`, `@swap`) | Traditional monolithic root partition (`/`) |
+| **Transparent Compression** | In-kernel Zstandard level 3 (`zstd:3`) reduces `/nix/store` by 40% to 50% | Uncompressed storage (requires larger disk allocation) |
+| **Maintenance Workload** | Automated monthly chunk rebalancing via `btrfs-balance.timer` | Zero filesystem maintenance overhead (standard fsck) |
+| **I/O Overhead** | Copy-on-Write metadata tracking | Minimal filesystem overhead, stable raw write throughput |
+| **Recommended Use Case** | Modern NVMe/SATA SSDs with limited physical storage capacity | Traditional magnetic disks (HDDs), USB storage, or high-throughput databases |
+
 ---
 
 ## Memory Pressure Management
