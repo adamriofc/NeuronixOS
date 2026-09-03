@@ -204,6 +204,14 @@ cat <<USER_EOF >> "$CONFIG_DIR/configuration.nix"
     description = "$TARGET_USER (NEURONIX)";
   };
 
+  # Autonomous AI System Copilot (OpenCode)
+  # Pre-installed by default across KDE, GNOME, and Hyprland.
+  # To disable or remove: set enable = false; or toggle via NEURONIX Center.
+  neuronix.services.opencode = {
+    enable = true;
+    autoUpdate.enable = true;
+  };
+
   system.stateVersion = "24.11";
 }
 USER_EOF
@@ -220,6 +228,8 @@ cat <<MANIFEST_EOF > "$MANIFEST_DIR/release.json"
   "target_user": "$TARGET_USER",
   "target_hostname": "$TARGET_HOSTNAME",
   "desktop_environment": "$SELECTED_DESKTOP",
+  "ai_agent": "opencode",
+  "ai_agent_autoupdate": "daily",
   "nixpkgs_channel": "$NRX_CHANNEL",
   "nixpkgs_commit": "$NRX_COMMIT",
   "state_version": "$NRX_STATE",

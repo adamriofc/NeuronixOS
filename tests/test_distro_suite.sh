@@ -485,6 +485,18 @@ assert_contains "${DISTRO_ROOT}/docs/adr/ADR-004-update-channel-strategy.md" "Ac
 assert_contains "${DISTRO_ROOT}/docs/adr/ADR-004-update-channel-strategy.md" "Context & Problem Statement" "ADR-004 contains Context & Problem Statement"
 assert_contains "${DISTRO_ROOT}/docs/adr/ADR-005-hardware-detection-architecture.md" "Accepted" "ADR-005 is Accepted"
 assert_contains "${DISTRO_ROOT}/docs/adr/ADR-005-hardware-detection-architecture.md" "Context & Problem Statement" "ADR-005 contains Context & Problem Statement"
+
+# ------------------------------------------------------------------------------
+# SUITE 19: OpenCode Built-in AI Copilot & Autonomous Update Contracts
+# ------------------------------------------------------------------------------
+suite_header "19 - OpenCode Built-in AI Copilot & Autonomous Update Contracts"
+
+assert_contains "${DISTRO_ROOT}/modules/services/opencode.nix" "services.opencode" "OpenCode service option hierarchy is defined"
+assert_contains "${DISTRO_ROOT}/modules/services/opencode.nix" "default = true;" "OpenCode is enabled by default"
+assert_contains "${DISTRO_ROOT}/packages/opencode/default.nix" "makeDesktopItem" "OpenCode generates desktop item"
+assert_contains "${DISTRO_ROOT}/flake.nix" "opencode = import ./modules/services/opencode.nix;" "Flake exports opencode nixosModule"
+assert_contains "${DISTRO_ROOT}/installer/scripts/neuronix-install-engine.sh" "neuronix.services.opencode" "Installer engine configures opencode"
+
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
 TOTAL_TESTS=$((PASSED_COUNT + FAILED_COUNT))

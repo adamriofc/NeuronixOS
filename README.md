@@ -6,7 +6,7 @@
 [![Version](https://img.shields.io/badge/Version-1.0.1--beta-blueviolet.svg)](version.nix)
 [![NixOS](https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
 [![Architecture](https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg)](#platform-architecture)
-[![Testing](https://img.shields.io/badge/Assertions-746%2F746_Passed_(100%25)-success.svg)](#verification--test-harness)
+[![Testing](https://img.shields.io/badge/Assertions-778%2F778_Passed_(100%25)-success.svg)](#verification--test-harness)
 [![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg)](#storage-architecture--maintenance)
 [![Memory Management](https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg)](#memory-pressure-management)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg)](.github/workflows/ci.yml)
@@ -37,9 +37,10 @@
   - [3. Isolated Development Environments (neuronix dev)](#3-isolated-development-environments-neuronix-dev)
   - [4. In-Memory Micro-VM Simulation (neuronix try)](#4-in-memory-micro-vm-simulation-neuronix-try)
   - [5. Model Context Protocol (MCP) Server](#5-model-context-protocol-mcp-server)
+  - [6. OpenCode AI System Copilot & Autonomous Updates](#6-opencode-ai-system-copilot--autonomous-updates)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (746 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (778 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -292,6 +293,12 @@ NEURONIX includes a built-in Model Context Protocol server communicating over `s
 neuronix mcp
 ```
 
+### 6. OpenCode AI System Copilot & Autonomous Updates
+A built-in, declarative AI system copilot providing natural language and CLI-driven system intelligence across all desktop environments (KDE Plasma, GNOME, Hyprland):
+- **Pre-installed by Default:** Enabled out-of-the-box (`neuronix.services.opencode.enable = true;`), exposing application launcher entries (`opencode.desktop`) and desktop shortcuts across all desktop environments.
+- **Autonomous Background Updates:** Powered by `neuronix-opencode-update.timer` which checks and synchronizes upstream releases daily without touching physical store immutability or risking running system stability.
+- **Zero-Residue Removal:** Easily disabled via `neuronix.services.opencode.enable = false;` or via the NEURONIX Center interface. Disabling immediately removes all binaries, background timers, and desktop shortcuts.
+
 ---
 
 ## Building & Installation
@@ -348,21 +355,21 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Test Harness (746 Assertions)
+## Verification, Lifecycle Gate & Test Harness (778 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 746 automated assertions across 21 verification suites:
+System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 778 automated assertions across 22 verification suites:
 
 ```text
 ═══════════════════════════════════════════════════════════════════
                     TEST HARNESS REPORT SUMMARY                    
 ═══════════════════════════════════════════════════════════════════
-  Master Test Harness (tests/run_all_tests.sh)     : 506 / 506 PASS
-  Distro Test Harness (tests/test_distro_suite.sh) : 199 / 199 PASS
+  Master Test Harness (tests/run_all_tests.sh)     : 531 / 531 PASS
+  Distro Test Harness (tests/test_distro_suite.sh) : 204 / 204 PASS
   Core CLI Harness (tests/test_neuronix_core.sh)   :  14 /  14 PASS
-  Release Lifecycle Gate (test_release_lifecycle)  :  27 /  27 PASS
-  Total Executed Assertions                        : 746 Assertions
+  Release Lifecycle Gate (test_release_lifecycle)  :  29 /  29 PASS
+  Total Executed Assertions                        : 778 Assertions
   Failed Verification                              : 0 Failures
-  Execution Duration                               : ~65.0 seconds
+  Execution Duration                               : ~70.0 seconds
   Confidence Score                                 : 100%
 ═══════════════════════════════════════════════════════════════════
   ✓ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED
@@ -381,20 +388,21 @@ System invariants, module structures, and CLI dispatchers are validated through 
 - **Suite 18:** Command-line argument boundary fuzzing and shell injection neutralization.
 - **Suite 19:** Architecture Decision Records (ADRs) and documentation consistency.
 - **Suite 20:** Storage subsystem declarations, Btrfs subvolume mount options, and installer generator scripts.
+- **Suite 21:** OpenCode autonomous AI copilot derivations, background systemd update timers, and desktop entry contracts.
 - **Release Lifecycle Gate:** End-to-end integration test validating build, boot, install simulation, architecture detection, generation pointer inspection, and atomic rollback duration.
 
 Execute the verification battery:
 ```bash
-# Run master test harness (506 tests)
+# Run master test harness (531 tests)
 bash tests/run_all_tests.sh
 
-# Run distribution standalone suite (199 tests)
+# Run distribution standalone suite (204 tests)
 bash tests/test_distro_suite.sh
 
 # Run core CLI verification (14 tests)
 bash tests/test_neuronix_core.sh
 
-# Run end-to-end release lifecycle gate (27 tests)
+# Run end-to-end release lifecycle gate (29 tests)
 bash tests/test_release_lifecycle.sh
 ```
 

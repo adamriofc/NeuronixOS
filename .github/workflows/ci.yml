@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (746 Tests)
+    name: Industrial Systems Verification & Release Gate (778 Tests)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -36,15 +36,17 @@ jobs:
           nix-instantiate --parse hosts/desktop/default.nix
           nix-instantiate --parse packages/neuronix-cli/default.nix
           nix-instantiate --parse packages/neuronix-center/default.nix
+          nix-instantiate --parse packages/opencode/default.nix
           nix-instantiate --parse modules/hardware/secureboot.nix
           nix-instantiate --parse modules/hardware/nvidia-prime.nix
           nix-instantiate --parse modules/services/storage.nix
+          nix-instantiate --parse modules/services/opencode.nix
 
-      - name: Execute Distro Verification Suite (199 Tests)
+      - name: Execute Distro Verification Suite (204 Tests)
         run: |
           bash tests/test_distro_suite.sh
 
-      - name: Execute Master Test Harness (506 Tests)
+      - name: Execute Master Test Harness (531 Tests)
         run: |
           bash tests/run_all_tests.sh
 
@@ -56,6 +58,6 @@ jobs:
         run: |
           DRY_RUN=1 bash installer/scripts/neuronix-install-engine.sh
 
-      - name: Execute End-to-End Release Lifecycle Gate (27 Tests)
+      - name: Execute End-to-End Release Lifecycle Gate (29 Tests)
         run: |
           bash tests/test_release_lifecycle.sh

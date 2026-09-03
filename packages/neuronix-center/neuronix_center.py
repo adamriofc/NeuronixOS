@@ -173,6 +173,13 @@ def run_cli_mode(args):
         print("  [ RUNNING STORAGE MAINTENANCE (DIET) ]")
         subprocess.run(["neuronix", "diet"], check=False)
 
+    if args.opencode:
+        print("  [ LAUNCHING OPENCODE AI SYSTEM COPILOT ]")
+        try:
+            subprocess.run(["opencode", "status"], check=False)
+        except FileNotFoundError:
+            print("  [INFO] OpenCode binary not found in PATH. Ensure neuronix.services.opencode.enable = true.")
+
     if args.rollback:
         print("  [ EXECUTING SYSTEM ROLLBACK ]")
         start_t = time.monotonic()
@@ -220,10 +227,10 @@ def run_gui_mode():
         ttk.Label(frame_tel, text=f"Battery Ceiling  : {telemetry['battery_limit']}").pack(anchor="w", padx=10, pady=2)
 
         # Modular Profiles Frame
-        frame_prof = ttk.LabelFrame(root, text=" Developer Substrate & Profiles ")
+        frame_prof = ttk.LabelFrame(root, text=" Developer Substrate & AI Copilot ")
         frame_prof.pack(fill="x", padx=15, pady=5)
 
-        ttk.Label(frame_prof, text="Launch isolated hermetic developer environments via neuronix CLI:").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_prof, text="Launch isolated hermetic developer environments or OpenCode AI Copilot:").pack(anchor="w", padx=10, pady=2)
 
         dev_box = ttk.Frame(frame_prof)
         dev_box.pack(pady=5, padx=10, fill="x")
@@ -231,10 +238,14 @@ def run_gui_mode():
         def launch_stack(stack_name):
             subprocess.Popen(["x-terminal-emulator", "-e", f"neuronix dev {stack_name}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        ttk.Button(dev_box, text="Python (uv/ruff)", command=lambda: launch_stack("python")).pack(side="left", padx=4)
+        def launch_opencode():
+            subprocess.Popen(["x-terminal-emulator", "-e", "opencode interactive"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        ttk.Button(dev_box, text="OpenCode AI", command=launch_opencode).pack(side="left", padx=4)
+        ttk.Button(dev_box, text="Python (uv)", command=lambda: launch_stack("python")).pack(side="left", padx=4)
         ttk.Button(dev_box, text="Rust (cargo)", command=lambda: launch_stack("rust")).pack(side="left", padx=4)
         ttk.Button(dev_box, text="Node (pnpm)", command=lambda: launch_stack("node")).pack(side="left", padx=4)
-        ttk.Button(dev_box, text="AI (PyTorch/Ollama)", command=lambda: launch_stack("ai")).pack(side="left", padx=4)
+        ttk.Button(dev_box, text="AI (PyTorch)", command=lambda: launch_stack("ai")).pack(side="left", padx=4)
 
         # System Actions & Maintenance Frame
         frame_act = ttk.LabelFrame(root, text=" System Maintenance & Atomic Rollback ")
@@ -248,15 +259,21 @@ def run_gui_mode():
                 if res.returncode == 0:
                     messagebox.showinfo("Rollback Complete", f"System reverted successfully in {elapsed:.2f} seconds.")
                 else:
-                    messagebox.showerror("Rollback Error", f"Rollback command exited with code {res.returncode}. Review journalctl logs.")
+                    messagebox.showerror("Rollback Failed", f"Rollback exited with code {res.returncode}.")
 
         def on_diet():
-            subprocess.run(["neuronix", "diet"], check=False)
-            messagebox.showinfo("Maintenance Complete", "Store garbage collection and physical storage TRIM completed.")
+            start_t = time.monotonic()
+            res = subprocess.run(["neuronix", "diet"], check=False)
+            elapsed = time.monotonic() - start_t
+            if res.returncode == 0:
+                messagebox.showinfo("Diet Complete", f"Storage reclaimed successfully in {elapsed:.2f} seconds.")
+            else:
+                messagebox.showerror("Diet Failed", f"Diet operation exited with code {res.returncode}.")
 
         btn_box = ttk.Frame(frame_act)
-        btn_box.pack(pady=10)
-        ttk.Button(btn_box, text="⏪ Rollback Generation", command=on_rollback).pack(side="left", padx=5)
+        btn_box.pack(pady=5, padx=10, fill="x")
+
+        ttk.Button(btn_box, text="↩ Atomic Rollback", command=on_rollback).pack(side="left", padx=5)
         ttk.Button(btn_box, text="🧹 Reclaim Storage (Diet)", command=on_diet).pack(side="left", padx=5)
         ttk.Button(btn_box, text="Close", command=root.destroy).pack(side="left", padx=5)
 
@@ -267,6 +284,7 @@ def run_gui_mode():
         class DummyArgs:
             list_generations = True
             diet = False
+            opencode = False
             rollback = False
         run_cli_mode(DummyArgs())
 
@@ -275,12 +293,13 @@ def main():
     parser.add_argument("--cli", action="store_true", help="Run in terminal CLI mode")
     parser.add_argument("--list-generations", action="store_true", help="List system generation history")
     parser.add_argument("--diet", action="store_true", help="Run store garbage collection and TRIM")
+    parser.add_argument("--opencode", action="store_true", help="Launch or check OpenCode AI System Assistant")
     parser.add_argument("--rollback", action="store_true", help="Roll back to previous generation")
     parser.add_argument("--version", action="version", version=f"NEURONIX Center {VERSION}")
 
     args = parser.parse_args()
 
-    if args.cli or args.list_generations or args.diet or args.rollback or "DISPLAY" not in os.environ:
+    if args.cli or args.list_generations or args.diet or args.opencode or args.rollback or "DISPLAY" not in os.environ:
         run_cli_mode(args)
     else:
         run_gui_mode()

@@ -40,6 +40,7 @@
         desktopTweaks = import ./modules/services/desktop-tweaks.nix;
         printing = import ./modules/services/printing.nix;
         security = import ./modules/services/security.nix;
+        opencode = import ./modules/services/opencode.nix;
         kde = import ./modules/desktop/kde.nix;
         gnome = import ./modules/desktop/gnome.nix;
         hyprland = import ./modules/desktop/hyprland.nix;
@@ -62,6 +63,7 @@
           ./modules/services/desktop-tweaks.nix
           ./modules/services/printing.nix
           ./modules/services/security.nix
+          ./modules/services/opencode.nix
           ./modules/desktop/kde.nix
           ./hosts/desktop
         ];
@@ -90,6 +92,7 @@
         {
           neuronix-center = pkgs.callPackage ./packages/neuronix-center { };
           neuronix-cli = pkgs.callPackage ./packages/neuronix-cli { };
+          opencode = pkgs.callPackage ./packages/opencode { };
         } // (nixpkgs.lib.optionalAttrs (system == primarySystem) {
           iso = self.nixosConfigurations."neuronix-iso".config.system.build.isoImage;
         })

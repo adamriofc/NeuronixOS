@@ -92,7 +92,9 @@ assert_check "Center --list-generations succeeds" "nix-shell -p python3 --run 'p
 # ------------------------------------------------------------------------------
 echo -e "\n${BOLD}Phase 4: Atomic Rollback Duration Measurement Invariant${RESET}"
 assert_check "Center implements time.monotonic measurement" "grep -q 'time.monotonic' '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py'"
-assert_check "Center rollback error handling is present" "grep -q 'Rollback Error' '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py'"
+assert_check "Center rollback error handling is present" "grep -Eq 'Rollback (Error|Failed)' '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py'"
+assert_check "OpenCode is configured in target configuration" "grep -q 'neuronix.services.opencode' /tmp/neuronix-mock-install/etc/nixos/configuration.nix"
+assert_check "OpenCode is registered in release manifest" "grep -q '\"ai_agent\": \"opencode\"' /tmp/neuronix-mock-install/etc/neuronix/release.json"
 
 # ------------------------------------------------------------------------------
 # 5. Headless QEMU Ephemeral Micro-VM Sandbox Execution
