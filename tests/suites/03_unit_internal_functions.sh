@@ -7,10 +7,9 @@ start_suite "03 - Unit Tests for Internal Functions"
 
 # Extract helper functions into subshell environment
 TMP_MOCK_DIR=$(mktemp -d /tmp/neuronix_mock_XXXXXX)
-trap 'rm -rf "$TMP_MOCK_DIR"' EXIT
 
-# Source functions directly in subshell
-source <(sed -E '/^main "\$@"$/d' "$SRC_BIN")
+# Source functions directly in subshell without leaking set -e or traps
+source <(sed -E '/^main "\$@"$/d; /^set /d; /^trap /d' "$SRC_BIN")
 
 # 1-5. Test log formatters
 assert_output_contains "log_info 'Test info message'" "Test info message" "log_info renders message"
@@ -110,3 +109,6 @@ if [[ -L /nix/var/nix/profiles/system ]]; then
 else
     assert_eq "1" "1" "Real system has at least 1 active generation"
 fi
+
+# Clean up mock workspace
+rm -rf "$TMP_MOCK_DIR"
