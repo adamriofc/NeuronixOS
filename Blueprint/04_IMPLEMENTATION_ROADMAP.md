@@ -105,13 +105,19 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
      - **GUI App Store Bawaan:** GNOME Software / KDE Discover terintegrasi Flathub dengan sinkronisasi portal tema Wayland.
      - **Kustomisasi Penuh Auto-TRIM:** Kendali toggle switch di GUI (Calamares & NEURONIX Center) serta CLI (`neuronix config set auto-trim on|off`).
      - **Inklusi Otomatis `allowUnfree = true`:** Mengeliminasi error lisensi proprietary pada instalasi software umum (NVIDIA, Steam, Discord).
-  7. **10 Pertahanan Perangkat Keras Kedap Peluru (*Bulletproof Hardware Shield*):**
-     - Alokasi 1.0 GiB ESP `/boot` dengan auto-rotasi batas 15 generasi (anti-overflow EFI).
-     - Firmware Wi-Fi/Bluetooth Realtek/Broadcom lengkap di ISO offline.
-     - Manajemen Hybrid GPU (NVIDIA Optimus / AMD PRIME) hemat daya & HDMI out.
-     - Dukungan Secure Boot Windows 11 via signed `shim` bootloader.
-     - Penanganan sleep laptop S0ix modern standby (anti panas di dalam tas).
-     - Pemetaan portal file-chooser Flatpak tanpa freeze DBus.
+   7. **16 Pertahanan Perangkat Keras & Runtime Kedap Peluru (*16-Pillar Ironclad Shield*):**
+      - Alokasi 1.0 GiB ESP `/boot` dengan auto-rotasi batas 15 generasi (anti-overflow EFI).
+      - Firmware Wi-Fi/Bluetooth Realtek/Broadcom lengkap di ISO offline.
+      - Manajemen Hybrid GPU (NVIDIA Optimus / AMD PRIME) hemat daya & HDMI out.
+      - Dukungan Secure Boot Windows 11 via signed `shim` bootloader.
+      - Penanganan sleep laptop S0ix modern standby (anti panas di dalam tas).
+      - Pemetaan portal file-chooser Flatpak tanpa freeze DBus.
+      - Sinkronisasi jam hardware dual-boot Windows (RTC Local Time auto-fix).
+      - Tuning kernel `vm.max_map_count` level SteamOS (anti-crash Proton/gaming & IDE).
+      - Rendering tajam Wayland HiDPI/4K Fractional Scaling Ozone Electron (anti-blurry text).
+      - Watchdog penilaian boot UEFI mandiri pasca-transaksi update (anti-power loss brick).
+      - Modul input multibahasa Fcitx5 aktif bawaan (Japanese/Korean/Chinese).
+      - Fitur impor sertifikat root CA korporat/kampus satu klik (anti-SSL proxy failure).
 - **Kriteria Kelulusan Fase (Exit Gate 4):**
   - File ISO sukses di-compile secara hermetis dan dapat di-boot di mesin bare-metal maupun mesin virtual bersih (QEMU / Quickemu / VirtualBox).
   - Installer Calamares sukses mengeksekusi partisi Btrfs ZSTD:3 dan menyelesaikan instalasi hingga masuk ke desktop Wayland pilihan.
