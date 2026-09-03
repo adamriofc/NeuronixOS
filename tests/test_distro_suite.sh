@@ -276,7 +276,7 @@ test_neuronix_center() {
 
   local ver
   ver=$(nix-shell -p python3 --run "python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --version" 2>&1)
-  if echo "$ver" | grep -Eq "0.4.0-beta|1.0.0-phase4"; then
+  if echo "$ver" | grep -Eq "1.0.1-beta|0.4.0-beta|1.0.0-phase4"; then
     log_pass "neuronix-center reports correct version (${ver})"
   else
     log_fail "neuronix-center version mismatch: $ver"

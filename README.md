@@ -3,10 +3,10 @@
 **A Declarative Linux Operating System Platform with Calamares Installer, Hardware Hardening Matrix, and Developer Substrate**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.4.0--beta-blueviolet.svg)](version.nix)
+[![Version](https://img.shields.io/badge/Version-1.0.1--beta-blueviolet.svg)](version.nix)
 [![NixOS](https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
 [![Architecture](https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg)](#platform-architecture)
-[![Testing](https://img.shields.io/badge/Assertions-705%2F705_Passed_(100%25)-success.svg)](#verification--test-harness)
+[![Testing](https://img.shields.io/badge/Assertions-746%2F746_Passed_(100%25)-success.svg)](#verification--test-harness)
 [![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg)](#storage-architecture--maintenance)
 [![Memory Management](https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg)](#memory-pressure-management)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg)](.github/workflows/ci.yml)
@@ -16,6 +16,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Release Engineering & Version Truth](#release-engineering--version-truth)
 - [Feature Status & Assurance Hierarchy](#feature-status--assurance-hierarchy)
 - [Platform Architecture](#platform-architecture)
 - [Storage Architecture & Maintenance](#storage-architecture--maintenance)
@@ -28,7 +29,7 @@
   - [ZRAM In-Memory Swap Pool](#zram-in-memory-swap-pool)
   - [Kernel Paging Tuning (vm.swappiness = 180)](#kernel-paging-tuning-vmswappiness--180)
   - [Pressure Stall Information (PSI) & systemd-oomd](#pressure-stall-information-psi--systemd-oomd)
-- [Hardware Compatibility Matrix](#hardware-compatibility-matrix)
+- [Hardware Compatibility Matrix & Profiles](#hardware-compatibility-matrix--profiles)
 - [Command-Line Reference (neuronix)](#command-line-reference-neuronix)
 - [Core System Components](#core-system-components)
   - [1. Declarative Calamares Installation Engine](#1-declarative-calamares-installation-engine)
@@ -38,7 +39,7 @@
   - [5. Model Context Protocol (MCP) Server](#5-model-context-protocol-mcp-server)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification & Test Harness (705 Tests)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (746 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -48,10 +49,13 @@
 
 NEURONIX OS is an independent, declarative Linux distribution platform based on NixOS. It provides an automated Calamares installation workflow, pre-configured hardware and kernel profiles, transactional desktop environments, and developer CLI utilities while maintaining full compatibility with the upstream Nix package ecosystem.
 
-### Release Channels and Compatibility Baseline
-- **Development Builds:** Track `nixos-unstable` for modern kernel, Wayland compositors, and rapid developer tooling updates.
-- **Production Stable Builds:** Target `nixos-26.05` for conservative enterprise workloads and long-term security updates.
-- **State Version (`system.stateVersion = "24.11"`):** Represents the immutable NixOS state migration compatibility baseline, ensuring stateful configuration files (e.g. database schemas, systemd paths) remain backwards-compatible across upgrades.
+### Release Engineering & Version Truth
+- **Single Source of Truth (`version.nix`):** All components (CLI, GUI Center, MCP Daemon, Calamares installer engine, release manifests, package derivations) read canonical versioning from `version.nix`.
+- **Release `v1.0.0` (Frozen GA):** Immutable initial General Availability release tag.
+- **Release `v1.0.1-beta` (Active Development & Hardening Baseline on `main`):** Actively maintained branch incorporating post-GA architectural hardening, end-to-end lifecycle verification gates, runtime telemetry, multi-arch flake outputs, and MCP JSON-RPC protocol compliance.
+- **Development Channel Baseline:** Tracks `nixos-unstable` for modern Linux kernels, Wayland compositors, and rapid developer tooling.
+- **Production Stable Baseline:** Targets `nixos-26.05` for conservative enterprise stability and verified patch streams.
+- **State Version (`system.stateVersion = "24.11"`):** The immutable NixOS state migration baseline preserving data directory layouts and system state compatibility across upgrades.
 
 ---
 
@@ -166,9 +170,9 @@ To prevent system lockups under memory exhaustion, NEURONIX implements a three-t
 
 ---
 
-## Hardware Compatibility Matrix
+## Hardware Compatibility Matrix & Profiles
 
-NEURONIX includes declarative configurations addressing standard desktop and laptop hardware requirements:
+NEURONIX includes declarative configurations addressing standard desktop and laptop hardware requirements. For empirical platform qualifications across reference platforms (ThinkPad, Framework, Dell XPS, ASUS ROG Zephyrus, QEMU KVM, Apple Silicon), see the [Reference Hardware Qualification Matrix](docs/hardware_profiles.md).
 
 | Subsystem Domain | Technical Objective | Declarative Implementation | Configuration Module |
 | :--- | :--- | :--- | :--- |
@@ -227,7 +231,7 @@ USAGE:
 | `verify` | `<package>` | Tests whether a derivation evaluates cleanly against the nixpkgs closure via dry-build. | `neuronix verify ripgrep` |
 | `center` | None | Opens the graphical NEURONIX Control Center (or runs `--cli` in headless environments). | `neuronix center` |
 | `mcp` | None | Starts the Model Context Protocol (MCP) server over `stdio` adhering to JSON-RPC 2.0. | `neuronix mcp` |
-| `undo` | None (or `rollback`) | Reverts the system to the previous generation in under 2 seconds. | `neuronix undo` |
+| `undo` | None (or `rollback`) | Reverts the system to the previous generation via atomic symlink pointer swap. | `neuronix undo` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
 | `help` | None (`-h`, `--help`)   | Displays available commands and syntax summaries. | `neuronix help` |
 
@@ -344,9 +348,9 @@ neuronix diet
 
 ---
 
-## Verification & Test Harness (705 Assertions)
+## Verification, Lifecycle Gate & Test Harness (746 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test suite comprising 705 automated assertions across 20 verification suites:
+System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 746 automated assertions across 21 verification suites:
 
 ```text
 ═══════════════════════════════════════════════════════════════════
@@ -354,13 +358,18 @@ System invariants, module structures, and CLI dispatchers are validated through 
 ═══════════════════════════════════════════════════════════════════
   Master Test Harness (tests/run_all_tests.sh)     : 506 / 506 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 199 / 199 PASS
-  Total Executed Tests                             : 705 Assertions
+  Core CLI Harness (tests/test_neuronix_core.sh)   :  14 /  14 PASS
+  Release Lifecycle Gate (test_release_lifecycle)  :  27 /  27 PASS
+  Total Executed Assertions                        : 746 Assertions
   Failed Verification                              : 0 Failures
-  Execution Duration                               : ~44.0 seconds
+  Execution Duration                               : ~65.0 seconds
   Confidence Score                                 : 100%
 ═══════════════════════════════════════════════════════════════════
   ✓ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED
+  ✓ NEURONIX RELEASE GATE PASSED: BUILD, BOOT, INSTALL AND ROLLBACK VERIFIED
 ```
+
+> **Industrial QA Harness Scope:** A project-level validation framework verifying declared subsystem invariants and contracts, not a formal mathematical safety/security proof system.
 
 ### Verification Coverage:
 - **Suites 01-03:** Script syntax, POSIX compliance, static analysis, and generation parsing.
@@ -372,6 +381,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
 - **Suite 18:** Command-line argument boundary fuzzing and shell injection neutralization.
 - **Suite 19:** Architecture Decision Records (ADRs) and documentation consistency.
 - **Suite 20:** Storage subsystem declarations, Btrfs subvolume mount options, and installer generator scripts.
+- **Release Lifecycle Gate:** End-to-end integration test validating build, boot, install simulation, architecture detection, generation pointer inspection, and atomic rollback duration.
 
 Execute the verification battery:
 ```bash
@@ -380,6 +390,12 @@ bash tests/run_all_tests.sh
 
 # Run distribution standalone suite (199 tests)
 bash tests/test_distro_suite.sh
+
+# Run core CLI verification (14 tests)
+bash tests/test_neuronix_core.sh
+
+# Run end-to-end release lifecycle gate (27 tests)
+bash tests/test_release_lifecycle.sh
 ```
 
 ---

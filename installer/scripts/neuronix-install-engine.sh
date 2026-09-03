@@ -76,23 +76,45 @@ else
 HW_EOF
 fi
 
-log "Generating pure flake.nix configuration for target system..."
+# Resolve versioning and platform architecture dynamically
+VERSION_NIX="$(dirname "$(readlink -f "$0")")/../../version.nix"
+NRX_VER="1.0.1-beta"
+NRX_RELEASE_TAG="v1.0.1"
+NRX_STATE="24.11"
+NRX_CHANNEL="nixos-unstable"
+NRX_COMMIT="577972710ddbf3f000ae7f184dd26c25264d7be7"
+
+if [[ -f "$VERSION_NIX" ]]; then
+  NRX_VER=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+  NRX_RELEASE_TAG=$(grep -E 'releaseTag\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "v1.0.1")
+  NRX_STATE=$(grep -E 'stateVersion\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+  NRX_CHANNEL=$(grep -E 'channelDevelopment\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+  NRX_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "577972710ddbf3f000ae7f184dd26c25264d7be7")
+fi
+
+TARGET_ARCH="${TARGET_ARCH:-$(uname -m)}"
+case "$TARGET_ARCH" in
+  x86_64) NIX_ARCH="x86_64-linux" ;;
+  aarch64|arm64) NIX_ARCH="aarch64-linux" ;;
+  *) NIX_ARCH="x86_64-linux" ;;
+esac
+
+log "Generating pure flake.nix configuration for target system ($NIX_ARCH)..."
 cat <<FLAKE_EOF > "$CONFIG_DIR/flake.nix"
 # ==============================================================================
-# NEURONIX OS: Konfigurasi Sistem Deklaratif Mandiri
-# Dihasilkan secara otomatis oleh NEURONIX Installer Engine
-# Sistem ini 100% reproducible, memiliki riwayat atomic rollback, dan kebal rusak.
+# NEURONIX OS: Declarative Host Configuration
+# Generated autonomously by NEURONIX Installer Engine ($NRX_VER)
 # ==============================================================================
 {
   description = "NEURONIX Host Configuration for $TARGET_HOSTNAME";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/$NRX_CHANNEL";
   };
 
   outputs = { self, nixpkgs, ... }@inputs: {
     nixosConfigurations."$TARGET_HOSTNAME" = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
+      system = "$NIX_ARCH";
       modules = [
         ./hardware-configuration.nix
         ./configuration.nix
@@ -192,12 +214,15 @@ mkdir -p "$MANIFEST_DIR"
 cat <<MANIFEST_EOF > "$MANIFEST_DIR/release.json"
 {
   "distribution": "NEURONIX OS",
-  "version": "0.4.0-beta",
-  "system": "x86_64-linux",
+  "version": "$NRX_VER",
+  "release_tag": "$NRX_RELEASE_TAG",
+  "system": "$NIX_ARCH",
   "target_user": "$TARGET_USER",
   "target_hostname": "$TARGET_HOSTNAME",
   "desktop_environment": "$SELECTED_DESKTOP",
-  "nixpkgs_channel": "nixos-unstable",
+  "nixpkgs_channel": "$NRX_CHANNEL",
+  "nixpkgs_commit": "$NRX_COMMIT",
+  "state_version": "$NRX_STATE",
   "installed_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 }
 MANIFEST_EOF

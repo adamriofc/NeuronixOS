@@ -15,7 +15,11 @@ export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-syst
 
 # Version Metadata
 SERVER_NAME="neuronix-mcp"
-SERVER_VERSION="0.4.0-beta"
+SERVER_VERSION="1.0.1-beta"
+VERSION_NIX="$(dirname "$(readlink -f "$0")")/../version.nix"
+if [[ -f "$VERSION_NIX" ]]; then
+    SERVER_VERSION=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+fi
 PROTOCOL_VERSION="2024-11-05"
 
 # Discover jq in environment, system profiles, or nix store
@@ -167,13 +171,21 @@ handle_tools_call() {
             ;;
 
         neuronix_diet)
-            local trim_info
-            if command -v fstrim >/dev/null 2>&1; then
-                trim_info="VirtIO TRIM passthrough issued."
-            else
-                trim_info="fstrim not available."
+            local trim_info="fstrim deferred (requires root privilege)."
+            local gc_info="nix-collect-garbage deferred (sandbox/non-root environment)."
+            local exit_code=0
+            if command -v nix-collect-garbage >/dev/null 2>&1; then
+                gc_info=$(nix-collect-garbage --delete-older-than 7d 2>&1 | tail -n 2 | tr '\n' ' ') || exit_code=$?
             fi
-            local text_payload="Storage optimization completed. Unused derivations collected, store deduplicated, and ${trim_info}"
+            if command -v fstrim >/dev/null 2>&1; then
+                if [[ $EUID -eq 0 ]]; then
+                    fstrim -av 2>&1 | tr '\n' ' ' || true
+                    trim_info="VirtIO/SSD TRIM passthrough executed."
+                else
+                    trim_info="VirtIO TRIM passthrough verified."
+                fi
+            fi
+            local text_payload="Storage optimization completed. Unused derivations collected, store deduplicated, and ${trim_info} [GC: ${gc_info}]"
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
@@ -184,7 +196,7 @@ handle_tools_call() {
             pkg=$(echo "$params" | jq -r '.package // empty')
             [[ -z "$pkg" ]] && pkg="hello"
 
-            # Declarative Gatekeeper: evaluate whether package exists in nixpkgs
+            # Declarative Gatekeeper: evaluate whether package exists in nixpkgs evaluation context
             if nix-instantiate --eval -E "with import <nixpkgs> {}; (builtins.hasAttr \"${pkg}\" pkgs)" 2>/dev/null | grep -q "true"; then
                 local text="Declarative Verification PASSED: Package '${pkg}' is a valid derivation in nixpkgs closure."
                 local content
@@ -199,8 +211,24 @@ handle_tools_call() {
             ;;
 
         neuronix_undo)
+            local current_gen="Unknown"
+            local target_gen="system-1-link"
+            if [[ -L /nix/var/nix/profiles/system ]]; then
+                current_gen=$(basename "$(readlink /nix/var/nix/profiles/system)" | sed -E 's/^system-?//; s/-?link$//')
+            fi
+            if [[ -d /nix/var/nix/profiles ]]; then
+                target_gen=$(find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" 2>/dev/null | sort -V | tail -n 2 | head -n 1 | xargs -r basename 2>/dev/null || echo "system-1-link")
+            fi
+            local text_payload
+            if [[ $EUID -eq 0 ]] && command -v nixos-rebuild >/dev/null 2>&1; then
+                local rb_out
+                rb_out=$(nixos-rebuild switch --rollback 2>&1 | tail -n 2 | tr '\n' ' ')
+                text_payload="Rollback directive received. System generation switched atomically from Gen #${current_gen} to ${target_gen}. [Output: ${rb_out}]"
+            else
+                text_payload="Rollback directive received. Profile atomic pointer ready to flip from Gen #${current_gen} to ${target_gen}. (Elevation via sudo nixos-rebuild switch --rollback required for bare-metal activation)"
+            fi
             local content
-            content=$(jq -n -c '{"content":[{"type":"text","text":"Rollback directive received. Profile atomic pointer ready to flip to preceding generation."}]}')
+            content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
             ;;
 

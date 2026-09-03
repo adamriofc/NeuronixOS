@@ -1,4 +1,4 @@
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, config, options, ... }:
 
 # ==============================================================================
 # NEURONIX OS: Declarative Secure Boot Subsystem (Lanzaboote Integration)
@@ -26,11 +26,11 @@
     # Systemd-boot is disabled when Lanzaboote replaces the default EFI loader
     boot.loader.systemd-boot.enable = lib.mkForce false;
 
-    # Note: When Lanzaboote input is active in host flake, enable:
-    # boot.lanzaboote = {
-    #   enable = true;
-    #   pkiBundle = config.neuronix.security.secureboot.pkiBundle;
-    # };
+    # Conditional Lanzaboote configuration if module option is present
+    boot.lanzaboote = lib.mkIf (options.boot ? lanzaboote) {
+      enable = true;
+      pkiBundle = config.neuronix.security.secureboot.pkiBundle;
+    };
 
     environment.systemPackages = with pkgs; [
       sbctl

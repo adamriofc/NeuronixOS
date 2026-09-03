@@ -15,7 +15,11 @@ trap 'exec 2>/dev/null; exit 0' PIPE
 # Safe Path & Environment Fallbacks (Mission-critical defensive posture)
 export PATH="/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:${PATH:-}"
 
-VERSION="0.4.0-beta"
+VERSION="1.0.1-beta"
+VERSION_NIX="$(dirname "$(readlink -f "$0")")/../version.nix"
+if [[ -f "$VERSION_NIX" ]]; then
+    VERSION=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+fi
 PROGRAM_NAME="neuronix"
 
 # Color Palettes & UI Formats
@@ -529,7 +533,7 @@ cmd_version() {
     echo -e "License       : Apache License 2.0"
     echo -e "Substrate     : NixOS / Pure-Functional Linux"
     echo -e "Engine Target : Linux x86_64, aarch64, Darwin, WSL2"
-    echo -e "Repository    : https://github.com/neuronix-os/neuronix"
+    echo -e "Repository    : https://github.com/adamriofc/neuronix"
 }
 
 # Main CLI Dispatcher

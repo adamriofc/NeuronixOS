@@ -12,7 +12,17 @@ import subprocess
 import argparse
 import glob
 
-VERSION = "0.4.0-beta"
+VERSION = "1.0.1-beta"
+try:
+    _vfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../version.nix")
+    if os.path.exists(_vfile):
+        with open(_vfile, "r") as _f:
+            for _line in _f:
+                if "version =" in _line:
+                    VERSION = _line.split('"')[1]
+                    break
+except Exception:
+    pass
 
 def get_system_telemetry():
     """Probes runtime system telemetry truthfully without hardcoded mock values."""

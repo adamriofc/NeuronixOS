@@ -53,10 +53,10 @@ nix.settings.trusted-users = [ "root" "@wheel" ];
 
 ### Implications and Rationale
 1. **Nix Daemon Socket Access:** Unprivileged users communicating with the multi-user `nix-daemon` socket cannot instruct the daemon to add arbitrary binary substituters or override core security settings.
-2. **Administrative Delegation:** Members of the `@wheel` group are granted trusted status because they already possess full `sudo` privileges. This allows authorized developers to:
+2. **Administrative Delegation:** Members of the `@wheel` group are granted trusted status because they already possess full `sudo` privileges. This is an intentional privilege expansion, equivalent to granting already-administrative users additional authority over Nix daemon policy. This allows authorized developers to:
    - Configure local binary caches during developer builds.
    - Run `nix build` with custom extra-substituters without requiring interactive sudo prompts for every package evaluation.
-3. **Security Boundary:** Non-wheel users are untrusted. They can build existing derivations and install packages from declared caches, but cannot inject untrusted binary paths into `/nix/store`.
+3. **Security Boundary:** Non-wheel users are untrusted. They can build existing derivations and install packages from declared caches, but cannot inject untrusted binary paths into `/nix/store`. Store immutability protects package paths from ordinary in-place mutation; it does not constitute a full system integrity proof against compromised kernels or elevated root threats.
 
 ---
 

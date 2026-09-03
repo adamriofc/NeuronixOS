@@ -6,6 +6,8 @@
 set -uo pipefail
 
 TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/bin/neuronix"
+CORE_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CANONICAL_VERSION=$(grep -E 'version\s*=' "${CORE_TEST_DIR}/../version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.1-beta")
 
 PASSED=0
 FAILED=0
@@ -68,7 +70,7 @@ assert_output_contains() {
 run_test "Binary is executable" "test -x ${TARGET_BIN}" 0
 
 # 2. Version and Help Flags
-assert_output_contains "Command: version output" "${TARGET_BIN} version" "0.4.0-beta"
+assert_output_contains "Command: version output" "${TARGET_BIN} version" "${CANONICAL_VERSION}"
 assert_output_contains "Command: --version flag" "${TARGET_BIN} --version" "Apache License"
 assert_output_contains "Command: help output" "${TARGET_BIN} help" "USAGE:"
 assert_output_contains "Command: --help flag" "${TARGET_BIN} --help" "CORE COMMANDS:"

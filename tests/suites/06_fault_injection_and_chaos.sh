@@ -10,7 +10,7 @@ assert_exit_code "nix-shell -p package_that_definitely_does_not_exist_98765 --ru
 
 # 2. Piping to non-TTY (headless stdout)
 assert_exit_code "$TARGET_BIN status | cat >/dev/null" 0 "Piping status output to 'cat' succeeds without TTY"
-assert_exit_code "$TARGET_BIN version | grep -q '0.4.0'" 0 "Piping version output to grep succeeds"
+assert_exit_code "$TARGET_BIN version | grep -q '$CANONICAL_VERSION'" 0 "Piping version output to grep succeeds"
 
 # 3. Running with stdin from /dev/null
 assert_exit_code "$TARGET_BIN status </dev/null" 0 "Running status with stdin closed (</dev/null) exits 0"

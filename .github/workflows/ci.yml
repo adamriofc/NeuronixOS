@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification (705 Tests)
+    name: Industrial Systems Verification & Release Gate (746 Tests)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -55,3 +55,7 @@ jobs:
       - name: Verify Installer Dry-Run Simulation
         run: |
           DRY_RUN=1 bash installer/scripts/neuronix-install-engine.sh
+
+      - name: Execute End-to-End Release Lifecycle Gate (27 Tests)
+        run: |
+          bash tests/test_release_lifecycle.sh
