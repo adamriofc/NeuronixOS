@@ -9,7 +9,7 @@
 
   networking.hostName = "neuronix-installer";
 
-  # User akun Live Session (Passwordless Sudo untuk kenyamanan live-testing)
+  # Live session user account (passwordless sudo enabled for live environment)
   users.users.nixos = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "video" "audio" ];

@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 {
-  # Pilar 13: Variabel Lingkungan Global Wayland HiDPI / 4K Fractional Scaling
+  # Wayland HiDPI / 4K Fractional Scaling environment flags
   # Menjamin aplikasi Electron (VS Code, Spotify, Discord) tajam (pixel-crisp)
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1";
@@ -9,7 +9,7 @@
     ELECTRON_OZONE_PLATFORM_HINT = "auto";
   };
 
-  # Pilar 15: Dukungan Multibahasa Terpadu (Fcitx5 Wayland Frontend)
+  # Multilingual input method support (Fcitx5 Wayland Frontend)
   i18n.inputMethod = {
     enable = true;
     type = "fcitx5";

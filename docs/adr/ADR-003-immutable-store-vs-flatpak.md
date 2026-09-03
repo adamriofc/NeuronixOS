@@ -1,19 +1,20 @@
-# ADR-003: Arsitektur Dua Lapis (Immutable Nix Core vs Mutable Flatpak Apps)
+# ADR-003: Dual-Layer Architecture: Immutable Nix Core vs Sandboxed Flatpak
 
 ## Status
-**Accepted** (Disetujui untuk Fase 4 Distro NEURONIX)
+**Accepted** (Approved for NEURONIX OS Standalone Distribution)
 
-## Konteks & Masalah
-Di NixOS murni, menginstal aplikasi desktop harian (seperti Spotify, Discord, atau Obsidian) mengharuskan pengguna menambahkan baris deklaratif ke konfigurasi sistem dan menjalankan `nixos-rebuild switch`. 
-Hal ini menimbulkan friksi berat bagi pengguna baru:
-- Waktu rebuild lambat hanya untuk memasang aplikasi obrolan.
-- Tidak ada pengalaman browsing visual toko aplikasi (*App Store*).
+## Context & Problem Statement
+Desktop Linux users require rapid access to third-party proprietary and desktop software (e.g., Discord, Spotify, Steam, VS Code, Slack, Zoom).
+Managing all graphical applications exclusively via Nix derivations introduces friction:
+1. **Rebuild Latency:** Installing a desktop app via Nix requires modifying `/etc/nixos/configuration.nix` and running `nixos-rebuild switch`, triggering generation rebuilds for everyday desktop apps.
+2. **Desktop Integration Gaps:** Complex graphical packages can occasionally have packaging quirks or missing sandboxing under strict Nix isolation.
 
-## Keputusan Arsitektur
-NEURONIX menerapkan **Arsitektur Perangkat Lunak Dua Lapis (*Dual-Layer Software Architecture*)**:
-1. **Lapis 1 (Core OS & Dev Stacks):** Dikelola secara murni oleh **Nixpkgs & Flakes**. Menjamin kernel, pustaka dasar, toolchain compiler, dan layanan server kebal terhadap kerusakan.
-2. **Lapis 2 (Desktop GUI Apps):** Dikelola oleh **Flatpak & Flathub** via GNOME Software / KDE Discover.
-3. Seluruh integrasi tema, kursor, dan dialog berkas disinkronkan secara mulus melalui protokol `xdg-desktop-portal`.
+## Architectural Decision
+NEURONIX implements a **Dual-Layer Software Distribution Model**:
+1. **Immutable Nix Core:** Kernel, system daemons, hardware drivers, system libraries, shell environments, development toolchains (`neuronix dev`), and core system utilities are managed strictly through declarative Nix modules.
+2. **Flathub Sandboxed Applications:** Everyday graphical desktop applications are installed through Flathub via pre-configured Flatpak integrations.
+3. **Portal Sandboxing:** Native Wayland session integration is enforced using `xdg-desktop-portal` backends.
 
-## Konsekuensi
-- **Positif:** Onboarding pengguna berlangsung tanpa gesekan; jutaan aplikasi Flathub siap dipasang dengan satu klik; integritas sistem inti di `/nix/store` tetap aman 100%.
+## Consequences
+- **Positive:** Core operating system stability and immutability remain uncompromised; non-root users can install and update desktop applications instantly via KDE Discover or GNOME Software without root permissions or system recompilation.
+- **Trade-off:** Two package managers exist simultaneously; CLI documentation and Control Center UI must clearly distinguish between system derivations and user Flatpak applications.

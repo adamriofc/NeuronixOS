@@ -53,7 +53,7 @@ else
 HW_EOF
 fi
 
-log "Menghasilkan konfigurasi flake.nix murni untuk sistem terpasang..."
+log "Generating pure flake.nix configuration for target system..."
 cat <<FLAKE_EOF > "$CONFIG_DIR/flake.nix"
 # ==============================================================================
 # NEURONIX OS: Konfigurasi Sistem Deklaratif Mandiri
@@ -94,26 +94,26 @@ cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nix.settings.auto-optimise-store = true;
 
-  # Pilar 1: Lisensi Unfree (Steam, NVIDIA, Spotify aktif langsung)
+  # Unfree package licensing (Steam, NVIDIA, Spotify)
   nixpkgs.config.allowUnfree = true;
 
   # Aktivasi Global nix-ld (Eksekusi biner Linux FHS langsung)
   programs.nix-ld.enable = true;
 
-  # Pilar 5: Bootloader systemd-boot dengan batas 15 generasi di ESP 1.0 GiB
+  # Bootloader systemd-boot with 15 generation threshold on 1.0 GiB ESP
   boot.loader.systemd-boot.enable = true;
   boot.loader.systemd-boot.configurationLimit = 15;
   boot.loader.efi.canTouchEfiVariables = true;
   time.hardwareClockInLocalTime = true;
 
-  # Pilar 17: Active Memory Pressure Shield (ZRAM ZSTD + systemd-oomd)
+  # Active Memory Pressure Shield (ZRAM ZSTD + systemd-oomd)
   zramSwap.enable = true;
   zramSwap.algorithm = "zstd";
   systemd.oomd.enable = true;
   boot.kernel.sysctl."vm.max_map_count" = 2147483642;
   boot.kernel.sysctl."vm.swappiness" = 180;
 
-  # Pilar 18: Audio PipeWire HD Duplex
+  # Audio PipeWire HD Duplex subsystem
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
@@ -121,7 +121,7 @@ cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
     pulse.enable = true;
   };
 
-  # Pilar 4: Toko Aplikasi Flatpak & Flathub
+  # Flatpak & Flathub application marketplace
   services.flatpak.enable = true;
 
   # Pemeliharaan Storage Btrfs & Auto-TRIM
@@ -149,7 +149,7 @@ fi
 
 cat <<USER_EOF >> "$CONFIG_DIR/configuration.nix"
 
-  # User akun sistem
+  # System user account
   users.users.$TARGET_USER = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
@@ -160,12 +160,12 @@ cat <<USER_EOF >> "$CONFIG_DIR/configuration.nix"
 }
 USER_EOF
 
-log "✓ Konfigurasi deklaratif di $CONFIG_DIR berhasil dibuat."
+log "✓ Declarative configuration at $CONFIG_DIR generated successfully."
 
 if [ "$DRY_RUN" -eq 0 ]; then
-  log "Mengeksekusi instalasi hermetis via nixos-install..."
+  log "Executing hermetic installation via nixos-install..."
   nixos-install --flake "$CONFIG_DIR#$TARGET_HOSTNAME" --no-root-passwd
-  log "✓ Instalasi sistem selesai dengan sukses!"
+  log "✓ System installation completed successfully!"
 else
-  log "✓ Verifikasi dry-run sukses! File konfigurasi valid dan hermetis."
+  log "✓ Dry-run verification successful! Configuration files are valid and hermetic."
 fi

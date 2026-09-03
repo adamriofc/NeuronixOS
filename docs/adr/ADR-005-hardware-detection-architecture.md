@@ -1,20 +1,20 @@
-# ADR-005: Arsitektur Deteksi Perangkat Keras Hibrida
+# ADR-005: Hybrid Hardware Detection and Battery Longevity Architecture
 
 ## Status
-**Accepted** (Disetujui untuk Fase 4 Distro NEURONIX)
+**Accepted** (Approved for NEURONIX OS Standalone Distribution)
 
-## Konteks & Masalah
-Komputer modern (terutama laptop gaming) memiliki kombinasi perangkat keras yang kompleks:
-- Dual GPU (Intel/AMD iGPU + NVIDIA dGPU) yang rentan boros baterai jika salah konfigurasi.
-- Chip Wi-Fi Broadcom/Realtek yang membutuhkan firmware proprietary offline.
-- Profil manajemen daya Modern Standby S0ix.
+## Context & Problem Statement
+Linux desktop installations frequently encounter hardware compatibility challenges out-of-the-box:
+1. Missing proprietary wireless firmware causing no Wi-Fi availability during initial setup.
+2. Hybrid GPU laptops (Intel/AMD + NVIDIA) causing battery drain or display freezing.
+3. Modern laptops remaining plugged into AC power continuously, causing premature battery degradation.
 
-## Keputusan Arsitektur
-NEURONIX mengotomatiskan konfigurasi ini melalui **27 Pilar Pertahanan Kedap Peluru**:
-1. Calamares mendeteksi konfigurasi PCI bus untuk kartu grafis ganda dan otomatis mengaktifkan modul `hardware.nvidia.prime.offload`.
-2. Image ISO memaketkan firmware proprietary lengkap (`hardware.enableAllFirmware = true`) agar instalasi offline 100% mulus.
-3. Mengaktifkan `power-profiles-daemon`, `thermald`, dan parameter kernel `mem_sleep_default=deep`.
+## Architectural Decision
+NEURONIX deploys an integrated declarative hardware compatibility matrix:
+1. **Full Offline Firmware:** Bundles redistributable firmware blobs (`hardware.enableAllFirmware = true`) within the installer image.
+2. **NVIDIA PRIME Dynamic Offload:** Pre-configures PRIME Render Offload to keep the discrete GPU powered down until explicitly requested by high-performance applications.
+3. **Battery Longevity Protection:** Configures an autonomous battery threshold daemon setting sysfs `charge_control_limit_max = 80` to prolong lithium-ion battery lifespan during stationary AC usage.
 
-## Konsekuensi
-- **Positif:** Pengguna tidak mengalami fenomena baterai laptop bocor atau Wi-Fi mati pasca instalasi.
-- **Kompromi:** Ukuran image Live ISO bertambah sekitar 600 MB untuk menampung seluruh koleksi firmware offline.
+## Consequences
+- **Positive:** Out-of-the-box Wi-Fi and Bluetooth connectivity; power efficiency on hybrid GPU laptops; extended hardware lifespan.
+- **Trade-off:** Battery maximum capacity is capped at 80% while stationary, toggleable to 100% via `neuronix battery 100`.

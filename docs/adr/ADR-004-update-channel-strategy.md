@@ -1,15 +1,17 @@
-# ADR-004: Strategi Saluran Pembaruan Upstream
+# ADR-004: Upstream Synchronization and Fork Mitigation Strategy
 
 ## Status
-**Accepted** (Disetujui untuk Fase 4 Distro NEURONIX)
+**Accepted** (Approved for NEURONIX OS Standalone Distribution)
 
-## Konteks & Masalah
-Beberapa distro Linux turunan (misalnya Manjaro di ekosistem Arch) menahan paket upstream selama beberapa minggu dalam repositori internal mereka. Praktik ini sering menimbulkan konflik ketergantungan paket, celah keamanan zero-day yang lambat ditambal, dan friksi dengan komunitas upstream.
+## Context & Problem Statement
+Many derivative Linux distributions fork their upstream distribution's package repositories. Over time, maintaining a full downstream fork of a massive package collection leads to unsustainable maintenance overhead, delayed security patches, and eventual project abandonment.
 
-## Keputusan Arsitektur
-NEURONIX **TIDAK PERNAH mem-fork atau menahan repositori Nixpkgs resmi**:
-- Konfigurasi Flake merujuk langsung ke upstream resmi: `github:NixOS/nixpkgs/nixos-unstable` (atau `nixos-24.11` / `nixos-26.05`).
-- Seluruh modul kustom NEURONIX adalah layer tambahan (*additive modular overlays*) yang bersih.
+## Architectural Decision
+NEURONIX **strictly avoids forking nixpkgs** (never forks upstream repositories):
+- NEURONIX acts as an opinionated, declarative architectural layer constructed entirely on top of official upstream NixOS channels (`nixos-24.11` / `nixos-unstable`).
+- Custom components (`neuronix-center`, `neuronix-cli`, branding, and modules) are packaged as pure Nix overlays and Flake inputs.
+- Hardware hardening and system tuning are implemented as modular NixOS configuration modules (`modules/`).
 
-## Konsekuensi
-- **Positif:** Pengguna mendapatkan patch keamanan dan paket software terkini secara langsung; kompatibilitas dengan ekosistem Nixpkgs global dijamin 100%; proyek dihormati oleh komunitas inti NixOS.
+## Consequences
+- **Positive:** Zero downstream packaging lag for security CVE patches; full compatibility with the 100,000+ packages in upstream nixpkgs; maintenance burden remains focused on distribution UX and hardware resilience.
+- **Trade-off:** Changes to upstream NixOS module options must be tracked and tested across release cycles via our automated CI test harness.

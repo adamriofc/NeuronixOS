@@ -2,106 +2,59 @@
 
 > **Document ID:** `NRX-PRD-001`  
 > **Status:** APPROVED  
-> **Path:** `Blueprint/01_PRD_PRODUCT_REQUIREMENTS.md`  
+> **Path:** `docs/specifications/01_PRD_PRODUCT_REQUIREMENTS.md`  
 
 ---
 
-## 1. Vision & Mission Statement
+## 1. Vision & Objectives
 
-### 1.1 Visi
-Menjadi standar platform sistem operasi mandiri (*Standalone Operating System*) dan perkakas kerja pengembang (*Developer Harness*) nomor satu di dunia yang menyatukan komputasi fungsional deterministik dengan orkestrasi kecerdasan buatan otonom, menghilangkan friksi teknis sistem operasi bagi seluruh pengembang global.
+### 1.1 Vision
+Deliver an independent declarative operating system platform and developer execution environment that combines functional reproducibility with automated installation, integrated hardware profiles, and autonomous storage optimization.
 
-### 1.2 Misi
-1. **Membebaskan Pengembang:** Mengeliminasi Docker Desktop bloat dan problem *"works on my machine"* melalui ruang kerja sekali pakai (*ephemeral*) yang instan dan hemat memori.
-2. **Menjinakkan AI:** Membangun dinding pengaman matematis (*formal compiler gates*) agar agen AI otonom dapat dipercaya mengelola infrastruktur tanpa risiko halusinasi destruktif.
-3. **Mendemokratisasi NixOS:** Mengubah kekuatan fungsional NixOS yang rumit menjadi perkakas elegan yang dapat digunakan dengan mudah oleh pengguna awam sekalipun lewat bahasa alami.
+### 1.2 Objectives
+1. **Reduce Developer Environment Friction:** Provide on-demand, hermetic developer toolchains (`neuronix dev`) that run in memory without background daemons.
+2. **Mitigate System Mutation Risks:** Ensure changes are evaluated via dry-build compiler checks and can be reverted in under 2 seconds.
+3. **Automate Storage Maintenance:** Continuously optimize storage through in-kernel compression (ZSTD:3), deduplication, and scheduled host TRIM timers.
+4. **Accessible Declarative Infrastructure:** Provide a graphical installation engine (Calamares) that outputs clean Nix flakes for immediate declarative management.
 
 ---
 
-## 2. Problem Statement & Market Analysis
+## 2. Problem Statement & Architecture Comparison
 
-| Titik Sakit (*Pain Point*) | Kondisi Industri Saat Ini (Status Quo) | Solusi yang Dihadirkan NEURONIX |
+| Engineering Problem | Legacy Operating System State | NEURONIX Platform Solution |
 | :--- | :--- | :--- |
-| **Docker Desktop Bloat** | Docker Desktop memakan 4-8 GB RAM, boros baterai, dan menimbun puluhan gigabyte layer image yang tak terpakai di laptop pengembang. | **Daemonless Ephemeral Substrate:** Berjalan murni sebagai proses CLI instan tanpa background daemon, menggunakan *content-addressed inode sharing*. |
-| **Kerusakan Sistem Akibat AI** | Agen AI yang diberi akses shell di Ubuntu/Windows sering salah menghapus file sistem atau memicu konflik library permanen. | **Atomic State & 2-Second Rollback:** Perubahan diverifikasi di level *dry-build*, dan sistem dapat kembali ke kondisi semula dalam 2 detik. |
-| **Storage Bleed pada VM (Host Physical Storage)** | Virtual disk image (`.qcow2`/`.vhdx`) pada Quickemu/WSL2 terus membesar dan tidak pernah menyusut otomatis saat file dihapus di dalam VM. | **Hypervisor-Aware Auto-TRIM:** Secara terjadwal dan otomatis memicu *VirtIO discard/TRIM* langsung ke SSD host fisik. |
-| **Curamnya Kurva Belajar Nix** | 99% pengembang menyerah mempelajari NixOS karena sintaksis ekspresi Nix yang kaku dan dokumentasi yang terfragmentasi. | **Decoupled Natural Language Copilot:** AI menerjemahkan maksud pengguna menjadi graf deklaratif Nix secara otomatis dan aman. |
+| **Container Overhead** | Heavy background container runtimes consuming 4-8 GB RAM and accumulating unreferenced image layers. | **Daemonless Ephemeral Substrate:** In-memory `nix-shell` execution using content-addressed store hardlinks without background daemons. |
+| **System Breakage from Untrusted Changes** | Imperative package managers mutating shared system directories, resulting in broken dependencies or unbootable states. | **Atomic State & 2-Second Rollback:** Every system generation is atomic; earlier generations can be restored instantly via `neuronix undo`. |
+| **Virtual Disk Expansion** | Sparse disk images (`.qcow2` / `.vhdx`) expanding indefinitely without releasing deleted blocks to the host SSD. | **Automated TRIM Lifecycle:** Scheduled daily TRIM unmap signals pass through VirtIO/SCSI controllers to reclaim host physical storage. |
+| **Declarative Learning Curve** | Complex syntax and fragmented documentation in functional package managers. | **Calamares Flake Generation:** Automated graphical onboarding that generates clean, human-readable flakes on target disks. |
 
 ---
 
-## 3. User Personas & Target Audience
+## 3. Use Cases & Scenarios
 
-### Persona 1: Rian: The AI & Web3 Polyglot Developer (Mac / Windows User)
-- **Karakter:** Mengembangkan microservices dengan Python, Rust, dan Go. 
-- **Frustrasi:** Laptopnya lambat setiap kali membuka Docker Desktop, dan ia sering menghabiskan waktu 2 jam memperbaiki *environment variable* atau konflik versi Python.
-- **Kebutuhan:** Ruang kerja isolasi sekali pakai (`neuronix run`) yang menyala dalam hitungan milidetik dan lenyap tanpa jejak sampah di laptopnya.
+### Scenario 1: Ephemeral Tool Execution
+- **Context:** Running a utility or compiler without installing it globally.
+- **Requirement:** `neuronix run <packages...>` provisions an isolated subshell in under 3 seconds with access to Wayland, audio, and network. All temporary paths are reclaimed upon session termination.
 
-### Persona 2: Sarah: Senior Site Reliability Engineer (Enterprise DevOps)
-- **Karakter:** Mengelola armada ribuan server di Kubernetes cloud.
-- **Frustrasi:** Dockerfile yang dibuat tim developer menghasilkan image berukuran 1 GB dengan puluhan celah keamanan (*CVE vulnerabilities*).
-- **Kebutuhan:** Generator image minimalis (`neuronix export`) yang menghasilkan container OCI berukuran 20 MB murni dari dependensi esensial tanpa celah keamanan.
+### Scenario 2: Isolated Development Toolchains
+- **Context:** Working on multiple language ecosystems with conflicting dependencies.
+- **Requirement:** `neuronix dev <python|rust|node|ai|go|web3>` provisions pre-configured development toolchains in RAM, isolated from the base system.
 
-### Persona 3: David: The Enthusiastic Linux Learner (Power User / Novice)
-- **Karakter:** Tertarik dengan stabilitas NixOS tetapi takut komputernya rusak atau kehabisan disk.
-- **Frustrasi:** Bingung dengan file `.nix`, takut salah konfigurasi desktop.
-- **Kebutuhan:** Sistem operasi mandiri dengan tombol *undo* instan dan penjaga storage otonom yang bisa diajak berdiskusi via bahasa manusia.
+### Scenario 3: Autonomous Storage Pruning
+- **Context:** Preventing storage ballooning and disk exhaustion over long operational lifetimes.
+- **Requirement:** `neuronix diet` orchestrates store garbage collection, hardlink deduplication, and filesystem TRIM in a single command.
 
----
-
-## 4. User Stories & Acceptance Criteria
-
-### User Story 1: Menjalankan Software Sekali Pakai (*Disposable App*)
-> *Sebagai seorang pengembang, saya ingin menjalankan software dari GitHub atau package manager tanpa menginstalnya secara permanen di OS saya, agar disk dan sistem saya tetap bersih.*
-- **Kriteria Penerimaan (Acceptance Criteria):**
-  - Perintah `neuronix run <pkg>` menyiapkan lingkungan terisolasi dalam $< 3$ detik.
-  - Software dapat mengakses GPU, display Wayland/X11, dan audio tanpa konfigurasi manual.
-  - Begitu terminal ditutup, 0 byte sampah tersisa di sistem global.
-
-### User Story 2: Pemeliharaan Kapasitas Disk Virtual Host
-> *Sebagai pengguna virtualisasi lokal (Quickemu / WSL2), saya ingin kapasitas file virtual disk di Host Physical Storage komputer saya menyusut saat file di dalam sistem dihapus.*
-- **Kriteria Penerimaan:**
-  - Perintah `neuronix diet` menggabungkan file duplikat menjadi hardlink dan menembakkan *VirtIO TRIM*.
-  - Kapasitas fisik file `.qcow2` di host berkurang sebanding dengan ukuran data yang dihapus.
-
-### User Story 3: Rollback Darurat Saat Terjadi Masalah
-> *Sebagai pengguna, saya ingin dapat membatalkan perubahan konfigurasi sistem seketika jika software baru merusak alur kerja saya.*
-- **Kriteria Penerimaan:**
-  - Perintah `neuronix undo` memutar balik sistem ke generasi stabil sebelumnya dalam $< 3$ detik tanpa reboot.
-
-### User Story 4: Ekspor OCI Container Image Minimalis
-> *Sebagai insinyur DevOps, saya ingin mengekspor aplikasi saya menjadi image Docker yang siap dikirim ke Kubernetes tanpa perlu menginstal Docker daemon di laptop.*
-- **Kriteria Penerimaan:**
-  - Perintah `neuronix export <app>` menghasilkan tarball OCI/Docker standar.
-  - Ukuran file image $\ge 70\%$ lebih kecil dibanding image berbasis Ubuntu/Debian.
-  - Scanner keamanan (Trivy/Grype) melaporkan 0 CVE kritikal.
+### Scenario 4: Ephemeral System Simulation
+- **Context:** Testing experimental configuration files or packages before committing to host state.
+- **Requirement:** `neuronix try [file.nix]` spins up an in-memory QEMU micro-VM with read-only 9P store sharing, verifying that the target evaluates cleanly.
 
 ---
 
-## 5. Functional Requirements (FR)
+## 4. Key Performance Indicators (KPIs)
 
-- **`FR-001` (Core CLI Engine):** Sistem wajib menyediakan biner CLI mandiri (`neuronix`) yang dapat berjalan di Linux POSIX tanpa dependensi daemon root.
-- **`FR-002` (Ephemeral Runner):** Sistem wajib mampu meluncurkan subshell terisolasi dengan software sementara melalui integrasi graf dependensi Nix.
-- **`FR-003` (Automated Storage Pruning):** Sistem wajib memiliki modul internal untuk menjadwalkan *garbage collection*, *hardlink deduplication*, dan *filesystem TRIM*.
-- **`FR-004` (State Rollback):** Sistem wajib memelihara riwayat generasi deklaratif dan menyediakan fungsi pemulihan instan ke generasi sebelumnya.
-- **`FR-005` (Non-FHS Binary Compatibility):** Sistem wajib secara transparan menyematkan loader dinamis (`nix-ld`) agar biner pihak ketiga non-Nix dapat dieksekusi tanpa modifikasi manual.
-- **`FR-006` (Decoupled Cognitive Driver):** Fitur kecerdasan buatan wajib bersifat modular (*opt-in* via Model Context Protocol JSON-RPC 2.0 over `stdio`) dengan gerbang pembuktian formal (*Formal Proof Gatekeeper*).
-- **`FR-007` (Standalone OS Distribution & Calamares Installer):** Sistem wajib menyediakan format bootable Live ISO mandiri yang dilengkapi installer grafis Calamares, partisi cerdas Btrfs ZSTD:3, serta katalog desktop Wayland terkurasi (KDE Plasma 6, GNOME Tokyo Cyber, Hyprland).
-- **`FR-008` (First-Boot Onboarding & Hardware Telemetry):** Sistem wajib menyediakan aplikasi penyambutan visual (*NEURONIX Center*) untuk memeriksa kesehatan storage, deteksi GPU otomatis (NVIDIA CUDA/AMD Mesa), dan aktivasi profil modular satu klik.
-- **`FR-009` (Flexible Maintenance Customization):** Pengguna wajib memiliki kendali 100% untuk mengaktifkan atau menonaktifkan fitur Auto-TRIM, hardlink deduplikasi, dan autonomous timers melalui antarmuka GUI maupun perintah CLI.
-- **`FR-010` (Integrated GUI App Marketplace):** Sistem wajib menyertakan toko aplikasi visual bawaan (GNOME Software / KDE Discover) berbasis Flatpak dan Flathub yang tersinkronisasi penuh dengan tema dan kursor Wayland.
-
----
-
-## 6. Non-Functional Requirements (NFR)
-
-- **`NFR-001` (Performance & Latency):**
-  - Eksekusi CLI dasar (`status`, `undo`, `diet`) harus merespons dalam $< 500$ milidetik.
-  - Startup lingkungan *ephemeral* yang sudah ter-cache harus selesai dalam $< 2$ detik.
-- **`NFR-002` (Zero Cloud Lock-in):**
-  - 100% fungsi manajemen sistem, isolasi, dan storage wajib berjalan normal dalam kondisi *air-gapped* (tanpa koneksi internet).
-- **`NFR-003` (Storage Determinism):**
-  - File kembar pada sistem wajib disatukan di tingkat *filesystem inode* sehingga redundansi storage berkurang minimal 20%.
-- **`NFR-004` (Safety & Fault Tolerance):**
-  - Tidak ada tindakan mutasi sistem yang boleh merusak *read-only store* (`/nix/store`).
-- **`NFR-005` (Cross-Platform Extensibility):**
-  - Arsitektur wajib siap dikompilasi untuk target Linux x86_64, aarch64, macOS (Darwin), dan Windows (WSL2).
+| Metric | Target | Verification Method |
+| :--- | :--- | :--- |
+| Rollback Latency | < 2.0 seconds | Automated switch duration test |
+| Dev Stack Provisioning | < 3.0 seconds | Dry-run shell evaluation |
+| Storage Compression Ratio | 40% - 50% savings | Btrfs filesystem compsize audit |
+| Test Suite Reliability | 100% pass (0 failures) | 705-test automated verification suite |

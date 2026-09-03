@@ -1,8 +1,8 @@
-# Arsitektur Teknis Sistem Operasi NEURONIX
+# NEURONIX OS Technical Architecture
 
-Dokumen ini menjelaskan arsitektur 4-Layer Platform yang mendasari distribusi mandiri NEURONIX.
+This document describes the 4-Layer Platform architecture powering the standalone NEURONIX distribution.
 
-## 1. Diagram 4-Layer Platform Architecture
+## 1. 4-Layer Platform Architecture Diagram
 
 ```text
                              NEURONIX PLATFORM
@@ -28,11 +28,11 @@ Dokumen ini menjelaskan arsitektur 4-Layer Platform yang mendasari distribusi ma
                  • Architecture Decision Records (ADR-001 - 005)
 ```
 
-## 2. Struktur Modul Deklaratif (`modules/`)
-1. **Core:** `nix-ld` bawaan, `allowUnfree = true`, terminal sadar generasi.
-2. **Hardware:** Deteksi firmware offline, NVIDIA PRIME, manajemen daya S0ix, PipeWire audio HD duplex, bootloader limit 15 generasi di ESP 1.0 GiB.
-3. **Services:** Active Memory Pressure Shield (ZRAM ZSTD + systemd-oomd), Btrfs balance timer, Flatpak Flathub marketplace, NetworkManager captive portal detection, AirPrint & Mopria IPP driverless printing.
-4. **Desktop:** KDE Plasma 6 Wayland, GNOME Wayland (Tokyo Cyber), Hyprland auto-tiling.
+## 2. Declarative Module Structure (`modules/`)
+1. **Core:** Built-in `nix-ld` dynamic loader, unfree package allowance (`allowUnfree = true`), and generation-aware shell prompts.
+2. **Hardware:** Offline firmware detection, NVIDIA PRIME dynamic offload, S0ix Modern Standby sleep management, PipeWire low-latency HD audio codecs, and EFI System Partition threshold limits (15 generations on 1.0 GiB ESP).
+3. **Services:** Active Memory Pressure Shield (ZRAM ZSTD + systemd-oomd), monthly Btrfs balance timer, Flathub Flatpak application marketplace, NetworkManager captive portal detection, and IPP driverless printing (AirPrint & Mopria).
+4. **Desktop:** KDE Plasma 6 Wayland, GNOME Wayland, and Hyprland auto-tiling window manager.
 
-## 3. Matriks 27 Pilar Pertahanan Perangkat Keras
-Seluruh 27 pilar diintegrasikan secara deklaratif untuk menjamin kebal terhadap kegagalan hardware laptop, desinkronisasi jam dual-boot dengan Windows, dan OOM lockup.
+## 3. Hardware Compatibility Matrix
+All hardware profiles are integrated declaratively to ensure resilience against mobile battery degradation, dual-boot Windows RTC clock desynchronization, and memory pressure lockups.

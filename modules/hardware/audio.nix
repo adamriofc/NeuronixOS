@@ -1,7 +1,7 @@
 { pkgs, lib, ... }:
 
 {
-  # Pilar 18: Subsistem Audio Modern PipeWire & WirePlumber (Latensi Rendah + HD Duplex Bluetooth)
+  # Modern PipeWire & WirePlumber audio subsystem (low-latency + HD duplex Bluetooth)
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
@@ -26,7 +26,7 @@
     };
   };
 
-  # Pilar 24: Eliminasi Bunyi Letupan Audio "Pop" pada Headphone Kabel 3.5mm (ALSA Powersave)
+  # Analog audio DAC pop elimination (ALSA Powersave tuning)
   boot.extraModprobeConfig = ''
     options snd_hda_intel power_save=0
     options snd_hda_intel power_save_controller=N

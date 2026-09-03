@@ -1,8 +1,8 @@
 { pkgs, lib, ... }:
 
 {
-  # Pilar 3 & 25: Pemeliharaan Filesystem Btrfs & Subvolume Management
-  # Layanan balance latar belakang berkala untuk mencegah fragmentasi metadata chunk kosong
+  # Btrfs filesystem maintenance and subvolume topology
+  # Periodic background balance service to prevent metadata chunk fragmentation
   systemd.services.btrfs-balance = {
     description = "NEURONIX Btrfs Metadata Auto-Balance Service";
     serviceConfig = {
@@ -26,7 +26,7 @@
     interval = "daily";
   };
 
-  # Pilar 23: Driver Native ntfs3 + exFAT + Auto-mount USB Eksternal Windows
+  # Native ntfs3 + exFAT drivers and removable media automounting
   boot.supportedFilesystems = [ "btrfs" "ntfs" "exfat" "ext4" "vfat" ];
 
   services.udisks2.enable = true;

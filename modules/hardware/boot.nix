@@ -2,7 +2,7 @@
 
 {
   boot.loader = {
-    # Pilar 5: Batasi riwayat kernel bootloader maksimal 15 generasi (anti-overflow partisi ESP 1.0 GiB)
+    # Bootloader generation limit (15 generations on 1.0 GiB ESP)
     systemd-boot = {
       enable = lib.mkDefault true;
       configurationLimit = 15;
@@ -12,14 +12,14 @@
     timeout = lib.mkDefault 5;
   };
 
-  # Pilar 2 & 11: Sinkronisasi Dual-Boot Windows (Jam RTC Lokal & Deteksi Bootloader)
+  # Dual-boot Windows synchronization (RTC local time & UEFI boot discovery)
   time.hardwareClockInLocalTime = lib.mkDefault true;
 
-  # Pilar 14: UEFI Boot Assessment Watchdog (Anti-mati total saat pemadaman listrik di tengah update)
+  # UEFI Boot Assessment Watchdog (power-loss protection during update)
   systemd.watchdog.runtimeTime = "30s";
   systemd.watchdog.rebootTime = "10min";
 
-  # Pilar 12 & 10: Kernel Tuning (SteamOS vm.max_map_count & S0ix deep sleep)
+  # Kernel tuning (SteamOS vm.max_map_count and S0ix deep sleep)
   boot.kernelParams = [
     "mem_sleep_default=deep"
     "quiet"
@@ -28,7 +28,7 @@
   ];
 
   boot.kernel.sysctl = {
-    # Standar SteamOS 3 / Fedora untuk gaming berat, Proton anti-cheat, dan IDE raksasa
+    # SteamOS 3 / Fedora standard for high-concurrency gaming, Proton, and large IDEs
     "vm.max_map_count" = 2147483642;
     "fs.file-max" = 2097152;
   };

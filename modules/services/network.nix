@@ -4,7 +4,7 @@
   # Jaringan Utama via NetworkManager
   networking.networkmanager = {
     enable = true;
-    # Pilar 21: Deteksi Otomatis Captive Portal Wi-Fi Publik (Hotel/Cafe/Bandara)
+    # Captive portal detection for public Wi-Fi networks
     settings = {
       connectivity = {
         uri = "http://nmcheck.gnome.org/check_network_status";
@@ -13,7 +13,7 @@
     };
   };
 
-  # Pilar 16: Skrip Pembantu Impor Root CA Korporat / Kampus (Zscaler/Fortinet Proxy)
+  # Enterprise / Institutional Root CA import utility
   environment.systemPackages = with pkgs; [
     networkmanager
     networkmanager-openvpn
@@ -29,11 +29,11 @@
         exit 1
       fi
       CERT_NAME=$(basename "$CERT_PATH")
-      echo "Mendaftarkan sertifikat $CERT_NAME ke trust-store sistem..."
+      echo "Enrolling certificate $CERT_NAME into system trust store..."
       sudo cp "$CERT_PATH" "/etc/ssl/certs/$CERT_NAME"
       echo "Memperbarui direktori sertifikat..."
       sudo update-ca-certificates 2>/dev/null || true
-      echo "✓ Sertifikat $CERT_NAME berhasil didaftarkan ke trust-store OS & Nix daemon."
+      echo "✓ Certificate $CERT_NAME enrolled successfully into OS & Nix daemon trust store."
     '')
   ];
 }

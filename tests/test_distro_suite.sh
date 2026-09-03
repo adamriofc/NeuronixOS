@@ -233,7 +233,7 @@ test_dev_stack() {
   local stack="$1"
   local out
   out=$(DEV_DRY_RUN=1 "${NEURONIX_BIN}" dev "$stack" 2>&1)
-  if echo "$out" | grep -q "Mode uji (dry-run) berhasil memvalidasi stack $stack"; then
+  if echo "$out" | grep -Eq "Dry-run validation successful for stack $stack|Mode uji.*$stack"; then
     log_pass "neuronix dev $stack correctly loads complete toolchain"
   else
     log_fail "neuronix dev $stack failed: $out"
@@ -268,7 +268,7 @@ test_neuronix_center() {
     log_fail "neuronix-center CLI failed: $out"
   fi
 
-  if echo "$out" | grep -q "Generasi Aktif"; then
+  if echo "$out" | grep -Eq "Active Generation|Generasi Aktif"; then
     log_pass "neuronix-center telemetry correctly detects active generation"
   else
     log_fail "neuronix-center failed to read active generation"
@@ -448,11 +448,11 @@ NC_VER_OUTPUT=$(nix-shell -p python3 --run "python3 '${DISTRO_ROOT}/packages/neu
 assert_output_contains "echo '$NC_VER_OUTPUT'" "NEURONIX Center" "Version output contains brand name"
 assert_exit_code "nix-shell -p python3 --run 'python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --help'" 0 "Flag --help exits 0"
 NC_CLI_OUTPUT=$(nix-shell -p python3 --run "python3 '${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py' --cli")
-assert_output_contains "echo '$NC_CLI_OUTPUT'" "Sistem Operasi" "CLI contains Sistem Operasi field"
-assert_output_contains "echo '$NC_CLI_OUTPUT'" "Versi Kernel" "CLI contains Versi Kernel field"
-assert_output_contains "echo '$NC_CLI_OUTPUT'" "Prosesor" "CLI contains Prosesor field"
+assert_output_contains "echo '$NC_CLI_OUTPUT'" "Operating System" "CLI contains Operating System field"
+assert_output_contains "echo '$NC_CLI_OUTPUT'" "Kernel Version" "CLI contains Kernel Version field"
+assert_output_contains "echo '$NC_CLI_OUTPUT'" "Processor" "CLI contains Processor field"
 assert_output_contains "echo '$NC_CLI_OUTPUT'" "Storage Format" "CLI contains Storage Format field"
-assert_output_contains "echo '$NC_CLI_OUTPUT'" "Pengisian Bat." "CLI contains Pengisian Bat. field"
+assert_output_contains "echo '$NC_CLI_OUTPUT'" "Battery Limit" "CLI contains Battery Limit field"
 
 # ------------------------------------------------------------------------------
 # SUITE 17: Security & Permission Invariants
@@ -476,15 +476,15 @@ assert_contains "${DISTRO_ROOT}/modules/core/default.nix" "auto-optimise-store =
 suite_header "18 - ADR Documentation & Citation Integrity"
 
 assert_contains "${DISTRO_ROOT}/docs/adr/ADR-001-why-flakes.md" "Accepted" "ADR-001 is Accepted"
-assert_contains "${DISTRO_ROOT}/docs/adr/ADR-001-why-flakes.md" "Konteks & Masalah" "ADR-001 contains Konteks & Masalah"
+assert_contains "${DISTRO_ROOT}/docs/adr/ADR-001-why-flakes.md" "Context & Problem Statement" "ADR-001 contains Context & Problem Statement"
 assert_contains "${DISTRO_ROOT}/docs/adr/ADR-002-why-calamares-flake-generator.md" "Accepted" "ADR-002 is Accepted"
-assert_contains "${DISTRO_ROOT}/docs/adr/ADR-002-why-calamares-flake-generator.md" "Konteks & Masalah" "ADR-002 contains Konteks & Masalah"
+assert_contains "${DISTRO_ROOT}/docs/adr/ADR-002-why-calamares-flake-generator.md" "Context & Problem Statement" "ADR-002 contains Context & Problem Statement"
 assert_contains "${DISTRO_ROOT}/docs/adr/ADR-003-immutable-store-vs-flatpak.md" "Accepted" "ADR-003 is Accepted"
-assert_contains "${DISTRO_ROOT}/docs/adr/ADR-003-immutable-store-vs-flatpak.md" "Konteks & Masalah" "ADR-003 contains Konteks & Masalah"
+assert_contains "${DISTRO_ROOT}/docs/adr/ADR-003-immutable-store-vs-flatpak.md" "Context & Problem Statement" "ADR-003 contains Context & Problem Statement"
 assert_contains "${DISTRO_ROOT}/docs/adr/ADR-004-update-channel-strategy.md" "Accepted" "ADR-004 is Accepted"
-assert_contains "${DISTRO_ROOT}/docs/adr/ADR-004-update-channel-strategy.md" "Konteks & Masalah" "ADR-004 contains Konteks & Masalah"
+assert_contains "${DISTRO_ROOT}/docs/adr/ADR-004-update-channel-strategy.md" "Context & Problem Statement" "ADR-004 contains Context & Problem Statement"
 assert_contains "${DISTRO_ROOT}/docs/adr/ADR-005-hardware-detection-architecture.md" "Accepted" "ADR-005 is Accepted"
-assert_contains "${DISTRO_ROOT}/docs/adr/ADR-005-hardware-detection-architecture.md" "Konteks & Masalah" "ADR-005 contains Konteks & Masalah"
+assert_contains "${DISTRO_ROOT}/docs/adr/ADR-005-hardware-detection-architecture.md" "Context & Problem Statement" "ADR-005 contains Context & Problem Statement"
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
 TOTAL_TESTS=$((PASSED_COUNT + FAILED_COUNT))

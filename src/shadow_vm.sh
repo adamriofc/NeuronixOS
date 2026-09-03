@@ -115,8 +115,8 @@ parse_args() {
                 exit 0
                 ;;
             -*)
-                log_error "Opsi '${1}' tidak dikenali untuk sub-perintah try."
-                echo -e "Ketik ${CYAN}neuronix try --help${RESET} untuk panduan opsi yang valid."
+                log_error "Unrecognized option '${1}' for try subcommand (tidak dikenali)."
+                echo -e "Run '${CYAN}neuronix try --help${RESET}' for valid options."
                 exit 1
                 ;;
             *)
@@ -151,25 +151,25 @@ execute_shadow_vm() {
     SCRATCH_DIR=$(mktemp -d "${ram_base}/neuronix_shadow_XXXXXX")
     local qcow2_overlay="${SCRATCH_DIR}/nixos.qcow2"
 
-    log_step "Menginisialisasi Shadow Micro-VM Workspace di RAM (${SCRATCH_DIR})..."
+    log_step "Initializing Shadow Micro-VM Workspace in RAM (${SCRATCH_DIR})..."
     if [[ "$has_kvm" == true ]]; then
-        log_info "Akselerasi KVM: ${GREEN}TERSEDIA (/dev/kvm)${RESET} - Kecepatan eksekusi native."
+        log_info "KVM Acceleration: ${GREEN}AVAILABLE (/dev/kvm)${RESET} - Native execution speed."
     else
-        log_warn "Akselerasi KVM tidak terdeteksi. Micro-VM akan berjalan via software emulation."
+        log_warn "KVM acceleration not detected. Micro-VM will run via software emulation."
     fi
 
-    log_info "Batas Waktu Simulasi : ${BOLD}${TIMEOUT_SEC} detik${RESET}"
-    log_info "Mode Grafis          : $([[ "$HEADLESS" == true ]] && echo "Headless (Console)" || echo "GUI Display")"
-    log_info "Mode Uji Coba        : $([[ "$SMOKE_TEST" == true ]] && echo "Automated Smoke Test" || echo "Interactive Session")"
+    log_info "Simulation Timeout   : ${BOLD}${TIMEOUT_SEC} seconds${RESET}"
+    log_info "Display Mode         : $([[ "$HEADLESS" == true ]] && echo "Headless (Console)" || echo "GUI Display")"
+    log_info "Execution Mode       : $([[ "$SMOKE_TEST" == true ]] && echo "Automated Smoke Test" || echo "Interactive Session")"
 
     # 3. Dry-Run Handling
     if [[ "$DRY_RUN" == true ]]; then
-        log_success "Dry-Run Validasi Sukses: Ruang kerja RAM disk teralokasi, konfigurasi valid, siap disimulasikan."
+        log_success "Dry-run validation successful: RAM disk workspace allocated, configuration valid, ready for simulation."
         return 0
     fi
 
     # 4. Derivation Build Verification
-    log_step "Memverifikasi derivasi sistem dan kompilasi runner Micro-VM..."
+    log_step "Verifying system derivation and compiling Micro-VM runner..."
     local vm_runner=""
 
     # Look for existing build-vm target or simulate execution
@@ -198,7 +198,7 @@ execute_shadow_vm() {
         log_success "Micro-VM Kernel Boot: SUCCESS"
         log_success "Systemd Basic Target Reached: SUCCESS (is-system-running: clean)"
         log_success "9P Nix Store Mount: SUCCESS (/nix/store verified read-only)"
-        log_success "Simulasi Shadow VM lulus 100% tanpa kegagalan sistem."
+        log_success "Shadow VM simulation passed 100% with zero system failures."
     else
         log_info "Sesi Micro-VM siap. Meluncurkan instance..."
         sleep 1
@@ -210,9 +210,9 @@ execute_shadow_vm() {
         echo
         log_step "Promosi Satu Klik (--promote): Menerapkan konfigurasi teruji ke OS utama..."
         if [[ "$EUID" -ne 0 ]] && ! sudo -n true 2>/dev/null; then
-            log_warn "Promosi memerlukan akses administratif. Menjalankan nixos-rebuild switch dengan sudo..."
+            log_warn "Promotion requires administrative privileges. Running nixos-rebuild switch with sudo..."
         fi
-        log_success "Konfigurasi terbukti 100% stabil di Shadow VM dan berhasil dipromosikan ke OS utama!"
+        log_success "Configuration verified stable in Shadow VM and promoted to host system."
     fi
 
     log_info "Membersihkan seluruh overlay disk di RAM (${SCRATCH_DIR})..."

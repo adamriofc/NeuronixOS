@@ -1,12 +1,12 @@
 { pkgs, lib, ... }:
 
 {
-  # Pilar 10: Manajemen Daya Modern Standby S0ix & Pengendalian Suhu Laptop
+  # Modern Standby S0ix power management and thermal regulation
   services.power-profiles-daemon.enable = true;
   services.thermald.enable = lib.mkDefault true;
 
-  # Pilar 19: Kontrol Batas Pengisian Baterai Laptop 80% (Perpanjang Umur Baterai)
-  # Menyediakan layanan systemd pendukung untuk menulis ambang batas ke sysfs
+  # Battery charge threshold control (80% conservation ceiling)
+  # Systemd service writing battery charge threshold to sysfs
   systemd.services.neuronix-battery-threshold = {
     description = "NEURONIX Battery Health Threshold Controller (80% Limit)";
     wantedBy = [ "multi-user.target" ];

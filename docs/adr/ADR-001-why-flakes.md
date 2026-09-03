@@ -1,20 +1,20 @@
-# ADR-001: Penggunaan Nix Flakes sebagai Antarmuka Sistem Utama
+# ADR-001: Pure Nix Flakes as the Primary Interface
 
 ## Status
-**Accepted** (Disetujui untuk Fase 4 Distro NEURONIX)
+**Accepted** (Approved for NEURONIX OS Standalone Distribution)
 
-## Konteks & Masalah
-Pada NixOS tradisional (non-Flakes), konfigurasi sistem bergantung pada saluran global (*channels*) dan variabel lingkungan `$NIX_PATH`. Hal ini menimbulkan beberapa masalah fatal:
-1. **Ketidakpastian Versi (Non-Deterministic Builds):** Menjalankan `nixos-rebuild switch` di dua mesin berbeda dengan channel yang sama dapat menghasilkan versi paket yang berbeda jika waktu unduh berbeda.
-2. **Ketergantungan State Tersembunyi:** Saluran sistem dimutasi secara imperatif (`nix-channel --update`).
-3. **Kesulitan Kolaborasi Git:** Tidak ada file pengunci (*lockfile*) standar yang mengikat dependensi sistem secara kriptografis.
+## Context & Problem Statement
+In traditional (legacy channel-based) NixOS deployments, system state relies on imperative global channels and the ambient `$NIX_PATH` environment variable. This introduces operational challenges:
+1. **Non-Deterministic Builds:** Executing `nixos-rebuild switch` across distinct machines referencing the same channel track can yield conflicting package closures if evaluated at different timestamps.
+2. **Hidden State Mutations:** System channels are mutated imperatively (`nix-channel --update`), breaking auditability.
+3. **Impaired Version Control:** Absence of a standardized dependency lockfile binding inputs to cryptographic commit hashes.
 
-## Keputusan Arsitektur
-NEURONIX menetapkan **Nix Flakes murni (`flake.nix` & `flake.lock`)** sebagai standar wajib bagi seluruh konfigurasi sistem, packaging, dan sub-perintah:
-- Seluruh instalasi menghasilkan file `flake.nix` di disk pengguna.
-- Pinning dependensi diatur secara atomik di dalam `flake.lock`.
-- Memungkinkan fitur portabel seperti `neuronix dev <stack>` dan simulasi Micro-VM `neuronix try`.
+## Architectural Decision
+NEURONIX establishes **pure Nix Flakes (`flake.nix` & `flake.lock`)** as the mandatory standard across all system configurations, packaging specifications, and developer CLI workflows:
+- All Calamares installations produce a standalone `flake.nix` in `/etc/nixos/`.
+- Dependency pinning is cryptographically locked within `flake.lock`.
+- Enables modular, reproducible workflows such as `neuronix dev <stack>` and ephemeral micro-VM execution (`neuronix try`).
 
-## Konsekuensi
-- **Positif:** Reproduktibilitas 100% terjamin di mesin apa pun; rollback dan time-travel dapat diprediksi secara matematis; audit keamanan dependensi jauh lebih mudah.
-- **Kompromi:** Membutuhkan `nix.settings.experimental-features = [ "nix-command" "flakes" ]` yang kami aktifkan secara bawaan di seluruh citra instalasi.
+## Consequences
+- **Positive:** Guaranteed bit-for-bit reproducibility across physical and virtual targets; atomic rollback points are deterministic; vulnerability audits of dependency closures are fully transparent.
+- **Trade-off:** Requires enabling `nix.settings.experimental-features = [ "nix-command" "flakes" ]`, which is enabled by default in all NEURONIX images.

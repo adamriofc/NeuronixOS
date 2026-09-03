@@ -39,7 +39,7 @@
         hyprland = import ./modules/desktop/hyprland.nix;
       };
 
-      # Konfigurasi sistem target terpasang (Default Desktop)
+      # Target installed system configuration (Default Desktop)
       nixosConfigurations."neuronix-desktop" = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [

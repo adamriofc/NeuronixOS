@@ -1,7 +1,7 @@
 { pkgs, lib, ... }:
 
 {
-  # Pilar 4 & 9: Ekosistem Aplikasi Grafis Terpadu Flatpak & Flathub
+  # Integrated Flatpak & Flathub application marketplace
   services.flatpak.enable = true;
 
   # Inisialisasi Otomatis Remote Flathub saat Sistem Pertama Booting
@@ -17,7 +17,7 @@
     };
   };
 
-  # Pilar 9: Pemetaan Declarative portals.conf untuk Mencegah File Chooser Freeze di Wayland
+  # Declarative portals.conf mapping to prevent file chooser freeze under Wayland
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [

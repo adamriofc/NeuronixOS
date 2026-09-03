@@ -28,7 +28,7 @@ assert_output_contains "grep -F 'zramSwap' '${DISTRO_PATH}/modules/services/memo
 # 13-18. Calamares Declarative Installer Engine Invariants
 assert_eq "$(test -x "${DISTRO_PATH}/installer/scripts/neuronix-install-engine.sh" && echo "exec" || echo "non-exec")" "exec" "neuronix-install-engine.sh is executable"
 INSTALL_OUT=$(DRY_RUN=1 bash "${DISTRO_PATH}/installer/scripts/neuronix-install-engine.sh" 2>&1)
-assert_output_contains "echo '$INSTALL_OUT'" "Verifikasi dry-run sukses" "Installer engine dry-run completes successfully"
+assert_output_contains "echo '$INSTALL_OUT'" "Dry-run verification successful" "Installer engine dry-run completes successfully"
 assert_eq "$(test -f "/tmp/neuronix-mock-install/etc/nixos/flake.nix" && echo "exists" || echo "missing")" "exists" "Installer generates clean flake.nix"
 assert_eq "$(test -f "/tmp/neuronix-mock-install/etc/nixos/configuration.nix" && echo "exists" || echo "missing")" "exists" "Installer generates clean configuration.nix"
 assert_exit_code "nix-instantiate --parse '/tmp/neuronix-mock-install/etc/nixos/configuration.nix'" 0 "Generated configuration.nix has valid Nix syntax"
@@ -45,7 +45,7 @@ assert_exit_code "$TARGET_BIN dev nonexistent_stack 2>/dev/null" 1 "Invalid stac
 # 25-28. NEURONIX Center Telemetry & ADRs
 CENTER_OUT=$(nix-shell -p python3 --run "python3 '${DISTRO_PATH}/packages/neuronix-center/neuronix_center.py' --cli" 2>&1)
 assert_output_contains "echo '$CENTER_OUT'" "NEURONIX CONTROL CENTER" "neuronix-center banner emitted in CLI mode"
-assert_output_contains "echo '$CENTER_OUT'" "Generasi Aktif" "neuronix-center telemetry inspects active generation"
+assert_output_contains "echo '$CENTER_OUT'" "Active Generation" "neuronix-center telemetry inspects active generation"
 assert_eq "$(test -f "${DISTRO_PATH}/docs/adr/ADR-001-why-flakes.md" && echo "exists" || echo "missing")" "exists" "ADR-001 exists"
 assert_eq "$(test -f "${DISTRO_PATH}/docs/adr/ADR-002-why-calamares-flake-generator.md" && echo "exists" || echo "missing")" "exists" "ADR-002 exists"
 

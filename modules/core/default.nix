@@ -16,7 +16,7 @@
     ];
   };
 
-  # Pilar 1: Auto-injeksi allowUnfree untuk software berlisensi proprietary (Steam, NVIDIA, Spotify)
+  # Proprietary licensed package support (Steam, NVIDIA, Spotify)
   nixpkgs.config.allowUnfree = true;
 
   # Aktivasi Global nix-ld: Eksekusi biner FHS Linux konvensional tanpa error

@@ -1,7 +1,7 @@
 { lib, ... }:
 
 {
-  # Pilar 17: Active Memory Pressure Shield (ZRAM ZSTD + systemd-oomd PSI)
+  # Active Memory Pressure Shield (ZRAM ZSTD + systemd-oomd)
   # Menggandakan kapasitas RAM efektif, mengeliminasi swap thrashing, freeze, dan random hard-reboot.
 
   # 1. ZRAM Swap Terkompresi ZSTD di Memori RAM
@@ -22,7 +22,7 @@
     };
   };
 
-  # 3. Tuning Virtual Memory Kernel untuk ZRAM Modern
+  # Kernel Virtual Memory tuning for modern ZRAM
   boot.kernel.sysctl = {
     "vm.swappiness" = 180;          # Proaktif mengompresi memori pasif ke ZRAM
     "vm.watermark_boost_factor" = 0; # Mencegah lonjakan kswapd agresif

@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 {
-  # Pilar 27: Otentikasi Git SSH & GPG Pinentry Terpadu di Wayland
+  # Git SSH & GPG Pinentry authentication under Wayland
   programs.gnupg.agent = {
     enable = true;
     enableSSHSupport = true;
@@ -14,6 +14,6 @@
     wheelNeedsPassword = true;
   };
 
-  # PolicyKit untuk otentikasi GUI
+  # PolKit for graphical privilege escalation
   security.polkit.enable = true;
 }

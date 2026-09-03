@@ -63,24 +63,24 @@ show_help() {
     echo -e "${BOLD}USAGE:${RESET}"
     echo -e "  ${CYAN}${PROGRAM_NAME}${RESET} <COMMAND> [OPTIONS]\n"
     echo -e "${BOLD}CORE COMMANDS:${RESET}"
-    echo -e "  ${GREEN}status${RESET}          Tampilkan dashboard telemetri sistem & kesehatan storage"
-    echo -e "  ${GREEN}diet${RESET}            Pangkas sampah sistem, satukan file kembar & TRIM ke host SSD"
+    echo -e "  ${GREEN}status${RESET}          Display system telemetry dashboard and storage health"
+    echo -e "  ${GREEN}diet${RESET}            Reclaim storage, optimize store hardlinks, and issue TRIM"
     echo -e "  ${GREEN}run${RESET} <pkgs...>   Jalankan software di ruang isolasi sekali pakai di RAM"
     echo -e "  ${GREEN}dev${RESET} <stack>     Lingkungan pengembang satu-perintah hermetis (python/rust/node/ai/go)"
     echo -e "  ${GREEN}try${RESET} [options]   Simulasikan konfigurasi di Shadow Micro-VM di RAM (< 3 detik)"
     echo -e "  ${GREEN}verify${RESET} <pkg>    Verifikasi formal paket via dry-build (Zero-Blast Radius)"
     echo -e "  ${GREEN}shield${RESET}          Dashboard diagnosa memori, ZRAM & PSI Active Memory Shield"
-    echo -e "  ${GREEN}generations${RESET}     Tampilkan linimasa generasi sistem untuk time-travel rollback"
-    echo -e "  ${GREEN}battery${RESET} [val]   Atur ambang batas pengisian daya baterai laptop (Pilar 19: 80%)"
+    echo -e "  ${GREEN}generations${RESET}     Display chronological timeline of system generations"
+    echo -e "  ${GREEN}battery${RESET} [val]   Configure laptop battery charging threshold (80% ceiling)"
     echo -e "  ${GREEN}center${RESET}          Luncurkan aplikasi grafis NEURONIX Control Center"
     echo -e "  ${GREEN}mcp${RESET}             Luncurkan server Model Context Protocol (JSON-RPC 2.0 over stdio)"
-    echo -e "  ${GREEN}undo${RESET}            Rollback instan ke generasi sistem sebelumnya (< 2 detik)"
-    echo -e "  ${GREEN}version${RESET}         Tampilkan informasi versi dan metadata arsitektur"
-    echo -e "  ${GREEN}help${RESET}            Tampilkan panduan penggunaan ini\n"
+    echo -e "  ${GREEN}undo${RESET}            Instantly rollback to previous system generation (< 2s)"
+    echo -e "  ${GREEN}version${RESET}         Display version and architecture metadata"
+    echo -e "  ${GREEN}help${RESET}            Display this usage guide\n"
     echo -e "${BOLD}EXAMPLES:${RESET}"
-    echo -e "  ${DIM}# Cek kesehatan sistem dan disk virtual${RESET}"
+    echo -e "  ${DIM}# Check system and storage health${RESET}"
     echo -e "  ${PROGRAM_NAME} status\n"
-    echo -e "  ${DIM}# Pangkas storage dan lepaskan blok disk ke Host Physical Storage${RESET}"
+    echo -e "  ${DIM}# Reclaim storage and release blocks to host storage via TRIM${RESET}"
     echo -e "  ${PROGRAM_NAME} diet\n"
     echo -e "  ${DIM}# Coba aplikasi tanpa mengotori PC (misal: jq dan cowsay)${RESET}"
     echo -e "  ${PROGRAM_NAME} run jq cowsay\n"
@@ -120,7 +120,7 @@ cmd_status() {
     echo -e "  ├─ Linux Kernel      : ${CYAN}${kernel_ver}${RESET}"
     echo -e "  ├─ Hypervisor Type   : ${YELLOW}${virt_type}${RESET} (KVM/VirtIO accelerated)"
     echo -e "  ├─ Active Generation : ${BOLD}Gen #${current_gen}${RESET}"
-    echo -e "  └─ Total History     : ${total_gen} generasi tersedia untuk rollback instan"
+    echo -e "  └─ Total History     : ${total_gen} generations available for rollback"
     echo
 
     # 2. Storage Health
@@ -197,7 +197,7 @@ cmd_status() {
     echo -e "  ├─ Battery Longevity  : ${batt_status}"
     echo -e "  └─ Audio Subsystem    : ${pipewire_status}"
     echo
-    log_success "Seluruh parameter subsistem dalam kondisi optimal."
+    log_success "All subsystem parameters are operating at optimal status."
 }
 
 cmd_diet() {
@@ -249,7 +249,7 @@ cmd_diet() {
     else
         log_success "Siklus perampingan selesai! Sistem Anda sudah berada pada kondisi terbersih."
     fi
-    log_success "Sinyal TRIM unmap berhasil dilepaskan ke Host Physical Storage."
+    log_success "TRIM unmap signal successfully issued to host storage controller."
 }
 
 cmd_run() {
@@ -259,12 +259,12 @@ cmd_run() {
         exit 1
     fi
 
-    log_info "Mempersiapkan ruang isolasi ephemeral untuk: ${BOLD}$*${RESET}..."
+    log_info "Preparing ephemeral isolation subshell for: ${BOLD}$*${RESET}..."
     log_info "Lingkungan berjalan di memori RAM dan akan lenyap bersih begitu terminal ditutup."
     echo
 
-    # Luncurkan subshell interaktif dengan nix-shell
-    # Pengguna langsung masuk ke environment dengan software yang diminta
+    # Launch interactive subshell with nix-shell
+    # User immediately enters environment with requested software
     nix-shell -p "$@"
     
     local exit_code=$?
@@ -309,13 +309,13 @@ cmd_dev() {
             ;;
     esac
 
-    log_step "Mempersiapkan lingkungan pengembang satu-perintah: ${BOLD}${stack}${RESET}..."
+    log_step "Provisioning isolated development environment: ${BOLD}${stack}${RESET}..."
     log_info "Toolchain lengkap yang disediakan: ${BOLD}${pkgs[*]}${RESET}"
     log_info "Lingkungan hermetis di RAM aktif. Menutup terminal akan membersihkan memori."
     echo
 
     if [[ "${DEV_DRY_RUN:-0}" == "1" ]]; then
-        log_success "Mode uji (dry-run) berhasil memvalidasi stack ${stack}: ${pkgs[*]}"
+        log_success "Dry-run validation successful for stack ${stack}: ${pkgs[*]}"
         return 0
     fi
 
@@ -328,7 +328,7 @@ cmd_dev() {
 
 cmd_undo() {
     print_banner
-    log_warn "PERINGATAN: Memulai proses Rollback atomik ke generasi sebelumnya..."
+    log_warn "WARNING: Initiating atomic rollback to previous system generation..."
     
     local prev_gen
     prev_gen="$(get_current_generation)"
@@ -343,8 +343,8 @@ cmd_undo() {
     new_gen="$(get_current_generation)"
 
     echo
-    log_success "Rollback sukses! Sistem berhasil beralih dari Gen #${prev_gen} $\to$ ${BOLD}Gen #${new_gen}${RESET}."
-    log_info "Seluruh pustaka, konfigurasi, dan layanan telah kembali persis ke generasi sebelumnya."
+    log_success "Rollback successful: Switched from Gen #${prev_gen} $\to$ ${BOLD}Gen #${new_gen}${RESET}."
+    log_info "All packages, configurations, and services restored to previous generation."
 }
 
 cmd_verify() {
@@ -355,7 +355,7 @@ cmd_verify() {
         exit 1
     fi
 
-    log_step "Menjalankan evaluasi fungsional murni (Formal Proof) untuk paket: ${BOLD}${pkg}${RESET}..."
+    log_step "Running dry-build derivation verification for package: ${BOLD}${pkg}${RESET}..."
     if nix-instantiate --eval -E "with import <nixpkgs> {}; (builtins.hasAttr \"${pkg}\" pkgs)" 2>/dev/null | grep -q "true"; then
         log_success "Formal Proof PASSED: Derivasi '${pkg}' sah dalam closure nixpkgs. Blast-radius: 0."
         return 0
@@ -411,7 +411,7 @@ cmd_generations() {
         if [[ "$gen_num" == "$current_gen" ]]; then
             echo -e "  ${GREEN}▶ Gen #${gen_num}${RESET}          ${CYAN}${mod_time}${RESET}       ${GREEN}* AKTIF (Current)${RESET}"
         else
-            echo -e "    Gen #${gen_num}          ${mod_time}       ${DIM}Tersedia untuk rollback${RESET}"
+            echo -e "    Gen #${gen_num}          ${mod_time}       ${DIM}Available for rollback${RESET}"
         fi
     done
     
@@ -419,12 +419,12 @@ cmd_generations() {
         echo -e "    Gen #${current_gen}          $(date "+%Y-%m-%d %H:%M:%S")       ${GREEN}* AKTIF (Initial)${RESET}"
     fi
     echo
-    log_info "Gunakan '${CYAN}neuronix undo${RESET}' untuk kembali instan ke generasi sebelumnya."
+    log_info "Use '${CYAN}neuronix undo${RESET}' to instantly revert to the previous generation."
 }
 
 cmd_shield() {
     print_banner
-    log_step "Memeriksa Status Active Memory Pressure Shield (Pilar 17)..."
+    log_step ""
     echo
     echo -e "  ${BOLD}MEMORY & SWAP PRESSURE DIAGNOSTICS${RESET}"
     
@@ -442,8 +442,8 @@ cmd_shield() {
     max_map=$(sysctl -n vm.max_map_count 2>/dev/null || echo "unknown")
     
     echo -e "  ${BOLD}Kernel Memory Parameters:${RESET}"
-    echo -e "  ├─ vm.swappiness      : ${CYAN}${swappiness}${RESET} (Pilar 17 standard: 180)"
-    echo -e "  ├─ vm.vfs_cache_press : ${CYAN}${vfs_pressure}${RESET} (Pilar 17 standard: 50)"
+    echo -e "  ├─ vm.swappiness      : ${CYAN}${swappiness}${RESET} (Standard: 180)"
+    echo -e "  ├─ vm.vfs_cache_press : ${CYAN}${vfs_pressure}${RESET} (Standard: 50)"
     echo -e "  └─ vm.max_map_count   : ${CYAN}${max_map}${RESET} (SteamOS standard: 2147483642)"
     echo
     
@@ -463,16 +463,16 @@ cmd_battery() {
     batt_file=$(find /sys/class/power_supply/ -name "charge_control_limit_max" 2>/dev/null | head -n 1 || true)
     
     if [[ -z "$batt_file" || ! -f "$batt_file" ]]; then
-        log_warn "Hardware baterai laptop dengan charge_control_limit_max tidak terdeteksi."
+        log_warn "Laptop battery hardware with charge_control_limit_max was not detected."
         echo -e "Perangkat beroperasi dalam mode desktop / AC permanen."
         return 0
     fi
     
     case "$target" in
         80|limit|on)
-            log_step "Mengaktifkan Ambang Batas 80% (Pilar 19: Battery Longevity Shield)..."
+            log_step ""
             if echo 80 | sudo tee "$batt_file" &>/dev/null; then
-                log_success "Ambang batas pengisian daya berhasil disetel ke 80%."
+                log_success "Battery charge threshold successfully configured to 80%."
             else
                 log_error "Gagal menyetel ambang batas baterai. Butuh akses root."
                 return 1
@@ -491,7 +491,7 @@ cmd_battery() {
             local cur
             cur=$(cat "$batt_file" 2>/dev/null || echo "100")
             print_banner
-            echo -e "  ${BOLD}BATTERY LONGEVITY STATUS (Pilar 19)${RESET}"
+            echo -e "  ${BOLD}BATTERY LONGEVITY STATUS${RESET}"
             echo -e "  ├─ Batas Pengisian Saat Ini : ${BOLD}${cur}%${RESET}"
             if [[ "$cur" -le 80 ]]; then
                 echo -e "  └─ Mode Longevity           : ${GREEN}AKTIF (Baterai awet berumur panjang)${RESET}"
@@ -518,7 +518,7 @@ cmd_center() {
             python3 "$center_py" &
         fi
     else
-        log_error "NEURONIX Center belum terpasang di sistem."
+        log_error "NEURONIX Center is not installed on this system."
         exit 1
     fi
 }
@@ -586,8 +586,8 @@ main() {
             show_help
             ;;
         *)
-            log_error "Perintah '${cmd}' tidak dikenali."
-            echo -e "Ketik ${CYAN}${PROGRAM_NAME} help${RESET} untuk melihat daftar perintah yang tersedia."
+            log_error "Command '${cmd}' is unrecognized (tidak dikenali)."
+            echo -e "Run '${CYAN}${PROGRAM_NAME} help${RESET}' to view available commands."
             exit 1
             ;;
     esac

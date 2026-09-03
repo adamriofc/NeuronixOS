@@ -1,7 +1,7 @@
 { pkgs, lib, config, ... }:
 
 {
-  # Pilar 7 & 20: Manajemen GPU Hibrida (NVIDIA Optimus / AMD PRIME) & Hardware Video Decoding
+  # Hybrid GPU management (NVIDIA Optimus / PRIME) & hardware video decode
   hardware.graphics = {
     enable = true;
     enable32Bit = true;

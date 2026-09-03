@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 {
-  # Pilar 22: Percetakan & Pemindaian Nirkabel Tanpa Driver (Driverless Apple AirPrint / Mopria IPP)
+  # Driverless printing & scanning (Apple AirPrint / Mopria IPP)
   services.printing = {
     enable = true;
     drivers = with pkgs; [

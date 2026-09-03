@@ -1,11 +1,11 @@
 { pkgs, lib, ... }:
 
 {
-  # Pilar 6: Inklusi lengkap seluruh firmware proprietary vendor (Wi-Fi, Bluetooth, GPU)
+  # Full redistributable firmware bundle (Wi-Fi, Bluetooth, GPU)
   hardware.enableAllFirmware = true;
   hardware.enableRedistributableFirmware = true;
 
-  # Paket firmware lengkap untuk Realtek, Broadcom, Intel, Mediatek
+  # Complete firmware bundle for Realtek, Broadcom, Intel, and MediaTek
   hardware.firmware = with pkgs; [
     linux-firmware
     wireless-regdb

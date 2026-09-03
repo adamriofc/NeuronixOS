@@ -20,8 +20,8 @@ assert_exit_code "$TARGET_BIN try -h" 0 "neuronix try -h exits 0"
 
 # 6-9. Dry-Run & RAM Scratch Allocation Invariants
 assert_exit_code "$TARGET_BIN try --dry-run" 0 "neuronix try --dry-run exits 0"
-assert_output_contains "$TARGET_BIN try --dry-run" "Akselerasi KVM" "Dry-run inspects KVM hypervisor status"
-assert_output_contains "$TARGET_BIN try --dry-run" "Dry-Run Validasi Sukses" "Dry-run verifies RAM disk reservation"
+assert_output_contains "$TARGET_BIN try --dry-run" "KVM Acceleration" "Dry-run inspects KVM hypervisor status"
+assert_output_contains "$TARGET_BIN try --dry-run" "Dry-run validation successful" "Dry-run verifies RAM disk reservation"
 assert_eq "$(ls -1 /dev/shm/neuronix_shadow_* 2>/dev/null | wc -l)" "0" "Dry-run leaves zero lingering files in /dev/shm"
 
 # 10-15. Automated Smoke Test Invariants
@@ -30,14 +30,14 @@ SMOKE_OUT=$($TARGET_BIN try --smoke-test)
 assert_output_contains "echo '$SMOKE_OUT'" "Micro-VM Kernel Boot: SUCCESS" "Smoke test validates kernel boot"
 assert_output_contains "echo '$SMOKE_OUT'" "Systemd Basic Target Reached: SUCCESS" "Smoke test validates systemd equilibrium"
 assert_output_contains "echo '$SMOKE_OUT'" "9P Nix Store Mount: SUCCESS" "Smoke test validates 9P read-only store mount"
-assert_output_contains "echo '$SMOKE_OUT'" "Simulasi Shadow VM lulus 100%" "Smoke test concludes with 100% pass"
+assert_output_contains "echo '$SMOKE_OUT'" "Shadow VM simulation passed 100%" "Smoke test concludes with 100% pass"
 assert_eq "$(ls -1 /dev/shm/neuronix_shadow_* 2>/dev/null | wc -l)" "0" "Smoke test cleans up /dev/shm upon exit"
 
 # 16-19. Execution Modes & Configuration Parameter Bounds
 assert_exit_code "$TARGET_BIN try --headless --smoke-test" 0 "Explicit headless smoke-test exits 0"
 assert_output_contains "$TARGET_BIN try --gui --dry-run" "GUI Display" "Option --gui sets GUI display mode"
 assert_output_contains "$TARGET_BIN try --headless --dry-run" "Headless (Console)" "Option --headless sets console mode"
-assert_output_contains "$TARGET_BIN try --timeout 30 --dry-run" "30 detik" "Option --timeout parses valid positive integer"
+assert_output_contains "$TARGET_BIN try --timeout 30 --dry-run" "30 seconds" "Option --timeout parses valid positive integer"
 
 # 20-26. Negative Bounds & Error Injection Handling
 assert_exit_code "$TARGET_BIN try --timeout 0" 1 "Option --timeout 0 is rejected with exit code 1"

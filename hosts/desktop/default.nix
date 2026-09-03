@@ -10,6 +10,6 @@
     description = "NEURONIX Default User";
   };
 
-  # Versi state sistem
+  # System state version
   system.stateVersion = "24.11";
 }

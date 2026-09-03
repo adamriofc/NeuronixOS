@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 NEURONIX Center & GUI System Control Center (v1.0.0)
-The user-friendly control center and time-travel rollback hub for NEURONIX OS.
-Provides hardware telemetry, generation inspection, modular profiles, and system maintenance.
+System control center and generation rollback hub for NEURONIX OS.
+Provides hardware telemetry, generation inspection, modular profiles, and storage maintenance.
 """
 
 import sys
@@ -25,7 +25,7 @@ def get_system_telemetry():
         "battery_limit": "80% Conservation Active"
     }
 
-    # Cek generasi aktif
+    # Check active generation
     try:
         current_gen = subprocess.check_output(
             ["readlink", "/nix/var/nix/profiles/system"],
@@ -38,7 +38,7 @@ def get_system_telemetry():
     except Exception:
         telemetry["generation"] = "1 (Initial)"
 
-    # Cek CPU
+    # Check CPU
     try:
         with open("/proc/cpuinfo", "r") as f:
             for line in f:
@@ -51,7 +51,7 @@ def get_system_telemetry():
     return telemetry
 
 def list_generations():
-    """Mengembalikan riwayat generasi sistem."""
+    """Returns the list of system generations."""
     generations = []
     try:
         out = subprocess.check_output(
@@ -66,38 +66,38 @@ def list_generations():
     return generations
 
 def run_cli_mode(args):
-    """Menjalankan NEURONIX Center dalam mode CLI / Headless."""
+    """Executes NEURONIX Center in CLI / headless mode."""
     telemetry = get_system_telemetry()
     print("=" * 64)
     print(f"  NEURONIX CONTROL CENTER & SYSTEM HUB (v{VERSION})")
     print("=" * 64)
-    print(f"  ● Sistem Operasi : {telemetry['os']}")
-    print(f"  ● Versi Kernel   : {telemetry['kernel']}")
-    print(f"  ● Generasi Aktif : #{telemetry['generation']}")
-    print(f"  ● Prosesor (CPU) : {telemetry['cpu']}")
-    print(f"  ● Storage Format : {telemetry['storage']}")
-    print(f"  ● Pengisian Bat. : {telemetry['battery_limit']}")
+    print(f"  ● Operating System : {telemetry['os']}")
+    print(f"  ● Kernel Version   : {telemetry['kernel']}")
+    print(f"  ● Active Generation: #{telemetry['generation']}")
+    print(f"  ● Processor (CPU)  : {telemetry['cpu']}")
+    print(f"  ● Storage Format   : {telemetry['storage']}")
+    print(f"  ● Battery Limit    : {telemetry['battery_limit']}")
     print("-" * 64)
 
     if args.list_generations:
-        print("  [ RIWAYAT GENERASI SISTEM / ATOMIC TIMELINE ]")
+        print("  [ SYSTEM GENERATION TIMELINE ]")
         for gen in list_generations():
             print(f"    {gen}")
         print("-" * 64)
 
     if args.diet:
-        print("  [ MENJALANKAN PEMELIHARAAN STORAGE / DIET ]")
+        print("  [ RUNNING STORAGE MAINTENANCE (DIET) ]")
         subprocess.run(["neuronix", "diet"], check=False)
 
     if args.rollback:
-        print("  [ MENJALANKAN TIME-TRAVEL ROLLBACK SISTEM ]")
+        print("  [ EXECUTING SYSTEM ROLLBACK ]")
         subprocess.run(["sudo", "nixos-rebuild", "switch", "--rollback"], check=False)
 
-    print("  ✓ Sistem NEURONIX beroperasi pada status optimal (100% Hermetic).")
+    print("  ✓ NEURONIX system is operating at optimal status (Hermetic).")
     print("=" * 64)
 
 def run_gui_mode():
-    """Menjalankan antarmuka grafis Tkinter / Qt fallback."""
+    """Launches the graphical user interface."""
     try:
         import tkinter as tk
         from tkinter import ttk, messagebox
@@ -116,51 +116,51 @@ def run_gui_mode():
         )
         header.pack(pady=10)
 
-        # Telemetri Frame
-        frame_tel = ttk.LabelFrame(root, text=" Telemetri Sistem & Perangkat Keras ")
+        # Telemetry Frame
+        frame_tel = ttk.LabelFrame(root, text=" System & Hardware Telemetry ")
         frame_tel.pack(fill="x", padx=15, pady=5)
 
-        ttk.Label(frame_tel, text=f"Substrat: {telemetry['os']}").pack(anchor="w", padx=10, pady=2)
-        ttk.Label(frame_tel, text=f"Generasi Aktif: #{telemetry['generation']}").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_tel, text=f"Substrate: {telemetry['os']}").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_tel, text=f"Active Generation: #{telemetry['generation']}").pack(anchor="w", padx=10, pady=2)
         ttk.Label(frame_tel, text=f"Kernel: {telemetry['kernel']}").pack(anchor="w", padx=10, pady=2)
         ttk.Label(frame_tel, text=f"CPU: {telemetry['cpu']}").pack(anchor="w", padx=10, pady=2)
         ttk.Label(frame_tel, text=f"Filesystem: {telemetry['storage']}").pack(anchor="w", padx=10, pady=2)
 
-        # Profil Modular
-        frame_prof = ttk.LabelFrame(root, text=" Profil Modular Cepat ")
+        # Modular Profiles Frame
+        frame_prof = ttk.LabelFrame(root, text=" Modular Profiles ")
         frame_prof.pack(fill="x", padx=15, pady=5)
 
         v_game = tk.BooleanVar(value=True)
         v_ai = tk.BooleanVar(value=True)
         v_web = tk.BooleanVar(value=False)
 
-        ttk.Checkbutton(frame_prof, text="Profil Gaming & Steam (Proton GE Aktif)", variable=v_game).pack(anchor="w", padx=10, pady=2)
-        ttk.Checkbutton(frame_prof, text="Profil AI Developer (PyTorch + CUDA + Ollama)", variable=v_ai).pack(anchor="w", padx=10, pady=2)
-        ttk.Checkbutton(frame_prof, text="Profil Web Dev (Node.js + Podman/Docker)", variable=v_web).pack(anchor="w", padx=10, pady=2)
+        ttk.Checkbutton(frame_prof, text="Gaming & Steam Profile (Proton GE Enabled)", variable=v_game).pack(anchor="w", padx=10, pady=2)
+        ttk.Checkbutton(frame_prof, text="AI Developer Profile (PyTorch + CUDA + Ollama)", variable=v_ai).pack(anchor="w", padx=10, pady=2)
+        ttk.Checkbutton(frame_prof, text="Web Dev Profile (Node.js + Podman/Docker)", variable=v_web).pack(anchor="w", padx=10, pady=2)
 
-        # Aksi Pemeliharaan & Rollback
-        frame_act = ttk.LabelFrame(root, text=" Operasi Sistem & Time-Travel Guard ")
+        # System Actions & Maintenance Frame
+        frame_act = ttk.LabelFrame(root, text=" System Maintenance & Rollback ")
         frame_act.pack(fill="x", padx=15, pady=5)
 
         def on_rollback():
-            if messagebox.askyesno("Rollback Konfirmasi", "Putar balik sistem ke generasi stabil sebelumnya?"):
+            if messagebox.askyesno("Confirm Rollback", "Revert system to previous stable generation?"):
                 subprocess.run(["sudo", "nixos-rebuild", "switch", "--rollback"], check=False)
-                messagebox.showinfo("Rollback Berhasil", "Sistem berhasil diputar balik dalam < 2 detik!")
+                messagebox.showinfo("Rollback Complete", "System reverted in under 2 seconds.")
 
         def on_diet():
             subprocess.run(["neuronix", "diet"], check=False)
-            messagebox.showinfo("Diet Selesai", "Pembersihan store dan TRIM disk fisik berhasil dieksekusi!")
+            messagebox.showinfo("Maintenance Complete", "Store garbage collection and physical TRIM completed.")
 
         btn_box = ttk.Frame(frame_act)
         btn_box.pack(pady=10)
-        ttk.Button(btn_box, text="⏪ Rollback Instan", command=on_rollback).pack(side="left", padx=5)
-        ttk.Button(btn_box, text="🧹 Bersihkan Store (Diet)", command=on_diet).pack(side="left", padx=5)
-        ttk.Button(btn_box, text="Tutup", command=root.destroy).pack(side="left", padx=5)
+        ttk.Button(btn_box, text="⏪ Instant Rollback", command=on_rollback).pack(side="left", padx=5)
+        ttk.Button(btn_box, text="🧹 Reclaim Storage (Diet)", command=on_diet).pack(side="left", padx=5)
+        ttk.Button(btn_box, text="Close", command=root.destroy).pack(side="left", padx=5)
 
         root.mainloop()
     except Exception as e:
-        # Fallback jika display server grafis tidak tersedia (Headless VM)
-        print(f"[INFO] GUI display tidak tersedia ({e}). Menjalankan CLI mode:")
+        # Fallback if display server is not available (Headless VM)
+        print(f"[INFO] Graphical display server unavailable ({e}). Falling back to CLI mode:")
         class DummyArgs:
             list_generations = True
             diet = False
@@ -169,15 +169,14 @@ def run_gui_mode():
 
 def main():
     parser = argparse.ArgumentParser(description="NEURONIX Center & GUI System Control Center")
-    parser.add_argument("--cli", action="store_true", help="Jalankan dalam mode terminal/CLI")
-    parser.add_argument("--list-generations", action="store_true", help="Tampilkan daftar riwayat generasi")
-    parser.add_argument("--diet", action="store_true", help="Jalankan pembersihan storage (nix diet + TRIM)")
-    parser.add_argument("--rollback", action="store_true", help="Putar balik sistem ke generasi sebelumnya")
+    parser.add_argument("--cli", action="store_true", help="Run in terminal CLI mode")
+    parser.add_argument("--list-generations", action="store_true", help="List system generation history")
+    parser.add_argument("--diet", action="store_true", help="Run store garbage collection and TRIM")
+    parser.add_argument("--rollback", action="store_true", help="Roll back to previous generation")
     parser.add_argument("--version", action="version", version=f"NEURONIX Center {VERSION}")
 
     args = parser.parse_args()
 
-    # Jika dipanggil dengan argumen CLI atau DISPLAY kosong, jalankan CLI
     if args.cli or args.list_generations or args.diet or args.rollback or "DISPLAY" not in os.environ:
         run_cli_mode(args)
     else:
