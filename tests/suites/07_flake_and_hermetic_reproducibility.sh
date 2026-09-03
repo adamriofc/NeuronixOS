@@ -17,8 +17,8 @@ assert_exit_code "python3 -c 'import json; json.load(open(\"$REPO_DIR/flake.lock
 # 4. Flake inputs contain nixpkgs
 assert_output_contains "grep 'nixpkgs' $REPO_DIR/flake.lock" "nixpkgs" "flake.lock records nixpkgs dependency input"
 
-# 5. Flake inputs contain flake-utils
-assert_output_contains "grep 'flake-utils' $REPO_DIR/flake.lock" "flake-utils" "flake.lock records flake-utils dependency input"
+# 5. Flake inputs contain generator/utils dependency
+assert_output_contains "grep -E 'nixos-generators|flake-utils' $REPO_DIR/flake.lock" "generators" "flake.lock records generator or utility dependency input"
 
 # 6. Flake metadata command returns exit 0
 assert_exit_code "nix flake metadata $REPO_DIR" 0 "nix flake metadata command executes with exit 0"
