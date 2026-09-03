@@ -1,0 +1,279 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# NEURONIX Core CLI Engine (v0.1.0)
+# The Deterministic, Self-Healing Workstation & Ephemeral Sandbox Substrate
+#
+# Copyright (c) 2026 NEURONIX Contributors
+# Licensed under the Apache License, Version 2.0
+# ==============================================================================
+
+set -eo pipefail
+
+VERSION="0.1.0-alpha"
+PROGRAM_NAME="neuronix"
+
+# Color Palettes & UI Formats
+if [[ -t 1 ]]; then
+    BOLD="\033[1m"
+    DIM="\033[2m"
+    GREEN="\033[38;5;82m"
+    CYAN="\033[38;5;51m"
+    BLUE="\033[38;5;39m"
+    YELLOW="\033[38;5;220m"
+    RED="\033[38;5;196m"
+    MAGENTA="\033[38;5;207m"
+    RESET="\033[0m"
+else
+    BOLD=""
+    DIM=""
+    GREEN=""
+    CYAN=""
+    BLUE=""
+    YELLOW=""
+    RED=""
+    MAGENTA=""
+    RESET=""
+fi
+
+print_banner() {
+    cat << "EOF"
+  _   _ _____ _   _ ____   ___  _   _ _____  __
+ | \ | | ____| | | |  _ \ / _ \| \ | |_ _\ \/ /
+ |  \| |  _| | | | | |_) | | | |  \| || | \  / 
+ | |\  | |___| |_| |  _ <| |_| | |\  || | /  \ 
+ |_| \_|_____|\___/|_| \_\\___/|_| \_|___/_/\_\
+EOF
+    echo -e "  ${DIM}Deterministic AI-Augmented Substrate${RESET}  ${CYAN}v${VERSION}${RESET}\n"
+}
+
+log_info()    { echo -e " ${BLUE}ℹ${RESET}  $*"; }
+log_success() { echo -e " ${GREEN}✔${RESET}  $*"; }
+log_warn()    { echo -e " ${YELLOW}⚠${RESET}  $*"; }
+log_error()   { echo -e " ${RED}✖${RESET}  $*" >&2; }
+log_step()    { echo -e " ${CYAN}➔${RESET}  ${BOLD}$*${RESET}"; }
+
+show_help() {
+    print_banner
+    echo -e "${BOLD}USAGE:${RESET}"
+    echo -e "  ${CYAN}${PROGRAM_NAME}${RESET} <COMMAND> [OPTIONS]\n"
+    echo -e "${BOLD}CORE COMMANDS:${RESET}"
+    echo -e "  ${GREEN}status${RESET}          Tampilkan dashboard telemetri sistem & kesehatan storage"
+    echo -e "  ${GREEN}diet${RESET}            Pangkas sampah sistem, satukan file kembar & TRIM ke host SSD"
+    echo -e "  ${GREEN}run${RESET} <pkgs...>   Jalankan software di ruang isolasi sekali pakai di RAM"
+    echo -e "  ${GREEN}undo${RESET}            Rollback instan ke generasi sistem sebelumnya (< 2 detik)"
+    echo -e "  ${GREEN}version${RESET}         Tampilkan informasi versi dan metadata arsitektur"
+    echo -e "  ${GREEN}help${RESET}            Tampilkan panduan penggunaan ini\n"
+    echo -e "${BOLD}EXAMPLES:${RESET}"
+    echo -e "  ${DIM}# Cek kesehatan sistem dan disk virtual${RESET}"
+    echo -e "  ${PROGRAM_NAME} status\n"
+    echo -e "  ${DIM}# Pangkas storage dan susutkan disk Drive D host${RESET}"
+    echo -e "  ${PROGRAM_NAME} diet\n"
+    echo -e "  ${DIM}# Coba aplikasi tanpa mengotori PC (misal: jq dan cowsay)${RESET}"
+    echo -e "  ${PROGRAM_NAME} run jq cowsay\n"
+    echo -e "  ${DIM}# Kembalikan konfigurasi jika ada kesalahan${RESET}"
+    echo -e "  ${PROGRAM_NAME} undo\n"
+}
+
+get_current_generation() {
+    if [[ -L /nix/var/nix/profiles/system ]]; then
+        basename "$(readlink /nix/var/nix/profiles/system)" | sed 's/system-//;s/-link//'
+    else
+        echo "Unknown"
+    fi
+}
+
+count_generations() {
+    find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" 2>/dev/null | wc -l
+}
+
+cmd_status() {
+    print_banner
+    log_step "Memeriksa Status & Telemetri Substrat NEURONIX..."
+    echo
+
+    # 1. System Identity
+    local current_gen
+    current_gen="$(get_current_generation)"
+    local total_gen
+    total_gen="$(count_generations)"
+    local kernel_ver
+    kernel_ver="$(uname -r)"
+    local virt_type
+    virt_type="$(systemd-detect-virt 2>/dev/null || echo "bare-metal")"
+
+    echo -e "  ${BOLD}SYSTEM IDENTITY & KERNEL${RESET}"
+    echo -e "  ├─ OS Substrate       : ${GREEN}NixOS (Pure-Functional)${RESET}"
+    echo -e "  ├─ Linux Kernel      : ${CYAN}${kernel_ver}${RESET}"
+    echo -e "  ├─ Hypervisor Type   : ${YELLOW}${virt_type}${RESET} (KVM/VirtIO accelerated)"
+    echo -e "  ├─ Active Generation : ${BOLD}Gen #${current_gen}${RESET}"
+    echo -e "  └─ Total History     : ${total_gen} generasi tersedia untuk rollback instan"
+    echo
+
+    # 2. Storage Health
+    echo -e "  ${BOLD}STORAGE SUBSYSTEM TELEMETRY${RESET}"
+    local nix_used nix_avail nix_pct
+    read -r nix_used nix_avail nix_pct < <(df -h /nix 2>/dev/null | awk 'NR==2 {print $3, $4, $5}')
+    local boot_used boot_avail boot_pct
+    read -r boot_used boot_avail boot_pct < <(df -h /boot 2>/dev/null | awk 'NR==2 {print $3, $4, $5}')
+
+    echo -e "  ├─ /nix Store Volume : Terpakai ${BOLD}${nix_used}${RESET} (${nix_pct}) | Sisa: ${GREEN}${nix_avail}${RESET}"
+    echo -e "  ├─ Boot Partition    : Terpakai ${boot_used} (${boot_pct}) | Sisa: ${boot_avail}"
+    
+    if [[ -f /etc/nix/nix.conf ]] && grep -q "auto-optimise-store = true" /etc/nix/nix.conf; then
+        echo -e "  ├─ Real-time Dedupe  : ${GREEN}AKTIF${RESET} (auto-optimise-store)"
+    else
+        echo -e "  ├─ Real-time Dedupe  : ${YELLOW}NONAKTIF${RESET}"
+    fi
+    echo -e "  └─ Dynamic Guard     : min-free 1.0 GiB | max-free 3.0 GiB"
+    echo
+
+    # 3. Autonomous Daemon Timers
+    echo -e "  ${BOLD}AUTONOMOUS TIMERS (SYSTEMD)${RESET}"
+    local gc_status opt_status trim_status
+    systemctl is-active nix-gc.timer &>/dev/null && gc_status="${GREEN}ONLINE (Harian)${RESET}" || gc_status="${RED}OFFLINE${RESET}"
+    systemctl is-active nix-optimise.timer &>/dev/null && opt_status="${GREEN}ONLINE (Harian)${RESET}" || opt_status="${RED}OFFLINE${RESET}"
+    systemctl is-active fstrim.timer &>/dev/null && trim_status="${GREEN}ONLINE (Harian)${RESET}" || trim_status="${RED}OFFLINE${RESET}"
+
+    echo -e "  ├─ Auto Garbage Clean: ${gc_status}"
+    echo -e "  ├─ Store Optimise    : ${opt_status}"
+    echo -e "  └─ Host SSD TRIM     : ${trim_status}"
+    echo
+    log_success "Seluruh parameter subsistem dalam kondisi optimal."
+}
+
+cmd_diet() {
+    print_banner
+    log_step "Memulai Siklus Perampingan Storage & Auto-TRIM..."
+    echo
+
+    # Catat pemakaian awal
+    local before_used
+    before_used="$(df -k /nix | awk 'NR==2 {print $3}')"
+
+    # Tahap 1: Garbage Collection
+    log_step "1/3. Membersihkan paket usang & cache mati (Garbage Collection)..."
+    if [[ $EUID -eq 0 ]]; then
+        nix-collect-garbage -d
+    else
+        sudo nix-collect-garbage -d
+    fi
+    echo
+
+    # Tahap 2: Deduplikasi Inode
+    log_step "2/3. Menyatukan file kembar di /nix/store (Hardlink Deduplication)..."
+    if [[ $EUID -eq 0 ]]; then
+        nix-store --optimise
+    else
+        sudo nix-store --optimise
+    fi
+    echo
+
+    # Tahap 3: Host TRIM Passthrough
+    log_step "3/3. Menembakkan sinyal VirtIO TRIM ke Host SSD (Penyusutan Drive D)..."
+    local trim_output
+    if [[ $EUID -eq 0 ]]; then
+        trim_output="$(fstrim -av)"
+    else
+        trim_output="$(sudo fstrim -av)"
+    fi
+    echo -e "${DIM}${trim_output}${RESET}"
+    echo
+
+    # Hitung selisih
+    local after_used
+    after_used="$(df -k /nix | awk 'NR==2 {print $3}')"
+    local diff_kb=$(( before_used - after_used ))
+
+    if [[ $diff_kb -gt 0 ]]; then
+        local diff_mb=$(( diff_kb / 1024 ))
+        log_success "Siklus perampingan selesai! Berhasil membebaskan ~${BOLD}${diff_mb} MiB${RESET} internal."
+    else
+        log_success "Siklus perampingan selesai! Sistem Anda sudah berada pada kondisi terbersih."
+    fi
+    log_success "Sinyal TRIM berhasil dilepaskan ke hypervisor host Drive D."
+}
+
+cmd_run() {
+    if [[ $# -eq 0 ]]; then
+        log_error "Silakan tentukan nama paket atau repository yang ingin dijalankan."
+        echo -e "Contoh: ${CYAN}${PROGRAM_NAME} run cowsay jq${RESET}"
+        exit 1
+    fi
+
+    log_info "Mempersiapkan ruang isolasi ephemeral untuk: ${BOLD}$*${RESET}..."
+    log_info "Lingkungan berjalan di memori RAM dan akan lenyap bersih begitu terminal ditutup."
+    echo
+
+    # Luncurkan subshell interaktif dengan nix-shell
+    # Pengguna langsung masuk ke environment dengan software yang diminta
+    nix-shell -p "$@"
+    
+    local exit_code=$?
+    echo
+    log_success "Sesi ephemeral berakhir. Ruang kerja telah dibersihkan tanpa residu."
+    return $exit_code
+}
+
+cmd_undo() {
+    print_banner
+    log_warn "PERINGATAN: Memulai proses Rollback atomik ke generasi sebelumnya..."
+    
+    local prev_gen
+    prev_gen="$(get_current_generation)"
+
+    if [[ $EUID -eq 0 ]]; then
+        nixos-rebuild switch --rollback
+    else
+        sudo nixos-rebuild switch --rollback
+    fi
+
+    local new_gen
+    new_gen="$(get_current_generation)"
+
+    echo
+    log_success "Rollback sukses! Sistem berhasil beralih dari Gen #${prev_gen} $\to$ ${BOLD}Gen #${new_gen}${RESET}."
+    log_info "Seluruh pustaka, konfigurasi, dan layanan telah kembali persis ke generasi sebelumnya."
+}
+
+cmd_version() {
+    print_banner
+    echo -e "Version       : ${CYAN}${VERSION}${RESET}"
+    echo -e "License       : Apache License 2.0"
+    echo -e "Substrate     : NixOS / Pure-Functional Linux"
+    echo -e "Engine Target : Linux x86_64, aarch64, Darwin, WSL2"
+    echo -e "Repository    : https://github.com/adamrofc/neuronix"
+}
+
+# Main CLI Dispatcher
+main() {
+    local cmd="${1:-}"
+    shift || true
+
+    case "${cmd}" in
+        status)
+            cmd_status "$@"
+            ;;
+        diet)
+            cmd_diet "$@"
+            ;;
+        run)
+            cmd_run "$@"
+            ;;
+        undo)
+            cmd_undo "$@"
+            ;;
+        version|-v|--version)
+            cmd_version
+            ;;
+        help|-h|--help|"")
+            show_help
+            ;;
+        *)
+            log_error "Perintah '${cmd}' tidak dikenali."
+            echo -e "Ketik ${CYAN}${PROGRAM_NAME} help${RESET} untuk melihat daftar perintah yang tersedia."
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

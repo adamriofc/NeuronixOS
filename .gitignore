@@ -1,0 +1,22 @@
+# Nix build artifacts
+result
+result-*
+.direnv
+.envrc
+
+# Temporary & Editor files
+*.swp
+*.bak
+*~
+.DS_Store
+*.log
+
+# Caches
+.cache/
+.pytest_cache/
+__pycache__/
+
+# QEMU / VM temporary artifacts
+*.qcow2
+*.img
+*.iso
