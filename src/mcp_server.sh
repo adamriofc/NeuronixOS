@@ -186,12 +186,14 @@ handle_tools_call() {
 
             # Declarative Gatekeeper: evaluate whether package exists in nixpkgs
             if nix-instantiate --eval -E "with import <nixpkgs> {}; (builtins.hasAttr \"${pkg}\" pkgs)" 2>/dev/null | grep -q "true"; then
+                local text="Declarative Verification PASSED: Package '${pkg}' is a valid derivation in nixpkgs closure."
                 local content
-                content=$(jq -n -c --arg pkg "$pkg" '{"content":[{"type":"text","text":"Declarative Verification PASSED: Package \u0027" + $pkg + "\u0027 is a valid derivation in nixpkgs closure."}]}')
+                content=$(jq -n -c --arg text "$text" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
             else
+                local text="Declarative Verification FAILED: Package '${pkg}' cannot be verified in pure nixpkgs evaluation. State modification rejected."
                 local content
-                content=$(jq -n -c --arg pkg "$pkg" '{"content":[{"type":"text","text":"Declarative Verification FAILED: Package \u0027" + $pkg + "\u0027 cannot be verified in pure nixpkgs evaluation. State modification rejected."}]}')
+                content=$(jq -n -c --arg text "$text" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
             fi
             ;;
