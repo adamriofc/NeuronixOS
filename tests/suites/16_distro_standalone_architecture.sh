@@ -50,7 +50,7 @@ assert_eq "$(test -f "${DISTRO_PATH}/docs/adr/ADR-001-why-flakes.md" && echo "ex
 assert_eq "$(test -f "${DISTRO_PATH}/docs/adr/ADR-002-why-calamares-flake-generator.md" && echo "exists" || echo "missing")" "exists" "ADR-002 exists"
 
 # 29-30. Sanitization & Zero Local Path Invariants
-COUNT_DRIVE_D=$( (grep -rn "Drive D" "${DISTRO_PATH}" 2>/dev/null || true) | (grep -v "test_distro_suite.sh" || true) | wc -l)
+COUNT_DRIVE_D=$( (grep -rn "Drive D" "${DISTRO_PATH}" 2>/dev/null || true) | (grep -v "/tests/" || true) | wc -l)
 assert_eq "$COUNT_DRIVE_D" "0" "Zero occurrences of 'Drive D' across Distro files"
-COUNT_USER_PATH=$( (grep -rn "/home/adamrofc" "${DISTRO_PATH}" 2>/dev/null || true) | (grep -v "test_distro_suite.sh" || true) | wc -l)
+COUNT_USER_PATH=$( (grep -rn "/home/adamrofc" "${DISTRO_PATH}" 2>/dev/null || true) | (grep -v "/tests/" || true) | wc -l)
 assert_eq "$COUNT_USER_PATH" "0" "Zero hardcoded user paths across Distro source files"

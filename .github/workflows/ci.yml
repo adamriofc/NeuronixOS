@@ -1,0 +1,42 @@
+name: NEURONIX OS Industrial CI & Resilience Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-verify:
+    name: Industrial Rust-Grade Verification (705 Tests)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix with Flakes Support
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Flake Syntax & Derivation Proof
+        run: |
+          nix-instantiate --parse flake.nix
+          nix-instantiate --parse hosts/iso/default.nix
+          nix-instantiate --parse hosts/desktop/default.nix
+          nix-instantiate --parse packages/neuronix-cli/default.nix
+          nix-instantiate --parse packages/neuronix-center/default.nix
+
+      - name: Execute Distro Verification Suite (199 Tests)
+        run: |
+          bash tests/test_distro_suite.sh
+
+      - name: Execute Master Test Harness (506 Tests)
+        run: |
+          bash tests/run_all_tests.sh
+
+      - name: Verify Installer Dry-Run Simulation
+        run: |
+          DRY_RUN=1 bash installer/scripts/neuronix-install-engine.sh

@@ -6,8 +6,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DISTRO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-PROJECT_ROOT="$(cd "${DISTRO_ROOT}/.." && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+DISTRO_ROOT="${PROJECT_ROOT}"
 NEURONIX_BIN="${PROJECT_ROOT}/src/neuronix"
 
 PASSED_COUNT=0
@@ -304,7 +304,7 @@ suite_header "8 - Absolute Zero Hardcoded PC Sanitization"
 
 test_sanitization() {
   local count_drive_d
-  count_drive_d=$( (grep -rn "Drive D" "${DISTRO_ROOT}" 2>/dev/null || true) | (grep -v "test_distro_suite.sh" || true) | wc -l )
+  count_drive_d=$( (grep -rn "Drive D" "${DISTRO_ROOT}" 2>/dev/null || true) | (grep -v "/tests/" || true) | wc -l )
   if [ "$count_drive_d" -eq 0 ]; then
     log_pass "Zero references to 'Drive D' in Distro/ (100% Clean)"
   else
@@ -312,7 +312,7 @@ test_sanitization() {
   fi
 
   local count_adamrofc
-  count_adamrofc=$( (grep -rn "/home/adamrofc" "${DISTRO_ROOT}" 2>/dev/null || true) | (grep -v "test_distro_suite.sh" || true) | wc -l )
+  count_adamrofc=$( (grep -rn "/home/adamrofc" "${DISTRO_ROOT}" 2>/dev/null || true) | (grep -v "/tests/" || true) | wc -l )
   if [ "$count_adamrofc" -eq 0 ]; then
     log_pass "Zero hardcoded user paths in Distro/ source files (100% Clean)"
   else
