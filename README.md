@@ -6,15 +6,44 @@
 [![NixOS](https://img.shields.io/badge/Substrate-NixOS_24.11_%2F_26.05-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
 [![Architecture](https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg)](#platform-architecture)
 [![Testing](https://img.shields.io/badge/Tests-705%2F705_Passed_(100%25)-success.svg)](#verification--test-harness)
-[![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_ZSTD%3A3-orange.svg)](#2-declarative-calamares-installation-engine)
-[![Memory Management](https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg)](#1-active-memory-pressure-architecture)
+[![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_ZSTD%3A3-orange.svg)](#storage-architecture--autonomous-lifecycle)
+[![Memory Management](https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg)](#active-memory-pressure-architecture)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg)](.github/workflows/ci.yml)
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Platform Architecture](#platform-architecture)
+- [Storage Architecture & Autonomous Lifecycle](#storage-architecture--autonomous-lifecycle)
+  - [Btrfs Subvolume Topology](#btrfs-subvolume-topology)
+  - [Transparent Block Compression (ZSTD:3)](#transparent-block-compression-zstd3)
+  - [Autonomous Storage Pruning & Host SSD TRIM (Auto-TRIM)](#autonomous-storage-pruning--host-ssd-trim-auto-trim)
+  - [Periodic Metadata Balance Timer](#periodic-metadata-balance-timer)
+- [Active Memory Pressure Architecture](#active-memory-pressure-architecture)
+  - [ZRAM In-Memory Compressed Swap Pool](#zram-in-memory-compressed-swap-pool)
+  - [Aggressive Swapping Tuning (`vm.swappiness = 180`)](#aggressive-swapping-tuning-vmswappiness--180)
+  - [Kernel Pressure Stall Information (PSI) & systemd-oomd](#kernel-pressure-stall-information-psi--systemd-oomd)
+- [Hardware Compatibility & Subsystem Hardening Matrix](#hardware-compatibility--subsystem-hardening-matrix)
+- [Comprehensive Command-Line Reference (`neuronix`)](#comprehensive-command-line-reference-neuronix)
+- [Core System Components](#core-system-components)
+  - [1. Declarative Calamares Installation Engine](#1-declarative-calamares-installation-engine)
+  - [2. System Control Center (`neuronix-center`)](#2-system-control-center-neuronix-center)
+  - [3. Isolated Development Environments (`neuronix dev`)](#3-isolated-development-environments-neuronix-dev)
+  - [4. Ephemeral In-Memory Micro-VM Simulation (`neuronix try`)](#4-ephemeral-in-memory-micro-vm-simulation-neuronix-try)
+  - [5. Model Context Protocol (MCP) Server](#5-model-context-protocol-mcp-server)
+- [Building & Installation](#building--installation)
+- [Post-Installation Administration](#post-installation-administration)
+- [Verification & Test Harness (705 Tests)](#verification--test-harness)
+- [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
+- [License](#license)
 
 ---
 
 ## Overview
 
-**NEURONIX OS** is a declarative, reproducible Linux operating system platform built upon the NixOS kernel and packaging infrastructure. It bridges functional package management and atomic system transitions with an automated graphical installation workflow, integrated hardware profiles, and developer execution engines.
+**NEURONIX OS** is a declarative, reproducible Linux operating system platform built upon the NixOS kernel and packaging infrastructure. It bridges pure-functional package management and atomic system transitions with an automated graphical installation workflow, integrated hardware profiles, and developer execution engines.
 
 The platform architecture is structured into four cohesive layers:
 1. **User Experience Layer:** Graphical system installer powered by Calamares, visual generation inspection, and curated desktop configurations (KDE Plasma 6, GNOME Wayland, and Hyprland).
@@ -50,6 +79,76 @@ The platform architecture is structured into four cohesive layers:
 
 ---
 
+## Storage Architecture & Autonomous Lifecycle
+
+Storage management in immutable and functional operating systems requires proactive maintenance to prevent disk expansion, file duplication, and SSD wear. NEURONIX implements an autonomous, multi-tier storage subsystem.
+
+### Btrfs Subvolume Topology
+The installation engine partitions storage utilizing a standardized Btrfs subvolume architecture designed for isolation, backup atomicity, and performance:
+
+| Subvolume | Mount Point | Mount Options | Purpose |
+| :--- | :--- | :--- | :--- |
+| `@` | `/` | `compress=zstd:3,noatime,space_cache=v2` | Operating system root files and immutable configuration pointers. |
+| `@nix` | `/nix` | `compress=zstd:3,noatime` | The cryptographic, content-addressed `/nix/store`. Deduplicated and compressed. |
+| `@home` | `/home` | `compress=zstd:3,noatime` | User data, projects, dotfiles, and personal documents. |
+| `@snapshots` | `/.snapshots` | `compress=zstd:3,noatime` | Atomic Btrfs snapshot repository for system rollback checkpoints. |
+| `@swap` | `/swap` | `nodatacow,noatime` | Dedicated swapfile subvolume. Copy-on-Write is strictly disabled to prevent fragmentation and hibernation image corruption. |
+
+### Transparent Block Compression (ZSTD:3)
+All read-write filesystem trees are mounted with in-kernel **Zstandard level 3 (`zstd:3`) compression**.
+- **Footprint Reduction:** Reduces the physical storage consumption of `/nix/store` derivations and libraries by **40% to 50%**.
+- **I/O Throughput Amplification:** Reading compressed blocks from modern NVMe/SATA storage reduces raw byte transfer volume, effectively increasing real-world read/write throughput while lowering wear cycles on solid-state NAND cells.
+
+### Autonomous Storage Pruning & Host SSD TRIM (Auto-TRIM)
+Solid-state drives and virtualized sparse disk images (such as QEMU/KVM `.qcow2` or raw disk images) suffer from space ballooning when deleted blocks are not released to the underlying storage controller.
+
+NEURONIX automates storage reclamation across three coordinated lifecycle phases:
+1. **Automated TRIM Daemon (`fstrim.timer`):** Runs daily as a systemd timer, issuing SCSI/VirtIO unmap commands (`fstrim -av`) across all mounted Btrfs and ESP partitions. This informs the host SSD or hypervisor of deallocated blocks, reclaiming host physical storage and optimizing flash wear leveling.
+2. **Automated Garbage Pruning (`nix-gc.timer`):** Executes periodic cleanup cycles, purging unreferenced derivation links and dead package profiles.
+3. **Continuous Inode Deduplication (`auto-optimise-store = true`):** Automatically hardlinks identical binary files across derivations within `/nix/store`, eliminating storage waste from duplicated shared libraries across different package closures.
+
+### Periodic Metadata Balance Timer
+Btrfs allocates storage in coarse-grained chunks (data chunks and metadata chunks). Over months of package updates, empty allocations can cause premature `ENOSPC` (No space left on device) errors despite free physical space.
+- NEURONIX incorporates an automated **`btrfs-balance.timer`** running on a monthly schedule (`OnCalendar=monthly`, `Persistent=true`).
+- It filters and compacts under-allocated block groups (`btrfs balance start -dusage=10 -musage=10 /`), ensuring long-term filesystem health without user intervention.
+
+---
+
+## Active Memory Pressure Architecture
+
+Standard desktop Linux environments frequently suffer from complete system freezes or mouse cursor lockups when memory is exhausted, caused by kernel page thrashing (`kswapd` high CPU utilization while scanning memory). 
+
+NEURONIX implements an active three-tier memory protection matrix:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       ACTIVE MEMORY PRESSURE MATRIX                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                       │
+        ┌──────────────────────────────┼──────────────────────────────┐
+        ▼                              ▼                              ▼
+  [ TIER 1: POOL ]              [ TIER 2: TUNING ]             [ TIER 3: GUARD ]
+  ZRAM Swap Pool (100% RAM)     vm.swappiness = 180            systemd-oomd (PSI)
+  Compression: ZSTD             vm.page-cluster = 0            Path: /proc/pressure/memory
+  Speed: Memory-bus speed       vm.vfs_cache_pressure = 50     Threshold: > 10% for 10s
+  Swap space: ~2.5x physical    Action: Compress idle pages    Action: Terminate rogue task
+                                early into ZRAM                Latency: < 50ms (No freeze)
+```
+
+### ZRAM In-Memory Compressed Swap Pool
+- Allocates an in-RAM virtual compressed block device up to **100% of physical RAM capacity** using the `zram-generator`.
+- Employs the **ZSTD** compression algorithm, providing an effective swap pool size $\approx 2.5\times$ to $3\times$ larger than uncompressed memory with microsecond latency.
+
+### Aggressive Swapping Tuning (`vm.swappiness = 180`)
+- Standard Linux defaults (`swappiness = 60`) delay swapping until memory is critically low, forcing catastrophic disk thrashing.
+- Setting `vm.swappiness = 180` and `vm.page-cluster = 0` encourages the kernel to compress inactive background memory pages into ZRAM early, reserving raw physical RAM for active foreground processes and compilers.
+
+### Kernel Pressure Stall Information (PSI) & systemd-oomd
+- The system continuously samples hardware stall metrics via kernel Pressure Stall Information (`/proc/pressure/memory`).
+- If memory stall pressure exceeds a 10% threshold for longer than 10 seconds, `systemd-oomd` deterministically identifies and terminates the specific rogue cgroup consumer within **50 milliseconds**, completely eliminating unrecoverable desktop freezes.
+
+---
+
 ## Hardware Compatibility & Subsystem Hardening Matrix
 
 NEURONIX encapsulates modular, declarative profiles addressing common desktop and mobile workstation configurations:
@@ -59,6 +158,7 @@ NEURONIX encapsulates modular, declarative profiles addressing common desktop an
 | **Package Licensing** | Proprietary drivers and runtime compatibility (Steam, NVIDIA, codecs) | `nixpkgs.config.allowUnfree = true` | `modules/core/default.nix` |
 | **RTC Synchronization** | Real-time clock synchronization in multi-boot environments | `time.hardwareClockInLocalTime = true` | `modules/hardware/boot.nix` |
 | **Filesystem Maintenance** | Metadata chunk fragmentation prevention on active Btrfs volumes | Automated monthly `btrfs-balance` systemd timer | `modules/services/storage.nix` |
+| **Storage Reclamation** | Autonomous SSD TRIM and sparse disk reclamation (Auto-TRIM) | Daily `fstrim.timer` + `auto-optimise-store` hardlink dedupe | `modules/services/storage.nix` |
 | **Application Ecosystem** | Sandboxed graphical application integration without root mutation | Dual-layer distribution: immutable Nix core + Flathub Flatpak | `modules/services/flatpak.nix` |
 | **Boot Partition Guard** | EFI System Partition storage overflow prevention | 1.0 GiB ESP standard with generation prune threshold (`configurationLimit = 15`) | `modules/hardware/boot.nix` |
 | **Offline Firmware** | Out-of-the-box Wi-Fi and Bluetooth chipset connectivity | Full redistributable firmware bundle (Broadcom, Realtek, Intel) | `modules/hardware/firmware.nix` |
@@ -86,34 +186,53 @@ NEURONIX encapsulates modular, declarative profiles addressing common desktop an
 
 ---
 
+## Comprehensive Command-Line Reference (`neuronix`)
+
+NEURONIX includes an integrated system utility (`neuronix`) providing diagnostic telemetry, storage optimization, developer workspaces, and generation control.
+
+```text
+USAGE:
+  neuronix <COMMAND> [OPTIONS]
+```
+
+### Core Commands
+
+| Command | Arguments | Description | Example |
+| :--- | :--- | :--- | :--- |
+| `status` | None | Displays system identity, kernel version, storage health, systemd timers, and hardware shield status. | `neuronix status` |
+| `shield` | None | Diagnoses memory pressure metrics, ZRAM allocation, kernel swappiness, and live PSI saturation. | `neuronix shield` |
+| `generations` | None (or `list`) | Displays chronological timeline of all system generations and highlights the currently active generation. | `neuronix generations` |
+| `battery` | `[80 \| 100 \| status]` | Inspects or toggles the hardware battery charge threshold limit (sysfs charge control limit). | `neuronix battery 80` |
+| `diet` | None | Executes garbage collection, hardlink deduplication across `/nix/store`, and issues filesystem TRIM unmap calls. | `neuronix diet` |
+| `dev` | `<stack>` | Provisions an instant, hermetic, zero-pollution development shell in memory (`python`, `rust`, `node`, `ai`, `go`, `web3`). | `neuronix dev rust` |
+| `run` | `<packages...>` | Constructs an isolated, temporary subshell containing the requested software packages, purged on exit. | `neuronix run ffmpeg jq` |
+| `try` | `[file.nix] [--smoke-test]` | Simulates configuration changes or packages inside an ephemeral in-RAM micro-VM via QEMU and 9P sharing. | `neuronix try --smoke-test` |
+| `verify` | `<package>` | Evaluates package existence and derivation validity against nixpkgs closure (Zero-Blast Radius proof). | `neuronix verify ripgrep` |
+| `center` | None | Launches the graphical NEURONIX Control Center (or falls back to `--cli` mode if headless). | `neuronix center` |
+| `mcp` | None | Initializes the Model Context Protocol (MCP) server over `stdio` adhering to JSON-RPC 2.0. | `neuronix mcp` |
+| `undo` | None (or `rollback`) | Instantly rolls back the active system to the preceding generation in $< 2$ seconds. | `neuronix undo` |
+| `version` | None (`-v`, `--version`)| Prints system version, metadata, and license details. | `neuronix version` |
+| `help` | None (`-h`, `--help`)   | Displays usage instructions and command summaries. | `neuronix help` |
+
+---
+
 ## Core System Components
 
-### 1. Active Memory Pressure Architecture
-To prevent kernel page-thrashing lockups (`kswapd` CPU saturation) during heavy multitasking or large compilation jobs, NEURONIX coordinates three memory management layers:
-1. **Compressed In-RAM Swap Pool (ZRAM):** Allocates a virtual swap device up to 100% of physical memory utilizing the **ZSTD compression algorithm** ($\approx 2.5\times$ to $3\times$ compression efficiency).
-2. **Paging Parameter Tuning (`vm.swappiness = 180`):** Directs idle anonymous memory pages into compressed ZRAM early, preserving uncompressed physical RAM for active application working sets.
-3. **Pressure Stall Information (`systemd-oomd`):** Samples kernel memory pressure from `/proc/pressure/memory`. If memory stall duration exceeds 10% for $> 10$ seconds, offending background processes are terminated deterministically within 50 milliseconds, preserving graphical interface responsiveness.
-
-### 2. Declarative Calamares Installation Engine
+### 1. Declarative Calamares Installation Engine
 The graphical installer operates as a **Declarative Flake Generator** rather than an imperative rootfs unpacker ([ADR-002](docs/adr/ADR-002-why-calamares-flake-generator.md)):
 - Collects locale, keyboard, user, and disk layout specifications via the Calamares framework.
 - Generates reproducible `/mnt/etc/nixos/flake.nix` and `configuration.nix` configurations reflecting host parameters.
-- Formats storage using an optimized Btrfs subvolume architecture:
-  - `@` (Root: `compress=zstd:3,noatime,space_cache=v2`)
-  - `@nix` (Nix store: `compress=zstd:3,noatime`) — Reduces physical disk footprint by 40–50%.
-  - `@home` (User directories: `compress=zstd:3,noatime`)
-  - `@snapshots` (Dedicated snapshot target)
-  - `@swap` (Swapfile: `nodatacow,noatime` — Disables CoW to preserve filesystem consistency).
+- Formats storage using an optimized Btrfs subvolume architecture (`@`, `@nix`, `@home`, `@snapshots`, `@swap`).
 - Executes `nixos-install --flake /mnt/etc/nixos#neuronix-desktop`, resulting in an installed system governed declaratively from initial boot.
 
-### 3. System Control Center (`neuronix-center`)
+### 2. System Control Center (`neuronix-center`)
 A native system management utility providing administrative controls:
 - **Telemetry Dashboard:** Live monitoring of kernel parameters, active Nix generation, processor, graphics adapter, and compression statistics.
 - **Generation Management:** Graphical timeline of system generations. Enables instantaneous rollback to preceding generations in $< 2$ seconds without terminal commands.
 - **Storage Maintenance:** Orchestrates store garbage collection, hardlink deduplication, and filesystem TRIM operations.
 - **Dual Execution Interface:** Supports graphical display (Tkinter/Qt) and headless command-line mode (`neuronix-center --cli`).
 
-### 4. Isolated Development Environments (`neuronix dev`)
+### 3. Isolated Development Environments (`neuronix dev`)
 Hermetic, content-addressed development workspaces provisioned directly into memory:
 ```bash
 # Provision Python toolchain (Python 3.12, uv, ruff, pyright, postgresql client)
@@ -135,7 +254,7 @@ neuronix dev go
 neuronix dev web3
 ```
 
-### 5. In-Memory Micro-VM Simulation (`neuronix try`)
+### 4. Ephemeral In-Memory Micro-VM Simulation (`neuronix try`)
 Enables verification of proposed system configurations, kernel options, or untrusted software inside an ephemeral QEMU micro-VM running entirely in memory (`/dev/shm`) with read-only 9P store pass-through:
 ```bash
 # Execute automated smoke test inside the in-memory Micro-VM
@@ -145,49 +264,11 @@ neuronix try --smoke-test
 neuronix try ./configuration.nix --timeout 60
 ```
 
-### 6. Model Context Protocol (MCP) Server
+### 5. Model Context Protocol (MCP) Server
 NEURONIX includes a built-in Model Context Protocol server communicating over `stdio` adhering to JSON-RPC 2.0 (Protocol Version `2024-11-05`). It provides structured tools for autonomous development agents:
 ```bash
 # Exposes neuronix_status, neuronix_diet, neuronix_verify, neuronix_undo, and neuronix_shadow_eval
 neuronix mcp
-```
-
----
-
-## Verification & Test Harness
-
-System invariants, module structures, and CLI dispatchers are validated through an automated test suite comprising **705 assertions across 20 verification suites**:
-
-```text
-═══════════════════════════════════════════════════════════════════
-                    TEST HARNESS REPORT SUMMARY                    
-═══════════════════════════════════════════════════════════════════
-  Master Test Harness (tests/run_all_tests.sh)     : 506 / 506 PASS
-  Distro Test Harness (tests/test_distro_suite.sh) : 199 / 199 PASS
-  Total Executed Tests                             : 705 Tests
-  Failed Verification                              : 0 Failures
-  Confidence Score                                 : 100%
-═══════════════════════════════════════════════════════════════════
-```
-
-### Verification Coverage:
-- **Suites 01–03:** Script syntax, POSIX compliance, static analysis, and generation parsing.
-- **Suites 04–06:** Storage subsystem telemetry, ephemeral sandbox isolation, and fault injection.
-- **Suites 07–09:** Hermetic Flake reproducibility, environment sanitization (`env -i`), and buffer fuzzing.
-- **Suites 10–13:** Filesystem invariants, concurrency race conditions, resource exhaustion (`ulimit`), and state mutations.
-- **Suites 14–15:** MCP JSON-RPC 2.0 protocol compliance and micro-VM lifecycle management.
-- **Suites 16–17:** Subsystem configuration contracts, kernel sysctl parameters, watchdog timers, and audio codecs.
-- **Suite 18:** Command-line argument boundary fuzzing and shell injection neutralization.
-- **Suite 19:** Architecture Decision Records (ADRs) and documentation consistency.
-- **Suite 20:** Storage subsystem declarations, Btrfs subvolume mount options, and installer generator scripts.
-
-Execute the verification battery:
-```bash
-# Run master test harness (506 tests)
-bash tests/run_all_tests.sh
-
-# Run distribution standalone suite (199 tests)
-bash tests/test_distro_suite.sh
 ```
 
 ---
@@ -218,6 +299,73 @@ sudo dd if=result/iso/neuronix-*.iso of=/dev/sdX bs=4M status=progress oflag=syn
 
 ---
 
+## Post-Installation Administration
+
+### Modifying System Configuration
+The installed system is fully declarative and configured in `/etc/nixos/`:
+```bash
+# Edit host configuration
+sudo nano /etc/nixos/configuration.nix
+
+# Rebuild and activate new system generation atomically
+sudo nixos-rebuild switch --flake /etc/nixos#neuronix-desktop
+```
+
+### Managing Application Packages
+- **Command-line utilities:** Add package derivations directly to `environment.systemPackages` in `configuration.nix`.
+- **Graphical applications:** Discover and install sandboxed applications via KDE Discover or GNOME Software powered by Flathub:
+```bash
+flatpak install flathub com.spotify.Client
+flatpak install flathub org.videolan.VLC
+```
+
+### Reclaiming Storage
+To run a manual storage optimization cycle:
+```bash
+neuronix diet
+```
+
+---
+
+## Verification & Test Harness (705 Tests)
+
+System invariants, module structures, and CLI dispatchers are validated through an automated test suite comprising **705 assertions across 20 verification suites**:
+
+```text
+═══════════════════════════════════════════════════════════════════
+                    TEST HARNESS REPORT SUMMARY                    
+═══════════════════════════════════════════════════════════════════
+  Master Test Harness (tests/run_all_tests.sh)     : 506 / 506 PASS
+  Distro Test Harness (tests/test_distro_suite.sh) : 199 / 199 PASS
+  Total Executed Tests                             : 705 Tests
+  Failed Verification                              : 0 Failures
+  Execution Duration                               : ~44.0 seconds
+  Confidence Score                                 : 100%
+═══════════════════════════════════════════════════════════════════
+```
+
+### Verification Coverage:
+- **Suites 01–03:** Script syntax, POSIX compliance, static analysis, and generation parsing.
+- **Suites 04–06:** Storage subsystem telemetry, ephemeral sandbox isolation, and fault injection.
+- **Suites 07–09:** Hermetic Flake reproducibility, environment sanitization (`env -i`), and buffer fuzzing.
+- **Suites 10–13:** Filesystem invariants, concurrency race conditions, resource exhaustion (`ulimit`), and state mutations.
+- **Suites 14–15:** MCP JSON-RPC 2.0 protocol compliance and micro-VM lifecycle management.
+- **Suites 16–17:** Subsystem configuration contracts, kernel sysctl parameters, watchdog timers, and audio codecs.
+- **Suite 18:** Command-line argument boundary fuzzing and shell injection neutralization.
+- **Suite 19:** Architecture Decision Records (ADRs) and documentation consistency.
+- **Suite 20:** Storage subsystem declarations, Btrfs subvolume mount options, and installer generator scripts.
+
+Execute the verification battery:
+```bash
+# Run master test harness (506 tests)
+bash tests/run_all_tests.sh
+
+# Run distribution standalone suite (199 tests)
+bash tests/test_distro_suite.sh
+```
+
+---
+
 ## Architecture Decision Records (ADRs)
 
 Formal design choices and rationales are maintained in `docs/adr/`:
@@ -231,6 +379,6 @@ Formal design choices and rationales are maintained in `docs/adr/`:
 
 ## License
 
-NEURONIX OS is open-source software licensed under the **Apache License, Version 2.0**. See the [LICENSE](LICENSE) file for terms and conditions.
+NEURONIX OS is open-source software licensed under the **Apache License, Version 2.0**. See the [LICENSE](LICENSE) file for complete details.
 
 Copyright (c) 2026 NEURONIX Contributors.
