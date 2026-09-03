@@ -191,7 +191,7 @@ suite_header "4 - Calamares Declarative Flake-Generating Engine"
 test_installer_engine() {
   local out
   out=$(DRY_RUN=1 bash "${DISTRO_ROOT}/installer/scripts/neuronix-install-engine.sh" 2>&1)
-  if echo "$out" | grep -q "Verifikasi dry-run sukses"; then
+  if echo "$out" | grep -Eq "Dry-run verification successful|Verifikasi dry-run sukses"; then
     log_pass "Installer engine executes in dry-run mode without errors"
   else
     log_fail "Installer engine failed in dry-run mode"
