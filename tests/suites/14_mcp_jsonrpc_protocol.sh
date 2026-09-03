@@ -4,8 +4,8 @@
 # Verifies standard compliance with MCP protocol version 2024-11-05.
 # ==============================================================================
 
-TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
-MCP_BIN="/home/adamrofc/NEURONIX/src/mcp_server.sh"
+TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
+MCP_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/src/mcp_server.sh"
 
 start_suite "14 - MCP & JSON-RPC 2.0 Protocol Compliance"
 

@@ -41,7 +41,7 @@ Instead of unpacking layered tarballs, `neuronix run` constructs lightweight use
 Virtual machine guest installations under QEMU/KVM frequently inflate host storage. NEURONIX incorporates an autonomous storage lifecycle daemon:
 - **Deduplication:** Hardlinks identical files across derivations using content-hash indexing.
 - **Threshold Guards:** Automatically triggers garbage collection when available disk space breaches `min-free` (1.0 GiB) until reaching `max-free` (3.0 GiB).
-- **VirtIO Discard:** Emits `fstrim` unmap directives over SCSI/VirtIO interfaces, releasing deallocated blocks directly to the host filesystem (e.g. host SSD / Drive D).
+- **VirtIO Discard:** Emits `fstrim` unmap directives over SCSI/VirtIO interfaces, releasing deallocated blocks directly to the host filesystem (e.g. host SSD / NVMe / sparse disk image).
 
 ---
 
@@ -76,7 +76,7 @@ flowchart TD
         J --> N[VirtIO TRIM / Discard Passthrough]
     end
 
-    N --> O[(Physical Host Storage: Sparse Image / Drive D)]
+    N --> O[(Physical Host Storage: Sparse Image / Host SSD)]
 ```
 
 ---

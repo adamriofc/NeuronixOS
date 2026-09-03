@@ -5,9 +5,9 @@
 # argument bounds, cleanup invariants, and MCP integration.
 # ==============================================================================
 
-TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
-SHADOW_BIN="/home/adamrofc/NEURONIX/src/shadow_vm.sh"
-MCP_BIN="/home/adamrofc/NEURONIX/src/mcp_server.sh"
+TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
+SHADOW_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/src/shadow_vm.sh"
+MCP_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/src/mcp_server.sh"
 
 start_suite "15 - Shadow Micro-VM Simulation & Ephemeral RAM Sandbox"
 

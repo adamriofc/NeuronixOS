@@ -2,7 +2,7 @@
 
 > **Document ID:** `NRX-QUAL-005`  
 > **Status:** APPROVED  
-> **Path:** `/home/adamrofc/NEURONIX/Blueprint/05_QUALITY_GATES_AND_VALIDATION.md`  
+> **Path:** `Blueprint/05_QUALITY_GATES_AND_VALIDATION.md`  
 
 ---
 
@@ -36,7 +36,7 @@ Sebelum versi rilis (tag Git) diterbitkan ke publik, tim pengembang wajib menand
 - [ ] **Gate 2: Offline Resilience Verified**  
   Mematikan koneksi internet (kabel/Wi-Fi terputus). Menjalankan `neuronix status`, `neuronix diet`, dan `neuronix undo`. Semua perintah wajib sukses tanpa ketergantungan jaringan.
 - [ ] **Gate 3: Hypervisor Passthrough Confirmed**  
-  Menjalankan `neuronix diet` di dalam VM, lalu mengaudit ukuran fisik file `.qcow2` di partisi Drive D komputer host. Ukuran file terbukti menyusut.
+  Menjalankan `neuronix diet` di dalam VM, lalu mengaudit ukuran fisik file `.qcow2` di partisi Host Physical Storage komputer host. Ukuran file terbukti menyusut.
 - [ ] **Gate 4: Non-FHS Binary Compatibility**  
   Menjalankan biner Linux pihak ketiga (misal: biner Node.js / Go resmi non-Nix). Biner wajib tereksekusi mulus berkat modul `nix-ld`.
 - [ ] **Gate 5: Documentation Integrity**  

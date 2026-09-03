@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Suite 07: Flake & Hermetic Reproducibility (10 Tests)
 
-REPO_DIR="/home/adamrofc/NEURONIX"
+REPO_DIR="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 
 start_suite "07 - Flake & Hermetic Reproducibility"
 
@@ -32,5 +32,5 @@ assert_exit_code "git -C $REPO_DIR status" 0 "Git repository status is clean and
 # 9. Git HEAD commit exists
 assert_eq "$(git -C $REPO_DIR rev-parse --verify HEAD >/dev/null && echo "valid" || echo "invalid")" "valid" "Git repository has a verified HEAD commit"
 
-# 10. Symlink consistency in user PATH
-assert_eq "$(test -L /home/adamrofc/.local/bin/neuronix && echo "linked" || echo "missing")" "linked" "User ~/.local/bin/neuronix symlink is linked to build"
+# 10. User local binary symlink
+assert_eq "$(test -L "${HOME}/.local/bin/neuronix" && echo "linked" || echo "missing")" "linked" "User ~/.local/bin/neuronix symlink is linked to build"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Suite 03: Unit Testing Internal Functions (30 Tests)
 
-SRC_BIN="/home/adamrofc/NEURONIX/src/neuronix"
+SRC_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/src/neuronix"
 
 start_suite "03 - Unit Tests for Internal Functions"
 

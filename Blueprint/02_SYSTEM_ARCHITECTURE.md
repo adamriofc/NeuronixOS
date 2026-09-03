@@ -2,7 +2,7 @@
 
 > **Document ID:** `NRX-ARCH-002`  
 > **Status:** APPROVED  
-> **Path:** `/home/adamrofc/NEURONIX/Blueprint/02_SYSTEM_ARCHITECTURE.md`  
+> **Path:** `Blueprint/02_SYSTEM_ARCHITECTURE.md`  
 
 ---
 
@@ -45,7 +45,7 @@ Pemisahan ini menjamin bahwa kegagalan, latensi jaringan, atau halusinasi pada l
 │  - Linux Kernel 6.x (Namespaces, cgroups, tmpfs)                           │
 │  - Content-Addressed Inode Store (/nix/store [Read-Only])                  │
 │  - Hypervisor Layer (KVM / Quickemu / QEMU / WSL2 Hyper-V)                 │
-│  - Physical Host Storage (Drive D / Windows / Arch Linux Host SSD)         │
+│  - Physical Host Storage (Host Physical Storage / Windows / Arch Linux Host SSD)         │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -65,7 +65,7 @@ sequenceDiagram
     participant Canary as Shadow Micro-VM (RAM)
     participant Core as Core Engine
     participant OS as NixOS Kernel & Store
-    participant Host as Physical Host (Drive D)
+    participant Host as Physical Host (Host Physical Storage)
 
     User->>CLI: neuronix run / "Tolong siapkan workspace Rust"
     alt Menggunakan Flag AI (--ai / Natural Language)
@@ -87,7 +87,7 @@ sequenceDiagram
     User->>Core: Selesai bekerja & keluar shell
     Core->>OS: Lepas bind-mounts & kumpulkan sampah
     Core->>Host: Picu VirtIO TRIM passthrough
-    Host-->>User: Kapasitas fisik Drive D host menyusut otomatis
+    Host-->>User: Kapasitas fisik Host Physical Storage host menyusut otomatis
 ```
 
 ---
@@ -109,7 +109,7 @@ Untuk mencegah *disk out-of-space panic* saat kompilasi berat, modul storage men
 Pada lingkungan virtualisasi (Quickemu / QEMU / WSL2), file virtual disk (`.qcow2` atau `.vhdx`) bersifat dinamis (*sparse file*):
 1. Saat data dihapus di dalam guest OS, blok data pada tabel alokasi internal ditandai kosong, namun ukuran file `.qcow2` di host **tidak mengecil**.
 2. **NEURONIX Hypervisor Bridge:** Memanggil utilitas `fstrim -av` melalui protokol `virtio-blk` / `virtio-scsi` dengan opsi `discard=unmap`.
-3. Hypervisor QEMU menerima sinyal pembebasan blok dan melakukan *punch hole* (menghapus blok fisik) pada file virtual disk di partisi NTFS/ext4 Drive D host.
+3. Hypervisor QEMU menerima sinyal pembebasan blok dan melakukan *punch hole* (menghapus blok fisik) pada file virtual disk di partisi NTFS/ext4 Host Physical Storage host.
 
 ---
 

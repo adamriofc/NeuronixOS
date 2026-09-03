@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Suite 01: Syntax, Static Analysis, and POSIX Compliance (15 Tests)
 
-SRC_BIN="/home/adamrofc/NEURONIX/src/neuronix"
-TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
+SRC_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/src/neuronix"
+TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
 
 start_suite "01 - Syntax & Static Analysis"
 

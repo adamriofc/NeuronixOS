@@ -2,7 +2,7 @@
 
 > **Document ID:** `NRX-ROAD-004`  
 > **Status:** APPROVED  
-> **Path:** `/home/adamrofc/NEURONIX/Blueprint/04_IMPLEMENTATION_ROADMAP.md`  
+> **Path:** `Blueprint/04_IMPLEMENTATION_ROADMAP.md`  
 
 ---
 
@@ -27,7 +27,7 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
 ### FASE 0: Inisialisasi Proyek & Repositori Git
 *Fokus: Meletakkan fondasi manajemen kode, lisensi, dan perkakas pengembangan lokal.*
 - **Aktivitas Utama:**
-  1. Inisialisasi Git repository di `/home/adamrofc/NEURONIX`.
+  1. Inisialisasi Git repository di `the repository`.
   2. Setup struktur direktori standar: `src/`, `modules/`, `scripts/`, `tests/`, `docs/`.
   3. Konfigurasi lisensi `Apache-2.0` dan dokumen `README.md` pengantar berstandar global.
   4. Setup file `.gitignore` yang ketat agar tidak ada biner atau file temporer terunggah.
@@ -40,11 +40,11 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
 *Fokus: Membangun biner CLI fungsional tanpa AI yang langsung memecahkan masalah storage dan isolasi harian.*
 - **Fitur yang Dibangun:**
   1. **`neuronix status`:** Menampilkan dashboard terminal interaktif berisi versi generasi sistem, sisa storage, dan statistik deduplikasi inode.
-  2. **`neuronix diet`:** Menjalankan `nix-collect-garbage -d`, `nix-store --optimise`, dan memicu `fstrim -av` ke host Drive D secara otomatis.
+  2. **`neuronix diet`:** Menjalankan `nix-collect-garbage -d`, `nix-store --optimise`, dan memicu `fstrim -av` ke host Host Physical Storage secara otomatis.
   3. **`neuronix run <app>`:** Membuka subshell isolasi instan menggunakan `nix-shell` / `bwrap`.
   4. **`neuronix undo`:** Mengeksekusi rollback atomik ke generasi sebelumnya dalam $< 3$ detik.
 - **Kriteria Kelulusan Fase (Exit Gate 1):**
-  - Perintah `neuronix diet` terbukti memotong kapasitas file virtual disk di Drive D host.
+  - Perintah `neuronix diet` terbukti memotong kapasitas file virtual disk di Host Physical Storage host.
   - Perintah `neuronix run` mampu menyalakan aplikasi tanpa meninggalkan file sampah pasca-exit.
   - Perintah `neuronix undo` berhasil memutar balik sistem dengan exit code `0`.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Suite 02: CLI Argument Dispatcher and Fuzzing (25 Tests)
 
-TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
+TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
 
 start_suite "02 - CLI Argument Parsing & Fuzzing"
 

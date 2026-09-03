@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Suite 13: Mutation & Negative Invariants (15 Tests)
 
-TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
+TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
 
 start_suite "13 - Mutation & Negative Invariants"
 
@@ -25,11 +25,11 @@ TMP_SNAPSHOT_A="$(mktemp -u /tmp/snap_XXXXXX)"
 touch "$TMP_SNAPSHOT_A"
 
 # Verify that current git status in project directory remains 100% untouched
-GIT_STATUS_BEFORE="$(git -C /home/adamrofc/NEURONIX status --porcelain)"
+GIT_STATUS_BEFORE="$(git -C ${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)} status --porcelain)"
 $TARGET_BIN invalid_cmd_rejection_test >/dev/null 2>&1 || true
 $TARGET_BIN --bad-flag >/dev/null 2>&1 || true
 $TARGET_BIN '!@#$' >/dev/null 2>&1 || true
-GIT_STATUS_AFTER="$(git -C /home/adamrofc/NEURONIX status --porcelain)"
+GIT_STATUS_AFTER="$(git -C ${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)} status --porcelain)"
 assert_eq "$GIT_STATUS_AFTER" "$GIT_STATUS_BEFORE" "Project repository git status is identical before and after error invocations"
 assert_exit_code "$TARGET_BIN version" 0 "Core engine remains 100% operational following barrage of mutations"
 assert_output_contains "$TARGET_BIN version" "Deterministic AI-Augmented Substrate" "Subtitle remains intact"

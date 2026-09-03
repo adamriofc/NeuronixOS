@@ -2,7 +2,7 @@
 
 > **Document ID:** `NRX-SEC-003`  
 > **Status:** APPROVED  
-> **Path:** `/home/adamrofc/NEURONIX/Blueprint/03_SECURITY_AND_VERIFICATION.md`  
+> **Path:** `Blueprint/03_SECURITY_AND_VERIFICATION.md`  
 
 ---
 

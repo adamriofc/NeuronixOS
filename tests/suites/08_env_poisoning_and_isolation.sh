@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Suite 08: Environment Poisoning & Isolation Defense (30 Tests)
 
-TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
+TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
 
 start_suite "08 - Environment Poisoning & Variable Sanitization"
 

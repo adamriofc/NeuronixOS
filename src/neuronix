@@ -75,7 +75,7 @@ show_help() {
     echo -e "${BOLD}EXAMPLES:${RESET}"
     echo -e "  ${DIM}# Cek kesehatan sistem dan disk virtual${RESET}"
     echo -e "  ${PROGRAM_NAME} status\n"
-    echo -e "  ${DIM}# Pangkas storage dan susutkan disk Drive D host${RESET}"
+    echo -e "  ${DIM}# Pangkas storage dan lepaskan blok disk ke Host Physical Storage${RESET}"
     echo -e "  ${PROGRAM_NAME} diet\n"
     echo -e "  ${DIM}# Coba aplikasi tanpa mengotori PC (misal: jq dan cowsay)${RESET}"
     echo -e "  ${PROGRAM_NAME} run jq cowsay\n"
@@ -178,7 +178,7 @@ cmd_diet() {
     echo
 
     # Tahap 3: Host TRIM Passthrough
-    log_step "3/3. Menembakkan sinyal VirtIO TRIM ke Host SSD (Penyusutan Drive D)..."
+    log_step "3/3. Menembakkan sinyal VirtIO/SCSI TRIM ke Host Physical Storage..."
     local trim_output
     if [[ $EUID -eq 0 ]]; then
         trim_output="$(fstrim -av)"
@@ -199,7 +199,7 @@ cmd_diet() {
     else
         log_success "Siklus perampingan selesai! Sistem Anda sudah berada pada kondisi terbersih."
     fi
-    log_success "Sinyal TRIM berhasil dilepaskan ke hypervisor host Drive D."
+    log_success "Sinyal TRIM unmap berhasil dilepaskan ke Host Physical Storage."
 }
 
 cmd_run() {
@@ -294,7 +294,7 @@ cmd_version() {
     echo -e "License       : Apache License 2.0"
     echo -e "Substrate     : NixOS / Pure-Functional Linux"
     echo -e "Engine Target : Linux x86_64, aarch64, Darwin, WSL2"
-    echo -e "Repository    : https://github.com/adamrofc/neuronix"
+    echo -e "Repository    : https://github.com/neuronix-os/neuronix"
 }
 
 # Main CLI Dispatcher

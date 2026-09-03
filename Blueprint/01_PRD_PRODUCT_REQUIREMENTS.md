@@ -2,7 +2,7 @@
 
 > **Document ID:** `NRX-PRD-001`  
 > **Status:** APPROVED  
-> **Path:** `/home/adamrofc/NEURONIX/Blueprint/01_PRD_PRODUCT_REQUIREMENTS.md`  
+> **Path:** `Blueprint/01_PRD_PRODUCT_REQUIREMENTS.md`  
 
 ---
 
@@ -24,7 +24,7 @@ Menjadi standar platform sistem operasi mandiri (*Standalone Operating System*) 
 | :--- | :--- | :--- |
 | **Docker Desktop Bloat** | Docker Desktop memakan 4–8 GB RAM, boros baterai, dan menimbun puluhan gigabyte layer image yang tak terpakai di laptop pengembang. | **Daemonless Ephemeral Substrate:** Berjalan murni sebagai proses CLI instan tanpa background daemon, menggunakan *content-addressed inode sharing*. |
 | **Kerusakan Sistem Akibat AI** | Agen AI yang diberi akses shell di Ubuntu/Windows sering salah menghapus file sistem atau memicu konflik library permanen. | **Atomic State & 2-Second Rollback:** Perubahan diverifikasi di level *dry-build*, dan sistem dapat kembali ke kondisi semula dalam 2 detik. |
-| **Storage Bleed pada VM (Drive D)** | Virtual disk image (`.qcow2`/`.vhdx`) pada Quickemu/WSL2 terus membesar dan tidak pernah menyusut otomatis saat file dihapus di dalam VM. | **Hypervisor-Aware Auto-TRIM:** Secara terjadwal dan otomatis memicu *VirtIO discard/TRIM* langsung ke SSD host fisik. |
+| **Storage Bleed pada VM (Host Physical Storage)** | Virtual disk image (`.qcow2`/`.vhdx`) pada Quickemu/WSL2 terus membesar dan tidak pernah menyusut otomatis saat file dihapus di dalam VM. | **Hypervisor-Aware Auto-TRIM:** Secara terjadwal dan otomatis memicu *VirtIO discard/TRIM* langsung ke SSD host fisik. |
 | **Curamnya Kurva Belajar Nix** | 99% pengembang menyerah mempelajari NixOS karena sintaksis ekspresi Nix yang kaku dan dokumentasi yang terfragmentasi. | **Decoupled Natural Language Copilot:** AI menerjemahkan maksud pengguna menjadi graf deklaratif Nix secara otomatis dan aman. |
 
 ---
@@ -58,7 +58,7 @@ Menjadi standar platform sistem operasi mandiri (*Standalone Operating System*) 
   - Begitu terminal ditutup, 0 byte sampah tersisa di sistem global.
 
 ### User Story 2: Pemeliharaan Kapasitas Disk Virtual Host
-> *Sebagai pengguna virtualisasi lokal (Quickemu / WSL2), saya ingin kapasitas file virtual disk di Drive D komputer saya menyusut saat file di dalam sistem dihapus.*
+> *Sebagai pengguna virtualisasi lokal (Quickemu / WSL2), saya ingin kapasitas file virtual disk di Host Physical Storage komputer saya menyusut saat file di dalam sistem dihapus.*
 - **Kriteria Penerimaan:**
   - Perintah `neuronix diet` menggabungkan file duplikat menjadi hardlink dan menembakkan *VirtIO TRIM*.
   - Kapasitas fisik file `.qcow2` di host berkurang sebanding dengan ukuran data yang dihapus.

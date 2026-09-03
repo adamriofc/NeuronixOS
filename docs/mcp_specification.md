@@ -148,7 +148,7 @@ Standard JSON-RPC 2.0 error payloads are returned for malformed or unauthorized 
 {
   "mcpServers": {
     "neuronix": {
-      "command": "/home/adamrofc/NEURONIX/bin/neuronix",
+      "command": "neuronix",
       "args": ["mcp"]
     }
   }

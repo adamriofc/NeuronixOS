@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Suite 06: Fault Injection, Edge-Cases, and Chaos Resilience (15 Tests)
 
-TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
+TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
 
 start_suite "06 - Fault Injection & Chaos Resilience"
 

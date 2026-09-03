@@ -3,7 +3,7 @@
 > **Version:** 1.0.0-RELEASE  
 > **Status:** RATIFIED & LOCKED  
 > **Standard:** Enterprise Systems Architecture & Open-Source Production Grade  
-> **Target Path:** `/home/adamrofc/NEURONIX/Blueprint`  
+> **Target Path:** `Blueprint`  
 > **Classification:** Technical Specification & Project Master Plan  
 
 ---
@@ -15,7 +15,7 @@
 Proyek ini dirancang untuk memecahkan tiga kegagalan laten komputasi modern:
 1. **Developer Environment Decay:** Beban berlebih (*bloat*), kebocoran memori, dan fragmentasi dependensi yang disebabkan oleh Docker Desktop dan pengelola paket imperatif.
 2. **AI Hallucination Blast-Radius:** Risiko kerusakan sistem ketika agen AI otonom diberikan hak akses sistem operasi tradisional yang bersifat *mutable*.
-3. **Hypervisor Storage Bleed:** Pertumbuhan tidak terkontrol dari virtual disk image (`.qcow2` / `.vhdx`) pada sistem virtualisasi lokal (Quickemu/QEMU/WSL2) yang menguras kapasitas SSD fisik host (Drive D).
+3. **Hypervisor Storage Bleed:** Pertumbuhan tidak terkontrol dari virtual disk image (`.qcow2` / `.vhdx`) pada sistem virtualisasi lokal (Quickemu/QEMU/WSL2) yang menguras kapasitas SSD fisik host (Host Physical Storage).
 
 ---
 
@@ -24,7 +24,7 @@ Proyek ini dirancang untuk memecahkan tiga kegagalan laten komputasi modern:
 Seluruh dokumen di dalam direktori ini disusun secara ortogonal, modular, dan mengikuti standar *RFC / Industrial Architecture Spec*:
 
 ```text
-/home/adamrofc/NEURONIX/Blueprint/
+Blueprint/
 ├── 00_INDEX.md                           # Dokumen Ini (Navigasi Master & Ikhtisar Eksekutif)
 ├── 01_PRD_PRODUCT_REQUIREMENTS.md       # Product Requirements Document (PRD), Personas, User Stories
 ├── 02_SYSTEM_ARCHITECTURE.md            # Spesifikasi Teknis, Arsitektur Dua Lapis, Diagram Data
@@ -39,11 +39,11 @@ Seluruh dokumen di dalam direktori ini disusun secara ortogonal, modular, dan me
 
 | Kode Dokumen | Nama Dokumen | Fokus Utama | Target Pembaca |
 | :--- | :--- | :--- | :--- |
-| **`01_PRD`** | [Product Requirements](file:///home/adamrofc/NEURONIX/Blueprint/01_PRD_PRODUCT_REQUIREMENTS.md) | Analisis kebutuhan pasar, *problem statement*, fitur kunci, KPI sukses, dan use-case non-NixOS. | Product Manager, Lead Architect, Users |
-| **`02_ARCH`** | [System Architecture](file:///home/adamrofc/NEURONIX/Blueprint/02_SYSTEM_ARCHITECTURE.md) | Dua lapis (Core Engine vs AI Driver), subsistem storage, auto-TRIM, *content-addressed store*, dan FHS shim. | Systems Engineer, Core Developers |
-| **`03_SEC`** | [Security & Verification](file:///home/adamrofc/NEURONIX/Blueprint/03_SECURITY_AND_VERIFICATION.md) | Eliminasi halusinasi AI via *pure functional compiler*, *shadow micro-VM canary*, dan isolasi namespaces. | Security Auditor, DevSecOps Leads |
-| **`04_ROAD`** | [Implementation Roadmap](file:///home/adamrofc/NEURONIX/Blueprint/04_IMPLEMENTATION_ROADMAP.md) | Rencana fase implementasi berdisiplin tinggi dari v0.1 CLI Core hingga ISO standalone Calamares. | Engineering Manager, Contributors |
-| **`05_QUAL`** | [Quality Gates & Validation](file:///home/adamrofc/NEURONIX/Blueprint/05_QUALITY_GATES_AND_VALIDATION.md) | Matriks pengujian deterministik, protokol *zero-bug*, *smoke tests*, kriteria rilis (*Release Gates*). | QA Engineers, System Integrators |
+| **`01_PRD`** | [Product Requirements](file://Blueprint/01_PRD_PRODUCT_REQUIREMENTS.md) | Analisis kebutuhan pasar, *problem statement*, fitur kunci, KPI sukses, dan use-case non-NixOS. | Product Manager, Lead Architect, Users |
+| **`02_ARCH`** | [System Architecture](file://Blueprint/02_SYSTEM_ARCHITECTURE.md) | Dua lapis (Core Engine vs AI Driver), subsistem storage, auto-TRIM, *content-addressed store*, dan FHS shim. | Systems Engineer, Core Developers |
+| **`03_SEC`** | [Security & Verification](file://Blueprint/03_SECURITY_AND_VERIFICATION.md) | Eliminasi halusinasi AI via *pure functional compiler*, *shadow micro-VM canary*, dan isolasi namespaces. | Security Auditor, DevSecOps Leads |
+| **`04_ROAD`** | [Implementation Roadmap](file://Blueprint/04_IMPLEMENTATION_ROADMAP.md) | Rencana fase implementasi berdisiplin tinggi dari v0.1 CLI Core hingga ISO standalone Calamares. | Engineering Manager, Contributors |
+| **`05_QUAL`** | [Quality Gates & Validation](file://Blueprint/05_QUALITY_GATES_AND_VALIDATION.md) | Matriks pengujian deterministik, protokol *zero-bug*, *smoke tests*, kriteria rilis (*Release Gates*). | QA Engineers, System Integrators |
 
 ---
 

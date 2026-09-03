@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Suite 09: Boundary, Buffer & Property-Based Fuzzing (50 Tests)
 
-TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
+TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
 
 start_suite "09 - Boundary, Buffer & Property-Based Fuzzing"
 

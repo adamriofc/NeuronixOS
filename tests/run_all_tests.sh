@@ -19,7 +19,9 @@
 
 set -uo pipefail
 
-TEST_DIR="/home/adamrofc/NEURONIX/tests"
+TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${TEST_DIR}/.." && pwd)"
+export PROJECT_ROOT
 source "$TEST_DIR/test_harness.sh"
 
 START_TIME=$(date +%s%N)

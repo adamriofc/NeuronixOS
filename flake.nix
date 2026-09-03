@@ -41,9 +41,9 @@
 
           meta = with pkgs.lib; {
             description = "Deterministic, Self-Healing AI-Augmented OS Substrate";
-            homepage = "https://github.com/adamrofc/neuronix";
+            homepage = "https://github.com/neuronix-os/neuronix";
             license = licenses.asl20;
-            maintainers = [ "adamrofc" ];
+            maintainers = [ "neuronix-core" ];
             mainProgram = "neuronix";
             platforms = platforms.linux ++ platforms.darwin;
           };

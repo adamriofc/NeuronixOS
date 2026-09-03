@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Suite 04: Storage Subsystem, TRIM, and Diet Resilience (20 Tests)
 
-TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
+TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
 
 start_suite "04 - Storage & Diet Resilience"
 
