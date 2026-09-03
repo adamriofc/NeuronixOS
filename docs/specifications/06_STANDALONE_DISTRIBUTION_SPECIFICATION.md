@@ -10,7 +10,7 @@
 ## 1. Visi, Positioning, & Arsitektur 4-Layer Platform
 
 ### A. Pernyataan Positioning Resmi (*Official Positioning Statement*)
-> **"A user-friendly, opinionated Linux distribution built on NixOS, engineered to deliver an EndeavourOS-like onboarding experience, automated hardware detection, graphical system management, and atomic generation rollbacks, while strictly preserving NixOS's declarative and reproducible architecture."**
+> **"A user-friendly, opinionated Linux distribution built on NixOS, engineered to deliver an automated graphical installation workflow, automated hardware detection, graphical system management, and atomic generation rollbacks, while strictly preserving NixOS's declarative and reproducible architecture."**
 
 NEURONIX bukan sekadar "NixOS yang diberi wallpaper dan tema berbeda". Itu adalah jebakan terbesar yang menurunkan nilai teknis menjadi sekadar *custom spin*. NEURONIX adalah **sebuah platform rekayasa sistem operasi utuh (*complete operating system distribution platform*)** yang dirancang dengan kedalaman rekayasa tingkat tinggi.
 
@@ -167,10 +167,10 @@ Salah satu keunggulan terbesar NixOS adalah kemampuannya kembali ke masa lalu (*
 │  Terjadi masalah setelah pembaruan terakhir?                 │
 │  Pilih generasi stabil sebelumnya untuk kembali instan:      │
 │                                                              │
-│  ● Generasi #43 — (Aktif Saat Ini / Pembaruan Terakhir)      │
-│  ○ Generasi #42 — (2026-09-03 19:20) [Stabil - Rekomendasi] │
-│  ○ Generasi #41 — (2026-09-01 14:05) [Stabil]                │
-│  ○ Generasi #40 — (2026-08-28 09:12) [Generasi Pabrik ISO]   │
+│  ● Generasi #43: (Aktif Saat Ini / Pembaruan Terakhir)      │
+│  ○ Generasi #42: (2026-09-03 19:20) [Stabil - Rekomendasi] │
+│  ○ Generasi #41: (2026-09-01 14:05) [Stabil]                │
+│  ○ Generasi #40: (2026-08-28 09:12) [Generasi Pabrik ISO]   │
 │                                                              │
 │  [ ⏪ Putar Balik ke Generasi #42 ]    [ 🚀 Boot Sekali Coba ]│
 └──────────────────────────────────────────────────────────────┘
@@ -201,7 +201,7 @@ Pengembang baru tidak perlu menghabiskan 3 hari untuk mengonfigurasi compiler da
 
 ## 6. Fleksibilitas Pengaturan Auto-TRIM: Kendali Penuh di Tangan Pengguna
 
-Sebagaimana filosofi EndeavourOS yang tidak pernah memaksakan kehendak pada penggunanya, **fitur Auto-TRIM di NEURONIX bersifat 100% fleksibel dan dapat dikustomisasi**:
+Sebagai bagian dari kedaulatan pengguna dan optimasi storage, **fitur Auto-TRIM di NEURONIX bersifat 100% fleksibel dan dapat dikustomisasi**:
 
 1. **Pilihan di Calamares Installer:**  
    Pada layar konfigurasi sistem, disediakan opsi eksplisit:  
@@ -328,21 +328,21 @@ Nilai portofolio tertinggi bukan sekadar screenshot, melainkan **CI/CD pipeline 
 Proyek dikembangkan secara metodis melalui 8 tahapan rilis bertahap untuk menjamin stabilitas kelas satu:
 
 ```text
-v0.1 — Minimal Bootable ISO (Kernel + CLI `neuronix` + Network)
+v0.1: Minimal Bootable ISO (Kernel + CLI `neuronix` + Network)
   ↓
-v0.2 — Calamares Installer (Flake-Generating + Btrfs ZSTD:3 Recipe)
+v0.2: Calamares Installer (Flake-Generating + Btrfs ZSTD:3 Recipe)
   ↓
-v0.3 — Hardware Profiles & Auto-Detection (NVIDIA PRIME + Wi-Fi Blobs)
+v0.3: Hardware Profiles & Auto-Detection (NVIDIA PRIME + Wi-Fi Blobs)
   ↓
-v0.4 — Graphical Control Center (`neuronix-control-center` + Telemetri)
+v0.4: Graphical Control Center (`neuronix-control-center` + Telemetri)
   ↓
-v0.5 — User-Friendly Rollback & Generations UX (Time-Travel Guard)
+v0.5: User-Friendly Rollback & Generations UX (Time-Travel Guard)
   ↓
-v0.6 — Automated CI/CD Headless VM Testing Pipeline
+v0.6: Automated CI/CD Headless VM Testing Pipeline
   ↓
-v0.7 — One-Command Development Stacks (`neuronix dev <stack>`)
+v0.7: One-Command Development Stacks (`neuronix dev <stack>`)
   ↓
-v1.0 — Flagship Stable Public Release (Produksi Mandiri Siap Pakai)
+v1.0: Flagship Stable Public Release (Produksi Mandiri Siap Pakai)
 ```
 
 ---

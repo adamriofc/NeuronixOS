@@ -76,7 +76,7 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
 ---
 
 ### FASE 4: Standalone OS Distribution & Calamares Installer (v1.0)
-*Fokus: Mewujudkan "The Golden Sweet Spot" ala EndeavourOS di atas fondasi NixOS: Live ISO mandiri, installer grafis Calamares, pilihan desktop Wayland terkurasi, dan onboarding center yang ramah.*
+*Fokus: Mewujudkan titik optimal pengalaman pengguna di atas fondasi NixOS: Live ISO mandiri, installer grafis Calamares, pilihan desktop Wayland terkurasi, dan onboarding center yang ramah.*
 - **Spesifikasi Teknis Rinci:** Lihat dokumen referensi lengkap di [06_STANDALONE_DISTRIBUTION_SPECIFICATION.md](file://Blueprint/06_STANDALONE_DISTRIBUTION_SPECIFICATION.md).
 - **Fitur & Komponen Kunci yang Dibangun:**
   1. **Kompilasi Live ISO Mandiri (`iso.nix`):**

@@ -22,7 +22,7 @@ Menjadi standar platform sistem operasi mandiri (*Standalone Operating System*) 
 
 | Titik Sakit (*Pain Point*) | Kondisi Industri Saat Ini (Status Quo) | Solusi yang Dihadirkan NEURONIX |
 | :--- | :--- | :--- |
-| **Docker Desktop Bloat** | Docker Desktop memakan 4–8 GB RAM, boros baterai, dan menimbun puluhan gigabyte layer image yang tak terpakai di laptop pengembang. | **Daemonless Ephemeral Substrate:** Berjalan murni sebagai proses CLI instan tanpa background daemon, menggunakan *content-addressed inode sharing*. |
+| **Docker Desktop Bloat** | Docker Desktop memakan 4-8 GB RAM, boros baterai, dan menimbun puluhan gigabyte layer image yang tak terpakai di laptop pengembang. | **Daemonless Ephemeral Substrate:** Berjalan murni sebagai proses CLI instan tanpa background daemon, menggunakan *content-addressed inode sharing*. |
 | **Kerusakan Sistem Akibat AI** | Agen AI yang diberi akses shell di Ubuntu/Windows sering salah menghapus file sistem atau memicu konflik library permanen. | **Atomic State & 2-Second Rollback:** Perubahan diverifikasi di level *dry-build*, dan sistem dapat kembali ke kondisi semula dalam 2 detik. |
 | **Storage Bleed pada VM (Host Physical Storage)** | Virtual disk image (`.qcow2`/`.vhdx`) pada Quickemu/WSL2 terus membesar dan tidak pernah menyusut otomatis saat file dihapus di dalam VM. | **Hypervisor-Aware Auto-TRIM:** Secara terjadwal dan otomatis memicu *VirtIO discard/TRIM* langsung ke SSD host fisik. |
 | **Curamnya Kurva Belajar Nix** | 99% pengembang menyerah mempelajari NixOS karena sintaksis ekspresi Nix yang kaku dan dokumentasi yang terfragmentasi. | **Decoupled Natural Language Copilot:** AI menerjemahkan maksud pengguna menjadi graf deklaratif Nix secara otomatis dan aman. |
@@ -31,17 +31,17 @@ Menjadi standar platform sistem operasi mandiri (*Standalone Operating System*) 
 
 ## 3. User Personas & Target Audience
 
-### Persona 1: Rian — The AI & Web3 Polyglot Developer (Mac / Windows User)
+### Persona 1: Rian: The AI & Web3 Polyglot Developer (Mac / Windows User)
 - **Karakter:** Mengembangkan microservices dengan Python, Rust, dan Go. 
 - **Frustrasi:** Laptopnya lambat setiap kali membuka Docker Desktop, dan ia sering menghabiskan waktu 2 jam memperbaiki *environment variable* atau konflik versi Python.
 - **Kebutuhan:** Ruang kerja isolasi sekali pakai (`neuronix run`) yang menyala dalam hitungan milidetik dan lenyap tanpa jejak sampah di laptopnya.
 
-### Persona 2: Sarah — Senior Site Reliability Engineer (Enterprise DevOps)
+### Persona 2: Sarah: Senior Site Reliability Engineer (Enterprise DevOps)
 - **Karakter:** Mengelola armada ribuan server di Kubernetes cloud.
 - **Frustrasi:** Dockerfile yang dibuat tim developer menghasilkan image berukuran 1 GB dengan puluhan celah keamanan (*CVE vulnerabilities*).
 - **Kebutuhan:** Generator image minimalis (`neuronix export`) yang menghasilkan container OCI berukuran 20 MB murni dari dependensi esensial tanpa celah keamanan.
 
-### Persona 3: David — The Enthusiastic Linux Learner (Power User / Novice)
+### Persona 3: David: The Enthusiastic Linux Learner (Power User / Novice)
 - **Karakter:** Tertarik dengan stabilitas NixOS tetapi takut komputernya rusak atau kehabisan disk.
 - **Frustrasi:** Bingung dengan file `.nix`, takut salah konfigurasi desktop.
 - **Kebutuhan:** Sistem operasi mandiri dengan tombol *undo* instan dan penjaga storage otonom yang bisa diajak berdiskusi via bahasa manusia.
