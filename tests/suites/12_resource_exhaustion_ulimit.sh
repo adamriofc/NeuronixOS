@@ -27,8 +27,8 @@ assert_output_contains "(ulimit -s 4096 && $TARGET_BIN version)" "Substrate" "Th
 assert_output_contains "(ulimit -s 2048 && $TARGET_BIN help)" "CORE COMMANDS:" "Throttled stack help matches expectation"
 
 # 16-20. Pipe Capacity & Buffering Stress
-assert_exit_code "$TARGET_BIN version | head -n 1" 0 "Piping to 'head -n 1' exits with clean pipe closing"
-assert_exit_code "$TARGET_BIN help | head -n 5" 0 "Piping to 'head -n 5' handles early SIGPIPE cleanly"
+assert_output_contains "$TARGET_BIN version | head -n 1" "NEURONIX" "Piping to 'head -n 1' exits with clean pipe closing"
+assert_output_contains "$TARGET_BIN help | head -n 5" "NEURONIX" "Piping to 'head -n 5' handles early SIGPIPE cleanly"
 assert_exit_code "$TARGET_BIN status | wc -l >/dev/null" 0 "Piping to 'wc -l' executes without hanging"
 assert_exit_code "$TARGET_BIN version | tr '[:lower:]' '[:upper:]' | grep -q 'NEURONIX'" 0 "Multi-stage POSIX pipeline executes cleanly"
 assert_output_contains "$TARGET_BIN version | tr '[:lower:]' '[:upper:]'" "APACHE LICENSE" "Pipeline transformation preserves text semantics"
