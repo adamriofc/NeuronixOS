@@ -9,6 +9,12 @@
 
 set -eo pipefail
 
+# Graceful SIGPIPE handling for pipeline consumers (e.g. head, grep -q)
+trap 'exec 2>/dev/null; exit 0' PIPE
+
+# Safe Path & Environment Fallbacks (Rust-grade defensive posture)
+export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-system/sw/bin:/usr/bin:/bin"
+
 VERSION="0.1.0-alpha"
 PROGRAM_NAME="neuronix"
 
@@ -76,7 +82,7 @@ show_help() {
 
 get_current_generation() {
     if [[ -L /nix/var/nix/profiles/system ]]; then
-        basename "$(readlink /nix/var/nix/profiles/system)" | sed 's/system-//;s/-link//'
+        basename "$(readlink /nix/var/nix/profiles/system)" | sed -E 's/^system-?//; s/-?link$//'
     else
         echo "Unknown"
     fi
@@ -246,6 +252,11 @@ cmd_version() {
 
 # Main CLI Dispatcher
 main() {
+    if [[ $# -eq 0 ]]; then
+        show_help
+        exit 0
+    fi
+
     local cmd="${1:-}"
     shift || true
 
@@ -265,7 +276,7 @@ main() {
         version|-v|--version)
             cmd_version
             ;;
-        help|-h|--help|"")
+        help|-h|--help)
             show_help
             ;;
         *)
