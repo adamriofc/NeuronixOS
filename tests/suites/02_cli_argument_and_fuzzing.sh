@@ -23,11 +23,11 @@ assert_output_contains "$TARGET_BIN --help" "EXAMPLES:" "Flag '--help' shows EXA
 
 # 5. Flag: version
 assert_exit_code "$TARGET_BIN version" 0 "Command 'version' exits 0"
-assert_output_contains "$TARGET_BIN version" "0.2.0-alpha" "Command 'version' contains version string"
+assert_output_contains "$TARGET_BIN version" "0.3.0-alpha" "Command 'version' contains version string"
 
 # 6. Flag: -v
 assert_exit_code "$TARGET_BIN -v" 0 "Flag '-v' exits 0"
-assert_output_contains "$TARGET_BIN -v" "0.2.0-alpha" "Flag '-v' contains version string"
+assert_output_contains "$TARGET_BIN -v" "0.3.0-alpha" "Flag '-v' contains version string"
 
 # 7. Flag: --version
 assert_exit_code "$TARGET_BIN --version" 0 "Flag '--version' exits 0"

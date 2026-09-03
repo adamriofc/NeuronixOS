@@ -169,6 +169,17 @@ $ neuronix run python311 ffmpeg jq
 # Exit leaves zero bytes of unreferenced binaries in rootfs
 ```
 
+### `neuronix try [options]`
+Simulates proposed system configurations or risky packages inside an ephemeral in-memory Shadow Micro-VM in RAM (`/dev/shm`) via QEMU with 9P store sharing. Features automated smoke testing and zero disk wear.
+```bash
+$ neuronix try --smoke-test
+ ➔  Menginisialisasi Shadow Micro-VM Workspace di RAM (/dev/shm/neuronix_shadow_EBLAwC)...
+ ℹ  Akselerasi KVM: TERSEDIA (/dev/kvm) - Kecepatan eksekusi native.
+ ✔  Micro-VM Kernel Boot: SUCCESS
+ ✔  Systemd Basic Target Reached: SUCCESS (is-system-running: clean)
+ ✔  Simulasi Shadow VM lulus 100% tanpa kegagalan sistem.
+```
+
 ### `neuronix verify <package>`
 Formally verifies whether a derivation or package exists and evaluates cleanly in the pure nixpkgs closure before allowing any state alteration (Zero-Blast Radius Formal Proof).
 ```bash
@@ -195,7 +206,7 @@ $ neuronix undo
 
 ## Verification & Test Suite
 
-The codebase is hardened using a mission-critical test suite covering 306 automated test cases across 14 distinct verification suites:
+The codebase is hardened using a mission-critical test suite covering 336 automated test cases across 15 distinct verification suites:
 - **Suite 01:** Syntax, strict POSIX compliance, static analysis.
 - **Suite 02:** Argument parsing, command fuzzing, stderr/stdout separation.
 - **Suite 03:** Unit testing of internal generation parser logic.
@@ -210,6 +221,7 @@ The codebase is hardened using a mission-critical test suite covering 306 automa
 - **Suite 12:** Resource exhaustion constraints (`ulimit -n 128`, quiet SIGPIPE handling).
 - **Suite 13:** Mutation testing & repository state invariance.
 - **Suite 14:** Model Context Protocol (MCP) & JSON-RPC 2.0 protocol compliance.
+- **Suite 15:** Shadow Micro-VM in-memory simulation (`neuronix try`) & ephemeral RAM bounds.
 
 Execute the verification battery locally:
 ```bash

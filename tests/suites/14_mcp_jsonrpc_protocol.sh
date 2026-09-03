@@ -16,7 +16,7 @@ INIT_RES=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | $
 assert_output_contains "echo '$INIT_RES'" '"jsonrpc":"2.0"' "Initialize response contains JSON-RPC 2.0 header"
 assert_output_contains "echo '$INIT_RES'" '2024-11-05' "Initialize specifies protocol version 2024-11-05"
 assert_output_contains "echo '$INIT_RES'" 'neuronix-mcp' "Server reports name neuronix-mcp"
-assert_output_contains "echo '$INIT_RES'" '0.2.0-alpha' "Server reports version 0.2.0-alpha"
+assert_output_contains "echo '$INIT_RES'" '0.3.0-alpha' "Server reports version 0.3.0-alpha"
 
 # 7-12. Tools Enumeration (tools/list)
 assert_exit_code "echo '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}' | $TARGET_BIN mcp" 0 "tools/list exits 0"

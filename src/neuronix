@@ -15,7 +15,7 @@ trap 'exec 2>/dev/null; exit 0' PIPE
 # Safe Path & Environment Fallbacks (Rust-grade defensive posture)
 export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-system/sw/bin:/usr/bin:/bin"
 
-VERSION="0.2.0-alpha"
+VERSION="0.3.0-alpha"
 PROGRAM_NAME="neuronix"
 
 # Color Palettes & UI Formats
@@ -66,6 +66,7 @@ show_help() {
     echo -e "  ${GREEN}status${RESET}          Tampilkan dashboard telemetri sistem & kesehatan storage"
     echo -e "  ${GREEN}diet${RESET}            Pangkas sampah sistem, satukan file kembar & TRIM ke host SSD"
     echo -e "  ${GREEN}run${RESET} <pkgs...>   Jalankan software di ruang isolasi sekali pakai di RAM"
+    echo -e "  ${GREEN}try${RESET} [options]   Simulasikan konfigurasi di Shadow Micro-VM di RAM (< 3 detik)"
     echo -e "  ${GREEN}verify${RESET} <pkg>    Verifikasi formal paket via dry-build (Zero-Blast Radius)"
     echo -e "  ${GREEN}mcp${RESET}             Luncurkan server Model Context Protocol (JSON-RPC 2.0 over stdio)"
     echo -e "  ${GREEN}undo${RESET}            Rollback instan ke generasi sistem sebelumnya (< 2 detik)"
@@ -274,6 +275,19 @@ cmd_mcp() {
     fi
 }
 
+cmd_try() {
+    local script_dir
+    script_dir="$(dirname "$(readlink -f "$0")")"
+    if [[ -f "${script_dir}/shadow_vm.sh" ]]; then
+        exec "${script_dir}/shadow_vm.sh" "$@"
+    elif [[ -f "${script_dir}/../src/shadow_vm.sh" ]]; then
+        exec "${script_dir}/../src/shadow_vm.sh" "$@"
+    else
+        log_error "Modul shadow_vm.sh tidak ditemukan di ${script_dir}."
+        exit 1
+    fi
+}
+
 cmd_version() {
     print_banner
     echo -e "Version       : ${CYAN}${VERSION}${RESET}"
@@ -302,6 +316,9 @@ main() {
             ;;
         run)
             cmd_run "$@"
+            ;;
+        try)
+            cmd_try "$@"
             ;;
         verify)
             cmd_verify "$@"

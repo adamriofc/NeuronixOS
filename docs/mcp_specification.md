@@ -2,7 +2,7 @@
 
 **Protocol Standard:** Model Context Protocol (Protocol Version `2024-11-05`)  
 **Transport Binding:** JSON-RPC 2.0 over `stdio`  
-**Substrate Version:** 0.2.0-alpha  
+**Substrate Version:** 0.3.0-alpha  
 
 ---
 
@@ -13,7 +13,8 @@ Autonomous AI agents operating on mutable operating systems present severe avail
 NEURONIX decouples the AI reasoning agent from direct root execution. The NEURONIX Model Context Protocol (MCP) server acts as a **formal proof gatekeeper**:
 1. All queries from the agent pass through structured, schema-validated JSON-RPC calls over `stdio`.
 2. Any requested environment modification must pass through `neuronix_verify` (pure-functional evaluation) before receiving clearance.
-3. System rollback (`neuronix_undo`) remains an immutable guarantee (< 2 seconds atomic symlink swap) regardless of agent actions.
+3. System configurations can be tested in transient RAM-disk Micro-VMs (`neuronix_shadow_eval`) before promotion.
+4. System rollback (`neuronix_undo`) remains an immutable guarantee (< 2 seconds atomic symlink swap) regardless of agent actions.
 
 ---
 
@@ -63,7 +64,7 @@ Negotiates client-server protocol version and capabilities.
     },
     "serverInfo": {
       "name": "neuronix-mcp",
-      "version": "0.2.0-alpha"
+      "version": "0.3.0-alpha"
     }
   }
 }
@@ -90,6 +91,7 @@ Enumerates available substrate primitives exposed to the AI agent.
 | `neuronix_verify` | `{"package": "<string>"}` | Formally proves whether a package derivation is valid in pure `nixpkgs` closure without mutating system state. |
 | `neuronix_undo` | None | Initiates instant atomic rollback to preceding generation. |
 | `neuronix_list_generations` | None | Lists historical generations, active profile symlinks, and timestamps. |
+| `neuronix_shadow_eval` | `{"config_path": "<string>"}` (optional) | Boots transient RAM-disk Micro-VM (/dev/shm) to run automated smoke tests on proposed system configuration. |
 
 ### 3.3 `tools/call`
 Executes an exposed tool with caller arguments.
