@@ -101,6 +101,10 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
      - **`nix-ld` Aktif Global:** Seluruh biner Linux standar (VS Code extensions, biner Go, Rust, script Python pip) langsung jalan tanpa error FHS.
      - **PipeWire & WirePlumber:** Subsistem audio latensi rendah untuk produksi audio dan gaming.
      - **Terminal Sadar Generasi:** Prompt terminal otomatis menampilkan status generasi sistem aktif (`[Gen #1] ➔ user@neuronix ~/code $`).
+  6. **Toko Aplikasi Grafis & Fleksibilitas Pemeliharaan:**
+     - **GUI App Store Bawaan:** GNOME Software / KDE Discover terintegrasi Flathub dengan sinkronisasi portal tema Wayland.
+     - **Kustomisasi Penuh Auto-TRIM:** Kendali toggle switch di GUI (Calamares & NEURONIX Center) serta CLI (`neuronix config set auto-trim on|off`).
+     - **Inklusi Otomatis `allowUnfree = true`:** Mengeliminasi error lisensi proprietary pada instalasi software umum (NVIDIA, Steam, Discord).
 - **Kriteria Kelulusan Fase (Exit Gate 4):**
   - File ISO sukses di-compile secara hermetis dan dapat di-boot di mesin bare-metal maupun mesin virtual bersih (QEMU / Quickemu / VirtualBox).
   - Installer Calamares sukses mengeksekusi partisi Btrfs ZSTD:3 dan menyelesaikan instalasi hingga masuk ke desktop Wayland pilihan.

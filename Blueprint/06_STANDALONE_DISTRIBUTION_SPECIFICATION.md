@@ -111,7 +111,43 @@ Pengguna tidak perlu mengetik konfigurasi manual; mencentang opsi di NEURONIX Ce
 
 ---
 
-## 5. Kompatibilitas Biner & Ergonomi Pengembang Out-of-the-Box
+## 5. Fleksibilitas Pengaturan Auto-TRIM: Kendali Penuh di Tangan Pengguna
+
+Sebagaimana filosofi EndeavourOS yang tidak pernah memaksakan kehendak pada penggunanya, **fitur Auto-TRIM di NEURONIX bersifat 100% fleksibel dan dapat dikustomisasi**:
+
+1. **Pilihan di Calamares Installer:**  
+   Pada layar konfigurasi sistem, disediakan opsi eksplisit:  
+   `[✓] Aktifkan Pemeliharaan Storage Otomatis (Auto-TRIM & Inode Deduplication) - Disarankan untuk SSD & Virtual Machine`. Pengguna yang menggunakan harddisk mekanis (HDD) konvensional atau ingin mengontrol TRIM secara manual dapat mematikan opsi ini.
+2. **Kendali Visual di NEURONIX Center:**  
+   Tersedia saklar tombol `[ ON / OFF ]` untuk mengaktifkan atau mematikan timer `fstrim.timer` dan scheduled diet hanya dengan satu kali klik.
+3. **Kendali Baris Perintah CLI:**  
+   ```bash
+   # Menonaktifkan timer pemeliharaan otomatis
+   neuronix config set auto-trim off
+
+   # Mengaktifkan kembali timer pemeliharaan otomatis
+   neuronix config set auto-trim on
+   ```
+
+---
+
+## 6. Toko Aplikasi Grafis (GUI Software Marketplace: Flatpak & Flathub Bawaan)
+
+Salah satu kelemahan terbesar yang membuat pengguna frustrasi saat pertama kali menginstal NixOS adalah **ketiadaan App Store visual**. Pengguna biasa terpaksa membuka browser dan mencari nama paket di `search.nixos.org`, lalu menulis baris deklaratif hanya untuk menginstal aplikasi desktop sehari-hari seperti Spotify atau Discord.
+
+**NEURONIX Fase 4 memecahkan masalah ini dengan Arsitektur Perangkat Lunak Dua Lapis (*Dual-Layer Software Architecture*):**
+
+1. **Lapis 1 (Core OS & Developer Stack):** Dikelola secara murni oleh **Nixpkgs / Flakes / CLI**. Menjamin kernel, compiler, Python, Node, dan Docker kebal rusak dan memiliki riwayat rollback instan.
+2. **Lapis 2 (Desktop Graphical Applications):** Dikelola oleh **Flatpak & Flathub Marketplace**. Pengguna dapat menginstal Spotify, Discord, Telegram, Steam, Obsidian, Blender, dan browser pihak ketiga secara visual dengan satu klik.
+
+### Integrasi Visual Out-of-the-Box:
+- **GNOME Edition:** Mengintegrasikan **GNOME Software** dengan plugin Flatpak dan repositori Flathub aktif otomatis.
+- **KDE Plasma Edition:** Mengintegrasikan **KDE Discover** dengan backend Flatpak dan repositori Flathub aktif otomatis.
+- **Sinkronisasi Tema & Kursor Sempurna:** Memasang `xdg-desktop-portal` dan `xdg-desktop-portal-gtk/kde` sehingga aplikasi Flatpak otomatis mengikuti tema *Dark Slate*, palet warna *Tokyo Cyber*, dan ukuran kursor sistem tanpa ada desinkronisasi visual.
+
+---
+
+## 7. Kompatibilitas Biner & Ergonomi Pengembang Out-of-the-Box
 
 1. **Aktivasi Global `nix-ld`:**  
    Menyelesaikan masalah mendasar ketiadaan FHS pada NixOS. Seluruh biner Linux standar (misal: binary VS Code, script Python pip yang mengompilasi modul C, biner Go, Rust, atau file tar.gz dari internet) dapat langsung dieksekusi secara instan tanpa perlu dibungkus (*wrapping*).
@@ -125,7 +161,7 @@ Pengguna tidak perlu mengetik konfigurasi manual; mencentang opsi di NEURONIX Ce
 
 ---
 
-## 6. Strategi Hardware & Instalasi Offline 100%
+## 8. Strategi Hardware & Instalasi Offline 100%
 
 - **Dual-Boot Mode pada Menu ISO:**
   - `Boot NEURONIX Installer (Standard / Open-Source AMD/Intel)`
@@ -135,11 +171,13 @@ Pengguna tidak perlu mengetik konfigurasi manual; mencentang opsi di NEURONIX Ce
 
 ---
 
-## 7. Matriks Kelemahan, Risiko, dan Solusi Cerdas
+## 9. Matriks Analisis Celah Fatal Tersembunyi & Solusi Brilian Rekayasa
 
-| Kelemahan / Risiko Nyata | Akar Masalah | **Solusi Rekayasa Cerdas NEURONIX** |
-| :--- | :--- | :--- |
-| **Peningkatan Ruang Disk `/nix/store`** | Setiap versi paket memiliki hash terpisah di `/nix/store`. | Format partisi bawaan **Btrfs ZSTD:3** + deduplikasi hardlink real-time (`auto-optimise-store = true`) + timer pembersihan mandiri (`neuronix diet`). |
-| **Instabilitas Driver GPU NVIDIA** | Modul kernel NVIDIA rentan rusak saat kernel Linux rolling update. | Mengunci konfigurasi desktop ke versi **Linux Kernel LTS** di file konfigurasi bawaan dan menyediakan fallback generasi instan di bootloader GRUB. |
-| **Kurva Belajar File Konfigurasi `.nix`** | Pengguna awam asing dengan paradigma *functional programming*. | Menyediakan file modul siap pakai (misal: `gaming.nix`, `ai-dev.nix`) di `/etc/nixos/modules/` yang hanya memerlukan saklar `enable = true;`. |
-| **Ukuran File ISO yang Besar** | Memaketkan beberapa Desktop Environment sekaligus dapat memperbesar file ISO. | Menggunakan kompresi ISO `squashfs` dengan algoritma `xz` tingkat tinggi untuk mempertahankan ukuran ISO di bawah 3.8 GB. |
+Di luar kelemahan umum, terdapat **4 celah fatal tersembunyi (*latent fatal traps*)** yang kerap menghancurkan proyek distro turunan NixOS, dan berikut adalah solusi rekayasa cerdas yang dirancang dalam NEURONIX:
+
+| No | Celah Fatal Tersembunyi | Dampak Kegagalan Nyata | **Solusi Rekayasa Cerdas NEURONIX** |
+| :---: | :--- | :--- | :--- |
+| **1** | **Pemblokiran Lisensi Proprietary (`allowUnfree`)** | NixOS secara default menolak aplikasi seperti Steam, NVIDIA, Spotify, Discord dengan error `unfree license`. | Calamares otomatis menyisipkan `nixpkgs.config.allowUnfree = true;` pada konfigurasi yang digenerate. Pengguna tidak akan pernah diblokir saat instalasi software. |
+| **2** | **Konflik Dual-Boot Windows (EFI / BitLocker / Fast Startup)** | Installer Linux sering gagal mendeteksi partisi Windows Boot Manager, menyebabkan Windows hilang dari menu boot. | Modul Calamares NEURONIX mengaktifkan `boot.loader.grub.useOSProber = true` secara otomatis dan menyelaraskan partisi ESP UEFI, serta memunculkan peringatan visual ramah jika *Windows Fast Startup* terdeteksi aktif. |
+| **3** | **Fragmentasi Metadata Filesystem Btrfs** | Subvolume Btrfs dengan ribuan hardlink `/nix/store` dapat mengalami penumpukan chunk metadata kosong. | Menyematkan service pemeliharaan bulanan ringan di latar belakang (`btrfs-balance.timer`) dengan ambang batas rendah (`btrfs balance start -dusage=10 /`) yang berjalan senyap tanpa membebani I/O. |
+| **4** | **Ketidakteraturan Izin Aplikasi Flatpak (Wayland/GPU)** | Beberapa aplikasi Flatpak sering crash karena tidak memiliki akses ke socket Wayland atau akselerasi GPU Mesa. | Menyetel izin dasar global Flatpak via declarative overrides (`flatpak override --system --socket=wayland --socket=fallback-x11 --device=dri`) sehingga seluruh aplikasi GUI Flatpak langsung terakselerasi GPU. |
