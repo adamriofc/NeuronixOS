@@ -12,8 +12,8 @@ set -eo pipefail
 # Graceful SIGPIPE handling for pipeline consumers (e.g. head, grep -q)
 trap 'exec 2>/dev/null; exit 0' PIPE
 
-# Safe Path & Environment Fallbacks (Rust-grade defensive posture)
-export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-system/sw/bin:/usr/bin:/bin"
+# Safe Path & Environment Fallbacks (Mission-critical defensive posture)
+export PATH="/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:${PATH:-}"
 
 VERSION="0.3.0-alpha"
 PROGRAM_NAME="neuronix"

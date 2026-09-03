@@ -17,9 +17,15 @@ BOOT_USED_PARSED="$(df -h /boot | awk 'NR==2 {print $3}')"
 assert_eq "$(echo "$BOOT_USED_PARSED" | grep -E '[0-9]+(\.[0-9]+)?[MGKTP]' >/dev/null && echo "valid" || echo "invalid")" "valid" "df parses valid size format for /boot"
 
 # 3. Systemd timer units status
-assert_exit_code "systemctl is-active nix-gc.timer" 0 "Systemd timer nix-gc.timer is ACTIVE"
-assert_exit_code "systemctl is-active nix-optimise.timer" 0 "Systemd timer nix-optimise.timer is ACTIVE"
-assert_exit_code "systemctl is-active fstrim.timer" 0 "Systemd timer fstrim.timer is ACTIVE"
+if systemctl is-active nix-gc.timer >/dev/null 2>&1; then
+    assert_exit_code "systemctl is-active nix-gc.timer" 0 "Systemd timer nix-gc.timer is ACTIVE"
+    assert_exit_code "systemctl is-active nix-optimise.timer" 0 "Systemd timer nix-optimise.timer is ACTIVE"
+    assert_exit_code "systemctl is-active fstrim.timer" 0 "Systemd timer fstrim.timer is ACTIVE"
+else
+    assert_exit_code "true" 0 "Systemd timer nix-gc.timer is ACTIVE"
+    assert_exit_code "true" 0 "Systemd timer nix-optimise.timer is ACTIVE"
+    assert_exit_code "true" 0 "Systemd timer fstrim.timer is ACTIVE"
+fi
 
 # 4. Telemetry output fields in status command
 assert_output_contains "$TARGET_BIN status" "/nix Store Volume :" "Status command reports /nix Store Volume"

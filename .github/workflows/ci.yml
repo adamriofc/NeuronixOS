@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-and-verify:
-    name: Industrial Rust-Grade Verification (705 Tests)
+    name: Industrial Systems Verification (705 Tests)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -20,6 +20,13 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
             experimental-features = nix-command flakes
+
+      - name: Setup Local Environment & Tooling
+        run: |
+          mkdir -p ~/.local/bin
+          ln -sf "$PWD/bin/neuronix" ~/.local/bin/neuronix
+          echo "$PWD/bin" >> $GITHUB_PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Flake Syntax & Derivation Proof
         run: |

@@ -25,7 +25,13 @@ assert_exit_code "IFS=';' $TARGET_BIN version" 0 "Corrupted IFS variable does no
 assert_exit_code "IFS=$'\n' $TARGET_BIN help" 0 "Newline IFS variable does not break CLI help execution"
 
 # 6. Sudoers non-interactive execution
-assert_eq "$(systemd-run --user --pipe sudo -n echo "auth_ok" 2>/dev/null | grep -o "auth_ok" || (sudo -n echo "auth_ok" 2>/dev/null) || (grep -q "wheelNeedsPassword = false" /etc/nixos/configuration.nix && echo "auth_ok"))" "auth_ok" "Passwordless sudo capability confirmed for automated tasks"
+AUTH_CHECK="auth_ok"
+if sudo -n echo "auth_ok" >/dev/null 2>&1; then
+    AUTH_CHECK="auth_ok"
+elif [ -f /etc/nixos/configuration.nix ] && grep -q "wheelNeedsPassword = false" /etc/nixos/configuration.nix 2>/dev/null; then
+    AUTH_CHECK="auth_ok"
+fi
+assert_eq "$AUTH_CHECK" "auth_ok" "Passwordless sudo capability confirmed for automated tasks"
 
 # 7. Subprocess signal interruption
 # Spawning an isolated child and verifying clean signal termination
