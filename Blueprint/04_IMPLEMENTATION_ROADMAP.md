@@ -105,7 +105,7 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
      - **GUI App Store Bawaan:** GNOME Software / KDE Discover terintegrasi Flathub dengan sinkronisasi portal tema Wayland.
      - **Kustomisasi Penuh Auto-TRIM:** Kendali toggle switch di GUI (Calamares & NEURONIX Center) serta CLI (`neuronix config set auto-trim on|off`).
      - **Inklusi Otomatis `allowUnfree = true`:** Mengeliminasi error lisensi proprietary pada instalasi software umum (NVIDIA, Steam, Discord).
-   7. **23 Pertahanan Perangkat Keras & Runtime Kedap Peluru (*23-Pillar Ironclad Shield*):**
+   7. **27 Pertahanan Perangkat Keras & Runtime Paripurna (*27-Pillar Ironclad Shield*):**
       - Alokasi 1.0 GiB ESP `/boot` dengan auto-rotasi batas 15 generasi (anti-overflow EFI).
       - Firmware Wi-Fi/Bluetooth Realtek/Broadcom lengkap di ISO offline.
       - Manajemen Hybrid GPU (NVIDIA Optimus / AMD PRIME) hemat daya & HDMI out.
@@ -125,6 +125,10 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
       - **Otentikasi Wi-Fi Publik Otomatis (Captive Portal Detection):** Pop-up login otomatis di hotel, cafe, dan bandara.
       - **Percetakan & Pemindaian Nirkabel Tanpa Driver (AirPrint / Mopria IPP):** Cetak dokumen instan tanpa instal driver PPD.
       - **Mounting Flashdisk Windows Cepat & Stabil (Kernel `ntfs3` + exFAT):** Baca-tulis partisi Windows dengan kecepatan 500+ MB/s.
+      - **Eliminasi Bunyi Letupan Headphone 3.5mm (ALSA Powersave Fix):** Bebas suara static pop/click di earphone kabel.
+      - **Hibernasi Btrfs Aman Tanpa Korupsi Data (`@swap` CoW-Disabled):** Resume dari swapfile Btrfs 100% reliabel.
+      - **Pembaruan Otomatis Microcode CPU (Intel & AMD):** Kebal celah keamanan prosesor Spectre, Zenbleed, dan Downfall.
+      - **Otentikasi Git SSH & GPG Pinentry Terpadu di Wayland:** Commit signing dan push repository langsung mulus.
 - **Kriteria Kelulusan Fase (Exit Gate 4):**
   - File ISO sukses di-compile secara hermetis dan dapat di-boot di mesin bare-metal maupun mesin virtual bersih (QEMU / Quickemu / VirtualBox).
   - Installer Calamares sukses mengeksekusi partisi Btrfs ZSTD:3 dan menyelesaikan instalasi hingga masuk ke desktop Wayland pilihan.
