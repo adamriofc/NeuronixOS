@@ -27,7 +27,7 @@ done
 
 # 11-15. Verification of Output Integrity Across Concurrent Threads
 for i in $(seq 1 5); do
-    assert_output_contains "cat '$RESULTS_DIR/out_$i'" "0.3.0-alpha" "Thread #$i output is complete and uncorrupted"
+    assert_output_contains "cat '$RESULTS_DIR/out_$i'" "0.4.0-beta" "Thread #$i output is complete and uncorrupted"
 done
 
 # 16-18. Check for Zombie / Orphan Processes

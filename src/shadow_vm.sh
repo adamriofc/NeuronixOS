@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Shadow Micro-VM Simulation Engine (v0.3.0)
+# NEURONIX Shadow Micro-VM Simulation Engine (v0.4.0)
 # Orchestrates ephemeral, in-memory (RAM-disk) QEMU virtual machine sandboxes.
 # Provides Zero-Blast Radius dry-run testing before atomic host system promotion.
 #

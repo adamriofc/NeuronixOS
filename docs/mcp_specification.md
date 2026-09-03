@@ -2,7 +2,7 @@
 
 **Protocol Standard:** Model Context Protocol (Protocol Version `2024-11-05`)  
 **Transport Binding:** JSON-RPC 2.0 over `stdio`  
-**Substrate Version:** 0.3.0-alpha  
+**Substrate Version:** 0.4.0-beta  
 
 ---
 
@@ -64,7 +64,7 @@ Negotiates client-server protocol version and capabilities.
     },
     "serverInfo": {
       "name": "neuronix-mcp",
-      "version": "0.3.0-alpha"
+      "version": "0.4.0-beta"
     }
   }
 }
@@ -118,7 +118,7 @@ Executes an exposed tool with caller arguments.
     "content": [
       {
         "type": "text",
-        "text": "Formal Proof PASSED: Package 'ripgrep' is a valid pure derivation in nixpkgs closure. Blast-radius is zero."
+        "text": "Declarative Verification PASSED: Package 'ripgrep' is a valid pure derivation in nixpkgs closure. Isolated sandbox verified."
       }
     ]
   }

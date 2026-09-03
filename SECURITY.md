@@ -6,8 +6,8 @@ NEURONIX OS follows the active upstream NixOS channel lifecycle. Security update
 
 | Version | Supported | Maintenance Phase |
 | :--- | :---: | :--- |
-| 1.0.x (Current) | Yes | Active Security & Subsystem Updates |
-| 0.3.x (Alpha) | Yes | Bug Fixes & Architecture Hardening |
+| 0.4.x (Beta) | Yes | Active Security, Testing, & Subsystem Hardening |
+| 0.3.x (Alpha) | Yes | Transition & Bug Fixes |
 | < 0.3.0 | No | End of Life (Superseded) |
 
 ## Reporting a Vulnerability

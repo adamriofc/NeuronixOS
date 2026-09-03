@@ -20,7 +20,7 @@ assert_stderr_contains "log_error 'Test error message'" "Test error message" "lo
 
 # 6-10. Test Banner Functionality
 assert_output_contains "print_banner" "NEURONIX" "Banner contains 'NEURONIX' text art"
-assert_output_contains "print_banner" "v0.3.0-alpha" "Banner contains version string"
+assert_output_contains "print_banner" "v0.4.0-beta" "Banner contains version string"
 assert_output_contains "print_banner" "Deterministic AI-Augmented Substrate" "Banner contains subtitle"
 assert_exit_code "print_banner" 0 "print_banner returns exit code 0"
 assert_eq "$(print_banner | wc -l)" "7" "Banner has expected line count"

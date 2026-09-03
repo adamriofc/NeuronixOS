@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Model Context Protocol (MCP) Server (v0.2.0)
+# NEURONIX Model Context Protocol (MCP) Server
 # Implements MCP JSON-RPC 2.0 over stdio (Protocol Version: 2024-11-05)
-# Zero-external-dependency, high-throughput, pure deterministic substrate harness.
+# Production-grade implementation utilizing robust jq parsing and serialization.
 #
 # Copyright (c) 2026 NEURONIX Contributors
 # Licensed under the Apache License, Version 2.0
@@ -15,49 +15,61 @@ export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-syst
 
 # Version Metadata
 SERVER_NAME="neuronix-mcp"
-SERVER_VERSION="0.3.0-alpha"
+SERVER_VERSION="0.4.0-beta"
 PROTOCOL_VERSION="2024-11-05"
+
+# Discover jq in environment, system profiles, or nix store
+if ! command -v jq >/dev/null 2>&1; then
+    for candidate in /run/current-system/sw/bin/jq /nix/store/*-jq-*/bin/jq; do
+        if [[ -x "$candidate" ]]; then
+            export PATH="$(dirname "$candidate"):$PATH"
+            break
+        fi
+    done
+fi
+
+# Ensure jq is available
+if ! command -v jq >/dev/null 2>&1; then
+    echo "Fatal: jq is required for NEURONIX MCP JSON-RPC 2.0 server" >&2
+    exit 1
+fi
 
 # Helper for JSON-RPC 2.0 responses
 send_response() {
     local id="$1"
     local result_json="$2"
-    printf '{"jsonrpc":"2.0","id":%s,"result":%s}\n' "$id" "$result_json"
+    jq -n -c --argjson id "$id" --argjson result "$result_json" \
+        '{"jsonrpc":"2.0","id":$id,"result":$result}'
 }
 
 send_error() {
     local id="${1:-null}"
     local code="$2"
     local message="$3"
-    printf '{"jsonrpc":"2.0","id":%s,"error":{"code":%d,"message":"%s"}}\n' "$id" "$code" "$message"
+    jq -n -c --argjson id "$id" --argjson code "$code" --arg msg "$message" \
+        '{"jsonrpc":"2.0","id":$id,"error":{"code":$code,"message":$msg}}'
 }
 
 # Core MCP Methods
 handle_initialize() {
     local req_id="$1"
     local result
-    result=$(cat <<EOF
-{
-  "protocolVersion": "${PROTOCOL_VERSION}",
-  "capabilities": {
-    "tools": {}
-  },
-  "serverInfo": {
-    "name": "${SERVER_NAME}",
-    "version": "${SERVER_VERSION}"
-  }
-}
-EOF
-)
-    # Compact JSON to single line
-    result="$(echo "$result" | tr -d '\n' | sed 's/  */ /g')"
+    result=$(jq -n -c \
+        --arg proto "$PROTOCOL_VERSION" \
+        --arg name "$SERVER_NAME" \
+        --arg ver "$SERVER_VERSION" \
+        '{
+            protocolVersion: $proto,
+            capabilities: { tools: {} },
+            serverInfo: { name: $name, version: $ver }
+        }')
     send_response "$req_id" "$result"
 }
 
 handle_tools_list() {
     local req_id="$1"
     local result
-    result=$(cat <<EOF
+    result=$(cat << 'JSON_EOF'
 {
   "tools": [
     {
@@ -78,7 +90,7 @@ handle_tools_list() {
     },
     {
       "name": "neuronix_verify",
-      "description": "Formally verify a Nix package or expression via pure evaluation dry-build before execution (Zero-Blast Radius Gatekeeper).",
+      "description": "Evaluate and validate a Nix package or expression derivation prior to execution (Declarative Evaluation Gatekeeper).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -92,7 +104,7 @@ handle_tools_list() {
     },
     {
       "name": "neuronix_undo",
-      "description": "Atomically revert system configuration to preceding generation in < 2 seconds.",
+      "description": "Atomic rollback directive: revert system configuration symlink to preceding generation.",
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -121,9 +133,9 @@ handle_tools_list() {
     }
   ]
 }
-EOF
+JSON_EOF
 )
-    result="$(echo "$result" | tr -d '\n' | sed 's/  */ /g')"
+    result="$(echo "$result" | jq -c .)"
     send_response "$req_id" "$result"
 }
 
@@ -146,10 +158,12 @@ handle_tools_call() {
             read -r nix_used nix_avail < <(df -h /nix 2>/dev/null | awk 'NR==2 {print $3, $4}')
 
             local text_payload
-            text_payload=$(printf 'NEURONIX Substrate Telemetry:\\n- Kernel: %s\\n- Hypervisor: %s\\n- Active Generation: Gen #%s (Total: %s)\\n- /nix Store: Used %s, Free %s\\n- Real-time Dedupe: ACTIVE\\n- Dynamic Guard: min-free 1.0G, max-free 3.0G' \
-                "$kernel_ver" "$virt_type" "$current_gen" "$total_gen" "$nix_used" "$nix_avail")
+            text_payload=$(printf 'NEURONIX Substrate Telemetry:\n- Kernel: %s\n- Hypervisor: %s\n- Active Generation: Gen #%s (Total: %s)\n- /nix Store: Used %s, Free %s\n- Real-time Dedupe: ACTIVE\n- Dynamic Guard: min-free 1.0G, max-free 3.0G' \
+                "$kernel_ver" "$virt_type" "$current_gen" "$total_gen" "${nix_used:-N/A}" "${nix_avail:-N/A}")
 
-            send_response "$req_id" "{\"content\":[{\"type\":\"text\",\"text\":\"${text_payload}\"}]}"
+            local content
+            content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
             ;;
 
         neuronix_diet)
@@ -160,34 +174,41 @@ handle_tools_call() {
                 trim_info="fstrim not available."
             fi
             local text_payload="Storage optimization completed. Unused derivations collected, store deduplicated, and ${trim_info}"
-            send_response "$req_id" "{\"content\":[{\"type\":\"text\",\"text\":\"${text_payload}\"}]}"
+            local content
+            content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
             ;;
 
         neuronix_verify)
-            # Extract package name from params
             local pkg
-            pkg=$(echo "$params" | sed -n 's/.*"package"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-            if [[ -z "$pkg" ]]; then
-                pkg="hello"
-            fi
+            pkg=$(echo "$params" | jq -r '.package // empty')
+            [[ -z "$pkg" ]] && pkg="hello"
 
-            # Formal Gatekeeper: evaluate whether package exists in nixpkgs
+            # Declarative Gatekeeper: evaluate whether package exists in nixpkgs
             if nix-instantiate --eval -E "with import <nixpkgs> {}; (builtins.hasAttr \"${pkg}\" pkgs)" 2>/dev/null | grep -q "true"; then
-                send_response "$req_id" "{\"content\":[{\"type\":\"text\",\"text\":\"Formal Proof PASSED: Package '${pkg}' is a valid pure derivation in nixpkgs closure. Blast-radius is zero.\"}]}"
+                local content
+                content=$(jq -n -c --arg pkg "$pkg" '{"content":[{"type":"text","text":"Declarative Verification PASSED: Package \u0027" + $pkg + "\u0027 is a valid derivation in nixpkgs closure."}]}')
+                send_response "$req_id" "$content"
             else
-                send_response "$req_id" "{\"content\":[{\"type\":\"text\",\"text\":\"Formal Proof FAILED: Package '${pkg}' cannot be verified in pure nixpkgs evaluation. State modification rejected.\"}]}"
+                local content
+                content=$(jq -n -c --arg pkg "$pkg" '{"content":[{"type":"text","text":"Declarative Verification FAILED: Package \u0027" + $pkg + "\u0027 cannot be verified in pure nixpkgs evaluation. State modification rejected."}]}')
+                send_response "$req_id" "$content"
             fi
             ;;
 
         neuronix_undo)
-            send_response "$req_id" "{\"content\":[{\"type\":\"text\",\"text\":\"Rollback directive received. Profile atomic pointer ready to flip to preceding generation.\"}]}"
+            local content
+            content=$(jq -n -c '{"content":[{"type":"text","text":"Rollback directive received. Profile atomic pointer ready to flip to preceding generation."}]}')
+            send_response "$req_id" "$content"
             ;;
 
         neuronix_list_generations)
             local gen_list
-            gen_list=$(find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" -printf "%f -> %l\\n" 2>/dev/null | sort -V | tr '\n' ';' | sed 's/;$//')
+            gen_list=$(find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" -printf "%f -> %l\n" 2>/dev/null | sort -V | tr '\n' ';' | sed 's/;$//')
             [[ -z "$gen_list" ]] && gen_list="system-3-link (active)"
-            send_response "$req_id" "{\"content\":[{\"type\":\"text\",\"text\":\"Available generations: ${gen_list}\"}]}"
+            local content
+            content=$(jq -n -c --arg text "Available generations: ${gen_list}" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
             ;;
 
         neuronix_shadow_eval)
@@ -196,10 +217,14 @@ handle_tools_call() {
             local shadow_script="${script_dir}/shadow_vm.sh"
             if [[ -x "$shadow_script" ]]; then
                 local res
-                res=$("$shadow_script" --smoke-test --headless 2>&1 | tr '\n' ' ' | sed 's/"/\\"/g')
-                send_response "$req_id" "{\"content\":[{\"type\":\"text\",\"text\":\"Shadow Micro-VM Simulation PASSED in RAM: ${res}\"}]}"
+                res=$("$shadow_script" --smoke-test --headless 2>&1 | tr '\n' ' ')
+                local content
+                content=$(jq -n -c --arg text "Shadow Micro-VM Simulation PASSED in RAM: ${res}" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
             else
-                send_response "$req_id" "{\"content\":[{\"type\":\"text\",\"text\":\"Shadow Micro-VM Simulation PASSED in RAM (Virtual smoke-test clean).\"}]}"
+                local content
+                content=$(jq -n -c '{"content":[{"type":"text","text":"Shadow Micro-VM Simulation PASSED in RAM (Virtual smoke-test clean)."}]}')
+                send_response "$req_id" "$content"
             fi
             ;;
 
@@ -216,14 +241,19 @@ run_mcp_server() {
         # Ignore empty lines
         [[ -z "${line// }" ]] && continue
 
-        # Extract ID (numeric or string)
+        # Robust JSON Parsing via jq
+        if ! echo "$line" | jq empty 2>/dev/null; then
+            send_error "null" -32700 "Parse error: Invalid JSON received"
+            continue
+        fi
+
+        # Extract ID (numeric, string, or null)
         local req_id
-        req_id=$(echo "$line" | sed -n 's/.*"id"[[:space:]]*:[[:space:]]*\([0-9A-Za-z_-]*\).*/\1/p')
-        [[ -z "$req_id" ]] && req_id="null"
+        req_id=$(echo "$line" | jq -c '.id // null')
 
         # Extract method
         local method
-        method=$(echo "$line" | sed -n 's/.*"method"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+        method=$(echo "$line" | jq -r '.method // empty')
 
         if [[ -z "$method" ]]; then
             send_error "$req_id" -32600 "Invalid Request: missing or malformed 'method' field"
@@ -242,8 +272,10 @@ run_mcp_server() {
                 ;;
             tools/call)
                 local tool_name
-                tool_name=$(echo "$line" | sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-                handle_tools_call "$req_id" "$tool_name" "$line"
+                tool_name=$(echo "$line" | jq -r '.params.name // empty')
+                local params
+                params=$(echo "$line" | jq -c '.params // {}')
+                handle_tools_call "$req_id" "$tool_name" "$params"
                 ;;
             ping)
                 send_response "$req_id" "{}"

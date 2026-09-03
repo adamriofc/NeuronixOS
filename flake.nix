@@ -11,17 +11,23 @@
 
   outputs = { self, nixpkgs, nixos-generators, ... }@inputs:
     let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
+      versionData = import ./version.nix;
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      pkgsFor = system: import nixpkgs {
         inherit system;
         config.allowUnfree = true;
       };
+      primarySystem = "x86_64-linux";
     in
     {
+      inherit (versionData) version stateVersion;
+
       # Modul deklaratif NEURONIX yang dapat digunakan kembali
       nixosModules = {
         core = import ./modules/core;
         hardware = import ./modules/hardware/boot.nix;
+        secureboot = import ./modules/hardware/secureboot.nix;
         firmware = import ./modules/hardware/firmware.nix;
         audio = import ./modules/hardware/audio.nix;
         power = import ./modules/hardware/power.nix;
@@ -41,7 +47,7 @@
 
       # Target installed system configuration (Default Desktop)
       nixosConfigurations."neuronix-desktop" = nixpkgs.lib.nixosSystem {
-        inherit system;
+        system = primarySystem;
         modules = [
           ./modules/core
           ./modules/hardware/boot.nix
@@ -63,7 +69,7 @@
 
       # Konfigurasi Live ISO Installer Mandiri
       nixosConfigurations."neuronix-iso" = nixpkgs.lib.nixosSystem {
-        inherit system;
+        system = primarySystem;
         modules = [
           "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares.nix"
           ./modules/core
@@ -76,29 +82,42 @@
         ];
       };
 
-      # Paket kustom NEURONIX
-      packages.${system} = {
-        neuronix-center = pkgs.callPackage ./packages/neuronix-center { };
-        neuronix-cli = pkgs.callPackage ./packages/neuronix-cli { };
-        iso = self.nixosConfigurations."neuronix-iso".config.system.build.isoImage;
-      };
+      # Paket kustom NEURONIX (Multi-Architecture: x86_64-linux & aarch64-linux)
+      packages = forAllSystems (system:
+        let
+          pkgs = pkgsFor system;
+        in
+        {
+          neuronix-center = pkgs.callPackage ./packages/neuronix-center { };
+          neuronix-cli = pkgs.callPackage ./packages/neuronix-cli { };
+        } // (nixpkgs.lib.optionalAttrs (system == primarySystem) {
+          iso = self.nixosConfigurations."neuronix-iso".config.system.build.isoImage;
+        })
+      );
 
-      # Development Shell hermetis
-      devShells.${system}.default = pkgs.mkShell {
-        name = "neuronix-dev-shell";
-        buildInputs = with pkgs; [
-          nix-diff
-          nixos-generators
-          qemu
-          calamares
-          btrfs-progs
-        ];
-        shellHook = ''
-          echo "========================================================"
-          echo "  NEURONIX OS Distribution Engineering Substrate       "
-          echo "  Ready for building ISO, modules, & test verification  "
-          echo "========================================================"
-        '';
-      };
+      # Development Shell hermetis (Multi-Architecture)
+      devShells = forAllSystems (system:
+        let
+          pkgs = pkgsFor system;
+        in
+        {
+          default = pkgs.mkShell {
+            name = "neuronix-dev-shell";
+            buildInputs = with pkgs; [
+              nix-diff
+              nixos-generators
+              qemu
+              calamares
+              btrfs-progs
+            ];
+            shellHook = ''
+              echo "========================================================"
+              echo "  NEURONIX OS Distribution Engineering Substrate       "
+              echo "  Ready for building ISO, modules, & test verification  "
+              echo "========================================================"
+            '';
+          };
+        }
+      );
     };
 }

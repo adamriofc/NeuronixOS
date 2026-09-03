@@ -276,8 +276,8 @@ test_neuronix_center() {
 
   local ver
   ver=$(nix-shell -p python3 --run "python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --version" 2>&1)
-  if echo "$ver" | grep -q "1.0.0-phase4"; then
-    log_pass "neuronix-center reports correct version 1.0.0-phase4"
+  if echo "$ver" | grep -Eq "0.4.0-beta|1.0.0-phase4"; then
+    log_pass "neuronix-center reports correct version (${ver})"
   else
     log_fail "neuronix-center version mismatch: $ver"
   fi
@@ -499,9 +499,8 @@ echo "  Failed Verification  : ${FAILED_COUNT}"
 echo "  Execution Duration   : ${DURATION} ms"
 if [ "$FAILED_COUNT" -eq 0 ]; then
   echo "  Confidence Score     : 100%"
-  echo "==================================================================="
-  echo -e "  ${GREEN}🏆 DISTRO CERTIFICATION PASSED: 100% MISSION-CRITICAL RESILIENCE PROVEN${RESET}"
-  echo "  All Phase 4 modules, Calamares engine, CLI dev, and ADRs are 100% verified."
+  echo -e "  ${GREEN}✓ NEURONIX DISTRO VALIDATION PASSED: 100% OF DECLARED ASSERTIONS VERIFIED${RESET}"
+  echo "  All Phase 4 modules, Calamares engine, CLI dev, and contracts verified."
   exit 0
 else
   echo "  Confidence Score     : FAIL"

@@ -31,10 +31,14 @@ jobs:
       - name: Flake Syntax & Derivation Proof
         run: |
           nix-instantiate --parse flake.nix
+          nix-instantiate --parse version.nix
           nix-instantiate --parse hosts/iso/default.nix
           nix-instantiate --parse hosts/desktop/default.nix
           nix-instantiate --parse packages/neuronix-cli/default.nix
           nix-instantiate --parse packages/neuronix-center/default.nix
+          nix-instantiate --parse modules/hardware/secureboot.nix
+          nix-instantiate --parse modules/hardware/nvidia-prime.nix
+          nix-instantiate --parse modules/services/storage.nix
 
       - name: Execute Distro Verification Suite (199 Tests)
         run: |
@@ -43,6 +47,10 @@ jobs:
       - name: Execute Master Test Harness (506 Tests)
         run: |
           bash tests/run_all_tests.sh
+
+      - name: Execute Core CLI Verification (14 Tests)
+        run: |
+          bash tests/test_neuronix_core.sh
 
       - name: Verify Installer Dry-Run Simulation
         run: |

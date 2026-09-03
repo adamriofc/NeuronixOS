@@ -15,7 +15,7 @@ trap 'exec 2>/dev/null; exit 0' PIPE
 # Safe Path & Environment Fallbacks (Mission-critical defensive posture)
 export PATH="/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:${PATH:-}"
 
-VERSION="0.3.0-alpha"
+VERSION="0.4.0-beta"
 PROGRAM_NAME="neuronix"
 
 # Color Palettes & UI Formats
@@ -343,7 +343,7 @@ cmd_undo() {
     new_gen="$(get_current_generation)"
 
     echo
-    log_success "Rollback successful: Switched from Gen #${prev_gen} $\to$ ${BOLD}Gen #${new_gen}${RESET}."
+    log_success "Rollback successful: Switched from Gen #${prev_gen} -> ${BOLD}Gen #${new_gen}${RESET}."
     log_info "All packages, configurations, and services restored to previous generation."
 }
 
@@ -357,10 +357,10 @@ cmd_verify() {
 
     log_step "Running dry-build derivation verification for package: ${BOLD}${pkg}${RESET}..."
     if nix-instantiate --eval -E "with import <nixpkgs> {}; (builtins.hasAttr \"${pkg}\" pkgs)" 2>/dev/null | grep -q "true"; then
-        log_success "Formal Proof PASSED: Derivasi '${pkg}' sah dalam closure nixpkgs. Blast-radius: 0."
+        log_success "Declarative Verification PASSED: Package derivation '${pkg}' is valid in nixpkgs closure. Blast-radius: 0."
         return 0
     else
-        log_error "Formal Proof FAILED: Paket '${pkg}' tidak dapat diverifikasi dalam closure nixpkgs. Modifikasi ditolak."
+        log_error "Declarative Verification FAILED: Package '${pkg}' cannot be verified in pure nixpkgs evaluation. State modification rejected."
         return 1
     fi
 }

@@ -9,7 +9,7 @@ start_suite "08 - Environment Poisoning & Variable Sanitization"
 assert_exit_code "env -i $TARGET_BIN version" 0 "Running in stripped environment (env -i) executes version cleanly"
 assert_exit_code "env -i $TARGET_BIN help" 0 "Running in stripped environment (env -i) executes help cleanly"
 assert_exit_code "env -i $TARGET_BIN status" 0 "Running in stripped environment (env -i) executes status cleanly"
-assert_output_contains "env -i $TARGET_BIN version" "0.3.0-alpha" "Stripped env retains version metadata"
+assert_output_contains "env -i $TARGET_BIN version" "0.4.0-beta" "Stripped env retains version metadata"
 assert_output_contains "env -i $TARGET_BIN status" "SYSTEM IDENTITY" "Stripped env executes core telemetry logic"
 
 # 6-10. Poisoned PATH
@@ -32,7 +32,7 @@ assert_exit_code "LANG='C' $TARGET_BIN version" 0 "LANG=C executes version clean
 assert_exit_code "LC_ALL='C' $TARGET_BIN help" 0 "LC_ALL=C executes help cleanly"
 assert_exit_code "LC_ALL='POSIX' $TARGET_BIN status" 0 "LC_ALL=POSIX executes status cleanly"
 assert_exit_code "LANG='invalid_locale_xyz.UTF-8' $TARGET_BIN version" 0 "Invalid locale executes version cleanly"
-assert_output_contains "LC_ALL='C' $TARGET_BIN version" "0.3.0-alpha" "LC_ALL=C preserves output integrity"
+assert_output_contains "LC_ALL='C' $TARGET_BIN version" "0.4.0-beta" "LC_ALL=C preserves output integrity"
 
 # 21-25. Poisoned Terminal & Shell Variables
 assert_exit_code "TERM='' $TARGET_BIN version" 0 "Empty TERM variable executes version with exit 0"

@@ -2,12 +2,17 @@
 
 {
   # Btrfs filesystem maintenance and subvolume topology
-  # Periodic background balance service to prevent metadata chunk fragmentation
+  # Background balance service with filesystem detection to prevent unnecessary wear
   systemd.services.btrfs-balance = {
     description = "NEURONIX Btrfs Metadata Auto-Balance Service";
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = "${pkgs.btrfs-progs}/bin/btrfs balance start -dusage=10 -musage=10 /";
+      ExecStart = pkgs.writeShellScript "neuronix-btrfs-balance" ''
+        # Verify root filesystem is Btrfs before executing maintenance
+        if ${pkgs.util-linux}/bin/findmnt -n -o FSTYPE / 2>/dev/null | grep -q "btrfs"; then
+          ${pkgs.btrfs-progs}/bin/btrfs balance start -dusage=10 -musage=10 /
+        fi
+      '';
     };
   };
 

@@ -1,12 +1,13 @@
 # NEURONIX OS
 
-**A Declarative Linux Operating System with Calamares Installer, Hardware Hardening Matrix, and Developer Substrate**
+**A Declarative Linux Operating System Platform with Calamares Installer, Hardware Hardening Matrix, and Developer Substrate**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![NixOS](https://img.shields.io/badge/Substrate-NixOS_24.11_%2F_26.05-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
+[![Version](https://img.shields.io/badge/Version-0.4.0--beta-blueviolet.svg)](version.nix)
+[![NixOS](https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
 [![Architecture](https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg)](#platform-architecture)
-[![Testing](https://img.shields.io/badge/Tests-705%2F705_Passed_(100%25)-success.svg)](#verification--test-harness)
-[![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_ZSTD%3A3-orange.svg)](#storage-architecture--maintenance)
+[![Testing](https://img.shields.io/badge/Assertions-705%2F705_Passed_(100%25)-success.svg)](#verification--test-harness)
+[![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg)](#storage-architecture--maintenance)
 [![Memory Management](https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg)](#memory-pressure-management)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg)](.github/workflows/ci.yml)
 
@@ -15,12 +16,14 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Feature Status & Assurance Hierarchy](#feature-status--assurance-hierarchy)
 - [Platform Architecture](#platform-architecture)
 - [Storage Architecture & Maintenance](#storage-architecture--maintenance)
   - [Btrfs Subvolume Topology](#btrfs-subvolume-topology)
   - [Transparent Block Compression (ZSTD:3)](#transparent-block-compression-zstd3)
   - [Auto-TRIM and Storage Reclamation](#auto-trim-and-storage-reclamation)
   - [Btrfs Metadata Balance Timer](#btrfs-metadata-balance-timer)
+  - [Filesystem Options: Btrfs vs EXT4](#filesystem-options-btrfs-vs-ext4)
 - [Memory Pressure Management](#memory-pressure-management)
   - [ZRAM In-Memory Swap Pool](#zram-in-memory-swap-pool)
   - [Kernel Paging Tuning (vm.swappiness = 180)](#kernel-paging-tuning-vmswappiness--180)
@@ -43,13 +46,24 @@
 
 ## Overview
 
-NEURONIX OS is an independent, declarative Linux distribution based on NixOS. It provides an automated Calamares installation workflow, pre-configured hardware and kernel profiles, transactional desktop environments, and developer CLI utilities while maintaining full compatibility with the upstream Nix package ecosystem.
+NEURONIX OS is an independent, declarative Linux distribution platform based on NixOS. It provides an automated Calamares installation workflow, pre-configured hardware and kernel profiles, transactional desktop environments, and developer CLI utilities while maintaining full compatibility with the upstream Nix package ecosystem.
 
-System architecture is organized into four layers:
-1. **User Experience Layer:** Graphical installer via Calamares, system generation management, and desktop configurations (KDE Plasma 6, GNOME Wayland, and Hyprland).
-2. **System Core Layer:** Read-only store (`/nix/store`), declarative kernel profiles, dynamic linking via `nix-ld`, and dual-layer application deployment (Nix core packages + Flatpak).
-3. **Developer Engine Layer:** One-command development toolchains (`neuronix dev`), store pruning, and system profile management.
-4. **Reliability & AI Substrate Layer:** In-memory micro-VM evaluation (`neuronix try`), a Model Context Protocol (MCP) server for system automation, and automated test suites.
+### Release Channels and Compatibility Baseline
+- **Development Builds:** Track `nixos-unstable` for modern kernel, Wayland compositors, and rapid developer tooling updates.
+- **Production Stable Builds:** Target `nixos-26.05` for conservative enterprise workloads and long-term security updates.
+- **State Version (`system.stateVersion = "24.11"`):** Represents the immutable NixOS state migration compatibility baseline, ensuring stateful configuration files (e.g. database schemas, systemd paths) remain backwards-compatible across upgrades.
+
+---
+
+## Feature Status & Assurance Hierarchy
+
+To ensure complete architectural truthfulness, system capabilities in NEURONIX OS are explicitly categorized into three distinct assurance tiers:
+
+| Assurance Level | Definition | Subsystems & Features |
+| :--- | :--- | :--- |
+| ✅ **VERIFIED** | Validated through automated test suites and contract assertions. | Pure Nix declarative substrate, atomic generation rollbacks, 27-pillar hardware compatibility contracts, Calamares installer engine, Btrfs subvolume layout, ZRAM memory shield, PipeWire duplex audio, dev toolchain stacks (Python/Rust/Node/Go/AI/Web3). |
+| 🟡 **IMPLEMENTED** | Declared in production system modules; hardware and runtime qualification actively in progress. | KDE Plasma 6 Wayland desktop, GNOME 47 desktop, Hyprland Wayland compositor with SDDM greeter, NVIDIA PRIME render offload module, battery charge ceiling daemon, real-time hardware telemetry center. |
+| 🔵 **EXPERIMENTAL** | Prototype integration or optional hardware-dependent research features. | Lanzaboote UEFI Secure Boot signing chain, QEMU in-memory Shadow Micro-VM evaluation (`neuronix try`), Model Context Protocol (MCP) JSON-RPC daemon. |
 
 ---
 
@@ -63,7 +77,7 @@ System architecture is organized into four layers:
 [ LAYER 1: USER EXPERIENCE (UX) ]                               [ LAYER 2: DESKTOP & SYSTEM CORE ]
   ├─ Calamares Graphical Installer (Declarative Generator)        ├─ Pure Nix Substrate (Immutable /nix/store)
   ├─ NEURONIX Center (GUI System Hub & Telemetry)                 ├─ Hardware Hardening & Compatibility Matrix
-  ├─ Generation Management & Instant Rollbacks (< 2s)             ├─ Global Dynamic Linker (nix-ld)
+  ├─ Generation Management & Instant Symlink Rollbacks            ├─ Global Dynamic Linker (nix-ld)
   ├─ Dual-Layer Software Model (Nix Core + Flathub Flatpak)       ├─ Atomic Symlink Pointer Management
   └─ Desktop Environments: KDE Plasma 6, GNOME, Hyprland          └─ Generation-Aware Shell Prompt [Gen #N]
   │                                                                                 │
@@ -72,9 +86,9 @@ System architecture is organized into four layers:
 [ LAYER 3: DEVELOPER ENGINE ]                                   [ LAYER 4: RELIABILITY & AI SUBSTRATE ]
   ├─ neuronix dev python (uv, ruff, pyright, postgresql)          ├─ Model Context Protocol (MCP) Server (JSON-RPC 2.0)
   ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ In-Memory Shadow Micro-VM Simulator (neuronix try)
-  ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Dry-Build Formal Verification (neuronix verify)
+  ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Declarative Derivation Verification (neuronix verify)
   ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Storage Pruner & VirtIO TRIM (neuronix diet)
-  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 705 Automated Test Cases (100% Pass)
+  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 705 Automated Test Assertions (100% Pass)
 ```
 
 ---
@@ -140,7 +154,7 @@ To prevent system lockups under memory exhaustion, NEURONIX implements a three-t
 
 ### ZRAM In-Memory Swap Pool
 - Configured using `zram-generator` with the ZSTD compression algorithm.
-- Provides an effective swap pool approximately 2.5x to 3x physical RAM capacity with RAM-speed transfer latency.
+- Provides an effective swap pool typically expanding memory capacity by 1.5x to 2.5x depending on workload compressibility and entropy, with RAM-speed transfer latency.
 
 ### Kernel Paging Tuning (vm.swappiness = 180)
 - The default Linux swappiness value (60) delays swapping until memory is nearly exhausted, increasing the risk of disk thrashing.
@@ -165,8 +179,8 @@ NEURONIX includes declarative configurations addressing standard desktop and lap
 | **Application Ecosystem** | Sandboxed desktop application integration without root modification | Dual-layer distribution: immutable Nix core + Flathub Flatpak | `modules/services/flatpak.nix` |
 | **Boot Partition Guard** | EFI System Partition storage overflow prevention | 1.0 GiB ESP standard with generation prune threshold (`configurationLimit = 15`) | `modules/hardware/boot.nix` |
 | **Offline Firmware** | Out-of-the-box Wi-Fi and Bluetooth chipset connectivity | Full redistributable firmware bundle (Broadcom, Realtek, Intel) | `modules/hardware/firmware.nix` |
-| **Hybrid Graphics** | Dynamic dGPU power gating on Optimus/PRIME laptops | Automated NVIDIA PRIME Render Offload configuration | `modules/hardware/nvidia-prime.nix` |
-| **Secure Boot** | Compatibility with UEFI Secure Boot firmware policies | Signed `shim` integration via `lanzaboote` | `modules/hardware/boot.nix` |
+| **Hybrid Graphics** | Dynamic dGPU power gating on Optimus/PRIME laptops | Declarative NVIDIA PRIME Render Offload configuration (Status: Implemented) | `modules/hardware/nvidia-prime.nix` |
+| **Secure Boot** | Compatibility with UEFI Secure Boot firmware policies | Lanzaboote signed boot integration (Status: Experimental, requires MOK enrollment) | `modules/hardware/secureboot.nix` |
 | **Portal Integration** | Native file-chooser dialog synchronization under Wayland | Explicit portal backend mapping via `portals.conf` | `modules/services/flatpak.nix` |
 | **Power Management** | Modern Standby battery drain reduction on mobile hardware | Kernel directive `mem_sleep_default=deep` + `power-profiles-daemon` | `modules/hardware/power.nix` |
 | **Dual Boot Detection** | UEFI boot partition discovery for multi-boot operating systems | Native `systemd-boot` EFI discovery without legacy os-prober | `modules/hardware/boot.nix` |
@@ -330,9 +344,9 @@ neuronix diet
 
 ---
 
-## Verification & Test Harness (705 Tests)
+## Verification & Test Harness (705 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test suite comprising 705 tests across 20 verification suites:
+System invariants, module structures, and CLI dispatchers are validated through an automated test suite comprising 705 automated assertions across 20 verification suites:
 
 ```text
 ═══════════════════════════════════════════════════════════════════
@@ -340,11 +354,12 @@ System invariants, module structures, and CLI dispatchers are validated through 
 ═══════════════════════════════════════════════════════════════════
   Master Test Harness (tests/run_all_tests.sh)     : 506 / 506 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 199 / 199 PASS
-  Total Executed Tests                             : 705 Tests
+  Total Executed Tests                             : 705 Assertions
   Failed Verification                              : 0 Failures
   Execution Duration                               : ~44.0 seconds
   Confidence Score                                 : 100%
 ═══════════════════════════════════════════════════════════════════
+  ✓ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED
 ```
 
 ### Verification Coverage:

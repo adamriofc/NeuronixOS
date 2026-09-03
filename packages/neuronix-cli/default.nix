@@ -1,8 +1,11 @@
 { lib, stdenv, makeWrapper, bash, coreutils, nix, jq }:
 
+let
+  versionData = import ../../version.nix;
+in
 stdenv.mkDerivation rec {
   pname = "neuronix-cli";
-  version = "0.3.0-alpha";
+  version = versionData.version;
 
   src = ../../src;
 
@@ -21,7 +24,7 @@ stdenv.mkDerivation rec {
 
   meta = with lib; {
     description = "NEURONIX Developer & System Substrate CLI Engine";
-    homepage = "https://github.com/neuronix-os/neuronix";
+    homepage = "https://github.com/adamriofc/neuronix";
     license = licenses.asl20;
     platforms = platforms.linux;
   };

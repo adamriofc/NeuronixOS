@@ -20,6 +20,29 @@ log_warn() {
   echo -e "\033[1;33m[NEURONIX-INSTALLER WARN]\033[0m $*"
 }
 
+log_err() {
+  echo -e "\033[1;31m[NEURONIX-INSTALLER ERROR]\033[0m $*" >&2
+}
+
+# Strict Input Validation (Privileged Sanitization Gatekeeper)
+if ! [[ "$TARGET_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+  log_err "Invalid TARGET_USER: '${TARGET_USER}'. Must conform to POSIX username format (^[a-z_][a-z0-9_-]{0,31}$)."
+  exit 1
+fi
+
+if ! [[ "$TARGET_HOSTNAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
+  log_err "Invalid TARGET_HOSTNAME: '${TARGET_HOSTNAME}'. Must conform to RFC 1123 hostname specification."
+  exit 1
+fi
+
+case "$SELECTED_DESKTOP" in
+  kde|gnome|hyprland) ;;
+  *)
+    log_err "Invalid SELECTED_DESKTOP: '${SELECTED_DESKTOP}'. Allowed values: kde, gnome, hyprland."
+    exit 1
+    ;;
+esac
+
 log "Memulai proses instalasi deklaratif NEURONIX ke target: $TARGET_ROOT"
 log "Parameter: User=$TARGET_USER, Host=$TARGET_HOSTNAME, Desktop=$SELECTED_DESKTOP"
 
@@ -143,7 +166,10 @@ elif [ "$SELECTED_DESKTOP" == "gnome" ]; then
 DESK_EOF
 elif [ "$SELECTED_DESKTOP" == "hyprland" ]; then
   cat <<'DESK_EOF' >> "$CONFIG_DIR/configuration.nix"
+  services.displayManager.sddm.enable = true;
+  services.displayManager.sddm.wayland.enable = true;
   programs.hyprland.enable = true;
+  programs.hyprland.xwayland.enable = true;
 DESK_EOF
 fi
 
@@ -160,7 +186,23 @@ cat <<USER_EOF >> "$CONFIG_DIR/configuration.nix"
 }
 USER_EOF
 
-log "✓ Declarative configuration at $CONFIG_DIR generated successfully."
+# Generate Release Manifest for System Traceability
+MANIFEST_DIR="$TARGET_ROOT/etc/neuronix"
+mkdir -p "$MANIFEST_DIR"
+cat <<MANIFEST_EOF > "$MANIFEST_DIR/release.json"
+{
+  "distribution": "NEURONIX OS",
+  "version": "0.4.0-beta",
+  "system": "x86_64-linux",
+  "target_user": "$TARGET_USER",
+  "target_hostname": "$TARGET_HOSTNAME",
+  "desktop_environment": "$SELECTED_DESKTOP",
+  "nixpkgs_channel": "nixos-unstable",
+  "installed_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+MANIFEST_EOF
+
+log "✓ Declarative configuration and release manifest at $CONFIG_DIR generated successfully."
 
 if [ "$DRY_RUN" -eq 0 ]; then
   log "Executing hermetic installation via nixos-install..."

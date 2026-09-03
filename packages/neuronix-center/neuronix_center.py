@@ -1,31 +1,33 @@
 #!/usr/bin/env python3
 """
-NEURONIX Center & GUI System Control Center (v1.0.0)
-System control center and generation rollback hub for NEURONIX OS.
-Provides hardware telemetry, generation inspection, modular profiles, and storage maintenance.
+NEURONIX Center & GUI System Control Center
+Truthful system telemetry, modular developer environments, and atomic rollback hub.
+All telemetry is probed directly from Linux kernel sysfs, /proc, and Nix profiles.
 """
 
 import sys
 import os
+import time
 import subprocess
 import argparse
-import json
+import glob
 
-VERSION = "1.0.0-phase4"
+VERSION = "0.4.0-beta"
 
 def get_system_telemetry():
+    """Probes runtime system telemetry truthfully without hardcoded mock values."""
     telemetry = {
-        "os": "NEURONIX OS (NixOS 26.05 Substrate)",
+        "os": "NEURONIX OS (Declarative NixOS Substrate)",
         "kernel": os.uname().release,
-        "generation": "Unknown",
-        "cpu": "Intel/AMD Processor",
-        "ram": "16.0 GB",
-        "storage": "Btrfs ZSTD:3 Enabled",
-        "gpu": "Auto-Detected (Mesa / PRIME Ready)",
-        "battery_limit": "80% Conservation Active"
+        "generation": "1 (Initial)",
+        "cpu": "Unknown Processor",
+        "ram": "Unknown",
+        "storage": "Unknown Filesystem",
+        "gpu": "Unknown Graphics Controller",
+        "battery_limit": "Not Supported (AC / Bare-Metal)"
     }
 
-    # Check active generation
+    # 1. Probing Active NixOS Generation
     try:
         current_gen = subprocess.check_output(
             ["readlink", "/nix/var/nix/profiles/system"],
@@ -34,19 +36,89 @@ def get_system_telemetry():
         if "system-" in current_gen:
             telemetry["generation"] = current_gen.split("system-")[1].split("-link")[0]
         else:
-            telemetry["generation"] = "1"
+            telemetry["generation"] = "1 (Initial)"
     except Exception:
         telemetry["generation"] = "1 (Initial)"
 
-    # Check CPU
+    # 2. Probing Real Physical CPU
     try:
         with open("/proc/cpuinfo", "r") as f:
             for line in f:
                 if "model name" in line:
-                    telemetry["cpu"] = line.split(":")[1].strip()
+                    telemetry["cpu"] = line.split(":", 1)[1].strip()
                     break
     except Exception:
         pass
+
+    # 3. Probing Real Physical RAM from /proc/meminfo
+    try:
+        with open("/proc/meminfo", "r") as f:
+            for line in f:
+                if line.startswith("MemTotal:"):
+                    parts = line.split()
+                    kb = int(parts[1])
+                    gib = kb / (1024 * 1024)
+                    telemetry["ram"] = f"{gib:.1f} GiB Total"
+                    break
+    except Exception:
+        telemetry["ram"] = "Unavailable"
+
+    # 4. Probing Real Root Filesystem and Mount Options
+    try:
+        out = subprocess.check_output(
+            ["findmnt", "-n", "-o", "FSTYPE,OPTIONS", "/"],
+            stderr=subprocess.DEVNULL, universal_newlines=True
+        ).strip()
+        if out:
+            parts = out.split(None, 1)
+            fstype = parts[0].upper()
+            opts = parts[1] if len(parts) > 1 else ""
+            if "compress=zstd" in opts:
+                telemetry["storage"] = f"{fstype} (ZSTD Compression Active)"
+            else:
+                telemetry["storage"] = f"{fstype} ({opts.split(',')[0] if opts else 'standard'})"
+    except Exception:
+        # Fallback to /proc/mounts
+        try:
+            with open("/proc/mounts", "r") as f:
+                for line in f:
+                    fields = line.split()
+                    if len(fields) >= 3 and fields[1] == "/":
+                        telemetry["storage"] = f"{fields[2].upper()} (Mounted /)"
+                        break
+        except Exception:
+            telemetry["storage"] = "Standard POSIX Filesystem"
+
+    # 5. Probing Real GPU / Display Controller
+    try:
+        lspci_out = subprocess.check_output(
+            ["lspci"], stderr=subprocess.DEVNULL, universal_newlines=True
+        )
+        for line in lspci_out.splitlines():
+            if "VGA compatible controller" in line or "3D controller" in line:
+                gpu_desc = line.split(":", 2)[-1].strip()
+                telemetry["gpu"] = gpu_desc
+                break
+    except Exception:
+        # Fallback check sysfs DRM
+        drm_cards = glob.glob("/sys/class/drm/card*")
+        if drm_cards:
+            telemetry["gpu"] = "Kernel DRM Display Controller Active"
+        else:
+            telemetry["gpu"] = "Standard Framebuffer Device"
+
+    # 6. Probing Real Battery Charge Threshold
+    battery_limit_paths = glob.glob("/sys/class/power_supply/*/charge_control_limit_max") + \
+                          glob.glob("/sys/class/power_supply/*/charge_control_end_threshold")
+    if battery_limit_paths:
+        try:
+            with open(battery_limit_paths[0], "r") as f:
+                val = f.read().strip()
+                telemetry["battery_limit"] = f"{val}% Active Hardware Ceiling"
+        except Exception:
+            telemetry["battery_limit"] = "Supported (Unset)"
+    else:
+        telemetry["battery_limit"] = "Not Supported (AC / Bare-Metal)"
 
     return telemetry
 
@@ -75,6 +147,8 @@ def run_cli_mode(args):
     print(f"  ● Kernel Version   : {telemetry['kernel']}")
     print(f"  ● Active Generation: #{telemetry['generation']}")
     print(f"  ● Processor (CPU)  : {telemetry['cpu']}")
+    print(f"  ● Physical Memory  : {telemetry['ram']}")
+    print(f"  ● Display Adapter  : {telemetry['gpu']}")
     print(f"  ● Storage Format   : {telemetry['storage']}")
     print(f"  ● Battery Limit    : {telemetry['battery_limit']}")
     print("-" * 64)
@@ -91,9 +165,15 @@ def run_cli_mode(args):
 
     if args.rollback:
         print("  [ EXECUTING SYSTEM ROLLBACK ]")
-        subprocess.run(["sudo", "nixos-rebuild", "switch", "--rollback"], check=False)
+        start_t = time.monotonic()
+        res = subprocess.run(["sudo", "nixos-rebuild", "switch", "--rollback"], check=False)
+        elapsed = time.monotonic() - start_t
+        if res.returncode == 0:
+            print(f"  ✓ System successfully reverted to previous generation in {elapsed:.2f}s.")
+        else:
+            print(f"  ✗ Rollback command exited with code {res.returncode}.")
 
-    print("  ✓ NEURONIX system is operating at optimal status (Hermetic).")
+    print("  ✓ Telemetry verified against live Linux kernel and system state.")
     print("=" * 64)
 
 def run_gui_mode():
@@ -104,7 +184,7 @@ def run_gui_mode():
 
         root = tk.Tk()
         root.title("NEURONIX Control Center")
-        root.geometry("640x520")
+        root.geometry("680x560")
         root.resizable(False, False)
 
         telemetry = get_system_telemetry()
@@ -117,43 +197,56 @@ def run_gui_mode():
         header.pack(pady=10)
 
         # Telemetry Frame
-        frame_tel = ttk.LabelFrame(root, text=" System & Hardware Telemetry ")
+        frame_tel = ttk.LabelFrame(root, text=" Live Hardware & Kernel Telemetry ")
         frame_tel.pack(fill="x", padx=15, pady=5)
 
-        ttk.Label(frame_tel, text=f"Substrate: {telemetry['os']}").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_tel, text=f"Operating System : {telemetry['os']}").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_tel, text=f"Kernel Version   : {telemetry['kernel']}").pack(anchor="w", padx=10, pady=2)
         ttk.Label(frame_tel, text=f"Active Generation: #{telemetry['generation']}").pack(anchor="w", padx=10, pady=2)
-        ttk.Label(frame_tel, text=f"Kernel: {telemetry['kernel']}").pack(anchor="w", padx=10, pady=2)
-        ttk.Label(frame_tel, text=f"CPU: {telemetry['cpu']}").pack(anchor="w", padx=10, pady=2)
-        ttk.Label(frame_tel, text=f"Filesystem: {telemetry['storage']}").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_tel, text=f"Processor (CPU)  : {telemetry['cpu']}").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_tel, text=f"Physical Memory  : {telemetry['ram']}").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_tel, text=f"Display Adapter  : {telemetry['gpu']}").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_tel, text=f"Root Filesystem  : {telemetry['storage']}").pack(anchor="w", padx=10, pady=2)
+        ttk.Label(frame_tel, text=f"Battery Ceiling  : {telemetry['battery_limit']}").pack(anchor="w", padx=10, pady=2)
 
         # Modular Profiles Frame
-        frame_prof = ttk.LabelFrame(root, text=" Modular Profiles ")
+        frame_prof = ttk.LabelFrame(root, text=" Developer Substrate & Profiles ")
         frame_prof.pack(fill="x", padx=15, pady=5)
 
-        v_game = tk.BooleanVar(value=True)
-        v_ai = tk.BooleanVar(value=True)
-        v_web = tk.BooleanVar(value=False)
+        ttk.Label(frame_prof, text="Launch isolated hermetic developer environments via neuronix CLI:").pack(anchor="w", padx=10, pady=2)
 
-        ttk.Checkbutton(frame_prof, text="Gaming & Steam Profile (Proton GE Enabled)", variable=v_game).pack(anchor="w", padx=10, pady=2)
-        ttk.Checkbutton(frame_prof, text="AI Developer Profile (PyTorch + CUDA + Ollama)", variable=v_ai).pack(anchor="w", padx=10, pady=2)
-        ttk.Checkbutton(frame_prof, text="Web Dev Profile (Node.js + Podman/Docker)", variable=v_web).pack(anchor="w", padx=10, pady=2)
+        dev_box = ttk.Frame(frame_prof)
+        dev_box.pack(pady=5, padx=10, fill="x")
+
+        def launch_stack(stack_name):
+            subprocess.Popen(["x-terminal-emulator", "-e", f"neuronix dev {stack_name}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        ttk.Button(dev_box, text="Python (uv/ruff)", command=lambda: launch_stack("python")).pack(side="left", padx=4)
+        ttk.Button(dev_box, text="Rust (cargo)", command=lambda: launch_stack("rust")).pack(side="left", padx=4)
+        ttk.Button(dev_box, text="Node (pnpm)", command=lambda: launch_stack("node")).pack(side="left", padx=4)
+        ttk.Button(dev_box, text="AI (PyTorch/Ollama)", command=lambda: launch_stack("ai")).pack(side="left", padx=4)
 
         # System Actions & Maintenance Frame
-        frame_act = ttk.LabelFrame(root, text=" System Maintenance & Rollback ")
+        frame_act = ttk.LabelFrame(root, text=" System Maintenance & Atomic Rollback ")
         frame_act.pack(fill="x", padx=15, pady=5)
 
         def on_rollback():
-            if messagebox.askyesno("Confirm Rollback", "Revert system to previous stable generation?"):
-                subprocess.run(["sudo", "nixos-rebuild", "switch", "--rollback"], check=False)
-                messagebox.showinfo("Rollback Complete", "System reverted in under 2 seconds.")
+            if messagebox.askyesno("Confirm Rollback", "Revert system to previous stable NixOS generation?"):
+                start_t = time.monotonic()
+                res = subprocess.run(["sudo", "nixos-rebuild", "switch", "--rollback"], check=False)
+                elapsed = time.monotonic() - start_t
+                if res.returncode == 0:
+                    messagebox.showinfo("Rollback Complete", f"System reverted successfully in {elapsed:.2f} seconds.")
+                else:
+                    messagebox.showerror("Rollback Error", f"Rollback command exited with code {res.returncode}. Review journalctl logs.")
 
         def on_diet():
             subprocess.run(["neuronix", "diet"], check=False)
-            messagebox.showinfo("Maintenance Complete", "Store garbage collection and physical TRIM completed.")
+            messagebox.showinfo("Maintenance Complete", "Store garbage collection and physical storage TRIM completed.")
 
         btn_box = ttk.Frame(frame_act)
         btn_box.pack(pady=10)
-        ttk.Button(btn_box, text="⏪ Instant Rollback", command=on_rollback).pack(side="left", padx=5)
+        ttk.Button(btn_box, text="⏪ Rollback Generation", command=on_rollback).pack(side="left", padx=5)
         ttk.Button(btn_box, text="🧹 Reclaim Storage (Diet)", command=on_diet).pack(side="left", padx=5)
         ttk.Button(btn_box, text="Close", command=root.destroy).pack(side="left", padx=5)
 

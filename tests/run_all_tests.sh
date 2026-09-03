@@ -75,8 +75,8 @@ echo -e "  Confidence Score     : ${C_GREEN}${C_BOLD}${CONFIDENCE_SCORE}%${C_RES
 echo -e "${C_BOLD}═══════════════════════════════════════════════════════════════════${C_RESET}\n"
 
 if [ "$FAILED_TESTS" -eq 0 ]; then
-    echo -e "${C_GREEN}${C_BOLD}🏆 ULTIMATE CERTIFICATION PASSED: 100% MISSION-CRITICAL RESILIENCE PROVEN${C_RESET}"
-    echo -e "${C_GREEN}   All components stress-tested against the strictest failure modes in the world.${C_RESET}\n"
+    echo -e "${C_GREEN}${C_BOLD}✓ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED${C_RESET}"
+    echo -e "${C_GREEN}   All subsystems, contracts, and failure modes verified against declared invariants.${C_RESET}\n"
     exit 0
 else
     echo -e "${C_RED}${C_BOLD}❌ CERTIFICATION FAILED. REVIEW DETAILED LOGS ABOVE.${C_RESET}\n"

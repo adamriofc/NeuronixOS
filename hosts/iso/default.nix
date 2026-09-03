@@ -2,7 +2,7 @@
 
 {
   # Konfigurasi Live Media ISO Mandiri NEURONIX
-  isoImage.isoBaseName = "neuronix-os";
+  isoImage.isoBaseName = lib.mkForce "neuronix-os";
   isoImage.volumeID = "NEURONIX_LIVE";
   isoImage.makeEfiBootable = true;
   isoImage.makeUsbBootable = true;

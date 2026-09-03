@@ -2,7 +2,7 @@
 
 **Component ID:** `NRX-SPEC-003`  
 **Subsystem:** Transient In-Memory QEMU Micro-Hypervisor Harness  
-**Substrate Version:** 0.3.0-alpha  
+**Substrate Version:** 0.4.0-beta  
 
 ---
 
@@ -10,7 +10,7 @@
 
 Mutating configuration files on bare-metal systems creates unquantified availability risks. While NixOS provides generation-based rollback, a faulty kernel driver, display server regression, or broken systemd service can render the machine unbootable, forcing manual GRUB recovery.
 
-The **NEURONIX Shadow Micro-VM (`neuronix try`)** eliminates this blast radius by constructing a transient clone of the proposed system state entirely inside volatile memory (`/dev/shm`). The host store (`/nix/store`) is mapped into the virtual guest via a 9P transport mount, achieving instantaneous boot latency ($< 3$ seconds) with zero duplicate disk allocation.
+The **NEURONIX Shadow Micro-VM (`neuronix try`)** isolates evaluation by constructing a transient clone of the proposed system state entirely inside volatile memory (`/dev/shm`). The host store (`/nix/store`) is mapped into the virtual guest via a 9P transport mount, achieving instantaneous boot latency (under 3 seconds) with zero duplicate disk allocation.
 
 ---
 
@@ -20,7 +20,7 @@ Traditional `nixos-rebuild build-vm` invocations write a persistent `.qcow2` ove
 
 `neuronix try` enforces an in-memory disk topology:
 
-$$\text{ScratchPath} \subset \texttt{/dev/shm/neuronix\_shadow\_}\langle\text{pid}\rangle$$
+Scratch Path: `/dev/shm/neuronix_shadow_<pid>`
 
 ```text
 Host Memory (RAM)

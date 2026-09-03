@@ -1,8 +1,11 @@
 { lib, python3, makeDesktopItem, copyDesktopItems }:
 
+let
+  versionData = import ../../version.nix;
+in
 python3.pkgs.buildPythonApplication rec {
   pname = "neuronix-center";
-  version = "1.0.0";
+  version = versionData.version;
   format = "other";
 
   src = ./.;
@@ -32,7 +35,8 @@ python3.pkgs.buildPythonApplication rec {
 
   meta = with lib; {
     description = "NEURONIX Control Center & Time-Travel Guard";
-    license = licenses.mit;
+    homepage = "https://github.com/adamriofc/neuronix";
+    license = licenses.asl20;
     platforms = platforms.linux;
   };
 }

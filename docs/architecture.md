@@ -69,7 +69,8 @@ modules/
 │   ├── cpu.nix               # Automated microcode updates for Intel and AMD processors
 │   ├── firmware.nix          # Offline redistributable firmware (Broadcom, Realtek, Intel, MediaTek)
 │   ├── nvidia-prime.nix      # Hybrid GPU offload (PRIME) and hardware video acceleration (VA-API)
-│   └── power.nix             # S0ix Modern Standby sleep management and 80% battery threshold
+│   ├── power.nix             # S0ix Modern Standby sleep management and 80% battery threshold
+│   └── secureboot.nix        # Lanzaboote UEFI Secure Boot signing chain integration (Experimental)
 └── services/
     ├── desktop-tweaks.nix    # HiDPI/4K Fractional Scaling (Ozone) and Fcitx5 multilingual IME
     ├── flatpak.nix           # Flathub remote repository, DRI GPU access, and portals.conf mapping
