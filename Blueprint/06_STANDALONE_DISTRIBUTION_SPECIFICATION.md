@@ -7,14 +7,36 @@
 
 ---
 
-## 1. Visi & Filosofi Distribusi: "The Golden Sweet Spot"
+## 1. Visi, Positioning, & Arsitektur 4-Layer Platform
 
-NixOS diakui secara global sebagai sistem operasi dengan arsitektur komputasi paling maju di dunia: fungsional murni, kebal terhadap kerusakan akibat pembaruan, dan memiliki riwayat generasi (*atomic rollback*). Namun, adopsi globalnya terhambat oleh kurva belajar yang sangat curam, ketiadaan installer grafis yang ramah, serta ketidakcocokan alami terhadap biner Linux konvensional (isu FHS).
+### A. Pernyataan Positioning Resmi (*Official Positioning Statement*)
+> **"A user-friendly, opinionated Linux distribution built on NixOS, engineered to deliver an EndeavourOS-like onboarding experience, automated hardware detection, graphical system management, and atomic generation rollbacks, while strictly preserving NixOS's declarative and reproducible architecture."**
 
-**NEURONIX Fase 4 hadir sebagai "EndeavourOS-nya dunia NixOS":**
-- **Mengambil 100% Kekuatan Inti NixOS:** Katalog 100.000+ paket (*nixpkgs*), Flakes deklaratif, dan integritas penyimpanan kriptografis `/nix/store`.
-- **Memangkas 90% Kerumitan Teknis:** Menyediakan antarmuka grafis yang ramah, biner CLI ergonomis (`neuronix run`, `neuronix try`, `neuronix diet`), dan kompatibilitas biner instan via `nix-ld`.
-- **Menghindari Jebakan Manjaro (Menjaga Kehormatan Komunitas):** NEURONIX tidak memecah (*fork*) atau menahan repositori resmi Nixpkgs. Format konfigurasinya 100% Flakes murni, sehingga dihormati oleh purist NixOS dan menjadi jembatan adopsi terluas di dunia.
+NEURONIX bukan sekadar "NixOS yang diberi wallpaper dan tema berbeda". Itu adalah jebakan terbesar yang menurunkan nilai teknis menjadi sekadar *custom spin*. NEURONIX adalah **sebuah platform rekayasa sistem operasi utuh (*complete operating system distribution platform*)** yang dirancang dengan kedalaman rekayasa tingkat tinggi.
+
+```text
+                             NEURONIX PLATFORM
+                                     │
+      ┌──────────────────────────────┴──────────────────────────────┐
+      │                                                             │
+  UX LAYER                                                     SYSTEM LAYER
+      │                                                             │
+ • Calamares Installer (Flake-Generating)                      • NixOS Pure Substrate
+ • NEURONIX Control Center (GUI System Center)                 • Declarative Flakes
+ • First-Boot Welcome App & Hardware Profiler                  • Content-Addressed Store
+ • Dual-Layer Software Marketplace (Flatpak)                   • Atomic Generations & Rollback
+ • One-Click Developer Stacks (neuronix dev)                   • nix-ld Global Dynamic Loader
+      │                                                             │
+      └──────────────────────────────┬──────────────────────────────┘
+                                     │
+                           INFRASTRUCTURE LAYER
+                                     │
+                 • Hermetic ISO Image Compilation
+                 • Automated CI/CD Headless QEMU VM Testing
+                 • Automated Installer & Desktop Smoke Tests
+                 • Hardware Driver Matrix (NVIDIA/PRIME/Wi-Fi)
+                 • Architecture Decision Records (ADR-001 - 005)
+```
 
 ---
 
@@ -80,10 +102,12 @@ NEURONIX Fase 4 menyediakan kurasi visual berkelas tinggi tanpa *bloatware* kant
 
 ---
 
-## 4. NEURONIX Center: Aplikasi Sapaan Awal (*First-Boot Onboarding*)
+## 4. NEURONIX Center & GUI System Control Center
 
-Mirip dengan `eos-welcome` pada EndeavourOS, saat pengguna pertama kali masuk ke desktop, sistem akan memunculkan aplikasi grafis ringan **NEURONIX Center**:
+NEURONIX tidak membiarkan pengguna tersesat dalam syntax NixOS. Seluruh kekuatan deklaratif disajikan melalui antarmuka grafis yang ramah namun bertenaga:
 
+### A. First-Boot Welcome App (`neuronix-welcome`)
+Saat pertama kali booting pasca-instalasi, aplikasi sapaan awal otomatis memandu pengguna melakukan orientasi sistem, pengaturan Wi-Fi, dan pemilihan profil perangkat lunak modular:
 ```text
 ┌──────────────────────────────────────────────────────────────┐
 │  NEURONIX CENTER v1.0                                [ _ X ] │
@@ -107,11 +131,75 @@ Mirip dengan `eos-welcome` pada EndeavourOS, saat pengguna pertama kali masuk ke
 └──────────────────────────────────────────────────────────────┘
 ```
 
-Pengguna tidak perlu mengetik konfigurasi manual; mencentang opsi di NEURONIX Center akan langsung menambahkan modul deklaratif terkait ke `/etc/nixos/configuration.nix` dan mengujinya melalui `neuronix try` sebelum dipromosikan.
+### B. GUI System Control Center (`neuronix-control-center`)
+Sebagai pusat kendali operasional harian, Control Center menyajikan panel visual yang membungkus mekanisme NixOS di balik layar:
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  NEURONIX CONTROL CENTER                              [ _ X ]│
+├──────────────────────────────────────────────────────────────┤
+│  System                                                      │
+│    ● OS Substrate     : NixOS 26.05 (Yarara)                 │
+│    ● Active Generation: #42 (Committed: 2026-09-04 01:15)    │
+│    ● Kernel           : Linux 6.12.x-zen-hardened            │
+│                                                              │
+│  Updates                                                     │
+│    ● 14 packages updated in upstream Flake                   │
+│    [ 🔄 Check Updates ]   [ ⬇️ Update & Rebuild System ]      │
+│                                                              │
+│  Hardware Telemetry                                          │
+│    ● GPU : NVIDIA RTX 4070 Laptop (PRIME Offload Active)     │
+│    ● CPU : AMD Ryzen 7 7840HS (8C/16T, 42°C)                 │
+│    ● RAM : 16.0 GB Phys (ZRAM ZSTD Active: 28.4 GB Eff.)     │
+│                                                              │
+│  Maintenance & Generations                                   │
+│    ● History : 42 Total Generations Preserved                │
+│    [ ⏪ Rollback Instan ]  [ 📋 Kelola Generasi ]             │
+│    [ 🧹 Bersihkan Store ]  [ 🔧 Perbaiki Sistem (Repair) ]    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### C. Super User-Friendly Visual Rollback UX ("Time-Travel Safe Guard")
+Salah satu keunggulan terbesar NixOS adalah kemampuannya kembali ke masa lalu (*time-travel rollback*). Jika pembaruan sistem menimbulkan masalah, pengguna disajikan dialog penyelamat visual tanpa perlu menyentuh terminal:
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  NEURONIX TIME-TRAVEL ROLLBACK                        [ _ X ]│
+├──────────────────────────────────────────────────────────────┤
+│  Terjadi masalah setelah pembaruan terakhir?                 │
+│  Pilih generasi stabil sebelumnya untuk kembali instan:      │
+│                                                              │
+│  ● Generasi #43 — (Aktif Saat Ini / Pembaruan Terakhir)      │
+│  ○ Generasi #42 — (2026-09-03 19:20) [Stabil - Rekomendasi] │
+│  ○ Generasi #41 — (2026-09-01 14:05) [Stabil]                │
+│  ○ Generasi #40 — (2026-08-28 09:12) [Generasi Pabrik ISO]   │
+│                                                              │
+│  [ ⏪ Putar Balik ke Generasi #42 ]    [ 🚀 Boot Sekali Coba ]│
+└──────────────────────────────────────────────────────────────┘
+```
+*Di balik layar:* Memanggil `sudo nixos-rebuild switch --rollback` atau mengaktifkan generasi target di `/nix/var/nix/profiles/system` dalam $< 2$ detik.
 
 ---
 
-## 5. Fleksibilitas Pengaturan Auto-TRIM: Kendali Penuh di Tangan Pengguna
+## 5. Lingkungan Pengembang Satu-Perintah (*One-Command Dev Environments*)
+
+Sebagai distro yang ramah pengembang (*developer-first distribution*), NEURONIX mengintegrasikan perintah cerdas `neuronix dev <stack>`. Perintah ini memanfaatkan lingkungan Nix Flakes hermetis yang instan, memaketkan seluruh rantai perkakas (*toolchain*) lengkap tanpa mengotori sistem induk:
+
+```text
+┌───────────────────────┬────────────────────────────────────────────────────────┐
+│ Perintah CLI          │ Toolchain & Ekosistem yang Disediakan Otomatis         │
+├───────────────────────┼────────────────────────────────────────────────────────┤
+│ neuronix dev python   │ Python 3.12, uv, Ruff, Pyright linter, & PostgreSQL DB │
+│ neuronix dev rust     │ rustc, cargo, rust-analyzer, clippy, & mold linker     │
+│ neuronix dev node     │ Node.js LTS, pnpm, TypeScript, ESLint, & Prettier      │
+│ neuronix dev ai       │ PyTorch, CUDA Toolkit, Ollama, JupyterLab, & Pandas    │
+│ neuronix dev go       │ Go compiler, gopls, golangci-lint, & Delve debugger    │
+│ neuronix dev web3     │ Rust, Foundry (cast, forge), Solana CLI, & Node.js     │
+└───────────────────────┴────────────────────────────────────────────────────────┘
+```
+Pengembang baru tidak perlu menghabiskan 3 hari untuk mengonfigurasi compiler dan dependensi C; cukup satu baris perintah, seluruh lingkungan kerja langsung siap dalam hitungan detik.
+
+---
+
+## 6. Fleksibilitas Pengaturan Auto-TRIM: Kendali Penuh di Tangan Pengguna
 
 Sebagaimana filosofi EndeavourOS yang tidak pernah memaksakan kehendak pada penggunanya, **fitur Auto-TRIM di NEURONIX bersifat 100% fleksibel dan dapat dikustomisasi**:
 
@@ -131,7 +219,7 @@ Sebagaimana filosofi EndeavourOS yang tidak pernah memaksakan kehendak pada peng
 
 ---
 
-## 6. Toko Aplikasi Grafis (GUI Software Marketplace: Flatpak & Flathub Bawaan)
+## 7. Toko Aplikasi Grafis (GUI Software Marketplace: Flatpak & Flathub Bawaan)
 
 Salah satu kelemahan terbesar yang membuat pengguna frustrasi saat pertama kali menginstal NixOS adalah **ketiadaan App Store visual**. Pengguna biasa terpaksa membuka browser dan mencari nama paket di `search.nixos.org`, lalu menulis baris deklaratif hanya untuk menginstal aplikasi desktop sehari-hari seperti Spotify atau Discord.
 
@@ -147,7 +235,7 @@ Salah satu kelemahan terbesar yang membuat pengguna frustrasi saat pertama kali 
 
 ---
 
-## 7. Kompatibilitas Biner & Ergonomi Pengembang Out-of-the-Box
+## 8. Kompatibilitas Biner & Ergonomi Pengembang Out-of-the-Box
 
 1. **Aktivasi Global `nix-ld`:**  
    Menyelesaikan masalah mendasar ketiadaan FHS pada NixOS. Seluruh biner Linux standar (misal: binary VS Code, script Python pip yang mengompilasi modul C, biner Go, Rust, atau file tar.gz dari internet) dapat langsung dieksekusi secara instan tanpa perlu dibungkus (*wrapping*).
@@ -161,7 +249,7 @@ Salah satu kelemahan terbesar yang membuat pengguna frustrasi saat pertama kali 
 
 ---
 
-## 8. Strategi Hardware & Instalasi Offline 100%
+## 9. Strategi Hardware & Instalasi Offline 100%
 
 - **Dual-Boot Mode pada Menu ISO:**
   - `Boot NEURONIX Installer (Standard / Open-Source AMD/Intel)`
@@ -171,9 +259,97 @@ Salah satu kelemahan terbesar yang membuat pengguna frustrasi saat pertama kali 
 
 ---
 
-## 9. Matriks Analisis Celah Fatal Tersembunyi & Solusi Brilian Rekayasa
+## 10. Struktur Repositori Rekayasa Profesional & Architecture Decision Records (ADRs)
 
-Di luar kelemahan umum, terdapat **4 celah fatal tersembunyi (*latent fatal traps*)** yang kerap menghancurkan proyek distro turunan NixOS, dan berikut adalah solusi rekayasa cerdas yang dirancang dalam NEURONIX:
+Struktur repositori NEURONIX dirancang dengan standar *enterprise systems engineering*:
+
+```text
+neuronix/
+├── flake.nix                  # Entrypoint orkestrasi Flake murni
+├── flake.lock                 # Lockfile pin dependensi hermetis
+│
+├── hosts/                     # Profil spesifik mesin target
+│   ├── desktop/               # Desktop workstation (Multi-GPU/HiDPI)
+│   ├── laptop/                # Laptop hemat daya (Optimus/S0ix sleep)
+│   └── vm/                    # Virtual machine (QEMU / Quickemu / Cloud)
+│
+├── modules/                   # Modul konfigurasi deklaratif modular
+│   ├── desktop/               # KDE 6, GNOME Tokyo, Hyprland Wayland
+│   ├── hardware/              # NVIDIA PRIME, Wi-Fi blobs, Bluetooth audio
+│   ├── networking/            # NetworkManager, Captive Portal, VPN, DNS
+│   ├── security/              # Secure Boot Lanzaboote, Microcode, Hardening
+│   └── services/              # ZRAM ZSTD, systemd-oomd, Flatpak portals
+│
+├── packages/                  # Derivasi paket kustom (NEURONIX Center, CLI)
+├── installer/                 # Modul resep partisi Btrfs & branding Calamares
+├── tooling/                   # Skrip automasi pembangunan ISO & rilis
+├── docs/                      # Dokumentasi profesional
+│   ├── architecture.md        # Diagram mendalam arsitektur 4-layer
+│   ├── installation.md        # Panduan instalasi grafis & dual-boot
+│   ├── development.md         # Petunjuk kontribusi & testing lokal
+│   ├── troubleshooting.md     # Resolusi mandiri 27 skenario umum
+│   └── adr/                   # Architecture Decision Records resmi
+│       ├── ADR-001-why-flakes.md
+│       ├── ADR-002-why-calamares-flake-generator.md
+│       ├── ADR-003-immutable-store-vs-flatpak.md
+│       ├── ADR-004-update-channel-strategy.md
+│       └── ADR-005-hardware-detection-architecture.md
+└── tests/                     # 15 Test Suites otomatis (336 Test Cases)
+```
+
+---
+
+## 11. Pipeline Pengujian Otomatis Virtual Machine (CI/CD End-to-End VM Testing)
+
+Nilai portofolio tertinggi bukan sekadar screenshot, melainkan **CI/CD pipeline yang menguji siklus hidup distro secara otomatis di headless QEMU VM**:
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│        PIPELINE PENGUJIAN OTOMATIS GITHUB ACTIONS CI/CD      │
+├──────────────────────────────────────────────────────────────┤
+│ 1. Git Push / PR ➔ Pemicu Otomatis Pipeline                  │
+│ 2. Nix Flake Check ➔ Validasi sintaks deklaratif & hermetis  │
+│ 3. Build ISO Artifact ➔ Kompilasi image Live ISO installer   │
+│ 4. Boot Headless QEMU VM ➔ Boot ISO di lingkungan bersih     │
+│ 5. Automated Installer Test ➔ Uji partisi Btrfs via Calamares│
+│ 6. Boot Installed System ➔ Booting pertama OS hasil install  │
+│ 7. Test Services & Desktop ➔ Validasi Wayland, Audio, Store  │
+│ 8. PASS & Rilis Artefak ➔ Sematkan Badge Status Portofolio   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Lencana Portofolio (*Portfolio Badges*):**  
+`Build: Passing` | `Tests: 336/336 Passing` | `ISO: Verified` | `Installer: Verified` | `Reproducible: 100%`
+
+---
+
+## 12. Roadmap Kematangan Bertahap (*Phased Maturity Pipeline v0.1 to v1.0*)
+
+Proyek dikembangkan secara metodis melalui 8 tahapan rilis bertahap untuk menjamin stabilitas kelas satu:
+
+```text
+v0.1 — Minimal Bootable ISO (Kernel + CLI `neuronix` + Network)
+  ↓
+v0.2 — Calamares Installer (Flake-Generating + Btrfs ZSTD:3 Recipe)
+  ↓
+v0.3 — Hardware Profiles & Auto-Detection (NVIDIA PRIME + Wi-Fi Blobs)
+  ↓
+v0.4 — Graphical Control Center (`neuronix-control-center` + Telemetri)
+  ↓
+v0.5 — User-Friendly Rollback & Generations UX (Time-Travel Guard)
+  ↓
+v0.6 — Automated CI/CD Headless VM Testing Pipeline
+  ↓
+v0.7 — One-Command Development Stacks (`neuronix dev <stack>`)
+  ↓
+v1.0 — Flagship Stable Public Release (Produksi Mandiri Siap Pakai)
+```
+
+---
+
+## 13. Matriks Paripurna 27 Pilar Pertahanan Kedap Peluru (*The 27-Pillar Ironclad Shield*)
+
+Di luar kelemahan umum, terdapat **27 celah fatal dan friksi desktop Linux** yang kerap menghancurkan adopsi pengguna, dan berikut adalah solusi rekayasa cerdas terintegrasi dalam NEURONIX:
 
 | No | Celah Fatal Tersembunyi | Dampak Kegagalan Nyata | **Solusi Rekayasa Cerdas NEURONIX** |
 | :---: | :--- | :--- | :--- |

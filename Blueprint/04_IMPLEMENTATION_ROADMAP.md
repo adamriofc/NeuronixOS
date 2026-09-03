@@ -92,20 +92,25 @@ Setiap fase wajib lolos kriteria verifikasi ketat (*Exit Gate*) sebelum tim/peng
      - **GNOME 47/50 Wayland:** Palet warna Tokyo Cyber / Dark Slate, tipografi Inter + JetBrains Mono, gestur touchpad 3-jari sangat fluida.
      - **Hyprland Wayland:** Window auto-tiling, animasi fisika halus, Waybar terintegrasi dengan telemetri `neuronix`.
      - **Cinnamon / XFCE / Minimal:** Opsi desktop tradisional yang ringan atau instalasi headless server.
-  4. **Aplikasi Sapaan Awal (NEURONIX Center ala `eos-welcome`):**
-     - Dasbor grafis yang otomatis menyapa pengguna saat pertama kali boot.
-     - Telemetri hardware instan (GPU, CPU, deteksi virtualisasi, dan kapasitas storage).
-     - Satu klik aktivasi profil modular: Gaming & Steam (Proton GE), AI Developer (PyTorch + CUDA + Ollama), Web Developer.
-     - Tombol cepat verifikasi sistem, rollback bencana (`neuronix undo`), dan simulasi RAM (`neuronix try`).
-  5. **Ergonomi Pengembang & Kompatibilitas Biner Global Out-of-the-Box:**
-     - **`nix-ld` Aktif Global:** Seluruh biner Linux standar (VS Code extensions, biner Go, Rust, script Python pip) langsung jalan tanpa error FHS.
-     - **PipeWire & WirePlumber:** Subsistem audio latensi rendah untuk produksi audio dan gaming.
-     - **Terminal Sadar Generasi:** Prompt terminal otomatis menampilkan status generasi sistem aktif (`[Gen #1] ➔ user@neuronix ~/code $`).
-  6. **Toko Aplikasi Grafis & Fleksibilitas Pemeliharaan:**
-     - **GUI App Store Bawaan:** GNOME Software / KDE Discover terintegrasi Flathub dengan sinkronisasi portal tema Wayland.
-     - **Kustomisasi Penuh Auto-TRIM:** Kendali toggle switch di GUI (Calamares & NEURONIX Center) serta CLI (`neuronix config set auto-trim on|off`).
-     - **Inklusi Otomatis `allowUnfree = true`:** Mengeliminasi error lisensi proprietary pada instalasi software umum (NVIDIA, Steam, Discord).
-   7. **27 Pertahanan Perangkat Keras & Runtime Paripurna (*27-Pillar Ironclad Shield*):**
+  4. **NEURONIX Center & GUI System Control Center:**
+      - **Aplikasi Sapaan Awal (`neuronix-welcome`):** Dasbor orientasi first-boot dengan telemetri GPU/CPU, deteksi virtualisasi, dan profil modular.
+      - **GUI System Control Center (`neuronix-control-center`):** Pusat kendali sistem visual untuk Update, Rollback, Switch Generation, Garbage Collection, Repair, dan Rebuild.
+      - **Super User-Friendly Visual Rollback UX:** Dialog interaktif pemilih generasi sistem ("Time-Travel Safe Guard") tanpa perlu menyentuh terminal.
+  5. **Lingkungan Pengembang Satu-Perintah (*One-Command Dev Environments*):**
+      - Biner `neuronix dev <stack>`: Menyediakan lingkungan Flakes hermetis instan untuk Python (uv+ruff+postgres), Rust (rustc+cargo+clippy), Node (pnpm+ts), AI (pytorch+cuda+ollama), dan Go.
+  6. **Ergonomi Pengembang & Kompatibilitas Biner Global Out-of-the-Box:**
+      - **`nix-ld` Aktif Global:** Seluruh biner Linux standar (VS Code extensions, biner Go, Rust, script Python pip) langsung jalan tanpa error FHS.
+      - **PipeWire & WirePlumber:** Subsistem audio latensi rendah untuk produksi audio dan gaming.
+      - **Terminal Sadar Generasi:** Prompt terminal otomatis menampilkan status generasi sistem aktif (`[Gen #1] ➔ user@neuronix ~/code $`).
+  7. **Toko Aplikasi Grafis & Fleksibilitas Pemeliharaan:**
+      - **GUI App Store Bawaan:** GNOME Software / KDE Discover terintegrasi Flathub dengan sinkronisasi portal tema Wayland.
+      - **Kustomisasi Penuh Auto-TRIM:** Kendali toggle switch di GUI (Calamares & NEURONIX Center) serta CLI (`neuronix config set auto-trim on|off`).
+      - **Inklusi Otomatis `allowUnfree = true`:** Mengeliminasi error lisensi proprietary pada instalasi software umum (NVIDIA, Steam, Discord).
+  8. **Infrastruktur Rekayasa: ADRs, CI/CD VM Testing, & 8 Tahap Rilis (v0.1 s/d v1.0):**
+      - **Architecture Decision Records (ADRs):** ADR-001 s/d ADR-005 mendokumentasikan keputusan arsitektural Flakes, Calamares, dan Flatpak.
+      - **Pipeline CI/CD Otomatis:** Pengujian end-to-end pada headless QEMU VM (Build ISO ➔ Boot VM ➔ Test Installer ➔ Boot Installed OS ➔ PASS).
+      - **Milestone Bertahap:** v0.1 (Minimal ISO) ➔ v0.2 (Calamares) ➔ v0.3 (Hardware Profiles) ➔ v0.4 (Control Center) ➔ v0.5 (Rollback UX) ➔ v0.6 (CI/CD VM Test) ➔ v0.7 (Dev Stacks) ➔ v1.0 (Flagship Release).
+  9. **27 Pertahanan Perangkat Keras & Runtime Paripurna (*27-Pillar Ironclad Shield*):**
       - Alokasi 1.0 GiB ESP `/boot` dengan auto-rotasi batas 15 generasi (anti-overflow EFI).
       - Firmware Wi-Fi/Bluetooth Realtek/Broadcom lengkap di ISO offline.
       - Manajemen Hybrid GPU (NVIDIA Optimus / AMD PRIME) hemat daya & HDMI out.
