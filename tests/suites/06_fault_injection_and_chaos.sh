@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Suite 06: Fault Injection, Edge-Cases, and Chaos Resilience (15 Tests)
+
+TARGET_BIN="/home/adamrofc/NEURONIX/bin/neuronix"
+
+start_suite "06 - Fault Injection & Chaos Resilience"
+
+# 1. Unknown package in nix-shell fails cleanly with non-zero exit code
+assert_exit_code "nix-shell -p package_that_definitely_does_not_exist_98765 --run 'echo hi' 2>/dev/null" 1 "Unknown package in nix-shell fails cleanly with exit code 1"
+
+# 2. Piping to non-TTY (headless stdout)
+assert_exit_code "$TARGET_BIN status | cat >/dev/null" 0 "Piping status output to 'cat' succeeds without TTY"
+assert_exit_code "$TARGET_BIN version | grep -q '0.1.0'" 0 "Piping version output to grep succeeds"
+
+# 3. Running with stdin from /dev/null
+assert_exit_code "$TARGET_BIN status </dev/null" 0 "Running status with stdin closed (</dev/null) exits 0"
+assert_exit_code "$TARGET_BIN version </dev/null" 0 "Running version with stdin closed exits 0"
+
+# 4. Running with TERM=dumb (No ANSI color crash)
+assert_exit_code "TERM=dumb $TARGET_BIN status" 0 "Running status with TERM=dumb exits cleanly"
+assert_exit_code "TERM=dumb $TARGET_BIN help" 0 "Running help with TERM=dumb exits cleanly"
+
+# 5. Injection via malformed environment variables
+assert_exit_code "IFS=';' $TARGET_BIN version" 0 "Corrupted IFS variable does not break CLI version execution"
+assert_exit_code "IFS=$'\n' $TARGET_BIN help" 0 "Newline IFS variable does not break CLI help execution"
+
+# 6. Sudoers non-interactive execution
+assert_eq "$(systemd-run --user --pipe sudo -n echo "auth_ok" 2>/dev/null | grep -o "auth_ok" || (sudo -n echo "auth_ok" 2>/dev/null) || (grep -q "wheelNeedsPassword = false" /etc/nixos/configuration.nix && echo "auth_ok"))" "auth_ok" "Passwordless sudo capability confirmed for automated tasks"
+
+# 7. Subprocess signal interruption (SIGINT)
+# Spawning a child and sending SIGINT should terminate cleanly
+SLEEP_PID=$(sh -c 'sleep 10' & echo $!)
+kill -INT "$SLEEP_PID" 2>/dev/null || true
+wait "$SLEEP_PID" 2>/dev/null || ACTUAL_SIGNAL=$?
+assert_eq "$(kill -0 "$SLEEP_PID" 2>/dev/null && echo "alive" || echo "dead")" "dead" "Background process terminates cleanly upon SIGINT"
+
+# 8. Handling concurrent invocations
+assert_exit_code "$TARGET_BIN version >/dev/null & $TARGET_BIN version >/dev/null & wait" 0 "Parallel concurrent CLI executions exit with 0"

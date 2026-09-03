@@ -43,7 +43,7 @@ print_banner() {
  | |\  | |___| |_| |  _ <| |_| | |\  || | /  \ 
  |_| \_|_____|\___/|_| \_\\___/|_| \_|___/_/\_\
 EOF
-    echo -e "  ${DIM}Deterministic AI-Augmented Substrate${RESET}  ${CYAN}v${VERSION}${RESET}\n"
+    echo -e "  ${BOLD}NEURONIX${RESET} - ${DIM}Deterministic AI-Augmented Substrate${RESET}  ${CYAN}v${VERSION}${RESET}\n"
 }
 
 log_info()    { echo -e " ${BLUE}ℹ${RESET}  $*"; }
