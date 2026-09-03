@@ -43,6 +43,7 @@ source "$TEST_DIR/suites/10_filesystem_invariants_and_symlink_defense.sh"
 source "$TEST_DIR/suites/11_concurrency_race_conditions.sh"
 source "$TEST_DIR/suites/12_resource_exhaustion_ulimit.sh"
 source "$TEST_DIR/suites/13_mutation_and_negative_invariants.sh"
+source "$TEST_DIR/suites/14_mcp_jsonrpc_protocol.sh"
 
 END_TIME=$(date +%s%N)
 DURATION_MS=$(( (END_TIME - START_TIME) / 1000000 ))

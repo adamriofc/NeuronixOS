@@ -14,7 +14,7 @@
       rec {
         packages.default = pkgs.stdenv.mkDerivation {
           pname = "neuronix";
-          version = "0.1.0-alpha";
+          version = "0.2.0-alpha";
 
           src = ./.;
 
@@ -23,7 +23,8 @@
           installPhase = ''
             mkdir -p $out/bin
             cp src/neuronix $out/bin/neuronix
-            chmod +x $out/bin/neuronix
+            cp src/mcp_server.sh $out/bin/mcp_server.sh
+            chmod +x $out/bin/neuronix $out/bin/mcp_server.sh
 
             wrapProgram $out/bin/neuronix \
               --prefix PATH : ${pkgs.lib.makeBinPath [

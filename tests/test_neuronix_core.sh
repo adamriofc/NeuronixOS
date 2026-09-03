@@ -68,7 +68,7 @@ assert_output_contains() {
 run_test "Binary is executable" "test -x ${TARGET_BIN}" 0
 
 # 2. Version and Help Flags
-assert_output_contains "Command: version output" "${TARGET_BIN} version" "0.1.0-alpha"
+assert_output_contains "Command: version output" "${TARGET_BIN} version" "0.2.0-alpha"
 assert_output_contains "Command: --version flag" "${TARGET_BIN} --version" "Apache License"
 assert_output_contains "Command: help output" "${TARGET_BIN} help" "USAGE:"
 assert_output_contains "Command: --help flag" "${TARGET_BIN} --help" "CORE COMMANDS:"

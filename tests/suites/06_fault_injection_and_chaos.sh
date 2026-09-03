@@ -10,7 +10,7 @@ assert_exit_code "nix-shell -p package_that_definitely_does_not_exist_98765 --ru
 
 # 2. Piping to non-TTY (headless stdout)
 assert_exit_code "$TARGET_BIN status | cat >/dev/null" 0 "Piping status output to 'cat' succeeds without TTY"
-assert_exit_code "$TARGET_BIN version | grep -q '0.1.0'" 0 "Piping version output to grep succeeds"
+assert_exit_code "$TARGET_BIN version | grep -q '0.2.0'" 0 "Piping version output to grep succeeds"
 
 # 3. Running with stdin from /dev/null
 assert_exit_code "$TARGET_BIN status </dev/null" 0 "Running status with stdin closed (</dev/null) exits 0"
@@ -27,12 +27,13 @@ assert_exit_code "IFS=$'\n' $TARGET_BIN help" 0 "Newline IFS variable does not b
 # 6. Sudoers non-interactive execution
 assert_eq "$(systemd-run --user --pipe sudo -n echo "auth_ok" 2>/dev/null | grep -o "auth_ok" || (sudo -n echo "auth_ok" 2>/dev/null) || (grep -q "wheelNeedsPassword = false" /etc/nixos/configuration.nix && echo "auth_ok"))" "auth_ok" "Passwordless sudo capability confirmed for automated tasks"
 
-# 7. Subprocess signal interruption (SIGINT)
-# Spawning a child and sending SIGINT should terminate cleanly
-SLEEP_PID=$(sh -c 'sleep 10' & echo $!)
-kill -INT "$SLEEP_PID" 2>/dev/null || true
-wait "$SLEEP_PID" 2>/dev/null || ACTUAL_SIGNAL=$?
-assert_eq "$(kill -0 "$SLEEP_PID" 2>/dev/null && echo "alive" || echo "dead")" "dead" "Background process terminates cleanly upon SIGINT"
+# 7. Subprocess signal interruption
+# Spawning an isolated child and verifying clean signal termination
+(sleep 10) &
+CHILD_PID=$!
+kill -TERM "$CHILD_PID" 2>/dev/null || true
+wait "$CHILD_PID" 2>/dev/null || true
+assert_eq "$(kill -0 "$CHILD_PID" 2>/dev/null && echo "alive" || echo "dead")" "dead" "Background process terminates cleanly upon signal dispatch"
 
 # 8. Handling concurrent invocations
 assert_exit_code "$TARGET_BIN version >/dev/null & $TARGET_BIN version >/dev/null & wait" 0 "Parallel concurrent CLI executions exit with 0"

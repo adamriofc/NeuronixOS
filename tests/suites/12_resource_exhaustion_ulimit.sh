@@ -10,7 +10,7 @@ assert_exit_code "(ulimit -n 1024 && $TARGET_BIN version)" 0 "ulimit -n 1024 exe
 assert_exit_code "(ulimit -n 512 && $TARGET_BIN help)" 0 "ulimit -n 512 executes help with exit 0"
 assert_exit_code "(ulimit -n 256 && $TARGET_BIN version)" 0 "ulimit -n 256 executes version with exit 0"
 assert_exit_code "(ulimit -n 128 && $TARGET_BIN help)" 0 "ulimit -n 128 executes help with exit 0"
-assert_output_contains "(ulimit -n 256 && $TARGET_BIN version)" "0.1.0-alpha" "Low fd limit preserves output integrity"
+assert_output_contains "(ulimit -n 256 && $TARGET_BIN version)" "0.2.0-alpha" "Low fd limit preserves output integrity"
 
 # 6-10. Core Dump Prevention (ulimit -c 0)
 assert_exit_code "(ulimit -c 0 && $TARGET_BIN version)" 0 "ulimit -c 0 executes version with exit 0"

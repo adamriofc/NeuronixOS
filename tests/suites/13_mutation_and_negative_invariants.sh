@@ -17,7 +17,7 @@ assert_exit_code "$TARGET_BIN status extra_param_ignored" 0 "Command 'status' wi
 assert_exit_code "$TARGET_BIN version extra_param_ignored" 0 "Command 'version' with extra arguments safely completes"
 assert_exit_code "$TARGET_BIN help extra_param_ignored" 0 "Command 'help' with extra arguments safely completes"
 assert_output_contains "$TARGET_BIN status extra_param" "SYSTEM IDENTITY" "Extra arguments do not disrupt status telemetry"
-assert_output_contains "$TARGET_BIN version extra_param" "0.1.0-alpha" "Extra arguments do not disrupt version display"
+assert_output_contains "$TARGET_BIN version extra_param" "0.2.0-alpha" "Extra arguments do not disrupt version display"
 
 # 11-15. State Immutability on Rejections
 # Ensure invalid commands do not modify /tmp or create stray files
