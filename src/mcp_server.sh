@@ -40,9 +40,15 @@ fi
 
 # Helper for JSON-RPC 2.0 responses
 send_response() {
-    local id="$1"
+    local raw_id="${1:-null}"
     local result_json="$2"
-    jq -n -c --argjson id "$id" --argjson result "$result_json" \
+    local safe_id="null"
+    if [[ -n "$raw_id" ]] && echo "$raw_id" | jq empty 2>/dev/null; then
+        safe_id="$raw_id"
+    elif [[ -n "$raw_id" && "$raw_id" != "null" ]]; then
+        safe_id=$(jq -n -c --arg id "$raw_id" '$id')
+    fi
+    jq -n -c --argjson id "$safe_id" --argjson result "$result_json" \
         '{"jsonrpc":"2.0","id":$id,"result":$result}'
 }
 
@@ -50,11 +56,13 @@ send_error() {
     local raw_id="${1:-null}"
     local code="$2"
     local message="$3"
-    local id="null"
+    local safe_id="null"
     if [[ -n "$raw_id" ]] && echo "$raw_id" | jq empty 2>/dev/null; then
-        id="$raw_id"
+        safe_id="$raw_id"
+    elif [[ -n "$raw_id" && "$raw_id" != "null" ]]; then
+        safe_id=$(jq -n -c --arg id "$raw_id" '$id')
     fi
-    jq -n -c --argjson id "$id" --argjson code "$code" --arg msg "$message" \
+    jq -n -c --argjson id "$safe_id" --argjson code "$code" --arg msg "$message" \
         '{"jsonrpc":"2.0","id":$id,"error":{"code":$code,"message":$msg}}'
 }
 

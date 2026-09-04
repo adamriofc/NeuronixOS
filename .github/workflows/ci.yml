@@ -6,16 +6,19 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (854 Assertions)
+    name: Industrial Systems Verification & Release Gate (854 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Install Nix with Flakes Support
-        uses: cachix/install-nix-action@v27
+        uses: cachix/install-nix-action@v30
         with:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
@@ -70,3 +73,7 @@ jobs:
       - name: Execute End-to-End Release Lifecycle Gate (32 Tests)
         run: |
           bash tests/test_release_lifecycle.sh
+
+      - name: Execute Reproducible Evaluation Suite (6 Tests)
+        run: |
+          bash tests/test_reproducible_iso.sh

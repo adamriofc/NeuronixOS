@@ -105,6 +105,11 @@ if [[ -f "$VERSION_NIX" ]]; then
   NRX_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "577972710ddbf3f000ae7f184dd26c25264d7be7")
 fi
 
+NRX_NIXPKGS_URL="github:NixOS/nixpkgs/${NRX_COMMIT}"
+if [[ "${NEURONIX_TRACK:-stable}" == "edge" ]]; then
+  NRX_NIXPKGS_URL="github:NixOS/nixpkgs/${NRX_CHANNEL_DEV}"
+fi
+
 TARGET_ARCH="${TARGET_ARCH:-$(uname -m)}"
 case "$TARGET_ARCH" in
   x86_64) NIX_ARCH="x86_64-linux" ;;
@@ -122,7 +127,7 @@ cat <<FLAKE_EOF > "$CONFIG_DIR/flake.nix"
   description = "NEURONIX Host Configuration for $TARGET_HOSTNAME";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/$NRX_CHANNEL";
+    nixpkgs.url = "$NRX_NIXPKGS_URL";
   };
 
   outputs = { self, nixpkgs, ... }@inputs: {
@@ -141,6 +146,8 @@ log "Generating curated configuration.nix..."
 cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
 # ==============================================================================
 # NEURONIX OS: Primary System Specification
+# Reproducible under pinned inputs and declared build environment;
+# reversible through NixOS generations.
 # ==============================================================================
 { config, pkgs, lib, ... }:
 
@@ -262,8 +269,10 @@ cat <<MANIFEST_EOF > "$MANIFEST_DIR/release.json"
   "storage_hygiene": "journal_tmp_flatpak",
   "nixpkgs_channel": "$NRX_CHANNEL",
   "nixpkgs_commit": "$NRX_COMMIT",
+  "nixpkgs_url": "$NRX_NIXPKGS_URL",
   "state_version": "$NRX_STATE",
-  "installed_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  "installed_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "reproducibility": "pinned_inputs_hermetic"
 }
 MANIFEST_EOF
 

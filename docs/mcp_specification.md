@@ -2,7 +2,7 @@
 
 **Protocol Standard:** Model Context Protocol (Protocol Version `2024-11-05`)  
 **Transport Binding:** JSON-RPC 2.0 over `stdio`  
-**Substrate Version:** 0.4.0-beta  
+**Substrate Version:** 1.0.3  
 
 ---
 
@@ -10,11 +10,11 @@
 
 Autonomous AI agents operating on mutable operating systems present severe availability risks: unconstrained file deletion, shared library mutation, and environment drift. 
 
-NEURONIX decouples the AI reasoning agent from direct root execution. The NEURONIX Model Context Protocol (MCP) server acts as a **formal proof gatekeeper**:
+NEURONIX decouples the AI reasoning agent from direct root execution. The NEURONIX Model Context Protocol (MCP) server acts as a **declarative evaluation gatekeeper**:
 1. All queries from the agent pass through structured, schema-validated JSON-RPC calls over `stdio`.
 2. Any requested environment modification must pass through `neuronix_verify` (pure-functional evaluation) before receiving clearance.
 3. System configurations can be tested in transient RAM-disk Micro-VMs (`neuronix_shadow_eval`) before promotion.
-4. System rollback (`neuronix_undo`) remains an immutable guarantee (< 2 seconds atomic symlink swap) regardless of agent actions.
+4. System rollback (`neuronix_undo`) provides immediate recovery via atomic profile symlink swap regardless of agent actions.
 
 ---
 

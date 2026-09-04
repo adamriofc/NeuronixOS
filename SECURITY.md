@@ -6,9 +6,8 @@ NEURONIX OS follows the active upstream NixOS channel lifecycle. Security update
 
 | Version | Supported | Maintenance Phase |
 | :--- | :---: | :--- |
-| 0.4.x (Beta) | Yes | Active Security, Testing, & Subsystem Hardening |
-| 0.3.x (Alpha) | Yes | Transition & Bug Fixes |
-| < 0.3.0 | No | End of Life (Superseded) |
+| 1.0.x (Current) | Yes | Active Security, Testing, & Subsystem Hardening |
+| < 1.0.0 | No | End of Life (Superseded) |
 
 ## Reporting a Vulnerability
 
@@ -28,7 +27,7 @@ The NEURONIX security team takes vulnerabilities seriously. If you discover a se
 NEURONIX implements defensive engineering across its operational layers:
 
 ### 1. Immutable Store Protection
-The entire package hierarchy (`/nix/store`) is mounted read-only at the kernel level. Package paths are derived from cryptographic SHA-256 hashes of their dependency closures. Direct binary tampering or unauthorized in-place library replacement is mathematically rejected by the filesystem architecture.
+The entire package hierarchy (`/nix/store`) is mounted read-only at the kernel level. Package paths are derived from cryptographic SHA-256 hashes of their dependency closures. The immutable, hash-addressed store architecture prevents ordinary in-place mutation or tampering of existing store paths.
 
 ### 2. Privilege Separation & User Namespaces
 - Administrative actions require explicit authentication via PolKit or wheel-restricted sudo.

@@ -38,11 +38,11 @@ def get_system_telemetry():
     telemetry = {
         "os": "NEURONIX OS (Declarative NixOS Substrate)",
         "kernel": os.uname().release,
-        "generation": "1 (Initial)",
+        "generation": "Unknown",
         "cpu": "Unknown Processor",
         "ram": "Unknown",
         "storage": "Unknown Filesystem",
-        "gpu": "Unknown Graphics Controller",
+        "gpu": "Not Detected",
         "battery_limit": "Not Supported (AC / Bare-Metal)"
     }
 
@@ -55,9 +55,9 @@ def get_system_telemetry():
         if "system-" in current_gen:
             telemetry["generation"] = current_gen.split("system-")[1].split("-link")[0]
         else:
-            telemetry["generation"] = "1 (Initial)"
+            telemetry["generation"] = "Unknown"
     except Exception:
-        telemetry["generation"] = "1 (Initial)"
+        telemetry["generation"] = "Unknown"
 
     # 2. Probing Real Physical CPU
     try:
@@ -80,7 +80,7 @@ def get_system_telemetry():
                     telemetry["ram"] = f"{gib:.1f} GiB Total"
                     break
     except Exception:
-        telemetry["ram"] = "Unavailable"
+        telemetry["ram"] = "Unknown"
 
     # 4. Probing Real Root Filesystem and Mount Options
     try:
@@ -106,7 +106,7 @@ def get_system_telemetry():
                         telemetry["storage"] = f"{fields[2].upper()} (Mounted /)"
                         break
         except Exception:
-            telemetry["storage"] = "Standard POSIX Filesystem"
+            telemetry["storage"] = "Unknown Filesystem"
 
     # 5. Probing Real GPU / Display Controller
     try:
@@ -124,7 +124,7 @@ def get_system_telemetry():
         if drm_cards:
             telemetry["gpu"] = "Kernel DRM Display Controller Active"
         else:
-            telemetry["gpu"] = "Standard Framebuffer Device"
+            telemetry["gpu"] = "Not Detected"
 
     # 6. Probing Real Battery Charge Threshold
     battery_limit_paths = glob.glob("/sys/class/power_supply/*/charge_control_limit_max") + \
@@ -155,7 +155,7 @@ def list_generations():
     except Exception:
         pass
     if not generations:
-        generations = ["Unable to determine generations (nix-env query failed or no profile links found)"]
+        generations = ["Generation data unavailable (no active profile links found)"]
     return generations
 
 def run_cli_mode(args):

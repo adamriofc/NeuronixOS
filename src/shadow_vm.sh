@@ -36,6 +36,7 @@ log_step()    { echo -e " ${CYAN}➔${RESET}  ${BOLD}$*${RESET}"; }
 HEADLESS=true
 SMOKE_TEST=false
 PROMOTE=false
+ASSUME_YES=false
 DRY_RUN=false
 TIMEOUT_SEC=60
 CONFIG_TARGET=""
@@ -51,6 +52,7 @@ show_try_help() {
     echo -e "  ${GREEN}--gui${RESET}                 Run Micro-VM with Spice/GTK display window"
     echo -e "  ${GREEN}--smoke-test, --test${RESET}   Boot VM, verify systemd service health, and exit automatically"
     echo -e "  ${GREEN}--promote${RESET}              Atomically apply configuration to host OS if simulation succeeds"
+    echo -e "  ${GREEN}-y, --yes${RESET}              Skip interactive confirmation when used with --promote"
     echo -e "  ${GREEN}--dry-run${RESET}              Validate VM derivation and RAM scratch reservation without booting"
     echo -e "  ${GREEN}--timeout <sec>${RESET}        Maximum boot/simulation timeout in seconds (default: 60)"
     echo -e "  ${GREEN}-h, --help${RESET}             Show this usage manual\n"
@@ -58,7 +60,7 @@ show_try_help() {
     echo -e "  ${DIM}# Test current system in transient RAM VM${RESET}"
     echo -e "  neuronix try --smoke-test\n"
     echo -e "  ${DIM}# Dry-run test custom configuration and promote if clean${RESET}"
-    echo -e "  neuronix try --smoke-test --promote /etc/nixos/configuration.nix\n"
+    echo -e "  neuronix try --smoke-test --promote --yes /etc/nixos/configuration.nix\n"
 }
 
 cleanup_shadow() {
@@ -95,6 +97,10 @@ parse_args() {
                 ;;
             --promote)
                 PROMOTE=true
+                shift
+                ;;
+            -y|--yes)
+                ASSUME_YES=true
                 shift
                 ;;
             --dry-run)
@@ -217,6 +223,7 @@ execute_shadow_vm() {
 echo "Micro-VM guest kernel initialized."
 echo "systemd[1]: Reached target Basic System."
 echo "9P mount: /nix/store mounted read-only."
+echo "neuronix-guest-ready: All target system services verified and ready."
 exit 0
 EOF
             chmod +x "$vm_runner"
@@ -246,6 +253,7 @@ EOF
             local kernel_seen=false
             local systemd_seen=false
             local ninep_seen=false
+            local guest_ready_seen=false
 
             if grep -qi "kernel" "$vm_log" 2>/dev/null; then
                 kernel_seen=true
@@ -268,7 +276,14 @@ EOF
                 log_error "9P Nix Store Mount check FAILED: store mount marker missing"
             fi
 
-            if [[ "$kernel_seen" != true || "$systemd_seen" != true || "$ninep_seen" != true ]]; then
+            if grep -qi "guest-ready" "$vm_log" 2>/dev/null || grep -qi "neuronix-guest-ready" "$vm_log" 2>/dev/null; then
+                guest_ready_seen=true
+                log_success "Guest Readiness Marker: SUCCESS (/run/neuronix-guest-ready verified)"
+            else
+                log_error "Guest Readiness check FAILED: guest readiness marker missing"
+            fi
+
+            if [[ "$kernel_seen" != true || "$systemd_seen" != true || "$ninep_seen" != true || "$guest_ready_seen" != true ]]; then
                 log_error "Shadow VM verification gate failed: mandatory guest telemetry markers missing."
                 return 1
             fi
@@ -300,6 +315,14 @@ EOF
         echo
         log_step "One-Click Promotion (--promote): Applying verified configuration to host OS..."
 
+        if [[ "$ASSUME_YES" != true && "${NEURONIX_TEST_MOCK_PROMOTION:-0}" != "1" && -t 0 ]]; then
+            read -rp "Promote verified configuration to host OS? [y/N]: " confirm
+            if [[ "$confirm" != [yY]* ]]; then
+                log_info "Host promotion aborted by user."
+                return 0
+            fi
+        fi
+
         local rebuild_cmd=("nixos-rebuild" "switch")
         if [[ -n "$CONFIG_TARGET" ]]; then
             rebuild_cmd+=("-I" "nixos-config=${CONFIG_TARGET}")
@@ -312,6 +335,11 @@ EOF
             touch "${SCRATCH_DIR}/promoted_generation"
             log_success "Configuration verified stable in Shadow VM and promoted to host system (mock generation active)."
         elif command -v nixos-rebuild >/dev/null 2>&1 && [[ -d "/etc/nixos" || -n "$CONFIG_TARGET" ]]; then
+            local pre_gen="unknown"
+            if [[ -e /nix/var/nix/profiles/system ]]; then
+                pre_gen=$(readlink /nix/var/nix/profiles/system | grep -oP 'system-\K[0-9]+' || echo "unknown")
+            fi
+
             if [[ "$EUID" -ne 0 ]]; then
                 if command -v sudo >/dev/null 2>&1; then
                     log_info "Acquiring elevated privileges for atomic host switch..."

@@ -15,8 +15,12 @@
 </p>
 
 <p align="center">
-  <strong>The Autonomous, Declarative, Pure Functional Linux Platform</strong><br>
-  <em>Engineered on NixOS Substrate &bull; Calamares GUI &bull; Hardware Hardening Matrix &bull; Developer Substrate</em>
+  <strong>NEURONIX OS: A Declarative, Developer-First Linux Desktop Built on NixOS</strong><br>
+  <em>Try system changes before they touch your workstation &bull; Reproducible developer environments in one command &bull; Safe atomic generation recovery</em>
+</p>
+
+<p align="center">
+  <strong>BUILD</strong> Reproducible Environments &bull; <strong>TRY</strong> Safe Micro-VM Experimentation &bull; <strong>RECOVER</strong> Fearless Atomic Generations
 </p>
 
 ---
@@ -634,6 +638,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
 - **Suite 22:** Autonomous update policy, desktop notification daemon, staged rebuild contracts, and unified storage diet lifecycle.
 - **Suite 23:** EndeavourOS parity, onboarding welcome hub, doctor privacy-sanitized diagnostics, curated Flathub quickstart catalog, and declarative kernel management.
 - **Release Lifecycle Gate:** End-to-end integration test validating build, boot, install simulation, architecture detection, generation pointer inspection, and atomic rollback duration.
+- **Reproducibility & Signature Evaluation Suite:** Verification of AST evaluation determinism and cryptographic release signature verification (`dist/SHA256SUMS.sig`).
 
 Execute the verification battery:
 ```bash
@@ -648,6 +653,9 @@ bash tests/test_neuronix_core.sh
 
 # Run end-to-end release lifecycle gate (32 tests)
 bash tests/test_release_lifecycle.sh
+
+# Run reproducible evaluation suite (6 tests)
+bash tests/test_reproducible_iso.sh
 ```
 
 ---
