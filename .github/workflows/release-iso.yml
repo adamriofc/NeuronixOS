@@ -39,6 +39,9 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Compile Official Live ISO Installer
+        env:
+          NEURONIX_SIGNING_KEY: ${{ secrets.NEURONIX_SIGNING_KEY }}
+          NEURONIX_ALLOW_INSECURE_DEV_KEY: ${{ secrets.NEURONIX_SIGNING_KEY != '' && '0' || '1' }}
         run: |
           mkdir -p dist
           nix build .#packages.x86_64-linux.iso --out-link result-iso
