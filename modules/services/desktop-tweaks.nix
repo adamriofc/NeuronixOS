@@ -36,6 +36,9 @@
   environment.etc = {
     "neuronix/artwork/wallpaper.svg".source = ../../artwork/wallpapers/neuronix-cyber-neural-dark.svg;
     "neuronix/artwork/badge.svg".source = ../../artwork/branding/neuronix-badge.svg;
+    "neuronix/artwork/logo.png".source = ../../artwork/branding/neuronix-logo.png;
+    "neuronix/artwork/symbol.png".source = ../../artwork/branding/neuronix-symbol.png;
+    "neuronix/artwork/banner.png".source = ../../artwork/branding/neuronix-banner.png;
     "xdg/autostart/neuronix-welcome.desktop".source = ../../packages/neuronix-center/neuronix-welcome.desktop;
   };
 }

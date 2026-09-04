@@ -1,16 +1,23 @@
-# NEURONIX OS
+<p align="center">
+  <img src="artwork/branding/neuronix-banner.png" alt="NEURONIX OS Official Banner" width="100%">
+</p>
 
-**A Declarative Linux Operating System Platform with Calamares Installer, Hardware Hardening Matrix, and Developer Substrate**
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+  <a href="https://github.com/adamriofc/neuronix/releases/tag/v1.0.3"><img src="https://img.shields.io/badge/Release-v1.0.3_(Hardened_Production)-success.svg" alt="Release"></a>
+  <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.3-blueviolet.svg" alt="Version"></a>
+  <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
+  <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
+  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-854%2F854_Passed_(100%25)-success.svg" alt="Testing"></a>
+  <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
+  <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
+  <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
+</p>
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-v1.0.3_(Hardened_Production)-success.svg)](https://github.com/adamriofc/neuronix/releases/tag/v1.0.3)
-[![Version](https://img.shields.io/badge/Version-1.0.3-blueviolet.svg)](version.nix)
-[![NixOS](https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
-[![Architecture](https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg)](#platform-architecture)
-[![Testing](https://img.shields.io/badge/Assertions-854%2F854_Passed_(100%25)-success.svg)](#verification--test-harness)
-[![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg)](#storage-architecture--maintenance)
-[![Memory Management](https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg)](#memory-pressure-management)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg)](.github/workflows/ci.yml)
+<p align="center">
+  <strong>The Autonomous, Declarative, Pure-Functional Linux Platform</strong><br>
+  <em>Engineered on NixOS Substrate &bull; Calamares GUI &bull; Hardware Hardening Matrix &bull; Developer Substrate</em>
+</p>
 
 ---
 

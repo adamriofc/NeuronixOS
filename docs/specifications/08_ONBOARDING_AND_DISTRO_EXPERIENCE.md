@@ -126,11 +126,21 @@ Kernel transitions are executed via **Staged Upgrades** (`neuronix upgrade --sta
 
 ## 7. Subcomponent 5: Visual Identity & 4K Artwork System
 
-1. **Default 4K UHD Wallpaper:**
+1. **Canonical Distro Logo (3D Mondrian Neural Master):**
+   - Master Source Path: `artwork/branding/neuronix-logo.png` (2048x2048 master high-resolution emblem featuring a 3D Mondrian primary-color construct with bold typography).
+   - Multi-Resolution Icons: Generated at 1024x1024, 512x512, 256x256, 128x128, and 64x64 (`artwork/branding/neuronix-logo-*.png`).
+   - Declarative Exposure: Linked via `environment.etc` to `/etc/neuronix/artwork/logo.png`.
+2. **Distro Symbol & Application Icon:**
+   - Source Path: `artwork/branding/neuronix-symbol.png` (512x512 square cropped 3D "N" emblem for desktop application launchers, taskbar, and avatars).
+   - Declarative Exposure: Linked via `environment.etc` to `/etc/neuronix/artwork/symbol.png`.
+3. **Official GitHub Header Banner:**
+   - Source Path: `artwork/branding/neuronix-banner.png` (1920x640 high-DPI widescreen header banner featuring integrated Mondrian 3D emblem card, architecture pills, and glassmorphism system telemetry card).
+   - Declarative Exposure: Linked via `environment.etc` to `/etc/neuronix/artwork/banner.png`.
+4. **Default 4K UHD Wallpaper:**
    - Source Path: `artwork/wallpapers/neuronix-cyber-neural-dark.svg`
    - Resolution: 3840x2160 (lossless scalable SVG, cyber-neural motif featuring deep cyan gradients, neural node geometry, and high-frequency circuit traces).
-   - System Symlink: Declaratively linked to `/etc/neuronix/artwork/neuronix-cyber-neural-dark.svg`.
-2. **Distro Branding Emblem:**
+   - System Symlink: Declaratively linked to `/etc/neuronix/artwork/wallpaper.svg`.
+5. **Distro Branding Emblem Badge:**
    - Source Path: `artwork/branding/neuronix-badge.svg` (512x512 vector emblem).
 
 ---
