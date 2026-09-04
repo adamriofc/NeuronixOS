@@ -4,7 +4,7 @@
   # Integrated Flatpak & Flathub application marketplace
   services.flatpak.enable = true;
 
-  # Inisialisasi Otomatis Remote Flathub saat Sistem Pertama Booting
+  # Automatic provisioning of Flathub remote on first boot
   systemd.services.flatpak-repo-flathub = {
     description = "NEURONIX Flathub Repository Auto-Provisioning";
     wantedBy = [ "multi-user.target" ];
@@ -17,7 +17,7 @@
     };
   };
 
-  # Pembersihan Berkala Runtime Flatpak yang Tidak Digunakan (Orphaned Runtimes)
+  # Periodic pruning of unused Flatpak runtimes (orphaned runtimes)
   systemd.services.flatpak-prune-unused = {
     description = "NEURONIX Flatpak Unused Runtime Pruner";
     serviceConfig = {
@@ -31,7 +31,7 @@
   };
 
   systemd.timers.flatpak-prune-unused = {
-    description = "Timer Mingguan Pembersihan Runtime Flatpak Yatim";
+    description = "Weekly timer for orphaned Flatpak runtime pruning";
     wantedBy = [ "timers.target" ];
     timerConfig = {
       OnCalendar = "weekly";
@@ -62,7 +62,7 @@
     };
   };
 
-  # Paket pembantu Flatpak
+  # Flatpak runtime packages
   environment.systemPackages = with pkgs; [
     flatpak
   ];

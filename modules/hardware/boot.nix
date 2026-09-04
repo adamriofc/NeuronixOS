@@ -29,7 +29,7 @@
       systemd-boot = {
         enable = lib.mkDefault true;
         configurationLimit = 15;
-        editor = false; # Keamanan: cegah modifikasi parameter kernel tanpa otentikasi
+        editor = false; # Security: prevent unauthenticated kernel parameter modifications
       };
       efi.canTouchEfiVariables = true;
       timeout = lib.mkDefault 5;
@@ -39,7 +39,7 @@
     time.hardwareClockInLocalTime = lib.mkDefault true;
 
     # Ephemeral /tmp Directory Hygiene
-    # Membersihkan seluruh file sementara yang tertinggal di /tmp saat sistem booting
+    # Purge stale temporary files in /tmp during system boot
     boot.tmp.cleanOnBoot = lib.mkDefault true;
 
     # UEFI Boot Assessment Watchdog (power-loss protection during update)

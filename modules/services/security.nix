@@ -8,7 +8,7 @@
     pinentryPackage = pkgs.pinentry-gnome3;
   };
 
-  # Keamanan sudo terkonfigurasi
+  # Configured sudo security policies
   security.sudo = {
     enable = true;
     wheelNeedsPassword = true;

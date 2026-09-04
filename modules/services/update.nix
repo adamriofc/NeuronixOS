@@ -84,7 +84,7 @@ in
                     -i system-software-update \
                     -u normal \
                     "NEURONIX OS Update" \
-                    "Pembaruan sistem baru tersedia. Buka NEURONIX Center atau jalankan 'neuronix upgrade' untuk menerapkan." || true
+                    "New system updates available. Open NEURONIX Center or run 'neuronix upgrade' to apply." || true
                 fi
               fi
             done

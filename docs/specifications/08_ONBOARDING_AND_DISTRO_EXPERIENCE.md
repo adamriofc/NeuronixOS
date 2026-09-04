@@ -1,26 +1,28 @@
-# Spesifikasi Teknis: Onboarding Distro, Doctor Diagnostik, Katalog Quickstart & Manajemen Kernel Deklaratif (08_ONBOARDING_AND_DISTRO_EXPERIENCE)
+# Technical Specification: Distro Onboarding, System Diagnostics, Quickstart App Catalog & Declarative Kernel Management (08_ONBOARDING_AND_DISTRO_EXPERIENCE)
 
+> **Document ID:** `NRX-SPEC-008`  
 > **Status:** Ratified & Active  
 > **Target Release:** NEURONIX OS v1.0.3+  
-> **Komponen:** `neuronix-welcome`, `neuronix doctor`, `neuronix quickstart`, `neuronix kernel`, `artwork/`, `modules/hardware/boot.nix`, `packages/neuronix-center/`  
-> **Verifikasi:** Suite 23 Test Contracts (854 Total Assertions / 100% Pass)
+> **Subcomponents:** `neuronix welcome`, `neuronix doctor`, `neuronix quickstart`, `neuronix kernel`, `artwork/`, `modules/hardware/boot.nix`, `packages/neuronix-center/`  
+> **Verification:** Suite 23 Test Contracts (854 Total Assertions / 100% Pass)
 
 ---
 
-## 1. Latar Belakang & Filosofi Rekayasa
+## 1. Executive Context & Architectural Philosophy
 
-EndeavourOS dikenal luas di ekosistem Linux karena memiliki daya tarik komunitas yang kuat: antarmuka sambutan (`eos-welcome`), alat pengumpul log dan diagnostik (`eos-log-tool`), penginstal aplikasi cepat (`eos-quickstart`), dan alat pengelola kernel (`akm`). Namun, di balik kemudahannya, sistem Arch-based tradisional memiliki kelemahan fundamental:
-1. **Imperative Fragility:** Penambahan aplikasi, kernel, dan diagnostik di EndeavourOS mengandalkan perintah imperatif (`pacman`, `yay`) yang langsung mengubah sistem berjalan tanpa proteksi rollback atomik.
-2. **Privacy Exposure:** Pengumpulan log pada distro konvensional sering kali mengekspos alamat IP, MAC address, username lokal, serta identifier sensitif hardware.
-3. **Storage/State Corruption Risk:** Pergantian kernel secara manual rentan menyebabkan boot failure bila initramfs gagal dibangun.
+EndeavourOS gained broad community adoption in the Linux ecosystem through polished user-facing onboarding and system utility tools: a first-boot welcome wizard (`eos-welcome`), a log and diagnostics aggregator (`eos-log-tool`), a rapid application installer (`eos-quickstart`), and a kernel manager (`akm`). However, beneath these conveniences, traditional imperative Arch-based distributions exhibit foundational engineering vulnerabilities:
 
-**NEURONIX OS mengadopsi seluruh kemudahan UX tersebut sekaligus melampauinya secara radikal** dengan menerapkan fondasi **Pure-Functional NixOS Substrate**, **Declarative State**, **Zero Disruption Rollback**, dan **Privacy-Preserving Sanitization**.
+1. **Imperative Fragility:** Installing applications, switching kernels, or querying diagnostics relies on imperative package managers (`pacman`, `yay`) that mutate the live filesystem in place. These operations lack atomic transaction boundaries and instantaneous zero-loss rollback mechanisms.
+2. **Privacy Exposure:** Conventional log export tools frequently upload or dump unredacted system telemetry, exposing private IPv4/IPv6 addresses, hardware MAC addresses, local user account identifiers, and hostnames.
+3. **Storage & State Corruption Risks:** Manual kernel swapping and non-atomic initramfs regeneration risk unbootable system states if a build is interrupted or if external kernel modules fail during compilation.
+
+**NEURONIX OS embraces these UX ergonomics while systematically superseding them** through its **pure-functional NixOS substrate**, **declarative configuration model**, **instantaneous zero-disruption rollback defense**, and **privacy-preserving sanitization engine**.
 
 ---
 
-## 2. Arsitektur Subkomponen
+## 2. Subcomponent Architecture
 
-```
+```text
 +---------------------------------------------------------------------------------------+
 |                                    NEURONIX OS                                        |
 |                          LAYER 4: USER EXPERIENCE & POLISH                            |
@@ -43,52 +45,52 @@ EndeavourOS dikenal luas di ekosistem Linux karena memiliki daya tarik komunitas
 
 ---
 
-## 3. Komponen 1: Onboarding Sambutan Interaktif (`neuronix welcome`)
+## 3. Subcomponent 1: Interactive First-Boot Onboarding (`neuronix welcome`)
 
-### 3.1. Spesifikasi Perilaku
-- **Desktop Auto-launch:** Disediakan melalui file XDG autostart `/etc/xdg/autostart/neuronix-welcome.desktop` yang aktif pada boot pertama pengguna baru.
-- **Dukungan Dua Mode (Hybrid CLI + GUI):**
-  - Bila berada di sesi grafis (Wayland/X11), memanggil antarmuka grafis `neuronix-center --welcome`.
-  - Bila berada di terminal, SSH, atau headless server (atau via flag `--cli`), menyajikan panduan interaktif terminal berbasis ANSI visual.
-- **Autostart Toggle:** Mendukung opsi `--disable-autostart` dan `--enable-autostart` untuk kenyamanan pengguna tanpa merusak konfigurasi sistem deklaratif.
-
----
-
-## 4. Komponen 2: Diagnosa Sistem & Sanitasi Data Privasi (`neuronix doctor`)
-
-### 4.1. Spesifikasi Pemeriksaan & Audit
-Memeriksa integritas sistem secara komprehensif tanpa memerlukan izin root:
-1. **Metadata Substrate:** Nama distribusi, versi kernel, arsitektur, uptime, nomor generasi aktif, dan total generasi tersimpan.
-2. **Telemetri Hardware:** Model prosesor (CPU), core count, alokasi memori RAM, Swap, adaptor grafis (GPU).
-3. **Kesehatan Storage:** Penggunaan root `/` dan `/nix/store`, status timer background (`neuronix-auto-diet.timer`, `neuronix-security-audit.timer`, `neuronix-auto-update.timer`).
-4. **Kernel Dmesg Rings:** 15 baris error log terbaru dari buffer kernel untuk mendeteksi hardware failure dini.
-
-### 4.2. Invarian Sanitasi Privasi (Privacy-Preserving Pipeline)
-Sebelum laporan ditulis atau dicetak:
-- Real local username direduksi menjadi `<sanitized-user>`.
-- Real hostname direduksi menjadi `<sanitized-host>`.
-- Alamat IPv4 / IPv6 diganti dengan token `[REDACTED-IP]`.
-- Alamat MAC hardware diganti dengan token `[REDACTED-MAC]`.
-
-Output disimpan secara default ke `/tmp/neuronix-doctor.md` dalam format Markdown yang siap ditempel ke GitHub Issues (`https://github.com/adamriofc/neuronix/issues/new`). Mendukung juga flag `--json` untuk integrasi Model Context Protocol (MCP) server.
+### 3.1 Behavioral Specification
+- **Desktop Auto-launch:** Managed via the standard XDG autostart entry `/etc/xdg/autostart/neuronix-welcome.desktop`, triggering automatically on a new user's initial graphical login.
+- **Hybrid Dual-Mode Execution (GUI + CLI):**
+  - In graphical sessions (Wayland/X11), launches the native Qt/GTK control interface: `neuronix-center --welcome`.
+  - In terminal, SSH, or headless environments (or when invoked with `--cli`), renders a responsive ANSI terminal guide providing system status and navigation shortcuts.
+- **Autostart Toggle:** Supports `--disable-autostart` and `--enable-autostart` flags, allowing users to configure autostart preferences via standard user-level XDG overrides without mutating declarative system configurations.
 
 ---
 
-## 5. Komponen 3: Katalog Aplikasi Cepat Terkurasi (`neuronix quickstart`)
+## 4. Subcomponent 2: System Diagnostics & Privacy-Preserving Audit (`neuronix doctor`)
 
-### 5.1. Prinsip Deklaratif & Isolasi Flathub
-Berbeda dengan `eos-quickstart` yang mengunduh paket binary native ke sistem root, `neuronix quickstart` memanfaatkan runtime **Flatpak via Flathub** yang telah diaktifkan secara bawaan di `modules/services/flatpak.nix`. Hal ini menjamin:
-- `/nix/store` tetap **100% immutable** dan aman dari mutasi file sistem tak terkontrol.
-- Seluruh aplikasi desktop berjalan dalam sandbox container terisolasi.
+### 4.1 Diagnostic Checks & System Audit
+Gathers comprehensive system health telemetry without requiring elevated root privileges:
+1. **Substrate Metadata:** Distribution release, kernel version, CPU architecture, uptime, active generation index, and total generations stored in `/nix/store`.
+2. **Hardware Telemetry:** CPU processor model, core/thread count, physical memory (RAM) allocation, Swap metrics, and GPU device detection.
+3. **Storage Health:** Filesystem consumption for `/` and `/nix/store`, alongside operational states of core background timers (`neuronix-auto-diet.timer`, `neuronix-security-audit.timer`, `neuronix-auto-update.timer`).
+4. **Kernel Dmesg Ring Buffer:** Captures the 15 most recent error-level events from the kernel ring buffer for proactive hardware and driver fault diagnosis.
 
-### 5.2. Katalog Terkurasi Bawaan
+### 4.2 Privacy-Preserving Sanitization Pipeline
+Before diagnostic output is written to disk or streamed to standard output, the report undergoes strict deterministic sanitization:
+- Local system usernames are masked as `<sanitized-user>`.
+- System hostnames are masked as `<sanitized-host>`.
+- IPv4 and IPv6 network addresses are replaced with `[REDACTED-IP]`.
+- Network interface hardware MAC addresses are replaced with `[REDACTED-MAC]`.
+
+Output is written by default to `/tmp/neuronix-doctor.md` in GitHub-flavored Markdown, pre-formatted for direct submission to the [NEURONIX Issue Tracker](https://github.com/adamriofc/neuronix/issues/new). The tool also supports a `--json` flag for machine consumption and Model Context Protocol (MCP) server integration.
+
+---
+
+## 5. Subcomponent 3: Curated Quickstart Application Hub (`neuronix quickstart`)
+
+### 5.1 Declarative Isolation & Flathub Integration
+Unlike imperative distro installers that write unmanaged binaries directly to the root partition, `neuronix quickstart` utilizes **Flatpak via Flathub**, enabled declaratively in `modules/services/flatpak.nix`. This architecture guarantees:
+- `/nix/store` remains **100% immutable**, reproducible, and protected against unmanaged dependency mutations.
+- Desktop applications execute within isolated bubblewrap sandboxes with discrete runtime permissions.
+
+### 5.2 Curated Catalog Registry
 - **Web Browsers:** Brave (`com.brave.Browser`), Chrome (`com.google.Chrome`), Firefox (`org.mozilla.firefox`).
 - **Development Tools:** VS Code (`com.visualstudio.code`), VSCodium (`com.vscodium.codium`), Postman (`com.getpostman.Postman`), DBeaver (`io.dbeaver.DBeaverCommunity`).
 - **Communication:** Discord (`com.discordapp.Discord`), Telegram (`org.telegram.desktop`), Slack (`com.slack.Slack`).
 - **Multimedia:** VLC (`org.videolan.VLC`), OBS Studio (`com.obsproject.Studio`), Spotify (`com.spotify.Client`), GIMP (`org.gimp.GIMP`).
 - **Productivity:** LibreOffice (`org.libreoffice.LibreOffice`), Obsidian (`md.obsidian.Obsidian`).
 
-Perintah CLI:
+CLI Operations:
 ```bash
 neuronix quickstart list
 neuronix quickstart install brave
@@ -97,10 +99,10 @@ neuronix quickstart search <keyword>
 
 ---
 
-## 6. Komponen 4: Pengelola Varian Kernel Deklaratif (`neuronix kernel`)
+## 6. Subcomponent 4: Declarative Kernel Flavor Manager (`neuronix kernel`)
 
-### 6.1. Opsi Modul NixOS
-Dideklarasikan pada `modules/hardware/boot.nix`:
+### 6.1 Declarative NixOS Module Option
+Defined in `modules/hardware/boot.nix`:
 ```nix
 neuronix.hardware.kernelFlavor = lib.mkOption {
   type = lib.types.enum [ "default" "zen" "lts" "latest" "hardened" ];
@@ -109,37 +111,37 @@ neuronix.hardware.kernelFlavor = lib.mkOption {
 };
 ```
 
-### 6.2. Karakteristik Varian Kernel
-| Flavor | Nix Package Binding | Karakteristik Utama | Rekomendasi Penggunaan |
+### 6.2 Kernel Flavor Specifications
+| Flavor | Nix Package Binding | Primary Characteristics | Target Workload |
 | :--- | :--- | :--- | :--- |
-| `default` | `pkgs.linuxPackages` | Stabil, teruji upstream NixOS | Server, pemakaian umum |
-| `zen` | `pkgs.linuxPackages_zen` | Low latency scheduler, responsiveness | Gaming, audio workstation, desktop harian |
-| `lts` | `pkgs.linuxPackages_lts` | Long Term Support, stabilitas tinggi | Mission-critical workstations, enterprise |
-| `latest` | `pkgs.linuxPackages_latest` | Bleeding-edge upstream kernel | Hardware generasi paling mutakhir |
-| `hardened` | `pkgs.linuxPackages_hardened` | Keamanan memori ketat, mitigasi eksploit | Workstation dengan kebutuhan sekuriti tinggi |
+| `default` | `pkgs.linuxPackages` | Verified upstream NixOS stable kernel | Servers, general computing, standard laptops |
+| `zen` | `pkgs.linuxPackages_zen` | Low-latency scheduler, interactive responsiveness | Gaming, real-time audio, desktop workstations |
+| `lts` | `pkgs.linuxPackages_lts` | Long-Term Support, maximum driver stability | Mission-critical workstations, enterprise deployments |
+| `latest` | `pkgs.linuxPackages_latest` | Bleeding-edge upstream mainline kernel | Latest generation CPU/GPU hardware architectures |
+| `hardened` | `pkgs.linuxPackages_hardened` | Strict memory protection, exploit mitigations | High-security environments, hardened nodes |
 
-Penerapan pergantian kernel dilakukan secara **Staged Upgrade** via `neuronix upgrade --staged`, sehingga kernel baru diuji pada generasi berikutnya tanpa merusak sesi boot saat ini dan dapat di-rollback seketika (`neuronix undo`) bila terjadi kegagalan hardware.
+Kernel transitions are executed via **Staged Upgrades** (`neuronix upgrade --staged`), staging the target closure for the subsequent bootloader entry without interrupting the running kernel session. If hardware regressions occur, instant recovery is guaranteed via bootloader rollback or `neuronix undo`.
 
 ---
 
-## 7. Komponen 5: Identitas Visual & 4K Artwork System
+## 7. Subcomponent 5: Visual Identity & 4K Artwork System
 
-1. **Wallpaper Bawaan (4K UHD):**
-   - Berkas: `artwork/wallpapers/neuronix-cyber-neural-dark.svg`
-   - Resolusi: 3840x2160 (vektor SVG lossless murni, cyber-neural theme dengan gradient deep cyan, neural nodes, dan circuit traces).
-   - Di-link secara deklaratif ke `/etc/neuronix/artwork/neuronix-cyber-neural-dark.svg`.
+1. **Default 4K UHD Wallpaper:**
+   - Source Path: `artwork/wallpapers/neuronix-cyber-neural-dark.svg`
+   - Resolution: 3840x2160 (lossless scalable SVG, cyber-neural motif featuring deep cyan gradients, neural node geometry, and high-frequency circuit traces).
+   - System Symlink: Declaratively linked to `/etc/neuronix/artwork/neuronix-cyber-neural-dark.svg`.
 2. **Distro Branding Emblem:**
-   - Berkas: `artwork/branding/neuronix-badge.svg` (512x512 vector badge).
+   - Source Path: `artwork/branding/neuronix-badge.svg` (512x512 vector emblem).
 
 ---
 
-## 8. Verifikasi & Pengujian Mutu (Quality Gates)
+## 8. Quality Gates & Test Verification
 
-Implementasi fitur ini divalidasi melalui **Suite 23** pada test harness NEURONIX, yang mencakup 30 assertions spesifik:
-- Integritas parsing sintaksis `boot.nix` dan `desktop-tweaks.nix`.
-- Validitas schema SVG 4K wallpaper dan desktop autostart entry.
-- Sanitasi data output `neuronix doctor` (username, hostname, IP).
-- Eksekusi non-blocking dan error handling CLI `neuronix welcome`, `quickstart`, dan `kernel`.
-- Integrasi schema tool `neuronix_doctor` dan `neuronix_quickstart_list` pada server MCP JSON-RPC 2.0.
+The features specified in this document are verified by **Suite 23** in the NEURONIX automated test harness:
+- Syntax parsing and option validation for `boot.nix` and `desktop-tweaks.nix`.
+- SVG schema validity for 4K wallpaper and XDG autostart desktop entry syntax.
+- Data sanitization regex assertions for `neuronix doctor` (username, hostname, IP, MAC).
+- Non-blocking execution and graceful exit codes for `neuronix welcome`, `quickstart`, and `kernel`.
+- JSON-RPC 2.0 schema validation for MCP tools `neuronix_doctor` and `neuronix_quickstart_list`.
 
-Total pengujian seluruh ekosistem NEURONIX kini mencapai **851 assertions** dengan tingkat kelulusan **100%**.
+The complete NEURONIX test harness executes **854 assertions** across 23 test suites and 4 top-level test runners, maintaining a **100% pass rate**.

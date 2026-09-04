@@ -23,7 +23,7 @@
     {
       inherit (versionData) version stateVersion;
 
-      # Modul deklaratif NEURONIX yang dapat digunakan kembali
+      # Reusable declarative NEURONIX modules
       nixosModules = {
         core = import ./modules/core;
         hardware = import ./modules/hardware/boot.nix;

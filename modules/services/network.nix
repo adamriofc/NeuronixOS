@@ -20,18 +20,18 @@
     (writeShellScriptBin "neuronix-add-ca" ''
       set -euo pipefail
       if [ "$#" -ne 1 ]; then
-        echo "Penggunaan: neuronix-add-ca <path-ke-sertifikat.crt/.pem>"
+        echo "Usage: neuronix-add-ca <path-to-certificate.crt/.pem>"
         exit 1
       fi
       CERT_PATH="$1"
       if [ ! -f "$CERT_PATH" ]; then
-        echo "Error: File sertifikat tidak ditemukan di $CERT_PATH"
+        echo "Error: Certificate file not found at $CERT_PATH"
         exit 1
       fi
       CERT_NAME=$(basename "$CERT_PATH")
       echo "Enrolling certificate $CERT_NAME into system trust store..."
       sudo cp "$CERT_PATH" "/etc/ssl/certs/$CERT_NAME"
-      echo "Memperbarui direktori sertifikat..."
+      echo "Updating certificate directory..."
       sudo update-ca-certificates 2>/dev/null || true
       echo "✓ Certificate $CERT_NAME enrolled successfully into OS & Nix daemon trust store."
     '')

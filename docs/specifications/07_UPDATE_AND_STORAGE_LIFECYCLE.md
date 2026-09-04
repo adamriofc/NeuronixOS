@@ -1,89 +1,90 @@
 # NEURONIX Specification: Autonomous Update Policy & Storage Diet Lifecycle
 
-**Status:** Accepted & Implemented  
-**Domain:** System Maintenance, Desktop Notifications, Atomic Upgrades & Storage Retention  
-**Canonical Reference:** `modules/services/update.nix` & `modules/services/storage.nix`  
+> **Document ID:** `NRX-SPEC-007`  
+> **Status:** Ratified & Implemented  
+> **Domain:** System Maintenance, Desktop Notifications, Atomic Upgrades & Storage Retention  
+> **Canonical References:** `modules/services/update.nix` & `modules/services/storage.nix`  
 
 ---
 
 ## 1. Executive Context & Architectural Philosophy
 
-Pada sistem operasi tradisional (Debian, Ubuntu, Arch Linux), pembaruan sistem beroperasi secara imperatif dengan menimpa berkas (*destructive in-place overwrite*), yang sering kali menyebabkan:
-- Ketidakstabilan sistem jika pustaka bersama (*shared libraries*) diperbarui di tengah sesi aplikasi berjalan.
-- Ketiadaan mekanisme *rollback* instan jika paket terbaru memiliki regresi atau *bug*.
-- Pembaruan otomatis tak terkendali (*unattended silent updates*) yang menghabiskan kuota atau merusak modul driver grafis.
+Traditional imperative Linux operating systems (e.g., Debian, Ubuntu, Arch Linux) execute system updates through destructive in-place file mutation, commonly introducing:
+- Runtime fragility when shared libraries mutate beneath actively executing processes.
+- The absence of an instantaneous, zero-loss rollback mechanism when regressions or upstream bugs occur.
+- Unattended, disruptive update cycles that can break proprietary graphics drivers or interrupt critical workloads.
 
-Sebaliknya, pada ekosistem murni NixOS, setiap modifikasi konfigurasi atau pembaruan menghasilkan **Generasi Baru** yang disimpan secara atomik di `/nix/store/`. Kelemahan yang sering timbul adalah **penumpukan ruang penyimpanan (*disk bloating*)** jika generasi lama tidak dikelola.
+Conversely, a pure NixOS substrate records every configuration and software transition as an atomic, immutable **Generation** inside `/nix/store`. The inherent engineering challenge of this functional design is **uncontrolled storage accumulation (disk bloat)** if historical generations are left unmanaged.
 
-**NEURONIX OS menyelesaikan kedua permasalahan ini secara harmonis melalui arsitektur terpadu:**
-1. **Kebijakan Pembaruan Terkawal (*Gated Update Policy*):** Menggabungkan pemantauan metadata upstream di latar belakang, notifikasi desktop yang elegan, dan eksekusi pembaruan bertahap (*Staged Upgrade* via `nixos-rebuild boot`) tanpa mengganggu sesi pengguna.
-2. **Mesin Diet Penyimpanan 4 Lapis (*4-Tier Storage Diet Engine*):** Pembersihan generasi usang secara otomatis (> 14 hari), deduplikasi berkas via *hardlink inode*, perlindungan darurat *Dynamic Storage Guard*, dan penembakan instruksi SSD TRIM ke perangkat fisik atau host hypervisor.
+**NEURONIX OS resolves both challenges through a harmonized dual architecture:**
+1. **Gated Update Policy:** Combines lightweight upstream metadata monitoring in the background, desktop notification triggers, and staged atomic generation builds (`nixos-rebuild boot`) with zero execution disruption.
+2. **4-Tier Storage Diet Subsystem:** Automates the reclamation of obsolete generations (> 14 days), unifies identical file content via hardlink inode deduplication, enforces dynamic emergency headroom floors (`min-free` / `max-free`), and dispatches physical SSD TRIM discards to host block devices.
 
 ---
 
-## 2. Model Pembaruan Sistem (System Update Architecture)
+## 2. System Update Architecture
 
-### 2.1 Pilihan Mode Operasional
+### 2.1 Operational Update Modes
 
-NEURONIX mendukung tiga moda pembaruan sistem deklaratif:
+NEURONIX provides three declarative upgrade execution modes:
 
-| Moda Pembaruan | Perilaku Operasional | Kasus Penggunaan Ideal |
+| Update Mode | Execution Semantics | Ideal Workload |
 | :--- | :--- | :--- |
-| **1. Staged Upgrade (Default)** | Mengunduh dan membangun generasi baru di `/nix/store` di latar belakang, menautkannya ke bootloader, dan mengaktifkannya saat reboot berikutnya (`nixos-rebuild boot`). Nol gangguan pada sesi aktif. | Workstation harian, laptop pengembang, lingkungan produksi. |
-| **2. Instant Switch** | Membangun generasi baru dan langsung mengalihkan symlink sistem aktif seketika (`nixos-rebuild switch`). | Administrasi langsung, pengujian konfigurasi cepat. |
-| **3. Unattended Auto-Upgrade** | Daemon systemd mengorkestrasi pembaruan terjadwal secara mandiri tanpa dialog konfirmasi. | Server tanpa monitor (*headless server*), automated build nodes. |
+| **1. Staged Upgrade (Default)** | Fetches and builds target closures in `/nix/store` in the background, updates bootloader entries, and marks the generation active on subsequent reboot (`nixos-rebuild boot`). Zero disruption to active desktop sessions. | Daily workstations, developer laptops, enterprise production nodes. |
+| **2. Instant Switch** | Builds the generation and immediately re-binds active runtime symlinks (`nixos-rebuild switch`). | Direct administrative tasks, rapid local configuration prototyping. |
+| **3. Unattended Auto-Upgrade** | Systemd orchestrates scheduled rebuilds autonomously without user confirmation prompts. | Headless servers, automated continuous delivery build runners. |
 
-### 2.2 Arsitektur Desktop Update Notifier
-Layanan `systemd.services.neuronix-update-check` dan timer `neuronix-update-check.timer` beroperasi secara ringan:
-1. Memeriksa konektivitas jaringan.
-2. Membaca commit remote dari repositori upstream (`https://github.com/adamriofc/neuronix.git`) tanpa mengunduh seluruh closure paket (< 50 KB metadata).
-3. Jika commit baru terdeteksi, memancarkan notifikasi desktop melalui `notify-send` ke seluruh sesi grafis pengguna aktif (KDE Plasma, GNOME, Hyprland).
+### 2.2 Desktop Update Notifier Architecture
+The `systemd.services.neuronix-update-check` service and `neuronix-update-check.timer` execute with minimal resource consumption:
+1. Verify active network connectivity.
+2. Query the latest commit hash from the upstream tracking branch (`https://github.com/adamriofc/neuronix.git`) via lightweight Git reference inspection (< 50 KB metadata).
+3. If an upstream update is detected, dispatch a graphical desktop notification via `notify-send` across active desktop sessions (KDE Plasma, GNOME, Hyprland).
 
-### 2.3 Konfigurasi Deklaratif NixOS
-Dideklarasikan pada `modules/services/update.nix`:
+### 2.3 Declarative NixOS Configuration
+Configured declaratively in `modules/services/update.nix`:
 
 ```nix
 neuronix.services.updates = {
-  enable = true;             # Mengaktifkan subsistem update
-  enableNotifier = true;     # Menyalakan notifikasi desktop (Default: true)
-  checkInterval = "daily";   # Frekuensi pengecekan upstream
-  autoUpgrade = false;       # Full otomatis tanpa konfirmasi (Default: false)
-  staged = true;             # Menggunakan nixos-rebuild boot (Default: true)
-  allowReboot = false;       # Reboot otomatis pasca auto-upgrade
+  enable = true;             # Enable update subsystem
+  enableNotifier = true;     # Enable desktop notification daemon (Default: true)
+  checkInterval = "daily";   # Upstream query frequency
+  autoUpgrade = false;       # Fully autonomous unattended upgrade (Default: false)
+  staged = true;             # Use staged nixos-rebuild boot (Default: true)
+  allowReboot = false;       # Automatic reboot following auto-upgrade
   channel = "github:adamriofc/neuronix";
 };
 ```
 
 ---
 
-## 3. Mesin Diet Penyimpanan (Storage Diet Lifecycle)
+## 3. Storage Diet Lifecycle & Reclamation Engine
 
-Untuk mencegah akumulasi generasi lama yang membengkak di `/nix/store`, NEURONIX menerapkan perlindungan 4 lapis:
+To prevent generation accumulation from exhausting disk capacity, NEURONIX enforces a 4-tier storage reclamation subsystem:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
-│       Lapis 1: Scheduled Garbage Collection (nix.gc)        │
-│       Memutuskan symlink generasi yang berusia > 14 hari    │
+│       Tier 1: Scheduled Garbage Collection (nix.gc)         │
+│       Unlinks generation symlinks older than 14 days        │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│  Lapis 2: Inode Hardlink Deduplication (nix.optimise)        │
-│  Menyatukan berkas kembar ke satu physical inode (hemat 30%)│
+│       Tier 2: Inode Hardlink Deduplication (nix.optimise)    │
+│       Merges identical files to a single physical inode      │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│  Lapis 3: Dynamic Storage Guard (min-free / max-free)        │
-│  Memicu GC darurat jika disk < 1 GiB hingga pulih ke 3 GiB   │
+│       Tier 3: Dynamic Storage Guard (min-free / max-free)    │
+│       Triggers emergency GC when disk space falls < 1 GiB   │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│        Lapis 4: Host Auto-TRIM Passthrough (fstrim)          │
-│        Menembakkan sinyal TRIM fisik ke SSD / VirtIO Host    │
+│       Tier 4: Storage Controller TRIM Passthrough (fstrim)   │
+│       Dispatches physical TRIM discards to SSD or hypervisor │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 3.1 Konfigurasi Deklaratif Storage
-Dideklarasikan pada `modules/services/storage.nix`:
+### 3.1 Declarative Storage Configuration
+Configured in `modules/services/storage.nix`:
 
 ```nix
 # Autonomous Storage Diet Policy
@@ -109,58 +110,58 @@ services.fstrim = {
 };
 ```
 
-### 3.2 Kedaulatan Pengguna (Beralih ke Mode Manual)
-Seluruh opsi dideklarasikan dengan `lib.mkDefault true`. Pengguna yang ingin mematikan otomatisasi ini cukup menambahkan baris berikut di `/etc/nixos/configuration.nix`:
+### 3.2 User Sovereignty (Manual Override)
+All automated storage policies use `lib.mkDefault true`. Users requiring manual storage control can disable them declaratively in `/etc/nixos/configuration.nix`:
 
 ```nix
-# Beralih ke kontrol manual 100%
+# Revert to full manual storage management
 nix.gc.automatic = false;
 nix.optimise.automatic = false;
 services.fstrim.enable = false;
 boot.tmp.cleanOnBoot = false;
 ```
 
-### 3.3 Kebersihan Penyimpanan Tambahan (Ephemeral & Log Hygiene)
-Selain 4 lapis mesin diet utama, NEURONIX menerapkan 3 otomatisasi higienis tambahan:
+### 3.3 Auxiliary Storage & Ephemeral Hygiene
+Beyond the primary 4-tier diet engine, NEURONIX enforces 3 auxiliary hygiene automations:
 1. **Systemd Journal Retention Ceiling:**
-   Membatasi ukuran log di `/var/log/journal` agar tidak melebihi 500 MiB melalui `services.journald.extraConfig = "SystemMaxUse=500M\nSystemMaxFileSize=50M\nMaxRetentionSec=1month\nRuntimeMaxUse=100M\n";`.
+   Restricts `/var/log/journal` to a 500 MiB ceiling via `services.journald.extraConfig = "SystemMaxUse=500M\nSystemMaxFileSize=50M\nMaxRetentionSec=1month\nRuntimeMaxUse=100M\n";`.
 2. **Ephemeral `/tmp` Directory Cleaning on Boot:**
-   Menjamin direktori sementara `/tmp` selalu segar setiap kali sistem booting melalui `boot.tmp.cleanOnBoot = lib.mkDefault true;`.
-3. **Flatpak Unused Runtime Autonomous Pruning:**
-   Membersihkan runtime Flatpak yatim yang tidak lagi memiliki dependensi aktif melalui unit `systemd.services.flatpak-prune-unused` dan timer mingguan `systemd.timers.flatpak-prune-unused`, serta terintegrasi langsung dalam perintah `neuronix diet`.
+   Guarantees `/tmp` is wiped clean upon each system boot via `boot.tmp.cleanOnBoot = lib.mkDefault true;`.
+3. **Flatpak Unused Runtime Pruning:**
+   Prunes orphaned Flatpak runtimes without active application consumers via `systemd.services.flatpak-prune-unused` and weekly timer `systemd.timers.flatpak-prune-unused`, also directly callable via `neuronix diet`.
 
 ---
 
-## 4. Antarmuka Operasional (CLI, GUI, & MCP)
+## 4. Operational Interfaces (CLI, GUI, and MCP)
 
-### 4.1 Baris Perintah CLI (`neuronix`)
-- **Pemeriksaan Pembaruan:**
+### 4.1 Command-Line Interface (`neuronix`)
+- **Query Upstream Updates:**
   ```bash
   neuronix check-update
   ```
-- **Penerapan Pembaruan Bertahap (*Staged Rebuild - Rekomendasi*):**
+- **Staged System Upgrade (Recommended):**
   ```bash
   neuronix upgrade --staged
   ```
-- **Penerapan Pembaruan Langsung (*Instant Switch*):**
+- **Instant System Switch:**
   ```bash
   neuronix upgrade --switch
   ```
-- **Pembersihan Storage Terpadu (*Storage Diet*):**
+- **Unified Storage Maintenance:**
   ```bash
   neuronix diet
   ```
-- **Pemantauan Telemetri:**
+- **Substrate Telemetry & Status:**
   ```bash
   neuronix status
   ```
 
-### 4.2 Pusat Kontrol Grafis (*NEURONIX Center*)
-- Tombol **`🔄 System Upgrade (Staged)`**: Menjalankan pembaruan bertahap dengan konfirmasi dialog aman.
-- Tombol **`🧹 Reclaim Storage (Diet)`**: Menjalankan siklus GC $\to$ Dedupe $\to$ TRIM dalam 1 klik.
-- Tombol **`↩ Atomic Rollback`**: Mengembalikan sistem ke generasi stabil sebelumnya.
+### 4.2 Graphical Control Hub (NEURONIX Center)
+- **`🔄 System Upgrade (Staged)`**: Initiates staged background rebuilds with interactive confirmation.
+- **`🧹 Reclaim Storage (Diet)`**: Executes GC $\to$ Deduplication $\to$ TRIM pipeline in 1 click.
+- **`↩ Atomic Rollback`**: Restores the operating system to the previous verified generation.
 
-### 4.3 Integrasi AI Copilot via Model Context Protocol (MCP)
-- `neuronix_check_update`: Mengueri status rilis upstream dalam format JSON terstruktur.
-- `neuronix_upgrade`: Menjalankan pembaruan bertahap atau *switch* via instruksi AI.
-- `neuronix_diet`: Memicu optimasi penyimpanan dan reklamasi blok SSD.
+### 4.3 Model Context Protocol (MCP) Integration
+- `neuronix_check_update`: Returns structured JSON representation of upstream git reference state.
+- `neuronix_upgrade`: Dispatches staged or direct atomic system upgrades.
+- `neuronix_diet`: Executes storage garbage collection, deduplication, and filesystem TRIM.
