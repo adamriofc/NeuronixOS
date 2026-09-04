@@ -59,7 +59,7 @@ assert_check "Flake AST evaluation produces identical SHA-256 hash" "test '${DRV
 # 2. Canonical Checksum Database Schema
 echo -e "\n${BOLD}Phase 2: Checksum Database & Checksum Integrity${RESET}"
 assert_check "dist/SHA256SUMS file exists" "test -f '${DIST_DIR}/SHA256SUMS'"
-assert_check "dist/SHA256SUMS follows RFC-compliant 64-character hex hash" "grep -Eq '^[0-9a-f]{64}[[:space:]]+.*\.iso$' '${DIST_DIR}/SHA256SUMS'"
+assert_check "dist/SHA256SUMS follows RFC-compliant 64-character hex hash" "grep -Eq '^[0-9a-f]{64}[[:space:]]+.*\.iso(\.zst)?$' '${DIST_DIR}/SHA256SUMS'"
 
 # 3. Release Signature Verification
 echo -e "\n${BOLD}Phase 3: Cryptographic Release Signature Validation${RESET}"

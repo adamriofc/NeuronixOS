@@ -48,8 +48,14 @@ jobs:
           TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.3' }}"
           TARGET_NAME="neuronix-os-${TAG}-x86_64.iso"
           cp "$ISO_FILE" "dist/${TARGET_NAME}"
+          ISO_SIZE=$(stat -c%s "dist/${TARGET_NAME}")
+          echo "Compiled ISO size: ${ISO_SIZE} bytes"
+          if [ "$ISO_SIZE" -ge 2140000000 ]; then
+            echo "ISO exceeds GitHub Release asset limit (2 GiB). Compressing with zstd..."
+            zstd -19 --rm "dist/${TARGET_NAME}" -o "dist/${TARGET_NAME}.zst"
+          fi
           cd dist
-          sha256sum "${TARGET_NAME}" > SHA256SUMS
+          sha256sum * > SHA256SUMS
           echo "Generated Checksum:"
           cat SHA256SUMS
           cd ..
@@ -60,9 +66,6 @@ jobs:
         with:
           tag_name: ${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.3' }}
           files: |
-            dist/*.iso
-            dist/SHA256SUMS
-            dist/SHA256SUMS.sig
-            dist/release_sign.pub
+            dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
