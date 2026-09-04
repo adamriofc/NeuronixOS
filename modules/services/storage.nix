@@ -49,6 +49,15 @@
     max-free = lib.mkDefault 3221225472; # 3 GiB Target headroom
   };
 
+  # Systemd Journal Log Retention Ceiling & Autonomous Vacuuming
+  # Membatasi ukuran maksimum file log systemd agar tidak memenuhi root storage (/var/log/journal)
+  services.journald.extraConfig = ''
+    SystemMaxUse=500M
+    SystemMaxFileSize=50M
+    MaxRetentionSec=1month
+    RuntimeMaxUse=100M
+  '';
+
   # Native ntfs3 + exFAT drivers and removable media automounting
   boot.supportedFilesystems = [ "btrfs" "ntfs" "exfat" "ext4" "vfat" ];
 

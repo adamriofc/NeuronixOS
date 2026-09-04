@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Suite 04: Storage Subsystem, TRIM, and Diet Resilience (20 Tests)
+# Suite 04: Storage Subsystem, TRIM, and Diet Resilience (25 Tests)
 
 TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
 
@@ -65,3 +65,16 @@ assert_eq "$(command -v fstrim >/dev/null && echo "found" || echo "missing")" "f
 
 # 8. Virtualization environment detection
 assert_output_contains "$TARGET_BIN status" "Hypervisor Type   :" "Status reports hypervisor environment"
+
+# 9. Systemd Journald Log Retention Ceiling & Vacuum Invariants
+STORAGE_NIX_FILE="${PROJECT_ROOT}/modules/services/storage.nix"
+assert_output_contains "grep -F 'SystemMaxUse=500M' '$STORAGE_NIX_FILE'" "SystemMaxUse=500M" "Storage module declares SystemMaxUse=500M journal ceiling"
+assert_output_contains "grep -F 'SystemMaxFileSize=50M' '$STORAGE_NIX_FILE'" "SystemMaxFileSize=50M" "Storage module declares SystemMaxFileSize=50M file limit"
+assert_output_contains "grep -F 'MaxRetentionSec=1month' '$STORAGE_NIX_FILE'" "MaxRetentionSec=1month" "Storage module declares MaxRetentionSec=1month retention"
+
+# 10. Ephemeral /tmp Boot Hygiene Invariant
+BOOT_NIX_FILE="${PROJECT_ROOT}/modules/hardware/boot.nix"
+assert_output_contains "grep -F 'boot.tmp.cleanOnBoot = lib.mkDefault true;' '$BOOT_NIX_FILE'" "cleanOnBoot" "Boot module declares boot.tmp.cleanOnBoot"
+
+# 11. Omni-Purging Diet Execution Invariant
+assert_output_contains "grep -F 'journalctl --vacuum-size=500M' '$TARGET_BIN'" "vacuum-size=500M" "CLI diet integrates journalctl 500M vacuuming"

@@ -117,7 +117,17 @@ Seluruh opsi dideklarasikan dengan `lib.mkDefault true`. Pengguna yang ingin mem
 nix.gc.automatic = false;
 nix.optimise.automatic = false;
 services.fstrim.enable = false;
+boot.tmp.cleanOnBoot = false;
 ```
+
+### 3.3 Kebersihan Penyimpanan Tambahan (Ephemeral & Log Hygiene)
+Selain 4 lapis mesin diet utama, NEURONIX menerapkan 3 otomatisasi higienis tambahan:
+1. **Systemd Journal Retention Ceiling:**
+   Membatasi ukuran log di `/var/log/journal` agar tidak melebihi 500 MiB melalui `services.journald.extraConfig = "SystemMaxUse=500M\nSystemMaxFileSize=50M\nMaxRetentionSec=1month\nRuntimeMaxUse=100M\n";`.
+2. **Ephemeral `/tmp` Directory Cleaning on Boot:**
+   Menjamin direktori sementara `/tmp` selalu segar setiap kali sistem booting melalui `boot.tmp.cleanOnBoot = lib.mkDefault true;`.
+3. **Flatpak Unused Runtime Autonomous Pruning:**
+   Membersihkan runtime Flatpak yatim yang tidak lagi memiliki dependensi aktif melalui unit `systemd.services.flatpak-prune-unused` dan timer mingguan `systemd.timers.flatpak-prune-unused`, serta terintegrasi langsung dalam perintah `neuronix diet`.
 
 ---
 

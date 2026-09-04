@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Industrial QA & Resilience Master Test Runner (561 Tests across 22 Suites)
+# NEURONIX Industrial QA & Resilience Master Test Runner (566 Tests across 22 Suites)
 # Executes 22 deep-dive suites:
 # 01 - Syntax & Static Analysis
 # 02 - CLI Argument Parsing & Fuzzing
@@ -39,7 +39,7 @@ START_TIME=$(date +%s%N)
 
 echo -e "\n${C_BOLD}${C_CYAN}╔═══════════════════════════════════════════════════════════════════╗${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}║     NEURONIX COMPREHENSIVE INDUSTRIAL QA & RESILIENCE HARNESS     ║${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (561 Tests)   ║${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (566 Tests)   ║${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}╚═══════════════════════════════════════════════════════════════════╝${C_RESET}"
 
 # Execute all 13 suites sequentially

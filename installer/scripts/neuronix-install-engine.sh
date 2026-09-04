@@ -223,6 +223,9 @@ cat <<USER_EOF >> "$CONFIG_DIR/configuration.nix"
     staged = true;
   };
 
+  # Ephemeral & Storage Hygiene (Journal Ceiling & Boot /tmp Clean)
+  boot.tmp.cleanOnBoot = true;
+
   system.stateVersion = "24.11";
 }
 USER_EOF
@@ -243,6 +246,7 @@ cat <<MANIFEST_EOF > "$MANIFEST_DIR/release.json"
   "ai_agent_autoupdate": "daily",
   "update_notifier": "enabled",
   "storage_diet": "autonomous_14d",
+  "storage_hygiene": "journal_tmp_flatpak",
   "nixpkgs_channel": "$NRX_CHANNEL",
   "nixpkgs_commit": "$NRX_COMMIT",
   "state_version": "$NRX_STATE",

@@ -6,7 +6,7 @@
 [![Version](https://img.shields.io/badge/Version-1.0.1--beta-blueviolet.svg)](version.nix)
 [![NixOS](https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
 [![Architecture](https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg)](#platform-architecture)
-[![Testing](https://img.shields.io/badge/Assertions-811%2F811_Passed_(100%25)-success.svg)](#verification--test-harness)
+[![Testing](https://img.shields.io/badge/Assertions-821%2F821_Passed_(100%25)-success.svg)](#verification--test-harness)
 [![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg)](#storage-architecture--maintenance)
 [![Memory Management](https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg)](#memory-pressure-management)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg)](.github/workflows/ci.yml)
@@ -41,7 +41,7 @@
   - [7. Autonomous Update Architecture & Desktop Notifier](#7-autonomous-update-architecture--desktop-notifier)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (811 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (821 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -94,7 +94,7 @@ To ensure complete architectural truthfulness, system capabilities in NEURONIX O
   ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ In-Memory Shadow Micro-VM Simulator (neuronix try)
   ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Declarative Derivation Verification (neuronix verify)
   ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Storage Pruner & VirtIO TRIM (neuronix diet)
-  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 811 Automated Test Assertions (100% Pass)
+  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 821 Automated Test Assertions (100% Pass)
 ```
 
 ---
@@ -119,13 +119,15 @@ All read-write filesystem subvolumes use Zstandard level 3 (`zstd:3`) compressio
 - **Disk Usage:** Reduces physical footprint on `/nix/store` by 40% to 50%.
 - **Throughput:** Minimizes raw byte transfers from NVMe/SATA storage, reducing solid-state write wear and improving real-world read times.
 
-### Auto-TRIM and 4-Tier Storage Diet Engine
+### Auto-TRIM and Omni-Purging Storage Diet Engine
 SSD performance degradation and sparse disk image inflation (in QEMU/KVM virtual machines) are addressed automatically through a multi-layered maintenance strategy:
 1. **Host Auto-TRIM (`fstrim.timer`):** Issues discard calls (`fstrim -av`) across all mounted Btrfs and ESP partitions daily. This informs SSD controllers and hypervisors of deallocated blocks.
 2. **Autonomous Garbage Collection (`nix.gc`):** Runs weekly garbage collection (`nix-gc.timer`) with a 14-day retention policy (`--delete-older-than 14d`), preserving instant rollback safety while purging orphaned package closures.
 3. **Hardlink Deduplication (`nix.optimise` & `auto-optimise-store = true`):** Automatically hardlinks identical binary files across derivations within `/nix/store`, saving 30% to 40% disk space.
 4. **Dynamic Storage Guard (`min-free` & `max-free`):** In-kernel Nix daemon safeguards disk space by triggering emergency collections if free space drops below 1.0 GiB until 3.0 GiB headroom is recovered.
-5. **One-Command Unified Diet (`neuronix diet`):** Allows users to orchestrate GC, store deduplication, and host TRIM in a single command, reporting reclaimed disk space.
+5. **Systemd Journal Retention Ceiling (`services.journald`):** Caps `/var/log/journal` storage at 500 MiB with 1-month retention, preventing runaway log file consumption.
+6. **Ephemeral `/tmp` & Flatpak Runtime Hygiene:** Purges stale `/tmp` files on every boot (`boot.tmp.cleanOnBoot = true`) and automatically prunes unreferenced Flatpak runtimes via `flatpak-prune-unused.timer`.
+7. **One-Command Unified Diet (`neuronix diet`):** Orchestrates Nix Store GC, Inode Deduplication, Flatpak Unused Pruning, Journal Vacuuming, and Host Physical TRIM in a single command, reporting reclaimed disk space.
 
 ### Btrfs Metadata Balance Timer
 Over time, Btrfs can accumulate sparsely populated block groups, causing `ENOSPC` errors even with remaining free space.
@@ -386,21 +388,21 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Test Harness (811 Assertions)
+## Verification, Lifecycle Gate & Test Harness (821 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 811 automated assertions across 22 verification suites and release gates:
+System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 821 automated assertions across 22 verification suites and release gates:
 
 ```text
 ═══════════════════════════════════════════════════════════════════
                     TEST HARNESS REPORT SUMMARY                    
 ═══════════════════════════════════════════════════════════════════
-  Master Test Harness (tests/run_all_tests.sh)     : 561 / 561 PASS
-  Distro Test Harness (tests/test_distro_suite.sh) : 204 / 204 PASS
+  Master Test Harness (tests/run_all_tests.sh)     : 566 / 566 PASS
+  Distro Test Harness (tests/test_distro_suite.sh) : 209 / 209 PASS
   Core CLI Harness (tests/test_neuronix_core.sh)   :  14 /  14 PASS
   Release Lifecycle Gate (test_release_lifecycle)  :  32 /  32 PASS
-  Total Executed Assertions                        : 811 Assertions
+  Total Executed Assertions                        : 821 Assertions
   Failed Verification                              : 0 Failures
-  Execution Duration                               : ~67.4 seconds
+  Execution Duration                               : ~66.7 seconds
   Confidence Score                                 : 100%
 ═══════════════════════════════════════════════════════════════════
   ✓ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED
@@ -411,13 +413,13 @@ System invariants, module structures, and CLI dispatchers are validated through 
 
 ### Verification Coverage:
 - **Suites 01-03:** Script syntax, POSIX compliance, static analysis, and generation parsing.
-- **Suites 04-06:** Storage subsystem telemetry, ephemeral sandbox isolation, and fault injection.
+- **Suites 04-06:** Storage subsystem telemetry, ephemeral sandbox isolation, fault injection, journal ceiling limits, and boot hygiene.
 - **Suites 07-09:** Hermetic Flake reproducibility, environment sanitization (`env -i`), and buffer fuzzing.
 - **Suites 10-13:** Filesystem invariants, concurrency race conditions, resource exhaustion (`ulimit`), and state mutations.
 - **Suites 14-15:** MCP JSON-RPC 2.0 protocol compliance and micro-VM lifecycle management.
 - **Suites 16-17:** Subsystem configuration contracts, kernel sysctl parameters, watchdog timers, and audio codecs.
 - **Suite 18:** Command-line argument boundary fuzzing and shell injection neutralization.
-- **Suite 19:** Architecture Decision Records (ADRs) and documentation consistency.
+- **Suite 19:** Architecture Decision Records (ADRs), documentation consistency, Flatpak pruning timers, and installer contracts.
 - **Suite 20:** Storage subsystem declarations, Btrfs subvolume mount options, and installer generator scripts.
 - **Suite 21:** OpenCode autonomous AI copilot derivations, background systemd update timers, and desktop entry contracts.
 - **Suite 22:** Autonomous update policy, desktop notification daemon, staged rebuild contracts, and unified storage diet lifecycle.
@@ -425,10 +427,10 @@ System invariants, module structures, and CLI dispatchers are validated through 
 
 Execute the verification battery:
 ```bash
-# Run master test harness (561 tests across 22 suites)
+# Run master test harness (566 tests across 22 suites)
 bash tests/run_all_tests.sh
 
-# Run distribution standalone suite (204 tests)
+# Run distribution standalone suite (209 tests)
 bash tests/test_distro_suite.sh
 
 # Run core CLI verification (14 tests)

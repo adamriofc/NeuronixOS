@@ -15,6 +15,10 @@
   # Dual-boot Windows synchronization (RTC local time & UEFI boot discovery)
   time.hardwareClockInLocalTime = lib.mkDefault true;
 
+  # Ephemeral /tmp Directory Hygiene
+  # Membersihkan seluruh file sementara yang tertinggal di /tmp saat sistem booting
+  boot.tmp.cleanOnBoot = lib.mkDefault true;
+
   # UEFI Boot Assessment Watchdog (power-loss protection during update)
   systemd.watchdog.runtimeTime = "30s";
   systemd.watchdog.rebootTime = "10min";

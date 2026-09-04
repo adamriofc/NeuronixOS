@@ -17,6 +17,29 @@
     };
   };
 
+  # Pembersihan Berkala Runtime Flatpak yang Tidak Digunakan (Orphaned Runtimes)
+  systemd.services.flatpak-prune-unused = {
+    description = "NEURONIX Flatpak Unused Runtime Pruner";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = pkgs.writeShellScript "flatpak-prune-unused" ''
+        if [ -x "${pkgs.flatpak}/bin/flatpak" ]; then
+          ${pkgs.flatpak}/bin/flatpak uninstall --unused -y 2>/dev/null || true
+        fi
+      '';
+    };
+  };
+
+  systemd.timers.flatpak-prune-unused = {
+    description = "Timer Mingguan Pembersihan Runtime Flatpak Yatim";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "weekly";
+      Persistent = true;
+      RandomizedDelaySec = "1h";
+    };
+  };
+
   # Declarative portals.conf mapping to prevent file chooser freeze under Wayland
   xdg.portal = {
     enable = true;

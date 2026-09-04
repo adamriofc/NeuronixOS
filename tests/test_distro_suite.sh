@@ -487,15 +487,20 @@ assert_contains "${DISTRO_ROOT}/docs/adr/ADR-005-hardware-detection-architecture
 assert_contains "${DISTRO_ROOT}/docs/adr/ADR-005-hardware-detection-architecture.md" "Context & Problem Statement" "ADR-005 contains Context & Problem Statement"
 
 # ------------------------------------------------------------------------------
-# SUITE 19: OpenCode Built-in AI Copilot & Autonomous Update Contracts
+# SUITE 19: OpenCode Built-in AI Copilot, Updates & Storage Hygiene Contracts
 # ------------------------------------------------------------------------------
-suite_header "19 - OpenCode Built-in AI Copilot & Autonomous Update Contracts"
+suite_header "19 - OpenCode Built-in AI Copilot, Updates & Storage Hygiene Contracts"
 
 assert_contains "${DISTRO_ROOT}/modules/services/opencode.nix" "services.opencode" "OpenCode service option hierarchy is defined"
 assert_contains "${DISTRO_ROOT}/modules/services/opencode.nix" "default = true;" "OpenCode is enabled by default"
 assert_contains "${DISTRO_ROOT}/packages/opencode/default.nix" "makeDesktopItem" "OpenCode generates desktop item"
 assert_contains "${DISTRO_ROOT}/flake.nix" "opencode = import ./modules/services/opencode.nix;" "Flake exports opencode nixosModule"
 assert_contains "${DISTRO_ROOT}/installer/scripts/neuronix-install-engine.sh" "neuronix.services.opencode" "Installer engine configures opencode"
+assert_contains "${DISTRO_ROOT}/modules/services/flatpak.nix" "flatpak-prune-unused" "Flatpak unused runtime pruner service defined"
+assert_contains "${DISTRO_ROOT}/modules/services/flatpak.nix" "uninstall --unused -y" "Flatpak prune command targets unused runtimes"
+assert_contains "${DISTRO_ROOT}/modules/services/flatpak.nix" "systemd.timers.flatpak-prune-unused" "Flatpak prune timer defined"
+assert_contains "${DISTRO_ROOT}/installer/scripts/neuronix-install-engine.sh" "storage_hygiene" "Installer manifest registers storage hygiene"
+assert_contains "${DISTRO_ROOT}/modules/hardware/boot.nix" "boot.tmp.cleanOnBoot" "Boot declarative module enables cleanOnBoot"
 
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))

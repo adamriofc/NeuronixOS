@@ -147,21 +147,24 @@ cmd_status() {
     else
         echo -e "  ├─ Real-time Dedupe  : ${YELLOW}NONAKTIF${RESET}"
     fi
-    echo -e "  └─ Dynamic Guard     : min-free 1.0 GiB | max-free 3.0 GiB"
+    echo -e "  ├─ Dynamic Guard     : min-free 1.0 GiB | max-free 3.0 GiB"
+    echo -e "  └─ Journal Retention : 500 MiB Max Ceiling (1 Month Retention)"
     echo
 
     # 3. Autonomous Daemon Timers
     echo -e "  ${BOLD}AUTONOMOUS TIMERS (SYSTEMD)${RESET}"
-    local gc_status opt_status trim_status update_status
+    local gc_status opt_status trim_status update_status flatpak_status
     systemctl is-active nix-gc.timer &>/dev/null && gc_status="${GREEN}ONLINE (Harian)${RESET}" || gc_status="${RED}OFFLINE${RESET}"
     systemctl is-active nix-optimise.timer &>/dev/null && opt_status="${GREEN}ONLINE (Harian)${RESET}" || opt_status="${RED}OFFLINE${RESET}"
     systemctl is-active fstrim.timer &>/dev/null && trim_status="${GREEN}ONLINE (Harian)${RESET}" || trim_status="${RED}OFFLINE${RESET}"
     systemctl is-active neuronix-update-check.timer &>/dev/null && update_status="${GREEN}ONLINE (Harian)${RESET}" || update_status="${YELLOW}STANDBY${RESET}"
+    systemctl is-active flatpak-prune-unused.timer &>/dev/null && flatpak_status="${GREEN}ONLINE (Mingguan)${RESET}" || flatpak_status="${YELLOW}STANDBY${RESET}"
 
     echo -e "  ├─ Auto Garbage Clean: ${gc_status}"
     echo -e "  ├─ Store Optimise    : ${opt_status}"
     echo -e "  ├─ Host SSD TRIM     : ${trim_status}"
-    echo -e "  └─ Desktop Update Mon: ${update_status}"
+    echo -e "  ├─ Desktop Update Mon: ${update_status}"
+    echo -e "  └─ Flatpak Prune Mon : ${flatpak_status}"
     echo
 
     # 4. Hardware & 27-Pillar Resilience Shield
@@ -221,7 +224,7 @@ cmd_diet() {
     before_used="$(df -k /nix | awk 'NR==2 {print $3}')"
 
     # Tahap 1: Garbage Collection
-    log_step "1/3. Membersihkan paket usang & cache mati (Garbage Collection)..."
+    log_step "1/5. Membersihkan paket usang & cache mati (Garbage Collection)..."
     if [[ $EUID -eq 0 ]]; then
         nix-collect-garbage -d
     else
@@ -230,7 +233,7 @@ cmd_diet() {
     echo
 
     # Tahap 2: Deduplikasi Inode
-    log_step "2/3. Menyatukan file kembar di /nix/store (Hardlink Deduplication)..."
+    log_step "2/5. Menyatukan file kembar di /nix/store (Hardlink Deduplication)..."
     if [[ $EUID -eq 0 ]]; then
         nix-store --optimise
     else
@@ -238,8 +241,30 @@ cmd_diet() {
     fi
     echo
 
-    # Tahap 3: Host TRIM Passthrough
-    log_step "3/3. Menembakkan sinyal VirtIO/SCSI TRIM ke Host Physical Storage..."
+    # Tahap 3: Pembersihan Runtime Flatpak Yatim
+    log_step "3/5. Membersihkan runtime Flatpak yang tidak terpakai (Unused Runtimes)..."
+    if command -v flatpak >/dev/null 2>&1; then
+        flatpak uninstall --unused -y >/dev/null 2>&1 || true
+        echo -e "${DIM}Pembersihan runtime Flatpak selesai.${RESET}"
+    else
+        echo -e "${DIM}Flatpak runtime tidak terpasang (dilewati).${RESET}"
+    fi
+    echo
+
+    # Tahap 4: Systemd Journal Vacuuming
+    log_step "4/5. Memangkas log systemd usang melebihi batas 500M (Journal Vacuuming)..."
+    if command -v journalctl >/dev/null 2>&1; then
+        if [[ $EUID -eq 0 ]]; then
+            journalctl --vacuum-size=500M >/dev/null 2>&1 || true
+        else
+            sudo journalctl --vacuum-size=500M >/dev/null 2>&1 || true
+        fi
+        echo -e "${DIM}Systemd journal log berhasil divacuum ke batas aman 500M.${RESET}"
+    fi
+    echo
+
+    # Tahap 5: Host TRIM Passthrough
+    log_step "5/5. Menembakkan sinyal VirtIO/SCSI TRIM ke Host Physical Storage..."
     local trim_output
     if [[ $EUID -eq 0 ]]; then
         trim_output="$(fstrim -av)"
