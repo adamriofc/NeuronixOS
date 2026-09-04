@@ -65,3 +65,8 @@ assert_exit_code "$TARGET_BIN 'тест' " 1 "Cyrillic unicode command exits 1"
 # 15. Subcommand argument enforcement
 assert_exit_code "$TARGET_BIN run" 1 "Subcommand 'run' without package exits 1"
 assert_stderr_contains "$TARGET_BIN run" "Silakan tentukan nama paket" "Subcommand 'run' without package warns user"
+
+# 16. Verification argument sanitization and injection rejection
+assert_exit_code "$TARGET_BIN verify 'hello;whoami'" 1 "Subcommand 'verify' rejects semicolon injection with exit 1"
+assert_stderr_contains "$TARGET_BIN verify 'hello;whoami'" "Must match regex" "Subcommand 'verify' emits regex error on invalid package"
+assert_exit_code "$TARGET_BIN verify 'hello\"abort'" 1 "Subcommand 'verify' rejects quote injection with exit 1"

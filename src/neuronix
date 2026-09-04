@@ -15,7 +15,7 @@ trap 'exec 2>/dev/null; exit 0' PIPE
 # Safe Path & Environment Fallbacks (Mission-critical defensive posture)
 export PATH="/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:${PATH:-}"
 
-VERSION="1.0.1-beta"
+VERSION="1.0.3"
 VERSION_NIX="$(dirname "$(readlink -f "$0")")/../version.nix"
 if [[ -f "$VERSION_NIX" ]]; then
     VERSION=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
@@ -32,6 +32,7 @@ if [[ -t 1 ]]; then
     YELLOW="\033[38;5;220m"
     RED="\033[38;5;196m"
     MAGENTA="\033[38;5;207m"
+    GRAY="\033[38;5;245m"
     RESET="\033[0m"
 else
     BOLD=""
@@ -42,6 +43,7 @@ else
     YELLOW=""
     RED=""
     MAGENTA=""
+    GRAY=""
     RESET=""
 fi
 
@@ -56,11 +58,11 @@ EOF
     echo -e "  ${BOLD}NEURONIX${RESET} - ${DIM}Deterministic AI-Augmented Substrate${RESET}  ${CYAN}v${VERSION}${RESET}\n"
 }
 
-log_info()    { echo -e " ${BLUE}ℹ${RESET}  $*"; }
-log_success() { echo -e " ${GREEN}✔${RESET}  $*"; }
-log_warn()    { echo -e " ${YELLOW}⚠${RESET}  $*"; }
-log_error()   { echo -e " ${RED}✖${RESET}  $*" >&2; }
-log_step()    { echo -e " ${CYAN}➔${RESET}  ${BOLD}$*${RESET}"; }
+log_info()    { echo -e "  ${BLUE}ℹ${RESET}  $*"; }
+log_success() { echo -e "  ${GREEN}✔${RESET}  $*"; }
+log_warn()    { echo -e "  ${YELLOW}⚠${RESET}  $*"; }
+log_error()   { echo -e "  ${RED}✖${RESET}  $*" >&2; }
+log_step()    { echo -e "  ${CYAN}➔${RESET}  ${BOLD}$*${RESET}"; }
 
 show_help() {
     print_banner
@@ -71,16 +73,16 @@ show_help() {
     echo -e "  ${GREEN}diet${RESET}            Reclaim storage, optimize store hardlinks, and issue TRIM"
     echo -e "  ${GREEN}check-update${RESET}    Check for available upstream releases and flake updates"
     echo -e "  ${GREEN}upgrade${RESET} [opt]   Perform atomic system upgrade (--staged / --switch)"
-    echo -e "  ${GREEN}run${RESET} <pkgs...>   Jalankan software di ruang isolasi sekali pakai di RAM"
-    echo -e "  ${GREEN}dev${RESET} <stack>     Lingkungan pengembang satu-perintah hermetis (python/rust/node/ai/go)"
-    echo -e "  ${GREEN}try${RESET} [options]   Simulasikan konfigurasi di Shadow Micro-VM di RAM (< 3 detik)"
-    echo -e "  ${GREEN}verify${RESET} <pkg>    Verifikasi formal paket via dry-build (Zero-Blast Radius)"
+    echo -e "  ${GREEN}run${RESET} <pkgs...>   Run packages in an isolated ephemeral nix-shell"
+    echo -e "  ${GREEN}dev${RESET} <stack>     Launch hermetic developer stack (python/rust/node/ai/go/web3)"
+    echo -e "  ${GREEN}try${RESET} [options]   Simulate and test configuration in an isolated Micro-VM sandbox"
+    echo -e "  ${GREEN}verify${RESET} <pkg>    Declarative build verification for package derivations"
     echo -e "  ${GREEN}shield${RESET}          Dashboard diagnosa memori, ZRAM & PSI Active Memory Shield"
     echo -e "  ${GREEN}generations${RESET}     Display chronological timeline of system generations"
     echo -e "  ${GREEN}battery${RESET} [val]   Configure laptop battery charging threshold (80% ceiling)"
     echo -e "  ${GREEN}center${RESET}          Luncurkan aplikasi grafis NEURONIX Control Center"
     echo -e "  ${GREEN}mcp${RESET}             Luncurkan server Model Context Protocol (JSON-RPC 2.0 over stdio)"
-    echo -e "  ${GREEN}undo${RESET}            Instantly rollback to previous system generation (< 2s)"
+    echo -e "  ${GREEN}undo${RESET}            Roll back to preceding system generation atomically"
     echo -e "  ${GREEN}doctor${RESET}          Diagnosa sistem mendalam & buat laporan issue terformat Markdown"
     echo -e "  ${GREEN}welcome${RESET}         Luncurkan panduan sambutan interaktif dan onboarding wizard"
     echo -e "  ${GREEN}quickstart${RESET}      Katalog aplikasi harian terkurasi 1-klik (Flatpak/Flathub)"
@@ -300,7 +302,7 @@ cmd_run() {
     fi
 
     log_info "Preparing ephemeral isolation subshell for: ${BOLD}$*${RESET}..."
-    log_info "Lingkungan berjalan di memori RAM dan akan lenyap bersih begitu terminal ditutup."
+    log_info "Sesi subshell ephemeral aktif. Paket diakses dari /nix/store tanpa mengubah profile sistem."
     echo
 
     # Launch interactive subshell with nix-shell
@@ -309,7 +311,7 @@ cmd_run() {
     
     local exit_code=$?
     echo
-    log_success "Sesi ephemeral berakhir. Ruang kerja telah dibersihkan tanpa residu."
+    log_success "Sesi ephemeral berakhir. Lingkungan shell kembali ke kondisi semula."
     return $exit_code
 }
 
@@ -390,17 +392,23 @@ cmd_undo() {
 cmd_verify() {
     local pkg="${1:-}"
     if [[ -z "$pkg" ]]; then
-        log_error "Silakan tentukan nama paket yang ingin diverifikasi secara formal."
+        log_error "Silakan tentukan nama paket yang ingin diverifikasi."
         echo -e "Contoh: ${CYAN}${PROGRAM_NAME} verify hello${RESET}"
         exit 1
     fi
 
-    log_step "Running dry-build derivation verification for package: ${BOLD}${pkg}${RESET}..."
-    if nix-instantiate --eval -E "with import <nixpkgs> {}; (builtins.hasAttr \"${pkg}\" pkgs)" 2>/dev/null | grep -q "true"; then
-        log_success "Declarative Verification PASSED: Package derivation '${pkg}' is valid in nixpkgs closure. Blast-radius: 0."
+    # Security: Strict allowlist to eliminate expression-injection attack surface
+    if [[ ! "$pkg" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+        log_error "Invalid package name: '${pkg}'. Must match regex ^[A-Za-z0-9._+-]+$."
+        return 1
+    fi
+
+    log_step "Running declarative build verification for package derivation: ${BOLD}${pkg}${RESET}..."
+    if nix-instantiate '<nixpkgs>' -A "$pkg" >/dev/null 2>&1; then
+        log_success "Declarative Build Verification PASSED: Package derivation '${pkg}' evaluates cleanly in nixpkgs closure."
         return 0
     else
-        log_error "Declarative Verification FAILED: Package '${pkg}' cannot be verified in pure nixpkgs evaluation. State modification rejected."
+        log_error "Declarative Build Verification FAILED: Package derivation '${pkg}' failed dry-build evaluation in nixpkgs."
         return 1
     fi
 }
@@ -593,9 +601,28 @@ cmd_check_update() {
         return 0
     fi
 
+    local local_head=""
+    local repo_root
+    repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd 2>/dev/null || true)"
+    if [[ -d "${repo_root}/.git" ]]; then
+        local_head=$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || true)
+    elif [[ -f "/etc/neuronix/release.json" ]] && command -v jq >/dev/null 2>&1; then
+        local_head=$(jq -r '.commit // empty' /etc/neuronix/release.json 2>/dev/null || true)
+    elif [[ -f "/etc/nixos/flake.lock" ]] && command -v jq >/dev/null 2>&1; then
+        local_head=$(jq -r '.nodes.self.locked.rev // empty' /etc/nixos/flake.lock 2>/dev/null || true)
+    fi
+
     echo -e "  ├─ Upstream Commit SHA : ${CYAN}${remote_head:0:12}${RESET}"
-    echo -e "  ├─ Local System Status : ${GREEN}SYNCHRONIZED (Generation #$(get_current_generation))${RESET}"
-    echo -e "  └─ Action Recommended  : Jalankan '${CYAN}${PROGRAM_NAME} upgrade${RESET}' untuk menerapkan pembaruan bertahap."
+    if [[ -n "$local_head" && "$local_head" == "$remote_head" ]]; then
+        echo -e "  ├─ Local System Status : ${GREEN}UP TO DATE (SYNCHRONIZED - ${local_head:0:12})${RESET}"
+        echo -e "  └─ Action Recommended  : Sistem mutakhir pada Generasi #$(get_current_generation)."
+    elif [[ -n "$local_head" ]]; then
+        echo -e "  ├─ Local System Status : ${YELLOW}UPDATE AVAILABLE (Local: ${local_head:0:12} -> Upstream: ${remote_head:0:12})${RESET}"
+        echo -e "  └─ Action Recommended  : Jalankan '${CYAN}${PROGRAM_NAME} upgrade${RESET}' untuk menerapkan pembaruan bertahap."
+    else
+        echo -e "  ├─ Local System Status : ${DIM}UNKNOWN / UNPINNED (Upstream: ${remote_head:0:12})${RESET}"
+        echo -e "  └─ Action Recommended  : Jalankan '${CYAN}${PROGRAM_NAME} upgrade${RESET}' untuk menyinkronkan dengan rilis upstream."
+    fi
     echo
     log_success "Pemeriksaan pembaruan selesai."
 }
@@ -641,22 +668,38 @@ cmd_upgrade() {
     if [[ "$mode" == "staged" ]]; then
         log_step "1/2. Menjalankan Staged Upgrade (nixos-rebuild boot)..."
         log_info "Generasi baru akan disiapkan di /nix/store tanpa mengganggu sesi aktif."
+        local rebuild_exit=0
         if [[ $EUID -eq 0 ]]; then
-            nixos-rebuild boot --flake "$config_dir" 2>/dev/null || true
+            nixos-rebuild boot --flake "$config_dir" || rebuild_exit=$?
         else
-            sudo nixos-rebuild boot --flake "$config_dir" 2>/dev/null || true
+            sudo nixos-rebuild boot --flake "$config_dir" || rebuild_exit=$?
         fi
+
+        if [[ $rebuild_exit -ne 0 ]]; then
+            echo
+            log_error "Pembaruan bertahap gagal dibangun (nixos-rebuild boot keluar dengan kode: ${rebuild_exit})."
+            return $rebuild_exit
+        fi
+
         echo
         log_step "2/2. Menautkan Generasi Baru ke Bootloader..."
         log_success "Pembaruan bertahap (Staged Upgrade) sukses dibangun!"
         echo -e "  ${GREEN}✔${RESET} Generasi baru akan aktif secara otomatis pada saat komputer dinyalakan kembali (reboot)."
     else
         log_step "1/2. Menjalankan Instant Switch (nixos-rebuild switch)..."
+        local rebuild_exit=0
         if [[ $EUID -eq 0 ]]; then
-            nixos-rebuild switch --flake "$config_dir" 2>/dev/null || true
+            nixos-rebuild switch --flake "$config_dir" || rebuild_exit=$?
         else
-            sudo nixos-rebuild switch --flake "$config_dir" 2>/dev/null || true
+            sudo nixos-rebuild switch --flake "$config_dir" || rebuild_exit=$?
         fi
+
+        if [[ $rebuild_exit -ne 0 ]]; then
+            echo
+            log_error "Peralihan langsung generasi gagal (nixos-rebuild switch keluar dengan kode: ${rebuild_exit})."
+            return $rebuild_exit
+        fi
+
         echo
         log_step "2/2. Mengaktifkan Generasi Baru..."
         log_success "Sistem berhasil diperbarui ke Generasi #$(get_current_generation) secara langsung!"
@@ -666,7 +709,6 @@ cmd_upgrade() {
 cmd_doctor() {
     local output_file="/tmp/neuronix-doctor.md"
     local json_output=0
-    local upload_requested=0
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -678,17 +720,12 @@ cmd_doctor() {
                 output_file="$2"
                 shift 2
                 ;;
-            --upload)
-                upload_requested=1
-                shift
-                ;;
             -h|--help)
                 echo -e "${BOLD}USAGE:${RESET}"
                 echo -e "  ${CYAN}${PROGRAM_NAME} doctor${RESET} [OPTIONS]\n"
                 echo -e "${BOLD}OPTIONS:${RESET}"
                 echo -e "  ${GREEN}--output, -o <file>${RESET}  Tentukan lokasi berkas laporan (Default: /tmp/neuronix-doctor.md)"
                 echo -e "  ${GREEN}--json${RESET}               Cetak output dalam format terstruktur JSON"
-                echo -e "  ${GREEN}--upload${RESET}             Unggah laporan terenkripsi/tersanitasi ke dumpbin aman"
                 echo -e "  ${GREEN}-h, --help${RESET}           Tampilkan bantuan ini\n"
                 return 0
                 ;;
@@ -702,7 +739,7 @@ cmd_doctor() {
     # Data collection & Sanitization
     local raw_user="${USER:-$(whoami 2>/dev/null || echo "user")}"
     local raw_host="$(hostname 2>/dev/null || uname -n)"
-    local os_pretty="NEURONIX OS 1.0.0 (NixOS Substrate)"
+    local os_pretty="NEURONIX OS 1.0.3 (NixOS Substrate)"
     local kernel_ver="$(uname -r 2>/dev/null || echo "Linux-unknown")"
     local arch_type="$(uname -m 2>/dev/null || echo "x86_64")"
     local uptime_str="$(uptime -p 2>/dev/null || uptime 2>/dev/null || echo "unknown")"
@@ -844,20 +881,6 @@ EOF
     log_success "Laporan diagnostik berhasil disusun ke: ${BOLD}${output_file}${RESET}"
     echo -e "  ${GRAY}Buka berkas di atas atau salin langsung ke laporan GitHub Issues:${RESET}"
     echo -e "  ${CYAN}https://github.com/adamriofc/neuronix/issues/new${RESET}\n"
-
-    if [[ "$upload_requested" -eq 1 ]]; then
-        log_info "Mode upload: Mengunggah berkas ter-sanitasi..."
-        if command -v curl &>/dev/null; then
-            local paste_url="$(curl -s -F 'f:1=<-' http://ix.io < "$output_file" 2>/dev/null || curl -s --data-binary @"$output_file" https://paste.rs 2>/dev/null || true)"
-            if [[ -n "$paste_url" && "$paste_url" =~ ^http ]]; then
-                log_success "Laporan tersanitasi berhasil diunggah: ${BOLD}${paste_url}${RESET}"
-            else
-                log_warn "Koneksi upload pastebin publik tidak tersedia. Gunakan berkas lokal: $output_file"
-            fi
-        else
-            log_warn "curl tidak ditemukan, lewati pengunggahan otomatis."
-        fi
-    fi
 }
 
 cmd_welcome() {
@@ -1089,7 +1112,11 @@ cmd_kernel() {
             fi
 
             if [[ -f "$boot_nix_path" ]]; then
-                local detected="$(grep -oP 'kernelFlavor\s*=\s*"\K[^"]+' "$boot_nix_path" 2>/dev/null || true)"
+                local detected
+                detected="$(grep -oP 'kernelFlavor\s*=\s*"\K[^"]+' "$boot_nix_path" 2>/dev/null || true)"
+                if [[ -z "$detected" ]]; then
+                    detected="$(grep -oP 'default\s*=\s*"\K[a-z]+(?=";\s*#\s*default)' "$boot_nix_path" 2>/dev/null || true)"
+                fi
                 if [[ -n "$detected" ]]; then
                     configured_flavor="$detected"
                 fi

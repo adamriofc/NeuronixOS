@@ -4,7 +4,7 @@
   options = {
     neuronix.hardware.kernelFlavor = lib.mkOption {
       type = lib.types.enum [ "default" "zen" "lts" "latest" "hardened" ];
-      default = "default";
+      default = "default"; # default, zen, lts, latest, hardened
       description = "Linux kernel profile flavor (zen: gaming/low-latency, lts: long-term, latest: bleeding-edge, hardened: high-security)";
     };
   };

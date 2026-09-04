@@ -7,7 +7,11 @@
 
 set -uo pipefail
 
-VERSION="1.0.1-beta"
+VERSION="1.0.3"
+VERSION_NIX="$(dirname "$(readlink -f "$0")")/../../version.nix"
+if [[ -f "$VERSION_NIX" ]]; then
+    VERSION=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+fi
 PROGRAM_NAME="opencode"
 
 # Terminal Color Formats

@@ -5,7 +5,7 @@
 # Declarative Kernel manager, 4K Artwork assets, and desktop integration.
 # ==============================================================================
 
-DISTRO_PATH="${PROJECT_ROOT}"
+DISTRO_PATH="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 TARGET_BIN="${DISTRO_PATH}/src/neuronix"
 
 start_suite "23 - EndeavourOS Parity, Onboarding & Distro Polish Contracts"

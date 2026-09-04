@@ -7,7 +7,7 @@ set -uo pipefail
 
 TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/bin/neuronix"
 CORE_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CANONICAL_VERSION=$(grep -E 'version\s*=' "${CORE_TEST_DIR}/../version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.1-beta")
+CANONICAL_VERSION=$(grep -E 'version\s*=' "${CORE_TEST_DIR}/../version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.3")
 
 PASSED=0
 FAILED=0

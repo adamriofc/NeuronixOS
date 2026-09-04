@@ -20,3 +20,8 @@ __pycache__/
 *.qcow2
 *.img
 *.iso
+
+# Local scratch / audit notes
+prompt.txt
+NEURONIX.txt
+

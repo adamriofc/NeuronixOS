@@ -37,22 +37,22 @@ assert_output_contains "echo '$STATUS_RES'" 'Active Generation:' "neuronix_statu
 DIET_CALL='{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"neuronix_diet"}}'
 assert_exit_code "echo '$DIET_CALL' | $TARGET_BIN mcp" 0 "tools/call neuronix_diet exits 0"
 DIET_RES=$(echo "$DIET_CALL" | $TARGET_BIN mcp)
-assert_output_contains "echo '$DIET_RES'" 'Storage optimization completed' "neuronix_diet returns completion text"
+assert_output_contains "echo '$DIET_RES'" 'Storage optimization' "neuronix_diet returns truthful optimization status"
 
 # 18-22. Declarative Verification Gatekeeper via MCP
 VERIFY_OK='{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"neuronix_verify","package":"hello"}}'
 assert_exit_code "echo '$VERIFY_OK' | $TARGET_BIN mcp" 0 "tools/call neuronix_verify with hello exits 0"
 VERIFY_OK_RES=$(echo "$VERIFY_OK" | $TARGET_BIN mcp)
-assert_output_contains "echo '$VERIFY_OK_RES'" 'Declarative Verification PASSED' "Valid package passes declarative verification"
+assert_output_contains "echo '$VERIFY_OK_RES'" 'Declarative Build Verification PASSED' "Valid package passes declarative verification"
 
 VERIFY_BAD='{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"neuronix_verify","package":"nonexistent_xyz_404"}}'
 assert_exit_code "echo '$VERIFY_BAD' | $TARGET_BIN mcp" 0 "tools/call neuronix_verify with nonexistent package exits 0"
 VERIFY_BAD_RES=$(echo "$VERIFY_BAD" | $TARGET_BIN mcp)
-assert_output_contains "echo '$VERIFY_BAD_RES'" 'Declarative Verification FAILED' "Invalid package fails declarative verification"
+assert_output_contains "echo '$VERIFY_BAD_RES'" 'Declarative Build Verification FAILED' "Invalid package fails declarative verification"
 
 UNDO_CALL='{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"neuronix_undo"}}'
 UNDO_RES=$(echo "$UNDO_CALL" | $TARGET_BIN mcp)
-assert_output_contains "echo '$UNDO_RES'" 'Rollback directive received' "neuronix_undo executes cleanly"
+assert_output_contains "echo '$UNDO_RES'" 'Rollback' "neuronix_undo reports rollback status cleanly"
 
 GENS_CALL='{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"neuronix_list_generations"}}'
 GENS_RES=$(echo "$GENS_CALL" | $TARGET_BIN mcp)
@@ -73,7 +73,7 @@ assert_output_contains "echo '$MALFORMED_REQ_RES'" '-32600' "Missing method emit
 
 # 26-30. Direct CLI Declarative Verification Ergonomics
 assert_exit_code "$TARGET_BIN verify hello" 0 "CLI verify hello returns exit 0"
-assert_output_contains "$TARGET_BIN verify hello" "Declarative Verification PASSED" "CLI verify displays success banner"
+assert_output_contains "$TARGET_BIN verify hello" "Declarative Build Verification PASSED" "CLI verify displays success banner"
 assert_exit_code "$TARGET_BIN verify nonexistent_fake_pkg_xyz" 1 "CLI verify nonexistent package exits 1"
-assert_stderr_contains "$TARGET_BIN verify nonexistent_fake_pkg_xyz" "Declarative Verification FAILED" "CLI verify displays rejection in stderr"
+assert_stderr_contains "$TARGET_BIN verify nonexistent_fake_pkg_xyz" "Declarative Build Verification FAILED" "CLI verify displays rejection in stderr"
 assert_exit_code "$TARGET_BIN verify" 1 "CLI verify without arguments exits 1"

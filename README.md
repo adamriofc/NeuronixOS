@@ -3,10 +3,10 @@
 **A Declarative Linux Operating System Platform with Calamares Installer, Hardware Hardening Matrix, and Developer Substrate**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.0.1--beta-blueviolet.svg)](version.nix)
+[![Version](https://img.shields.io/badge/Version-1.0.3-blueviolet.svg)](version.nix)
 [![NixOS](https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
 [![Architecture](https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg)](#platform-architecture)
-[![Testing](https://img.shields.io/badge/Assertions-851%2F851_Passed_(100%25)-success.svg)](#verification--test-harness)
+[![Testing](https://img.shields.io/badge/Assertions-854%2F854_Passed_(100%25)-success.svg)](#verification--test-harness)
 [![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg)](#storage-architecture--maintenance)
 [![Memory Management](https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg)](#memory-pressure-management)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg)](.github/workflows/ci.yml)
@@ -45,7 +45,7 @@
   - [11. Declarative Kernel Flavor Manager](#11-declarative-kernel-flavor-manager)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (851 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (854 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -58,7 +58,7 @@ NEURONIX OS is an independent, declarative Linux distribution platform based on 
 ### Release Engineering & Version Truth
 - **Single Source of Truth (`version.nix`):** All components (CLI, GUI Center, MCP Daemon, Calamares installer engine, release manifests, package derivations) read canonical versioning from `version.nix`.
 - **Release `v1.0.0` (Frozen GA):** Immutable initial General Availability release tag.
-- **Release `v1.0.1-beta` (Active Development & Hardening Baseline on `main`):** Actively maintained branch incorporating post-GA architectural hardening, end-to-end lifecycle verification gates, runtime telemetry, multi-arch flake outputs, and MCP JSON-RPC protocol compliance.
+- **Release `v1.0.3` (Hardened Production Baseline on `main`):** Actively maintained release incorporating comprehensive architectural hardening, truthful error propagation, injection-proof verification, privacy-preserving doctor diagnostics, end-to-end lifecycle verification gates, runtime telemetry, multi-arch flake outputs, and MCP JSON-RPC protocol compliance.
 - **Development Channel Baseline:** Tracks `nixos-unstable` for modern Linux kernels, Wayland compositors, and rapid developer tooling.
 - **Production Stable Baseline:** Targets `nixos-26.05` for conservative enterprise stability and verified patch streams.
 - **State Version (`system.stateVersion = "24.11"`):** The immutable NixOS state migration baseline preserving data directory layouts and system state compatibility across upgrades.
@@ -462,11 +462,11 @@ System invariants, module structures, and CLI dispatchers are validated through 
 ═══════════════════════════════════════════════════════════════════
                     TEST HARNESS REPORT SUMMARY                    
 ═══════════════════════════════════════════════════════════════════
-  Master Test Harness (tests/run_all_tests.sh)     : 596 / 596 PASS
+  Master Test Harness (tests/run_all_tests.sh)     : 599 / 599 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 209 / 209 PASS
   Core CLI Harness (tests/test_neuronix_core.sh)   :  14 /  14 PASS
   Release Lifecycle Gate (test_release_lifecycle)  :  32 /  32 PASS
-  Total Executed Assertions                        : 851 Assertions
+  Total Executed Assertions                        : 854 Assertions
   Failed Verification                              : 0 Failures
   Execution Duration                               : ~84.6 seconds
   Confidence Score                                 : 100%
@@ -494,7 +494,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
 
 Execute the verification battery:
 ```bash
-# Run master test harness (596 tests across 23 suites)
+# Run master test harness (599 tests across 23 suites)
 bash tests/run_all_tests.sh
 
 # Run distribution standalone suite (209 tests)

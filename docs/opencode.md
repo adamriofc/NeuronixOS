@@ -1,7 +1,7 @@
 # NEURONIX OpenCode AI System Copilot Specification
 
 **Component:** OpenCode Autonomous AI Copilot  
-**Substrate Version:** 1.0.1-beta  
+**Substrate Version:** 1.0.3  
 **License:** Apache License 2.0  
 **Integration:** Universal across KDE Plasma 6, GNOME, and Hyprland  
 

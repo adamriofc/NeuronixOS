@@ -12,7 +12,7 @@ import subprocess
 import argparse
 import glob
 
-VERSION = "1.0.1-beta"
+VERSION = "1.0.3"
 try:
     _vfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../version.nix")
     if os.path.exists(_vfile):

@@ -78,15 +78,15 @@ fi
 
 # Resolve versioning and platform architecture dynamically
 VERSION_NIX="$(dirname "$(readlink -f "$0")")/../../version.nix"
-NRX_VER="1.0.1-beta"
-NRX_RELEASE_TAG="v1.0.1"
+NRX_VER="1.0.3"
+NRX_RELEASE_TAG="v1.0.3"
 NRX_STATE="24.11"
 NRX_CHANNEL="nixos-unstable"
 NRX_COMMIT="577972710ddbf3f000ae7f184dd26c25264d7be7"
 
 if [[ -f "$VERSION_NIX" ]]; then
   NRX_VER=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
-  NRX_RELEASE_TAG=$(grep -E 'releaseTag\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "v1.0.1")
+  NRX_RELEASE_TAG=$(grep -E 'releaseTag\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "v1.0.3")
   NRX_STATE=$(grep -E 'stateVersion\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
   NRX_CHANNEL=$(grep -E 'channelDevelopment\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
   NRX_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "577972710ddbf3f000ae7f184dd26c25264d7be7")

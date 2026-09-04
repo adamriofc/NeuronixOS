@@ -11,7 +11,7 @@ export PASSED_TESTS=0
 export FAILED_TESTS=0
 export SUITE_NAME="GLOBAL"
 HARNESS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export CANONICAL_VERSION=$(grep -E 'version\s*=' "${HARNESS_DIR}/../version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.1-beta")
+export CANONICAL_VERSION=$(grep -E 'version\s*=' "${HARNESS_DIR}/../version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.3")
 
 # Color Codes
 if [[ -t 1 ]]; then

@@ -76,7 +76,7 @@ assert_check "Installer dry-run generates target files" "TARGET_ROOT='${MOCK_ROO
 assert_check "Target configuration.nix generated" "test -f /tmp/neuronix-mock-install/etc/nixos/configuration.nix"
 assert_check "Target flake.nix generated" "test -f /tmp/neuronix-mock-install/etc/nixos/flake.nix"
 assert_check "Target release.json generated" "test -f /tmp/neuronix-mock-install/etc/neuronix/release.json"
-assert_check "Target release.json contains canonical version" "grep -q '1.0.1-beta' /tmp/neuronix-mock-install/etc/neuronix/release.json"
+assert_check "Target release.json contains canonical version" "grep -q '1.0.3' /tmp/neuronix-mock-install/etc/neuronix/release.json"
 assert_check "Target release.json contains target architecture" "grep -q 'system' /tmp/neuronix-mock-install/etc/neuronix/release.json"
 
 # ------------------------------------------------------------------------------

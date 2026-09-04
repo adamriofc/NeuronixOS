@@ -1,9 +1,9 @@
 # Spesifikasi Teknis: Onboarding Distro, Doctor Diagnostik, Katalog Quickstart & Manajemen Kernel Deklaratif (08_ONBOARDING_AND_DISTRO_EXPERIENCE)
 
 > **Status:** Ratified & Active  
-> **Target Release:** NEURONIX OS v1.0.1+  
+> **Target Release:** NEURONIX OS v1.0.3+  
 > **Komponen:** `neuronix-welcome`, `neuronix doctor`, `neuronix quickstart`, `neuronix kernel`, `artwork/`, `modules/hardware/boot.nix`, `packages/neuronix-center/`  
-> **Verifikasi:** Suite 23 Test Contracts (851 Total Assertions / 100% Pass)
+> **Verifikasi:** Suite 23 Test Contracts (854 Total Assertions / 100% Pass)
 
 ---
 

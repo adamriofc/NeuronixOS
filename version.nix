@@ -3,8 +3,8 @@
 # Referenced by flake.nix, installer, CLI, GUI Center, and packaging derivations.
 # ==============================================================================
 {
-  version = "1.0.1-beta";
-  releaseTag = "v1.0.1";
+  version = "1.0.3";
+  releaseTag = "v1.0.3";
   stateVersion = "24.11";
   channelDevelopment = "nixos-unstable";
   channelStable = "nixos-26.05";

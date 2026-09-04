@@ -276,7 +276,9 @@ test_neuronix_center() {
 
   local ver
   ver=$(nix-shell -p python3 --run "python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --version" 2>&1)
-  if echo "$ver" | grep -Eq "1.0.1-beta|0.4.0-beta|1.0.0-phase4"; then
+  local expected_ver
+  expected_ver=$(grep -E 'version\s*=' "${DISTRO_ROOT}/version.nix" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.3")
+  if echo "$ver" | grep -Fq "$expected_ver"; then
     log_pass "neuronix-center reports correct version (${ver})"
   else
     log_fail "neuronix-center version mismatch: $ver"
@@ -522,6 +524,6 @@ if [ "$FAILED_COUNT" -eq 0 ]; then
 else
   echo "  Confidence Score     : FAIL"
   echo "==================================================================="
-  echo -e "  ${RED}✖ DISTRO CERTIFICATION FAILED: Fix the above failures.${RESET}"
+  echo -e "  ${RED}✖ DISTRO VALIDATION FAILED: Fix the above failures.${RESET}"
   exit 1
 fi

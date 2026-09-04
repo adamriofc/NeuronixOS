@@ -15,7 +15,7 @@ export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-syst
 
 # Version Metadata
 SERVER_NAME="neuronix-mcp"
-SERVER_VERSION="1.0.1-beta"
+SERVER_VERSION="1.0.3"
 VERSION_NIX="$(dirname "$(readlink -f "$0")")/../version.nix"
 if [[ -f "$VERSION_NIX" ]]; then
     SERVER_VERSION=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
@@ -215,21 +215,20 @@ handle_tools_call() {
             ;;
 
         neuronix_diet)
-            local trim_info="fstrim deferred (requires root privilege)."
-            local gc_info="nix-collect-garbage deferred (sandbox/non-root environment)."
-            local exit_code=0
-            if command -v nix-collect-garbage >/dev/null 2>&1; then
-                gc_info=$(nix-collect-garbage --delete-older-than 7d 2>&1 | tail -n 2 | tr '\n' ' ') || exit_code=$?
-            fi
-            if command -v fstrim >/dev/null 2>&1; then
-                if [[ $EUID -eq 0 ]]; then
-                    fstrim -av 2>&1 | tr '\n' ' ' || true
-                    trim_info="VirtIO/SSD TRIM passthrough executed."
-                else
-                    trim_info="VirtIO TRIM passthrough verified."
+            local text_payload
+            if [[ $EUID -eq 0 ]]; then
+                local gc_info=""
+                local trim_info=""
+                if command -v nix-collect-garbage >/dev/null 2>&1; then
+                    gc_info=$(nix-collect-garbage --delete-older-than 7d 2>&1 | tail -n 2 | tr '\n' ' ')
                 fi
+                if command -v fstrim >/dev/null 2>&1; then
+                    trim_info=$(fstrim -av 2>&1 | tr '\n' ' ')
+                fi
+                text_payload="Storage optimization executed. Unused derivations collected [GC: ${gc_info:-none}], TRIM executed [TRIM: ${trim_info:-none}]."
+            else
+                text_payload="Storage optimization deferred: requires administrative elevation to collect system-wide derivations and run fstrim. Run 'sudo neuronix diet' on the host system."
             fi
-            local text_payload="Storage optimization completed. Unused derivations collected, store deduplicated, and ${trim_info} [GC: ${gc_info}]"
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
@@ -240,14 +239,18 @@ handle_tools_call() {
             pkg=$(echo "$params" | jq -r '.package // empty')
             [[ -z "$pkg" ]] && pkg="hello"
 
-            # Declarative Gatekeeper: evaluate whether package exists in nixpkgs evaluation context
-            if nix-instantiate --eval -E "with import <nixpkgs> {}; (builtins.hasAttr \"${pkg}\" pkgs)" 2>/dev/null | grep -q "true"; then
-                local text="Declarative Verification PASSED: Package '${pkg}' is a valid derivation in nixpkgs closure."
+            if [[ ! "$pkg" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+                local text="Declarative Verification REJECTED: Package name '${pkg}' contains illegal characters. Allowed regex: ^[A-Za-z0-9._+-]+$."
+                local content
+                content=$(jq -n -c --arg text "$text" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            elif nix-instantiate '<nixpkgs>' -A "$pkg" >/dev/null 2>&1; then
+                local text="Declarative Build Verification PASSED: Package derivation '${pkg}' evaluates cleanly in nixpkgs closure."
                 local content
                 content=$(jq -n -c --arg text "$text" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
             else
-                local text="Declarative Verification FAILED: Package '${pkg}' cannot be verified in pure nixpkgs evaluation. State modification rejected."
+                local text="Declarative Build Verification FAILED: Package derivation '${pkg}' failed dry-build evaluation in nixpkgs."
                 local content
                 content=$(jq -n -c --arg text "$text" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
@@ -266,10 +269,15 @@ handle_tools_call() {
             local text_payload
             if [[ $EUID -eq 0 ]] && command -v nixos-rebuild >/dev/null 2>&1; then
                 local rb_out
-                rb_out=$(nixos-rebuild switch --rollback 2>&1 | tail -n 2 | tr '\n' ' ')
-                text_payload="Rollback directive received. System generation switched atomically from Gen #${current_gen} to ${target_gen}. [Output: ${rb_out}]"
+                local rb_code=0
+                rb_out=$(nixos-rebuild switch --rollback 2>&1 | tail -n 2 | tr '\n' ' ') || rb_code=$?
+                if [[ $rb_code -eq 0 ]]; then
+                    text_payload="Rollback executed successfully: system generation switched atomically from Gen #${current_gen} to ${target_gen}. [Output: ${rb_out}]"
+                else
+                    text_payload="Rollback execution failed with exit code ${rb_code}. [Output: ${rb_out}]"
+                fi
             else
-                text_payload="Rollback directive received. Profile atomic pointer ready to flip from Gen #${current_gen} to ${target_gen}. (Elevation via sudo nixos-rebuild switch --rollback required for bare-metal activation)"
+                text_payload="Rollback directive deferred: administrative privileges required. Run 'sudo nixos-rebuild switch --rollback' or 'sudo neuronix undo' to activate ${target_gen}."
             fi
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
@@ -291,13 +299,20 @@ handle_tools_call() {
             local shadow_script="${script_dir}/shadow_vm.sh"
             if [[ -x "$shadow_script" ]]; then
                 local res
-                res=$("$shadow_script" --smoke-test --headless 2>&1 | tr '\n' ' ')
+                local exit_code=0
+                res=$("$shadow_script" --smoke-test --headless 2>&1 | tr '\n' ' ') || exit_code=$?
+                local text
+                if [[ $exit_code -eq 0 ]]; then
+                    text="Shadow Micro-VM Simulation PASSED in RAM: ${res}"
+                else
+                    text="Shadow Micro-VM Simulation FAILED (exit code ${exit_code}): ${res}"
+                fi
                 local content
-                content=$(jq -n -c --arg text "Shadow Micro-VM Simulation PASSED in RAM: ${res}" '{"content":[{"type":"text","text":$text}]}')
+                content=$(jq -n -c --arg text "$text" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
             else
                 local content
-                content=$(jq -n -c '{"content":[{"type":"text","text":"Shadow Micro-VM Simulation PASSED in RAM (Virtual smoke-test clean)."}]}')
+                content=$(jq -n -c '{"content":[{"type":"text","text":"Shadow Micro-VM simulation engine (shadow_vm.sh) not found."}]}')
                 send_response "$req_id" "$content"
             fi
             ;;
@@ -318,10 +333,26 @@ handle_tools_call() {
             local mode
             mode=$(echo "$params" | jq -r '.mode // "staged"')
             local text_payload
-            if [[ "$mode" == "switch" ]]; then
-                text_payload="Atomic upgrade executed in 'switch' mode. New system generation active."
+            if [[ $EUID -ne 0 ]]; then
+                text_payload="Atomic upgrade deferred: administrative privileges required. Run 'sudo neuronix upgrade --${mode}'."
+            elif [[ "$mode" == "switch" ]]; then
+                local up_out
+                local up_code=0
+                up_out=$(nixos-rebuild switch 2>&1 | tail -n 2 | tr '\n' ' ') || up_code=$?
+                if [[ $up_code -eq 0 ]]; then
+                    text_payload="Atomic upgrade executed in 'switch' mode. New system generation active. [Output: ${up_out}]"
+                else
+                    text_payload="Atomic upgrade failed in 'switch' mode with code ${up_code}. [Output: ${up_out}]"
+                fi
             else
-                text_payload="Atomic upgrade executed in 'staged' mode. New system generation registered to bootloader for next reboot."
+                local up_out
+                local up_code=0
+                up_out=$(nixos-rebuild boot 2>&1 | tail -n 2 | tr '\n' ' ') || up_code=$?
+                if [[ $up_code -eq 0 ]]; then
+                    text_payload="Atomic upgrade executed in 'staged' mode. New system generation registered to bootloader. [Output: ${up_out}]"
+                else
+                    text_payload="Atomic upgrade failed in 'staged' mode with code ${up_code}. [Output: ${up_out}]"
+                fi
             fi
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
