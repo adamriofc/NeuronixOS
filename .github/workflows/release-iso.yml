@@ -29,7 +29,6 @@ jobs:
       - name: Install Nix with Flakes Support
         uses: cachix/install-nix-action@v30
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
             experimental-features = nix-command flakes
             substituters = https://cache.nixos.org https://nix-community.cachix.org
@@ -86,6 +85,7 @@ jobs:
           cd ..
           bash installer/scripts/sign_release.sh sign
           bash installer/scripts/generate_sbom.sh "${TAG}"
+          bash installer/scripts/generate_release_manifest.sh "${TAG}"
 
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v2

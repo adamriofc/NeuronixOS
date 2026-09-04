@@ -1,4 +1,4 @@
-# ADR-009: 854-Assertion Continuous Industrial Assurance Taxonomy and Truth Policy
+# ADR-009: 987-Assertion Continuous Industrial Assurance Taxonomy and Truth Policy
 
 ## Status
 **Accepted** (Approved for NEURONIX OS Standalone Distribution)
@@ -7,8 +7,8 @@
 Operating system quality assurance frequently relies on superficial test suites that merely verify zero exit codes without asserting state transitions, or advertise capabilities that lack concrete automated verification. Silent error swallowing in shell scripts masks critical deployment failures, producing unreliable system releases.
 
 ## Architectural Decision
-NEURONIX mandates an exhaustive 854-assertion continuous industrial test taxonomy across 23 distinct verification suites, delineated into two clear tiers:
-1. **Contract & Static Analysis:** ShellCheck static inspection, Nix syntax evaluation, Flake lock integrity, CLI argument parsing, security sanitization boundaries, and architectural module contracts (854 total contract assertions).
+NEURONIX mandates an exhaustive 987-assertion continuous industrial test taxonomy across 24 QA suites, 19 distro component suites, and 12 standalone lifecycle gates (cataloged in `data/test_manifest.json`), delineated into clear tiers:
+1. **Contract & Static Analysis:** ShellCheck static inspection, Nix syntax evaluation, Flake lock integrity, CLI argument parsing, security sanitization boundaries, and architectural module contracts.
 2. **Runtime Behavioral Integration:** Real execution testing ephemeral QEMU micro-VM guest initialization (enforcing mandatory kernel, systemd basic target, and 9P Nix store mount gates), live dry-run installer synthesis, generation pointer tracking, and rollback duration measurement.
 3. **Storage & State Invariants:** Btrfs subvolume mounting, auto-TRIM execution, and generation symlink verification.
 4. **Hardware & Subsystem Contracts:** Kernel flavor binding, NVIDIA PRIME offload, and battery threshold control.

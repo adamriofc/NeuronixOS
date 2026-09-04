@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-09-04T23:27:41Z",
+  "architectures": {
+    "x86_64-linux": {
+      "tier": 1,
+      "status": "FULL_STACK",
+      "iso_supported": true,
+      "packages_supported": true,
+      "iso_derivation": "/nix/store/f3bn3w0hmi0zy9y0zrsi98y8rcmxvqim-neuronix-os.iso.drv"
+    },
+    "aarch64-linux": {
+      "tier": 2,
+      "status": "TOOLING_ONLY",
+      "iso_supported": false,
+      "packages_supported": true,
+      "iso_derivation": null
+    }
+  },
+  "evaluated_attributes": {
+    "x86_64_cli": "neuronix-cli",
+    "x86_64_center": "neuronix-center",
+    "x86_64_opencode": "opencode",
+    "aarch64_cli": "neuronix-cli",
+    "aarch64_center": "neuronix-center",
+    "aarch64_opencode": "opencode"
+  },
+  "verdict": "PASS"
+}

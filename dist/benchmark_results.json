@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-09-04T21:47:13Z",
+  "timestamp": "2026-09-04T23:23:46Z",
   "benchmarks": {
-    "cli_startup_ms": 20,
-    "dev_manifest_ms": 25,
-    "doctor_probe_ms": 153,
-    "runtime_memory_used_mb": 2565
+    "cli_startup_ms": 17,
+    "dev_manifest_ms": 21,
+    "doctor_probe_ms": 123,
+    "runtime_memory_used_mb": 2165
   },
   "budgets": {
     "cli_startup_budget_ms": 500,

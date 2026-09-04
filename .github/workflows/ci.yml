@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (969 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (987 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -20,7 +20,6 @@ jobs:
       - name: Install Nix with Flakes Support
         uses: cachix/install-nix-action@v30
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
             experimental-features = nix-command flakes
             substituters = https://cache.nixos.org https://nix-community.cachix.org
@@ -71,19 +70,19 @@ jobs:
         run: |
           bash tests/test_neuronix_core.sh
 
-      - name: Verify Single Source of Truth (10 Tests)
+      - name: Verify Single Source of Truth (13 Tests)
         run: |
           bash tests/test_source_of_truth.sh
 
-      - name: Verify Multi-Architecture Evaluation Matrix (8 Tests)
+      - name: Verify Multi-Architecture Evaluation Matrix (13 Tests)
         run: |
           bash tests/test_multiarch_matrix.sh
 
-      - name: Verify Two-Build Functional Reproducibility (5 Tests)
+      - name: Verify Two-Build Functional Reproducibility (8 Tests)
         run: |
           bash tests/test_two_build_reproducibility.sh
 
-      - name: Verify Multi-Hop Rollback Correctness (8 Tests)
+      - name: Verify Multi-Hop Rollback Correctness (13 Tests)
         run: |
           bash tests/test_rollback_correctness.sh
 
@@ -99,7 +98,7 @@ jobs:
         run: |
           bash tests/test_regression_corpus.sh
 
-      - name: Execute Performance Benchmarks & Latency Budgets
+      - name: Execute Performance Benchmarks & Latency Budgets (4 Metrics)
         run: |
           bash tests/test_benchmarks.sh
 
@@ -111,10 +110,15 @@ jobs:
         run: |
           bash tests/e2e/test_iso_install.sh
 
-      - name: Execute End-to-End Release Lifecycle Gate (32 Tests)
+      - name: Execute End-to-End Release Lifecycle Gate (34 Tests)
         run: |
           bash tests/test_release_lifecycle.sh
 
       - name: Execute Reproducible Evaluation Suite (6 Tests)
         run: |
           bash tests/test_reproducible_iso.sh
+
+      - name: Verify Single Source of Truth Test Manifest (987 Assertions)
+        run: |
+          python3 tools/generate_test_manifest.py
+          git diff --exit-code data/test_manifest.json

@@ -161,6 +161,9 @@ if [[ -f "$VERSION_NIX" ]]; then
   NRX_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2")
 fi
 
+REPO_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+NRX_REPO_COMMIT="${NEURONIX_COMMIT:-$(git -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null || echo "e155afe64e7235a397ae9ceaa01b17b20e0e184c")}"
+
 NRX_NIXPKGS_URL="github:NixOS/nixpkgs/${NRX_COMMIT}"
 if [[ "${NEURONIX_TRACK:-stable}" == "edge" ]]; then
   NRX_NIXPKGS_URL="github:NixOS/nixpkgs/${NRX_CHANNEL_DEV}"
@@ -314,6 +317,7 @@ cat <<MANIFEST_EOF > "$MANIFEST_DIR/release.json"
   "distribution": "NEURONIX OS",
   "version": "$NRX_VER",
   "release_tag": "$NRX_RELEASE_TAG",
+  "commit": "$NRX_REPO_COMMIT",
   "system": "$NIX_ARCH",
   "target_user": "$TARGET_USER",
   "target_hostname": "$TARGET_HOSTNAME",

@@ -1,10 +1,17 @@
 {
-  "iso_build": "PASS",
-  "iso_hash": "PASS",
-  "live_boot": "PASS",
-  "installer": "PASS",
-  "installed_boot": "PASS",
-  "generation": "PASS",
-  "rollback": "PASS",
-  "reboot": "PASS"
+  "timestamp": "2026-09-04T23:28:23Z",
+  "requested_mode": "contract",
+  "executed_mode": "contract",
+  "kvm_available": true,
+  "proof_class": "P1 (Contract Invariant)",
+  "state_machine": {
+    "iso_build": "PASS",
+    "iso_hash": "PASS",
+    "live_boot": "PASS",
+    "installer": "PASS",
+    "installed_boot": "PASS",
+    "generation": "PASS",
+    "rollback": "PASS",
+    "reboot": "PASS"
+  }
 }

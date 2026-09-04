@@ -17,6 +17,7 @@ set -uo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET_BIN="${PROJECT_ROOT}/bin/neuronix"
 INSTALLER_BIN="${PROJECT_ROOT}/installer/scripts/neuronix-install-engine.sh"
+PYTHON_BIN="$(command -v python3 || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo "python3")"
 
 PASSED=0
 FAILED=0
@@ -78,6 +79,7 @@ assert_check "Target flake.nix generated" "test -f '${MOCK_ROOT}/etc/nixos/flake
 assert_check "Target release.json generated" "test -f '${MOCK_ROOT}/etc/neuronix/release.json'"
 assert_check "Target release.json contains canonical version" "grep -q '1.0.3' '${MOCK_ROOT}/etc/neuronix/release.json'"
 assert_check "Target release.json contains target architecture" "grep -q 'system' '${MOCK_ROOT}/etc/neuronix/release.json'"
+assert_check "Target release.json contains git commit hash" "grep -Eq '\"commit\": \"[0-9a-f]{40}\"' '${MOCK_ROOT}/etc/neuronix/release.json'"
 
 # ------------------------------------------------------------------------------
 # 3. System Generation Pointer Invariant Simulation
@@ -85,7 +87,8 @@ assert_check "Target release.json contains target architecture" "grep -q 'system
 echo -e "\n${BOLD}Phase 3: System Generation & Pointer Invariants${RESET}"
 assert_check "CLI generations query succeeds" "${TARGET_BIN} generations"
 assert_check "CLI generations contains system baseline" "${TARGET_BIN} generations | grep -Eq 'Gen #[0-9]+|\* AKTIF'"
-assert_check "Center --list-generations succeeds" "nix-shell -p python3 --run 'python3 ${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py --list-generations'"
+assert_check "Center --list-generations succeeds" "\"$PYTHON_BIN\" '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py' --list-generations"
+assert_check "Center --version matches 1.0.3" "\"$PYTHON_BIN\" '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py' --version | grep -q '1.0.3'"
 
 # ------------------------------------------------------------------------------
 # 4. Atomic Rollback Duration Measurement Invariant

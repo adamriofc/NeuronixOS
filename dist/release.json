@@ -1,0 +1,27 @@
+{
+  "distribution": "NEURONIX OS",
+  "version": "1.0.3",
+  "release_tag": "v1.0.3",
+  "commit": "34b15967d5d5cb0bd8661d4e520a2c150c376478",
+  "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
+  "nixpkgs_url": "github:NixOS/nixpkgs/3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
+  "state_version": "24.11",
+  "architectures": {
+    "primary": "x86_64-linux",
+    "secondary": "aarch64-linux"
+  },
+  "signing": {
+    "algorithm": "Ed25519",
+    "trust_anchor": "docs/security/RELEASE_SIGNING_KEY.pub",
+    "public_key_fingerprint": "272887f0ebe6777fd3563dc8f69c00d37b727a048cd8c5d43f5d3e14eed3a055",
+    "signature_file": "dist/SHA256SUMS.sig",
+    "signature_sha256": "c671327b4fad10f3761a06f8800f62bde4d3131775dea8908dea62755d803747"
+  },
+  "supply_chain": {
+    "sbom_spdx_file": "dist/neuronix-os-v1.0.3-sbom.spdx.json",
+    "sbom_sha256": "4c4af2765b2febdb53cccbeecf7bca602296f4ab6c5aef1789095339dc7d88d2",
+    "slsa_provenance_predicate": "https://slsa.dev/provenance/v1",
+    "build_reproducibility": "deterministic_two_build_identical"
+  },
+  "created_at": "2026-09-04T23:26:45Z"
+}

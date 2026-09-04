@@ -1,14 +1,23 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.3",
+  "taxonomy_definition": {
+    "DECLARED": "Architecture or chip family defined in version matrix or flake inputs without hardware-specific testing.",
+    "CONFIGURED": "Declarative NixOS configuration, kernel modules, power governors, or drivers explicitly implemented.",
+    "EMULATED": "Validated under micro-VM or virtualized hypervisor execution.",
+    "CI_VALIDATED": "Automated evaluation or execution passing in continuous integration pipelines.",
+    "BARE_METAL_TESTED": "Physically executed, observed, and verified on real host hardware by maintainers."
+  },
   "summary": {
     "total_device_declarations": 27,
-    "qualified_reference_platforms": 8,
-    "tier_1_ci_target_count": 5,
-    "tier_2_ecosystem_count": 3
+    "total_platforms": 8,
+    "bare_metal_tested_count": 1,
+    "ci_validated_count": 1,
+    "configured_count": 5,
+    "declared_count": 1
   },
-  "qualified_reference_platforms": [
+  "platforms": [
     {
       "id": "qemu-kvm-microvm",
       "name": "Generic QEMU / KVM Micro-VM",
@@ -16,10 +25,24 @@
       "cpu": "Virtual x86_64 (Host Passthrough)",
       "gpu": "VirtIO-GPU / DRM",
       "network": "VirtIO-Net",
-      "audio": "PipeWire Dummy / Virtual",
-      "suspend": "S3 / S4 Supported",
-      "tier": "Tier 1 (CI Validated)",
-      "validation_method": "GitHub Actions CI Ephemeral Micro-VM"
+      "audio": "PipeWire Virtual",
+      "suspend": "S3 / S4 Virtualized",
+      "qualification_level": "CI_VALIDATED",
+      "tier": "Tier 1 (CI Target)",
+      "validation_method": "Dual-Mode E2E Runner + GitHub Actions CI"
+    },
+    {
+      "id": "amd-workstation-rdna3",
+      "name": "Custom AMD Workstation (Ryzen 7950X + Radeon 7900 XTX)",
+      "architecture": "x86_64",
+      "cpu": "AMD Ryzen 9 7950X (Zen 4)",
+      "gpu": "AMD Radeon RX 7900 XTX (Mesa RADV)",
+      "network": "Intel I225-V 2.5GbE / AX210",
+      "audio": "Realtek ALC4080 (PipeWire Pro Audio)",
+      "suspend": "S3 Sleep",
+      "qualification_level": "BARE_METAL_TESTED",
+      "tier": "Tier 1 (Desktop Reference)",
+      "validation_method": "Maintainer Physical Hardware Benchmark & Workstation Test"
     },
     {
       "id": "lenovo-thinkpad-t14",
@@ -30,8 +53,9 @@
       "network": "Qualcomm Atheros / MT7922",
       "audio": "Realtek ALC257 (PipeWire HD)",
       "suspend": "Deep (mem_sleep=deep)",
+      "qualification_level": "CONFIGURED",
       "tier": "Tier 1 (Target Reference)",
-      "validation_method": "Maintainer Hardware Invariant Suite"
+      "validation_method": "Declarative Hardware Profile in modules/hardware"
     },
     {
       "id": "framework-laptop-13",
@@ -42,20 +66,9 @@
       "network": "Intel Wi-Fi 6E AX211",
       "audio": "Realtek ALC295 (PipeWire HD)",
       "suspend": "Modern Standby (s2idle)",
+      "qualification_level": "CONFIGURED",
       "tier": "Tier 1 (Target Reference)",
-      "validation_method": "Maintainer Hardware Invariant Suite"
-    },
-    {
-      "id": "amd-workstation-rdna3",
-      "name": "Custom AMD Workstation (Ryzen + RDNA3)",
-      "architecture": "x86_64",
-      "cpu": "AMD Ryzen 9 7950X (Zen 4)",
-      "gpu": "AMD Radeon RX 7900 XTX (Mesa RADV)",
-      "network": "Intel I225-V 2.5GbE / AX210",
-      "audio": "Realtek ALC4080 (PipeWire HD)",
-      "suspend": "S3 Sleep Supported",
-      "tier": "Tier 1 (Desktop Reference)",
-      "validation_method": "Bare-Metal Benchmark Run"
+      "validation_method": "Declarative Hardware Profile in modules/hardware"
     },
     {
       "id": "intel-workstation-arc",
@@ -65,9 +78,10 @@
       "gpu": "Intel Arc A770 / UHD Graphics 770",
       "network": "Realtek RTL8125 2.5GbE / AX211",
       "audio": "Realtek ALC1220 (PipeWire HD)",
-      "suspend": "S3 Sleep Supported",
+      "suspend": "S3 Sleep",
+      "qualification_level": "CONFIGURED",
       "tier": "Tier 1 (Desktop Reference)",
-      "validation_method": "Bare-Metal Benchmark Run"
+      "validation_method": "Declarative Hardware Profile in modules/hardware"
     },
     {
       "id": "dell-xps-15-hybrid",
@@ -78,8 +92,9 @@
       "network": "Killer Wi-Fi 6E AX1675",
       "audio": "Realtek ALC3281 (PipeWire HD)",
       "suspend": "Modern Standby (s2idle)",
-      "tier": "Tier 2 (PRIME Offload Validated)",
-      "validation_method": "PRIME Offload Test Harness"
+      "qualification_level": "CONFIGURED",
+      "tier": "Tier 2 (PRIME Offload Profile)",
+      "validation_method": "PRIME Offload Declarative Module (modules/hardware/nvidia-prime.nix)"
     },
     {
       "id": "asus-rog-zephyrus-g14",
@@ -90,8 +105,9 @@
       "network": "MediaTek MT7922 Wi-Fi 6E",
       "audio": "Realtek HD Audio (PipeWire)",
       "suspend": "Deep (mem_sleep=deep)",
-      "tier": "Tier 2 (Hybrid PRIME Qualified)",
-      "validation_method": "Hybrid PRIME Switch Invariant"
+      "qualification_level": "CONFIGURED",
+      "tier": "Tier 2 (Hybrid PRIME Profile)",
+      "validation_method": "Hybrid PRIME Declarative Module (modules/hardware/nvidia-prime.nix)"
     },
     {
       "id": "apple-silicon-aarch64",
@@ -102,8 +118,9 @@
       "network": "Broadcom Wi-Fi / VirtIO",
       "audio": "PipeWire Core",
       "suspend": "Suspend Supported",
+      "qualification_level": "DECLARED",
       "tier": "Tier 2 (Experimental aarch64)",
-      "validation_method": "Flake Multi-Arch Evaluation"
+      "validation_method": "Flake Multi-Arch Package Evaluation"
     }
   ],
   "hardware_configuration_pillars": [

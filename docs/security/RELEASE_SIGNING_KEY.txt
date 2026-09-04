@@ -1,0 +1,9 @@
+# NEURONIX OS Canonical Release Signing Trust Anchor
+
+Algorithm: Ed25519 (RFC 8032)
+Format: PEM SubjectPublicKeyInfo (RFC 5280)
+Authority: NEURONIX OS Release Signing Authority <security@neuronix.org>
+Trust Anchor Path: docs/security/RELEASE_SIGNING_KEY.pub
+SHA256 Fingerprint: 272887f0ebe6777fd3563dc8f69c00d37b727a048cd8c5d43f5d3e14eed3a055
+Established: 2026-09-04T00:00:00Z
+Policy: All production release manifests, SHA256SUMS checksum databases, and distribution bundles are cryptographically verified against this permanent root key. Ad-hoc ephemeral runner keys are strictly prohibited in production release pipelines.

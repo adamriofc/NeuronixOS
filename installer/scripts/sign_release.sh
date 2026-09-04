@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # NEURONIX OS Cryptographic Release Signing & Signature Verification Tool
-# Standard: SHA-256 Checksum Signature Verification
+# Standard: Ed25519 Checksum Signature Verification against Trusted Root Anchor
+# Root Key Anchor: docs/security/RELEASE_SIGNING_KEY.pub
+#
+# Copyright (c) 2026 NEURONIX Contributors
+# Licensed under the Apache License, Version 2.0
 # ==============================================================================
 
 set -euo pipefail
@@ -12,6 +16,7 @@ DIST_DIR="${PROJECT_ROOT}/dist"
 CHECKSUM_FILE="${DIST_DIR}/SHA256SUMS"
 SIG_FILE="${DIST_DIR}/SHA256SUMS.sig"
 KEY_DIR="${PROJECT_ROOT}/.keys"
+TRUSTED_PUB_KEY="${PROJECT_ROOT}/docs/security/RELEASE_SIGNING_KEY.pub"
 
 action="${1:-verify}"
 
@@ -21,33 +26,77 @@ case "$action" in
             echo "[ERROR] Checksum database $CHECKSUM_FILE not found." >&2
             exit 1
         fi
+
+        mkdir -p "$DIST_DIR"
         mkdir -p "$KEY_DIR"
+
         PRIV_KEY="${KEY_DIR}/release_sign.key"
-        PUB_KEY="${DIST_DIR}/release_sign.pub"
-        if [[ ! -f "$PRIV_KEY" ]]; then
-            openssl genpkey -algorithm ED25519 -out "$PRIV_KEY" 2>/dev/null
-            openssl pkey -in "$PRIV_KEY" -pubout -out "$PUB_KEY" 2>/dev/null
+
+        if [[ -n "${NEURONIX_SIGNING_KEY:-}" ]]; then
+            if [[ -f "${NEURONIX_SIGNING_KEY}" ]]; then
+                PRIV_KEY="${NEURONIX_SIGNING_KEY}"
+            else
+                PRIV_KEY="${KEY_DIR}/env_signing.key"
+                echo "${NEURONIX_SIGNING_KEY}" > "$PRIV_KEY"
+                chmod 600 "$PRIV_KEY"
+            fi
+        elif [[ ! -f "$PRIV_KEY" ]]; then
+            if [[ "${NEURONIX_ALLOW_INSECURE_DEV_KEY:-0}" == "1" ]]; then
+                echo "[WARN] Generating temporary dev signing key because NEURONIX_ALLOW_INSECURE_DEV_KEY=1"
+                openssl genpkey -algorithm ED25519 -out "$PRIV_KEY" 2>/dev/null
+            else
+                echo "[ERROR] Release signing key not found at $PRIV_KEY." >&2
+                echo "[ERROR] Set NEURONIX_SIGNING_KEY secret or set NEURONIX_ALLOW_INSECURE_DEV_KEY=1 for dev." >&2
+                exit 1
+            fi
         fi
+
         openssl pkeyutl -sign -inkey "$PRIV_KEY" -in "$CHECKSUM_FILE" -rawin -out "$SIG_FILE"
-        echo "[SIGN] Generated cryptographic signature at $SIG_FILE"
+        echo "[SIGN] Generated cryptographic Ed25519 signature at $SIG_FILE"
+
+        if [[ -f "$TRUSTED_PUB_KEY" ]]; then
+            cp "$TRUSTED_PUB_KEY" "${DIST_DIR}/release_sign.pub"
+        else
+            openssl pkey -in "$PRIV_KEY" -pubout -out "${DIST_DIR}/release_sign.pub" 2>/dev/null
+        fi
+
+        # Immediate verification
+        echo "[SIGN] Verifying generated signature against trust anchor..."
+        openssl pkeyutl -verify -pubin -inkey "${DIST_DIR}/release_sign.pub" -sigfile "$SIG_FILE" -in "$CHECKSUM_FILE" -rawin
+        echo "[SIGN] Verification succeeded."
         ;;
+
     verify)
         if [[ ! -f "$CHECKSUM_FILE" ]]; then
             echo "[ERROR] Checksum database $CHECKSUM_FILE not found." >&2
             exit 1
         fi
+
         if [[ ! -f "$SIG_FILE" ]]; then
-            echo "[INFO] Signature file $SIG_FILE not yet generated. Generating release signature..."
-            bash "$0" sign
+            echo "[ERROR] Signature file $SIG_FILE not found." >&2
+            echo "[ERROR] Refusing to synthesize ad-hoc keys in verification mode." >&2
+            exit 1
         fi
-        PUB_KEY="${DIST_DIR}/release_sign.pub"
-        if [[ -f "$PUB_KEY" ]]; then
-            openssl pkeyutl -verify -pubin -inkey "$PUB_KEY" -sigfile "$SIG_FILE" -in "$CHECKSUM_FILE" -rawin
-            echo "[VERIFY] Cryptographic signature $SIG_FILE verified against $PUB_KEY: VALID"
+
+        # Prioritize root trust anchor in repository
+        PUB_KEY="$TRUSTED_PUB_KEY"
+        if [[ ! -f "$PUB_KEY" ]]; then
+            PUB_KEY="${DIST_DIR}/release_sign.pub"
+        fi
+
+        if [[ ! -f "$PUB_KEY" ]]; then
+            echo "[ERROR] Trusted public key anchor not found at $PUB_KEY" >&2
+            exit 1
+        fi
+
+        if openssl pkeyutl -verify -pubin -inkey "$PUB_KEY" -sigfile "$SIG_FILE" -in "$CHECKSUM_FILE" -rawin 2>/dev/null; then
+            echo "[VERIFY] Cryptographic signature $SIG_FILE verified against trusted root $PUB_KEY: VALID"
         else
-            echo "[WARN] Public key $PUB_KEY not found. Verification skipped."
+            echo "[ERROR] Signature verification FAILED against $PUB_KEY." >&2
+            exit 1
         fi
         ;;
+
     *)
         echo "Usage: $0 [sign|verify]"
         exit 1

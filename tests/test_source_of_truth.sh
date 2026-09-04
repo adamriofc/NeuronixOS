@@ -76,11 +76,21 @@ fi
 assert_check "flake.lock has locked nixpkgs revision" "test -n '${LOCKED_COMMIT}'"
 assert_check "version.nix nixpkgsCommit matches flake.lock locked revision exactly" "test '${EXPECTED_COMMIT}' = '${LOCKED_COMMIT}'"
 
-# 4. Correlation with Installer engine
+# 4. Correlation with nix flake metadata (Runtime Input Truth)
+if command -v jq >/dev/null 2>&1; then
+    ACTUAL_FLAKE_INPUT=$(nix flake metadata "${PROJECT_ROOT}" --json 2>/dev/null | jq -r '.locks.nodes.nixpkgs.locked.rev // empty')
+else
+    ACTUAL_FLAKE_INPUT="${LOCKED_COMMIT}"
+fi
+assert_check "nix flake metadata resolves identical nixpkgs revision" "test '${EXPECTED_COMMIT}' = '${ACTUAL_FLAKE_INPUT}'"
+assert_check "flake.nix pins nixpkgs URL directly to locked revision" "grep -F '${EXPECTED_COMMIT}' '${PROJECT_ROOT}/flake.nix'"
+assert_check "release-iso.yml does not use imperative nixos-unstable channel" "! grep -F 'channel:nixos-unstable' '${PROJECT_ROOT}/.github/workflows/release-iso.yml'"
+
+# 5. Correlation with Installer engine
 INSTALLER_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "${VERSION_NIX}" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
 assert_check "Installer engine resolves exact revision from version.nix" "test '${EXPECTED_COMMIT}' = '${INSTALLER_COMMIT}'"
 
-# 5. Architecture matrix specification
+# 6. Architecture matrix specification
 PRIMARY_SYS=$(nix-instantiate --eval --expr "(import ${VERSION_NIX}).primarySystem" 2>/dev/null | tr -d '"')
 assert_check "version.nix declares primarySystem as x86_64-linux" "test '${PRIMARY_SYS}' = 'x86_64-linux'"
 

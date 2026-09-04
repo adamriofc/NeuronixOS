@@ -7,7 +7,10 @@ import glob
 import subprocess
 from datetime import datetime
 
-SYSTEM_PROFILE = "/nix/var/nix/profiles/system"
+SYSTEM_PROFILE = os.environ.get("NEURONIX_SYSTEM_PROFILE", "/nix/var/nix/profiles/system")
+
+def get_system_profile():
+    return os.environ.get("NEURONIX_SYSTEM_PROFILE", SYSTEM_PROFILE)
 
 def parse_generation_number(path):
     """Extracts numeric generation ID from profile symlink string."""
@@ -21,9 +24,10 @@ def parse_generation_number(path):
 
 def get_active_generation():
     """Returns the current active system generation number as a string."""
-    if os.path.exists(SYSTEM_PROFILE):
+    prof = get_system_profile()
+    if os.path.exists(prof):
         try:
-            target = os.readlink(SYSTEM_PROFILE)
+            target = os.readlink(prof)
             if "system-" in target:
                 num = target.split("system-")[1].split("-link")[0]
                 return num
@@ -38,17 +42,18 @@ def list_generations():
     """
     generations = []
     active = get_active_generation()
-    profile_dir = os.path.dirname(SYSTEM_PROFILE)
+    prof = get_system_profile()
+    profile_dir = os.path.dirname(prof)
 
     if not os.path.exists(profile_dir):
         return [{
             "generation": 1,
             "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "active": True,
-            "path": SYSTEM_PROFILE
+            "path": prof
         }]
 
-    links = glob.glob(f"{SYSTEM_PROFILE}-*-link")
+    links = glob.glob(f"{prof}-*-link")
     for link in links:
         gen_num = parse_generation_number(link)
         if gen_num is not None:
@@ -70,7 +75,7 @@ def list_generations():
             "generation": int(active) if active.isdigit() else 1,
             "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "active": True,
-            "path": SYSTEM_PROFILE
+            "path": prof
         })
 
     return generations

@@ -15,4 +15,18 @@
     "x86_64-linux"
     "aarch64-linux"
   ];
+  supportedTiers = {
+    x86_64-linux = {
+      tier = 1;
+      isoSupported = true;
+      packagesSupported = true;
+      status = "FULL_STACK";
+    };
+    aarch64-linux = {
+      tier = 2;
+      isoSupported = false;
+      packagesSupported = true;
+      status = "TOOLING_ONLY";
+    };
+  };
 }
