@@ -91,7 +91,11 @@ handle_initialize() {
         --arg ver "$SERVER_VERSION" \
         '{
             protocolVersion: $proto,
-            capabilities: { tools: {} },
+            capabilities: {
+                tools: {},
+                resources: { subscribe: false, listChanged: false },
+                prompts: { listChanged: false }
+            },
             serverInfo: { name: $name, version: $ver }
         }')
     send_response "$req_id" "$result"
@@ -605,6 +609,189 @@ CATALOG_EOF
     esac
 }
 
+handle_resources_list() {
+    local req_id="$1"
+    local result
+    result=$(cat << 'RES_EOF'
+{
+  "resources": [
+    {
+      "uri": "neuronix://manual/index",
+      "name": "NEURONIX Technical Manual Index",
+      "description": "Master navigation index and documentation structure for NEURONIX OS",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/architecture",
+      "name": "Platform Architecture Specification",
+      "description": "4-Layer platform model, pure-functional Nix substrate, and Proof Class taxonomy",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/configuration",
+      "name": "Declarative Configuration Reference",
+      "description": "Complete neuronix.* NixOS option schema and contracts",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/cli",
+      "name": "Unified CLI Reference Manual",
+      "description": "Syntax, options, and operational specification for all 18 CLI commands",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/storage",
+      "name": "Storage Architecture and Rollback Engine",
+      "description": "Btrfs 5-subvolume topology, ZSTD compression, and rollback state machine",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/shadow-vm",
+      "name": "Shadow Micro-VM Sandbox",
+      "description": "In-memory RAM sandbox execution and smoke testing engine",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/dev-stacks",
+      "name": "Hermetic Developer Stacks",
+      "description": "Isolated developer environments and JSON manifests",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/mcp",
+      "name": "Model Context Protocol Gateway",
+      "description": "JSON-RPC 2.0 stdio server specification and tool catalog",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/hardware",
+      "name": "Hardware Profiles and 27 Optimization Pillars",
+      "description": "Reference hardware qualification and Linux optimization pillars",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/security",
+      "name": "Security Boundaries and Supply Chain",
+      "description": "Privilege allowlist, TPM2, Secure Boot, and SPDX 2.3 SBOM",
+      "mimeType": "text/markdown"
+    },
+    {
+      "uri": "neuronix://manual/ai-directives",
+      "name": "AI Copilot System Directives and Guardrails",
+      "description": "Mandatory operational rules, semantic directives, and hallucination guardrails for AI models",
+      "mimeType": "text/markdown"
+    }
+  ]
+}
+RES_EOF
+)
+    result="$(echo "$result" | jq -c .)"
+    send_response "$req_id" "$result"
+}
+
+handle_resources_read() {
+    local req_id="$1"
+    local uri="$2"
+
+    local manual_dir="/etc/neuronix/manual"
+    if [[ ! -d "$manual_dir" ]]; then
+        local real_bin
+        real_bin="$(readlink -f "${BASH_SOURCE[0]}")"
+        local script_dir
+        script_dir="$(cd "$(dirname "$real_bin")" && pwd)"
+        manual_dir="${script_dir}/../docs/manual"
+    fi
+    if [[ ! -d "$manual_dir" && -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/docs/manual" ]]; then
+        manual_dir="${PROJECT_ROOT}/docs/manual"
+    fi
+    if [[ ! -d "$manual_dir" && -d "$(pwd)/docs/manual" ]]; then
+        manual_dir="$(pwd)/docs/manual"
+    fi
+
+    local target_file=""
+    case "$uri" in
+        neuronix://manual/index) target_file="$manual_dir/00_INDEX.md" ;;
+        neuronix://manual/architecture|neuronix://manual/arch) target_file="$manual_dir/01_ARCHITECTURE.md" ;;
+        neuronix://manual/configuration|neuronix://manual/config) target_file="$manual_dir/02_CONFIGURATION_REFERENCE.md" ;;
+        neuronix://manual/cli) target_file="$manual_dir/03_CLI_REFERENCE.md" ;;
+        neuronix://manual/storage) target_file="$manual_dir/04_STORAGE_AND_ROLLBACK.md" ;;
+        neuronix://manual/shadow-vm|neuronix://manual/shadow) target_file="$manual_dir/05_SHADOW_VM_AND_SANDBOX.md" ;;
+        neuronix://manual/dev-stacks|neuronix://manual/dev) target_file="$manual_dir/06_DEVELOPER_STACKS.md" ;;
+        neuronix://manual/mcp) target_file="$manual_dir/07_MCP_PROTOCOL_AND_AI_GATEWAY.md" ;;
+        neuronix://manual/hardware) target_file="$manual_dir/08_HARDWARE_AND_27_PILLARS.md" ;;
+        neuronix://manual/security) target_file="$manual_dir/09_SECURITY_AND_ATTESTATION.md" ;;
+        neuronix://manual/ai-directives|neuronix://manual/ai) target_file="$manual_dir/10_AI_AGENT_REFERENCE.md" ;;
+        *) target_file="" ;;
+    esac
+
+    if [[ -n "$target_file" && -f "$target_file" ]]; then
+        local text_payload
+        text_payload=$(cat "$target_file")
+        local result
+        result=$(jq -n -c --arg uri "$uri" --arg text "$text_payload" \
+            '{"contents":[{"uri":$uri,"mimeType":"text/markdown","text":$text}]}')
+        send_response "$req_id" "$result"
+    else
+        send_error "$req_id" -32002 "Resource URI not found: '$uri'"
+    fi
+}
+
+handle_prompts_list() {
+    local req_id="$1"
+    local result
+    result=$(cat << 'PROMPT_EOF'
+{
+  "prompts": [
+    {
+      "name": "neuronix_system_directive",
+      "description": "Primary operating system guidelines, declarative contracts, and guardrails for AI agents",
+      "arguments": []
+    }
+  ]
+}
+PROMPT_EOF
+)
+    result="$(echo "$result" | jq -c .)"
+    send_response "$req_id" "$result"
+}
+
+handle_prompts_get() {
+    local req_id="$1"
+    local prompt_name="$2"
+
+    if [[ "$prompt_name" != "neuronix_system_directive" ]]; then
+        send_error "$req_id" -32602 "Prompt '$prompt_name' not found"
+        return 0
+    fi
+
+    local manual_dir="/etc/neuronix/manual"
+    if [[ ! -d "$manual_dir" ]]; then
+        local real_bin
+        real_bin="$(readlink -f "${BASH_SOURCE[0]}")"
+        local script_dir
+        script_dir="$(cd "$(dirname "$real_bin")" && pwd)"
+        manual_dir="${script_dir}/../docs/manual"
+    fi
+    if [[ ! -d "$manual_dir" && -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/docs/manual" ]]; then
+        manual_dir="${PROJECT_ROOT}/docs/manual"
+    fi
+    if [[ ! -d "$manual_dir" && -d "$(pwd)/docs/manual" ]]; then
+        manual_dir="$(pwd)/docs/manual"
+    fi
+
+    local text_payload=""
+    if [[ -f "$manual_dir/10_AI_AGENT_REFERENCE.md" ]]; then
+        text_payload=$(cat "$manual_dir/10_AI_AGENT_REFERENCE.md")
+    else
+        text_payload="NEURONIX OS Declarative Platform Directives Active."
+    fi
+
+    local result
+    result=$(jq -n -c --arg text "$text_payload" \
+        '{"description":"NEURONIX AI System Directives","messages":[{"role":"user","content":{"type":"text","text":$text}}]}')
+    send_response "$req_id" "$result"
+}
+
 # Main JSON-RPC 2.0 Loop over stdio
 run_mcp_server() {
     local line
@@ -647,6 +834,22 @@ run_mcp_server() {
                 local params
                 params=$(echo "$line" | jq -c '.params // {}')
                 handle_tools_call "$req_id" "$tool_name" "$params"
+                ;;
+            resources/list)
+                handle_resources_list "$req_id"
+                ;;
+            resources/read)
+                local uri
+                uri=$(echo "$line" | jq -r '.params.uri // empty')
+                handle_resources_read "$req_id" "$uri"
+                ;;
+            prompts/list)
+                handle_prompts_list "$req_id"
+                ;;
+            prompts/get)
+                local prompt_name
+                prompt_name=$(echo "$line" | jq -r '.params.name // empty')
+                handle_prompts_get "$req_id" "$prompt_name"
                 ;;
             ping)
                 send_response "$req_id" "{}"

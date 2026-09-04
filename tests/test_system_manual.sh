@@ -17,7 +17,7 @@ START_TIME=$(date +%s%N)
 
 echo -e "\n${C_BOLD}${C_CYAN}╔═══════════════════════════════════════════════════════════════════╗${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}║     NEURONIX SYSTEM-EMBEDDED MANUAL & AI REFERENCE GATE           ║${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}║     Verifying Immutable Documentation & AI Directives (35 Tests)   ║${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}║     Verifying Immutable Documentation & AI Directives (44 Tests)   ║${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}╚═══════════════════════════════════════════════════════════════════╝${C_RESET}"
 
 source "$TEST_DIR/suites/24_system_manual_and_ai_reference.sh"

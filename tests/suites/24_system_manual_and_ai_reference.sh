@@ -61,3 +61,14 @@ OPENCODE_BIN="${DISTRO_PATH}/packages/opencode/opencode-launcher.sh"
 assert_output_contains "'${OPENCODE_BIN}' help" "manual [topic]" "OpenCode help lists manual command"
 assert_output_contains "'${OPENCODE_BIN}' manual cli" "Unified CLI Command Reference" "OpenCode manual cli renders chapter 3"
 assert_output_contains "echo '/manual config' | '${OPENCODE_BIN}'" "Declarative Configuration" "OpenCode interactive /manual renders chapter 2"
+
+# 36-39. MCP Resources & Prompts Engine
+assert_output_contains "echo '{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"resources/list\"}' | '${MCP_SERVER}'" "neuronix://manual/ai-directives" "MCP server exports resources/list with manual URIs"
+assert_output_contains "echo '{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"resources/read\",\"params\":{\"uri\":\"neuronix://manual/ai-directives\"}}' | '${MCP_SERVER}'" "AI Copilot System Directive" "MCP server resources/read returns chapter 10"
+assert_output_contains "echo '{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"prompts/list\"}' | '${MCP_SERVER}'" "neuronix_system_directive" "MCP server prompts/list exports system directive"
+assert_output_contains "echo '{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"prompts/get\",\"params\":{\"name\":\"neuronix_system_directive\"}}' | '${MCP_SERVER}'" "AI Copilot System Directive" "MCP server prompts/get returns system prompt"
+
+# 40-42. Ambient System Prompts & Autonomous AI Grounding
+assert_output_contains "grep -F 'SYSTEM_PROMPT.md' '${DISTRO_PATH}/modules/core/manual.nix'" "SYSTEM_PROMPT.md" "manual.nix provisions root SYSTEM_PROMPT.md"
+assert_output_contains "grep -F 'NEURONIX_MANUAL_DIR' '${DISTRO_PATH}/modules/core/manual.nix'" "NEURONIX_MANUAL_DIR" "manual.nix sets ambient NEURONIX_MANUAL_DIR"
+assert_output_contains "echo 'exit' | '${OPENCODE_BIN}'" "Auto-Loaded (10_AI_AGENT_REFERENCE.md)" "OpenCode auto-loads system reference without user command"

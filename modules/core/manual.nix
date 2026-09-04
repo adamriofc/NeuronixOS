@@ -23,6 +23,17 @@
       "neuronix/manual/08_HARDWARE_AND_27_PILLARS.md".source = ../../docs/manual/08_HARDWARE_AND_27_PILLARS.md;
       "neuronix/manual/09_SECURITY_AND_ATTESTATION.md".source = ../../docs/manual/09_SECURITY_AND_ATTESTATION.md;
       "neuronix/manual/10_AI_AGENT_REFERENCE.md".source = ../../docs/manual/10_AI_AGENT_REFERENCE.md;
+
+      # Standard root directives automatically discovered by AI agents (OpenCode, Cursor, Claude, Antigravity)
+      "neuronix/SYSTEM_PROMPT.md".source = ../../docs/manual/10_AI_AGENT_REFERENCE.md;
+      "neuronix/AGENTS.md".source = ../../docs/manual/10_AI_AGENT_REFERENCE.md;
+    };
+
+    # Ambient environment variables informing all shells and AI agents of manual locations
+    environment.variables = {
+      NEURONIX_MANUAL_DIR = "/etc/neuronix/manual";
+      NEURONIX_SYSTEM_PROMPT = "/etc/neuronix/SYSTEM_PROMPT.md";
+      NEURONIX_AI_DIRECTIVE = "/etc/neuronix/manual/10_AI_AGENT_REFERENCE.md";
     };
   };
 }

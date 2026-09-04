@@ -151,8 +151,28 @@ run_manual() {
 }
 
 run_interactive() {
+    local manual_dir="/etc/neuronix/manual"
+    if [[ ! -d "$manual_dir" ]]; then
+        local real_script
+        real_script="$(readlink -f "${BASH_SOURCE[0]}")"
+        local script_dir
+        script_dir="$(cd "$(dirname "$real_script")" && pwd)"
+        manual_dir="${script_dir}/../../docs/manual"
+    fi
+    if [[ ! -d "$manual_dir" && -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/docs/manual" ]]; then
+        manual_dir="${PROJECT_ROOT}/docs/manual"
+    fi
+
+    local directive_file="$manual_dir/10_AI_AGENT_REFERENCE.md"
+    local directive_badge="${YELLOW}Fallback${RESET}"
+    if [[ -f "$directive_file" ]]; then
+        directive_badge="${GREEN}Auto-Loaded (10_AI_AGENT_REFERENCE.md)${RESET}"
+    fi
+
     print_banner
     echo -e "${BOLD}Welcome to OpenCode.${RESET} Your declarative AI copilot is initialized."
+    echo -e "  • ${BOLD}AI System Reference :${RESET} ${directive_badge}"
+    echo -e "  • ${BOLD}Grounding Engine    :${RESET} Native MCP JSON-RPC 2.0 (Directives Preloaded)"
     echo -e "${DIM}Commands: /manual [topic], /status, /verify <pkg>, /try <cfg>, /diet, /rollback, /update, /exit${RESET}\n"
 
     while true; do
