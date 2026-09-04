@@ -31,4 +31,11 @@
     noto-fonts-cjk-sans
     noto-fonts-emoji
   ];
+
+  # NEURONIX Branding, Artwork & First-Boot Onboarding Integration
+  environment.etc = {
+    "neuronix/artwork/wallpaper.svg".source = ../../artwork/wallpapers/neuronix-cyber-neural-dark.svg;
+    "neuronix/artwork/badge.svg".source = ../../artwork/branding/neuronix-badge.svg;
+    "xdg/autostart/neuronix-welcome.desktop".source = ../../packages/neuronix-center/neuronix-welcome.desktop;
+  };
 }

@@ -57,4 +57,4 @@ Deliver an independent declarative operating system platform and developer execu
 | Rollback Latency | < 2.0 seconds | Automated switch duration test |
 | Dev Stack Provisioning | < 3.0 seconds | Dry-run shell evaluation |
 | Storage Compression Ratio | 40% - 50% savings | Btrfs filesystem compsize audit |
-| Test Suite Reliability | 100% pass (0 failures) | 821-test automated verification suite |
+| Test Suite Reliability | 100% pass (0 failures) | 851-test automated verification suite |

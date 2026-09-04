@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3840 2160" width="3840" height="2160">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="60%" stop-color="#090d16" />
+      <stop offset="100%" stop-color="#030712" />
+    </radialGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Deep Cosmic Canvas -->
+  <rect width="3840" height="2160" fill="url(#bgGrad)" />
+
+  <!-- Neural Mesh Grid -->
+  <g stroke="#1e293b" stroke-width="1.5" opacity="0.4">
+    <line x1="0" y1="540" x2="3840" y2="540" />
+    <line x1="0" y1="1080" x2="3840" y2="1080" />
+    <line x1="0" y1="1620" x2="3840" y2="1620" />
+    <line x1="960" y1="0" x2="960" y2="2160" />
+    <line x1="1920" y1="0" x2="1920" y2="2160" />
+    <line x1="2880" y1="0" x2="2880" y2="2160" />
+  </g>
+
+  <!-- Constellation Synapses -->
+  <g stroke="url(#cyanGrad)" stroke-width="2" opacity="0.6">
+    <line x1="1400" y1="1080" x2="1700" y2="880" />
+    <line x1="1700" y1="880" x2="1920" y2="1000" />
+    <line x1="1920" y1="1000" x2="2140" y2="880" />
+    <line x1="2140" y1="880" x2="2440" y2="1080" />
+    <line x1="1700" y1="880" x2="1920" y2="680" />
+    <line x1="2140" y1="880" x2="1920" y2="680" />
+    <line x1="1920" y1="1000" x2="1920" y2="1380" />
+    <line x1="1400" y1="1080" x2="1650" y2="1380" />
+    <line x1="2440" y1="1080" x2="2190" y2="1380" />
+    <line x1="1650" y1="1380" x2="1920" y2="1380" />
+    <line x1="2190" y1="1380" x2="1920" y2="1380" />
+  </g>
+
+  <!-- Glowing Nodes -->
+  <g fill="#38bdf8" filter="url(#glow)">
+    <circle cx="1920" cy="680" r="14" fill="#a855f7" />
+    <circle cx="1700" cy="880" r="10" />
+    <circle cx="2140" cy="880" r="10" />
+    <circle cx="1400" cy="1080" r="8" />
+    <circle cx="1920" cy="1000" r="18" fill="#38bdf8" />
+    <circle cx="2440" cy="1080" r="8" />
+    <circle cx="1650" cy="1380" r="10" />
+    <circle cx="1920" cy="1380" r="12" fill="#06b6d4" />
+    <circle cx="2190" cy="1380" r="10" />
+  </g>
+
+  <!-- Central NEURONIX Monogram -->
+  <g transform="translate(1920, 1080)" text-anchor="middle" font-family="'Inter', 'SF Pro Display', 'Segoe UI', sans-serif">
+    <text y="240" font-size="76" font-weight="900" fill="#f8fafc" letter-spacing="16">NEURONIX</text>
+    <text y="300" font-size="24" font-weight="500" fill="#64748b" letter-spacing="8">DECLARATIVE WORKSTATION PLATFORM</text>
+  </g>
+</svg>

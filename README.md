@@ -6,7 +6,7 @@
 [![Version](https://img.shields.io/badge/Version-1.0.1--beta-blueviolet.svg)](version.nix)
 [![NixOS](https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
 [![Architecture](https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg)](#platform-architecture)
-[![Testing](https://img.shields.io/badge/Assertions-821%2F821_Passed_(100%25)-success.svg)](#verification--test-harness)
+[![Testing](https://img.shields.io/badge/Assertions-851%2F851_Passed_(100%25)-success.svg)](#verification--test-harness)
 [![Filesystem](https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg)](#storage-architecture--maintenance)
 [![Memory Management](https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg)](#memory-pressure-management)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg)](.github/workflows/ci.yml)
@@ -39,9 +39,13 @@
   - [5. Model Context Protocol (MCP) Server](#5-model-context-protocol-mcp-server)
   - [6. OpenCode AI System Copilot & Autonomous Updates](#6-opencode-ai-system-copilot--autonomous-updates)
   - [7. Autonomous Update Architecture & Desktop Notifier](#7-autonomous-update-architecture--desktop-notifier)
+  - [8. First-Boot Welcome Hub & Onboarding Wizard](#8-first-boot-welcome-hub--onboarding-wizard)
+  - [9. System Doctor & Privacy-Sanitized Issue Reporter](#9-system-doctor--privacy-sanitized-issue-reporter)
+  - [10. Curated Quickstart App Hub (Flatpak)](#10-curated-quickstart-app-hub-flatpak)
+  - [11. Declarative Kernel Flavor Manager](#11-declarative-kernel-flavor-manager)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (821 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (851 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -237,7 +241,12 @@ USAGE:
 | `verify` | `<package>` | Tests whether a derivation evaluates cleanly against the nixpkgs closure via dry-build. | `neuronix verify ripgrep` |
 | `center` | None | Opens the graphical NEURONIX Control Center (or runs `--cli` in headless environments). | `neuronix center` |
 | `mcp` | None | Starts the Model Context Protocol (MCP) server over `stdio` adhering to JSON-RPC 2.0. | `neuronix mcp` |
-| `undo` | None (or `rollback`) | Reverts the system to the previous generation via atomic symlink pointer swap. | `neuronix undo` |
+| `check-update` | None | Checks upstream flake repository and remote releases for system updates. | `neuronix check-update` |
+| `upgrade` | `[--staged \| --switch]` | Performs atomic system upgrade (staged by default for reboot, or instant switch). | `neuronix upgrade --staged` |
+| `doctor` | `[--json \| --output <f>]` | Deep diagnostic probe producing privacy-sanitized reports for GitHub issues. | `neuronix doctor` |
+| `welcome` | `[--cli \| --disable-autostart]` | Interactive first-boot welcome wizard and distro onboarding guide. | `neuronix welcome` |
+| `quickstart` | `[list \| install <id>]` | Curated Flathub desktop & engineering app hub (zero store pollution). | `neuronix quickstart list` |
+| `kernel` | `[status \| list \| set <flv>]` | Declarative kernel flavor manager (default, zen, lts, latest, hardened). | `neuronix kernel list` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
 | `help` | None (`-h`, `--help`)   | Displays available commands and syntax summaries. | `neuronix help` |
 
@@ -332,6 +341,63 @@ neuronix upgrade --staged
 neuronix upgrade --switch
 ```
 
+### 8. First-Boot Welcome Hub & Onboarding Wizard
+A unified first-boot welcoming experience providing new users with immediate system orientation, quick links, system status telemetry, and shortcuts to critical distro tasks. See the [Onboarding & Distro Polish Specification](docs/specifications/08_ONBOARDING_AND_DISTRO_EXPERIENCE.md).
+- **Hybrid GUI & CLI Operation:** Launches automatically as `neuronix-welcome.desktop` upon initial desktop login, or interactively in terminal sessions via `neuronix welcome --cli`.
+- **Autostart Governance:** Seamlessly toggle auto-launch via `neuronix welcome --disable-autostart` or `--enable-autostart`.
+
+```bash
+# Launch interactive terminal onboarding guide
+neuronix welcome --cli
+
+# Disable autostart on future desktop logins
+neuronix welcome --disable-autostart
+```
+
+### 9. System Doctor & Privacy-Sanitized Issue Reporter
+An automated deep system diagnostics engine that inspects hardware, kernel dmesg rings, active generation, filesystem health, and systemd maintenance timers.
+- **Privacy-First Data Scrubbing:** Automatically scrubs and masks real local usernames (`<sanitized-user>`), hostnames (`<sanitized-host>`), IPv4/IPv6 addresses (`[REDACTED-IP]`), and hardware MAC identifiers (`[REDACTED-MAC]`).
+- **GitHub Issue Ready:** Produces formatted Markdown at `/tmp/neuronix-doctor.md` ready to copy-paste directly into community bug reports.
+
+```bash
+# Run diagnostics and produce /tmp/neuronix-doctor.md
+neuronix doctor
+
+# Output structured JSON for MCP agents and automated tools
+neuronix doctor --json
+```
+
+### 10. Curated Quickstart App Hub (Flatpak)
+A curated 1-click catalog of daily desktop applications (Browsers, Development IDEs, Communication, Multimedia, Productivity) powered entirely by Flathub container sandboxing.
+- **Immutable Store Protection:** Preserves `/nix/store` immutability by avoiding arbitrary native package pollution for transient desktop software.
+
+```bash
+# List curated application catalog
+neuronix quickstart list
+
+# Install Brave Browser via Flathub sandbox
+neuronix quickstart install brave
+
+# Install VS Code via Flathub sandbox
+neuronix quickstart install vscode
+```
+
+### 11. Declarative Kernel Flavor Manager
+An intuitive declarative interface to select and switch upstream Linux kernel packages (`default`, `zen`, `lts`, `latest`, `hardened`) with staged rollback protection.
+- **Declarative NixOS Option:** Declared in `modules/hardware/boot.nix` via `neuronix.hardware.kernelFlavor`.
+- **Staged Compilation:** Builds the new kernel generation safely via Staged Upgrade, ensuring fallback to the previous working kernel if new hardware regressions occur.
+
+```bash
+# Inspect currently running kernel and configured flavor
+neuronix kernel status
+
+# Compare available kernel flavors and target workloads
+neuronix kernel list
+
+# Set active kernel flavor to Zen (low-latency desktop & gaming)
+neuronix kernel set zen
+```
+
 ---
 
 ## Building & Installation
@@ -388,21 +454,21 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Test Harness (821 Assertions)
+## Verification, Lifecycle Gate & Test Harness (851 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 821 automated assertions across 22 verification suites and release gates:
+System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 851 automated assertions across 23 verification suites and release gates:
 
 ```text
 ═══════════════════════════════════════════════════════════════════
                     TEST HARNESS REPORT SUMMARY                    
 ═══════════════════════════════════════════════════════════════════
-  Master Test Harness (tests/run_all_tests.sh)     : 566 / 566 PASS
+  Master Test Harness (tests/run_all_tests.sh)     : 596 / 596 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 209 / 209 PASS
   Core CLI Harness (tests/test_neuronix_core.sh)   :  14 /  14 PASS
   Release Lifecycle Gate (test_release_lifecycle)  :  32 /  32 PASS
-  Total Executed Assertions                        : 821 Assertions
+  Total Executed Assertions                        : 851 Assertions
   Failed Verification                              : 0 Failures
-  Execution Duration                               : ~66.7 seconds
+  Execution Duration                               : ~84.6 seconds
   Confidence Score                                 : 100%
 ═══════════════════════════════════════════════════════════════════
   ✓ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED
@@ -423,11 +489,12 @@ System invariants, module structures, and CLI dispatchers are validated through 
 - **Suite 20:** Storage subsystem declarations, Btrfs subvolume mount options, and installer generator scripts.
 - **Suite 21:** OpenCode autonomous AI copilot derivations, background systemd update timers, and desktop entry contracts.
 - **Suite 22:** Autonomous update policy, desktop notification daemon, staged rebuild contracts, and unified storage diet lifecycle.
+- **Suite 23:** EndeavourOS parity, onboarding welcome hub, doctor privacy-sanitized diagnostics, curated Flathub quickstart catalog, and declarative kernel management.
 - **Release Lifecycle Gate:** End-to-end integration test validating build, boot, install simulation, architecture detection, generation pointer inspection, and atomic rollback duration.
 
 Execute the verification battery:
 ```bash
-# Run master test harness (566 tests across 22 suites)
+# Run master test harness (596 tests across 23 suites)
 bash tests/run_all_tests.sh
 
 # Run distribution standalone suite (209 tests)

@@ -31,7 +31,9 @@ docs/specifications/
 ├── 03_SECURITY_AND_VERIFICATION.md      # Threat Model, Dry-Build Verification, & Sandbox Isolation
 ├── 04_IMPLEMENTATION_ROADMAP.md         # Phased Implementation Roadmap
 ├── 05_QUALITY_GATES_AND_VALIDATION.md   # Quality Metrics, Testing Matrix, & Definition of Done (DoD)
-└── 06_STANDALONE_DISTRIBUTION_SPECIFICATION.md # Live ISO, Calamares Engine, & Desktop Environment Specs
+├── 06_STANDALONE_DISTRIBUTION_SPECIFICATION.md # Live ISO, Calamares Engine, & Desktop Environment Specs
+├── 07_UPDATE_AND_STORAGE_LIFECYCLE.md    # Autonomous Update System, Desktop Notifier & Storage Diet
+└── 08_ONBOARDING_AND_DISTRO_EXPERIENCE.md # First-Boot Welcome, Doctor, Quickstart & Kernel Manager
 ```
 
 ---
@@ -46,6 +48,8 @@ docs/specifications/
 | **`04_ROAD`** | [Implementation Roadmap](04_IMPLEMENTATION_ROADMAP.md) | Phased engineering roadmap from CLI engine to standalone Calamares distribution. | Engineering Leads, Contributors |
 | **`05_QUAL`** | [Quality Gates & Validation](05_QUALITY_GATES_AND_VALIDATION.md) | Deterministic test matrix, automated test harnesses, smoke tests, and release gates. | QA Engineers, System Integrators |
 | **`06_DISTRO`**| [Standalone Distro Spec](06_STANDALONE_DISTRIBUTION_SPECIFICATION.md) | Bootable ISO, Calamares engine, Btrfs ZSTD:3, Wayland suites (KDE 6/GNOME/Hyprland), and Control Center. | Maintainers, UI/UX, Core Team |
+| **`07_UPD`**   | [Update & Storage Lifecycle](07_UPDATE_AND_STORAGE_LIFECYCLE.md) | Autonomous update checking, desktop notification, staged background upgrades, and storage diet. | Systems Engineers, Maintainers |
+| **`08_ONB`**   | [Onboarding & Distro Polish](08_ONBOARDING_AND_DISTRO_EXPERIENCE.md) | Welcome hub, doctor issue reporting, Flathub quickstart app hub, and declarative kernel management. | UI/UX Leads, Community, End-Users |
 
 ---
 

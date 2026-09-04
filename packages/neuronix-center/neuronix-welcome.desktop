@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Welcome to NEURONIX
+GenericName=NEURONIX Onboarding Hub
+Comment=First steps, system diagnostics, curated quickstart apps, and AI copilot setup
+Exec=neuronix-center --welcome
+Icon=system-help
+Terminal=false
+Type=Application
+Categories=System;Settings;Utility;
+StartupNotify=true
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel

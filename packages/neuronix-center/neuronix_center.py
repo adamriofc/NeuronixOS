@@ -24,6 +24,15 @@ try:
 except Exception:
     pass
 
+def get_neuronix_cmd():
+    import shutil
+    if shutil.which("neuronix"):
+        return ["neuronix"]
+    repo_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../src/neuronix")
+    if os.path.exists(repo_bin):
+        return ["bash", repo_bin]
+    return ["neuronix"]
+
 def get_system_telemetry():
     """Probes runtime system telemetry truthfully without hardcoded mock values."""
     telemetry = {
@@ -171,15 +180,27 @@ def run_cli_mode(args):
 
     if args.diet:
         print("  [ RUNNING STORAGE MAINTENANCE (DIET) ]")
-        subprocess.run(["neuronix", "diet"], check=False)
+        subprocess.run(get_neuronix_cmd() + ["diet"], check=False)
 
     if getattr(args, 'upgrade', False):
         print("  [ RUNNING STAGED SYSTEM UPGRADE ]")
-        subprocess.run(["neuronix", "upgrade", "--staged"], check=False)
+        subprocess.run(get_neuronix_cmd() + ["upgrade", "--staged"], check=False)
 
     if getattr(args, 'check_update', False):
         print("  [ CHECKING FOR UPSTREAM SYSTEM UPDATES ]")
-        subprocess.run(["neuronix", "check-update"], check=False)
+        subprocess.run(get_neuronix_cmd() + ["check-update"], check=False)
+
+    if getattr(args, 'doctor', False):
+        print("  [ RUNNING SYSTEM DOCTOR & DIAGNOSTICS ]")
+        subprocess.run(get_neuronix_cmd() + ["doctor"], check=False)
+
+    if getattr(args, 'welcome', False):
+        print("  [ LAUNCHING ONBOARDING WELCOME EXPERIENCE ]")
+        subprocess.run(get_neuronix_cmd() + ["welcome", "--cli"], check=False)
+
+    if getattr(args, 'quickstart', False):
+        print("  [ LAUNCHING QUICKSTART APP HUB ]")
+        subprocess.run(get_neuronix_cmd() + ["quickstart", "list"], check=False)
 
     if args.opencode:
         print("  [ LAUNCHING OPENCODE AI SYSTEM COPILOT ]")
@@ -288,13 +309,21 @@ def run_gui_mode():
             else:
                 messagebox.showerror("Diet Failed", f"Diet operation exited with code {res.returncode}.")
 
+        def on_doctor():
+            subprocess.Popen(["x-terminal-emulator", "-e", "neuronix doctor"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        def on_quickstart():
+            subprocess.Popen(["x-terminal-emulator", "-e", "neuronix quickstart list"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
         btn_box = ttk.Frame(frame_act)
         btn_box.pack(pady=5, padx=10, fill="x")
 
-        ttk.Button(btn_box, text="🔄 System Upgrade (Staged)", command=on_upgrade).pack(side="left", padx=5)
-        ttk.Button(btn_box, text="↩ Atomic Rollback", command=on_rollback).pack(side="left", padx=5)
-        ttk.Button(btn_box, text="🧹 Reclaim Storage (Diet)", command=on_diet).pack(side="left", padx=5)
-        ttk.Button(btn_box, text="Close", command=root.destroy).pack(side="left", padx=5)
+        ttk.Button(btn_box, text="🔄 System Upgrade", command=on_upgrade).pack(side="left", padx=4)
+        ttk.Button(btn_box, text="↩ Rollback", command=on_rollback).pack(side="left", padx=4)
+        ttk.Button(btn_box, text="🧹 Diet", command=on_diet).pack(side="left", padx=4)
+        ttk.Button(btn_box, text="🩺 Doctor", command=on_doctor).pack(side="left", padx=4)
+        ttk.Button(btn_box, text="📦 Quickstart", command=on_quickstart).pack(side="left", padx=4)
+        ttk.Button(btn_box, text="Close", command=root.destroy).pack(side="left", padx=4)
 
         root.mainloop()
     except Exception as e:
@@ -307,6 +336,9 @@ def run_gui_mode():
             rollback = False
             upgrade = False
             check_update = False
+            doctor = False
+            welcome = False
+            quickstart = False
         run_cli_mode(DummyArgs())
 
 def main():
@@ -318,11 +350,14 @@ def main():
     parser.add_argument("--rollback", action="store_true", help="Roll back to previous generation")
     parser.add_argument("--upgrade", action="store_true", help="Perform staged system upgrade")
     parser.add_argument("--check-update", action="store_true", help="Check for available upstream updates")
+    parser.add_argument("--doctor", action="store_true", help="Run deep diagnostic and issue reporting tool")
+    parser.add_argument("--welcome", action="store_true", help="Launch interactive first-boot onboarding guide")
+    parser.add_argument("--quickstart", action="store_true", help="Explore curated daily apps catalog (Flatpak)")
     parser.add_argument("--version", action="version", version=f"NEURONIX Center {VERSION}")
 
     args = parser.parse_args()
 
-    if args.cli or args.list_generations or args.diet or args.opencode or args.rollback or args.upgrade or args.check_update or "DISPLAY" not in os.environ:
+    if args.cli or args.list_generations or args.diet or args.opencode or args.rollback or args.upgrade or args.check_update or args.doctor or args.welcome or args.quickstart or "DISPLAY" not in os.environ:
         run_cli_mode(args)
     else:
         run_gui_mode()

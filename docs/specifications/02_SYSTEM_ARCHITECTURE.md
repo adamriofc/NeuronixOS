@@ -18,9 +18,10 @@ NEURONIX is organized into four distinct architectural layers, ensuring clear bo
 [ LAYER 1: USER EXPERIENCE (UX) ]                               [ LAYER 2: DESKTOP & SYSTEM CORE ]
   ├─ Calamares Graphical Installer (Declarative Generator)        ├─ Pure Nix Substrate (Immutable /nix/store)
   ├─ NEURONIX Center (GUI System Hub & Telemetry)                 ├─ Hardware Hardening & Compatibility Matrix
-  ├─ Generation Management & Instant Rollbacks (< 2s)             ├─ Global Dynamic Linker (nix-ld)
-  ├─ Dual-Layer Software Model (Nix Core + Flathub Flatpak)       ├─ Atomic Symlink Pointer Management
-  └─ Desktop Environments: KDE Plasma 6, GNOME, Hyprland          └─ Generation-Aware Shell Prompt [Gen #N]
+  ├─ First-Boot Welcome, Doctor Diagnostics & Quickstart Hub      ├─ Global Dynamic Linker (nix-ld)
+  ├─ Declarative Kernel Manager (zen, lts, latest, hardened)      ├─ Atomic Symlink Pointer Management
+  ├─ Dual-Layer Software Model (Nix Core + Flathub Flatpak)       └─ Generation-Aware Shell Prompt [Gen #N]
+  └─ Desktop Environments: KDE Plasma 6, GNOME, Hyprland          
   │                                                                                 │
   ├─────────────────────────────────────────────────────────────────────────────────┤
   │                                                                                 │
@@ -29,7 +30,7 @@ NEURONIX is organized into four distinct architectural layers, ensuring clear bo
   ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ In-Memory Shadow Micro-VM Simulator (neuronix try)
   ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Dry-Build Formal Verification (neuronix verify)
   ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Storage Pruner & VirtIO TRIM (neuronix diet)
-  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 821 Automated Test Cases (100% Pass)
+  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 851 Automated Test Cases (100% Pass)
 ```
 
 ---

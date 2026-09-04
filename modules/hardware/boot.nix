@@ -1,39 +1,57 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, config ? {}, ... }:
 
 {
-  boot.loader = {
-    # Bootloader generation limit (15 generations on 1.0 GiB ESP)
-    systemd-boot = {
-      enable = lib.mkDefault true;
-      configurationLimit = 15;
-      editor = false; # Keamanan: cegah modifikasi parameter kernel tanpa otentikasi
+  options = {
+    neuronix.hardware.kernelFlavor = lib.mkOption {
+      type = lib.types.enum [ "default" "zen" "lts" "latest" "hardened" ];
+      default = "default";
+      description = "Linux kernel profile flavor (zen: gaming/low-latency, lts: long-term, latest: bleeding-edge, hardened: high-security)";
     };
-    efi.canTouchEfiVariables = true;
-    timeout = lib.mkDefault 5;
   };
 
-  # Dual-boot Windows synchronization (RTC local time & UEFI boot discovery)
-  time.hardwareClockInLocalTime = lib.mkDefault true;
+  config = {
+    boot.kernelPackages = lib.mkDefault (
+      if (config.neuronix.hardware.kernelFlavor or "default") == "zen" then pkgs.linuxPackages_zen
+      else if (config.neuronix.hardware.kernelFlavor or "default") == "lts" then pkgs.linuxPackages_lts
+      else if (config.neuronix.hardware.kernelFlavor or "default") == "latest" then pkgs.linuxPackages_latest
+      else if (config.neuronix.hardware.kernelFlavor or "default") == "hardened" then pkgs.linuxPackages_hardened
+      else pkgs.linuxPackages
+    );
 
-  # Ephemeral /tmp Directory Hygiene
-  # Membersihkan seluruh file sementara yang tertinggal di /tmp saat sistem booting
-  boot.tmp.cleanOnBoot = lib.mkDefault true;
+    boot.loader = {
+      # Bootloader generation limit (15 generations on 1.0 GiB ESP)
+      systemd-boot = {
+        enable = lib.mkDefault true;
+        configurationLimit = 15;
+        editor = false; # Keamanan: cegah modifikasi parameter kernel tanpa otentikasi
+      };
+      efi.canTouchEfiVariables = true;
+      timeout = lib.mkDefault 5;
+    };
 
-  # UEFI Boot Assessment Watchdog (power-loss protection during update)
-  systemd.watchdog.runtimeTime = "30s";
-  systemd.watchdog.rebootTime = "10min";
+    # Dual-boot Windows synchronization (RTC local time & UEFI boot discovery)
+    time.hardwareClockInLocalTime = lib.mkDefault true;
 
-  # Kernel tuning (SteamOS vm.max_map_count and S0ix deep sleep)
-  boot.kernelParams = [
-    "mem_sleep_default=deep"
-    "quiet"
-    "splash"
-    "loglevel=4"
-  ];
+    # Ephemeral /tmp Directory Hygiene
+    # Membersihkan seluruh file sementara yang tertinggal di /tmp saat sistem booting
+    boot.tmp.cleanOnBoot = lib.mkDefault true;
 
-  boot.kernel.sysctl = {
-    # SteamOS 3 / Fedora standard for high-concurrency gaming, Proton, and large IDEs
-    "vm.max_map_count" = 2147483642;
-    "fs.file-max" = 2097152;
+    # UEFI Boot Assessment Watchdog (power-loss protection during update)
+    systemd.watchdog.runtimeTime = "30s";
+    systemd.watchdog.rebootTime = "10min";
+
+    # Kernel tuning (SteamOS vm.max_map_count and S0ix deep sleep)
+    boot.kernelParams = [
+      "mem_sleep_default=deep"
+      "quiet"
+      "splash"
+      "loglevel=4"
+    ];
+
+    boot.kernel.sysctl = {
+      # SteamOS 3 / Fedora standard for high-concurrency gaming, Proton, and large IDEs
+      "vm.max_map_count" = 2147483642;
+      "fs.file-max" = 2097152;
+    };
   };
 }

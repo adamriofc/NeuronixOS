@@ -156,6 +156,28 @@ handle_tools_list() {
           }
         }
       }
+    },
+    {
+      "name": "neuronix_doctor",
+      "description": "Execute deep system diagnostic probe and produce privacy-sanitized system report for issue tracking.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": ["json", "markdown"],
+            "description": "Output format for diagnostic report (default: json)"
+          }
+        }
+      }
+    },
+    {
+      "name": "neuronix_quickstart_list",
+      "description": "List curated catalog of Flatpak/Flathub desktop and engineering applications for hermetic installation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
     }
   ]
 }
@@ -301,6 +323,61 @@ handle_tools_call() {
             else
                 text_payload="Atomic upgrade executed in 'staged' mode. New system generation registered to bootloader for next reboot."
             fi
+            local content
+            content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
+        neuronix_doctor)
+            local script_dir
+            script_dir="$(dirname "$(readlink -f "$0")")"
+            local neuronix_bin="${script_dir}/neuronix"
+            local text_payload
+            if [[ -x "$neuronix_bin" ]]; then
+                text_payload=$("$neuronix_bin" doctor --json 2>/dev/null || true)
+            else
+                text_payload='{"system":{"os":"NEURONIX OS 1.0.0"},"privacy":{"user":"<sanitized-user>","host":"<sanitized-host>"}}'
+            fi
+            local content
+            content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
+        neuronix_quickstart_list)
+            local text_payload
+            text_payload=$(cat << 'CATALOG_EOF'
+{
+  "categories": {
+    "browsers": [
+      {"id": "com.brave.Browser", "name": "Brave Privacy Browser"},
+      {"id": "com.google.Chrome", "name": "Google Chrome"},
+      {"id": "org.mozilla.firefox", "name": "Mozilla Firefox"}
+    ],
+    "development": [
+      {"id": "com.visualstudio.code", "name": "Visual Studio Code"},
+      {"id": "com.vscodium.codium", "name": "VSCodium"},
+      {"id": "com.getpostman.Postman", "name": "Postman API Platform"},
+      {"id": "io.dbeaver.DBeaverCommunity", "name": "DBeaver Universal Database"}
+    ],
+    "communication": [
+      {"id": "com.discordapp.Discord", "name": "Discord"},
+      {"id": "org.telegram.desktop", "name": "Telegram Desktop"},
+      {"id": "com.slack.Slack", "name": "Slack Workspace Client"}
+    ],
+    "multimedia": [
+      {"id": "org.videolan.VLC", "name": "VLC Media Player"},
+      {"id": "com.obsproject.Studio", "name": "OBS Studio"},
+      {"id": "com.spotify.Client", "name": "Spotify Music"},
+      {"id": "org.gimp.GIMP", "name": "GIMP Image Manipulation"}
+    ],
+    "productivity": [
+      {"id": "org.libreoffice.LibreOffice", "name": "LibreOffice"},
+      {"id": "md.obsidian.Obsidian", "name": "Obsidian Notes"}
+    ]
+  }
+}
+CATALOG_EOF
+)
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"

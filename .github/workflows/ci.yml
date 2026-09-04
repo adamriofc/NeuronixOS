@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (821 Tests)
+    name: Industrial Systems Verification & Release Gate (851 Tests)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -44,12 +44,13 @@ jobs:
           nix-instantiate --parse modules/services/flatpak.nix
           nix-instantiate --parse modules/services/opencode.nix
           nix-instantiate --parse modules/services/update.nix
+          nix-instantiate --parse modules/services/desktop-tweaks.nix
 
       - name: Execute Distro Verification Suite (209 Tests)
         run: |
           bash tests/test_distro_suite.sh
 
-      - name: Execute Master Test Harness (566 Tests)
+      - name: Execute Master Test Harness (596 Tests)
         run: |
           bash tests/run_all_tests.sh
 

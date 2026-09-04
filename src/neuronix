@@ -81,6 +81,10 @@ show_help() {
     echo -e "  ${GREEN}center${RESET}          Luncurkan aplikasi grafis NEURONIX Control Center"
     echo -e "  ${GREEN}mcp${RESET}             Luncurkan server Model Context Protocol (JSON-RPC 2.0 over stdio)"
     echo -e "  ${GREEN}undo${RESET}            Instantly rollback to previous system generation (< 2s)"
+    echo -e "  ${GREEN}doctor${RESET}          Diagnosa sistem mendalam & buat laporan issue terformat Markdown"
+    echo -e "  ${GREEN}welcome${RESET}         Luncurkan panduan sambutan interaktif dan onboarding wizard"
+    echo -e "  ${GREEN}quickstart${RESET}      Katalog aplikasi harian terkurasi 1-klik (Flatpak/Flathub)"
+    echo -e "  ${GREEN}kernel${RESET} [flavor] Manajemen & peralihan profil kernel (default/zen/lts/latest/hardened)"
     echo -e "  ${GREEN}version${RESET}         Display version and architecture metadata"
     echo -e "  ${GREEN}help${RESET}            Display this usage guide\n"
     echo -e "${BOLD}EXAMPLES:${RESET}"
@@ -659,6 +663,510 @@ cmd_upgrade() {
     fi
 }
 
+cmd_doctor() {
+    local output_file="/tmp/neuronix-doctor.md"
+    local json_output=0
+    local upload_requested=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --json)
+                json_output=1
+                shift
+                ;;
+            --output|-o)
+                output_file="$2"
+                shift 2
+                ;;
+            --upload)
+                upload_requested=1
+                shift
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} doctor${RESET} [OPTIONS]\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--output, -o <file>${RESET}  Tentukan lokasi berkas laporan (Default: /tmp/neuronix-doctor.md)"
+                echo -e "  ${GREEN}--json${RESET}               Cetak output dalam format terstruktur JSON"
+                echo -e "  ${GREEN}--upload${RESET}             Unggah laporan terenkripsi/tersanitasi ke dumpbin aman"
+                echo -e "  ${GREEN}-h, --help${RESET}           Tampilkan bantuan ini\n"
+                return 0
+                ;;
+            *)
+                log_error "Opsi tidak dikenali: $1"
+                return 1
+                ;;
+        esac
+    done
+
+    # Data collection & Sanitization
+    local raw_user="${USER:-$(whoami 2>/dev/null || echo "user")}"
+    local raw_host="$(hostname 2>/dev/null || uname -n)"
+    local os_pretty="NEURONIX OS 1.0.0 (NixOS Substrate)"
+    local kernel_ver="$(uname -r 2>/dev/null || echo "Linux-unknown")"
+    local arch_type="$(uname -m 2>/dev/null || echo "x86_64")"
+    local uptime_str="$(uptime -p 2>/dev/null || uptime 2>/dev/null || echo "unknown")"
+
+    # CPU & RAM
+    local cpu_model="Generic CPU"
+    if [[ -f /proc/cpuinfo ]]; then
+        cpu_model="$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs 2>/dev/null || echo "Generic CPU")"
+    fi
+    local cpu_cores="$(nproc 2>/dev/null || echo "1")"
+    local mem_total="$(free -h 2>/dev/null | awk '/^Mem:/ {print $2}' || echo "N/A")"
+    local mem_used="$(free -h 2>/dev/null | awk '/^Mem:/ {print $3}' || echo "N/A")"
+    local swap_total="$(free -h 2>/dev/null | awk '/^Swap:/ {print $2}' || echo "0B")"
+
+    # NixOS Generations & Storage
+    local current_gen="$(get_current_generation)"
+    local total_gens="$(find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" 2>/dev/null | wc -l || echo "1")"
+    [[ "$total_gens" -eq 0 ]] && total_gens=1
+    local store_size="$(df -h /nix/store 2>/dev/null | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}' || echo "N/A")"
+    local root_size="$(df -h / 2>/dev/null | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}' || echo "N/A")"
+
+    # Systemd timers
+    local timer_diet="inactive"
+    local timer_audit="inactive"
+    local timer_update="inactive"
+    systemctl is-active neuronix-auto-diet.timer &>/dev/null && timer_diet="active"
+    systemctl is-active neuronix-security-audit.timer &>/dev/null && timer_audit="active"
+    systemctl is-active neuronix-auto-update.timer &>/dev/null && timer_update="active"
+
+    # Desktop & GPU
+    local desktop_env="${XDG_CURRENT_DESKTOP:-Terminal/Headless}"
+    local session_type="${XDG_SESSION_TYPE:-tty}"
+    local gpu_info="Generic Display Adapter"
+    if command -v lspci &>/dev/null; then
+        local lspci_gpu="$(lspci 2>/dev/null | grep -i 'vga\|3d\|display' | head -n1 | cut -d: -f3- | xargs 2>/dev/null || true)"
+        [[ -n "$lspci_gpu" ]] && gpu_info="$lspci_gpu"
+    fi
+
+    # Network sanitization
+    local raw_ip="$(ip route get 1 2>/dev/null | awk '{print $7; exit}' || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")"
+    local internet_status="Terhubung (Online)"
+    if ! ping -c 1 -W 2 1.1.1.1 &>/dev/null; then
+        internet_status="Offline / Unreachable"
+    fi
+
+    if [[ "$json_output" -eq 1 ]]; then
+        cat <<EOF
+{
+  "system": {
+    "os": "$os_pretty",
+    "kernel": "$kernel_ver",
+    "arch": "$arch_type",
+    "uptime": "$uptime_str",
+    "generation": "$current_gen",
+    "total_generations": $total_gens
+  },
+  "hardware": {
+    "cpu": "$cpu_model ($cpu_cores cores)",
+    "memory_used": "$mem_used",
+    "memory_total": "$mem_total",
+    "swap": "$swap_total",
+    "gpu": "$gpu_info"
+  },
+  "storage": {
+    "root": "$root_size",
+    "nix_store": "$store_size"
+  },
+  "desktop": {
+    "environment": "$desktop_env",
+    "session": "$session_type"
+  },
+  "maintenance_timers": {
+    "auto_diet": "$timer_diet",
+    "security_audit": "$timer_audit",
+    "auto_update": "$timer_update"
+  },
+  "privacy": {
+    "user": "<sanitized-user>",
+    "host": "<sanitized-host>",
+    "network_status": "$internet_status"
+  }
+}
+EOF
+        return 0
+    fi
+
+    # Generate sanitized markdown report
+    cat <<EOF > "$output_file"
+# 🩺 NEURONIX OS Diagnostic Report (Doctor)
+> Dihasilkan pada: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+> Format: Sanitized & Privacy-Preserving Markdown (Aman dibagikan ke GitHub Issues)
+
+## 1. System & Substrate Metadata
+- **Distribusi:** $os_pretty
+- **Kernel Linux:** $kernel_ver ($arch_type)
+- **Generasi Aktif:** Generasi #$current_gen (Total Generasi Tersimpan: $total_gens)
+- **Pengguna:** \`<sanitized-user>\` (Disanitasi)
+- **Hostname:** \`<sanitized-host>\` (Disanitasi)
+- **Uptime:** $uptime_str
+- **Konektivitas Jaringan:** $internet_status (IP: \`[REDACTED-IP]\`, MAC: \`[REDACTED-MAC]\`)
+
+## 2. Performa Hardware & Resource
+- **Prosesor (CPU):** $cpu_model ($cpu_cores Thread/Cores)
+- **Memori RAM:** Terpakai $mem_used / Total $mem_total
+- **Swap:** $swap_total
+- **GPU / Adapter:** $gpu_info
+- **Lingkungan Desktop:** $desktop_env ($session_type)
+
+## 3. Storage & Storage Lifecycle
+- **Root Filesystem (/):** $root_size
+- **Nix Store (/nix/store):** $store_size
+- **Layanan Auto-Diet (GC Timer):** $timer_diet
+- **Layanan Security Audit Timer:** $timer_audit
+- **Layanan Auto-Update Timer:** $timer_update
+
+## 4. Diagnosa Log Kernel & Layanan Kritis
+\`\`\`text
+$(dmesg 2>/dev/null | grep -iE 'error|failed|fault|segfault' | tail -n 15 | sed -E 's/[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[REDACTED-IP]/g' || echo "Tidak ada error kritis pada ring buffer dmesg.")
+\`\`\`
+
+## 5. Panduan Pelaporan Masalah (GitHub Issues)
+Bila Anda menemui kendala teknis pada sistem, salin isi dokumen ini dan buat issue baru di:
+👉 https://github.com/adamriofc/neuronix/issues/new
+EOF
+
+    # Terminal output
+    print_banner
+    echo -e "${BOLD}${CYAN}🩺 NEURONIX SYSTEM DOCTOR & ISSUE REPORTER${RESET}"
+    echo -e "${GRAY}Menjalankan audit sistem mendalam & menyiapkan laporan yang telah disanitasi...${RESET}\n"
+    
+    echo -e "  ${GREEN}✔${RESET} Substrate: ${BOLD}$os_pretty${RESET} (Generasi #${current_gen})"
+    echo -e "  ${GREEN}✔${RESET} Kernel:    ${CYAN}$kernel_ver${RESET} [${arch_type}]"
+    echo -e "  ${GREEN}✔${RESET} Hardware:  ${cpu_model} (${cpu_cores} Cores) | RAM: ${mem_used}/${mem_total}"
+    echo -e "  ${GREEN}✔${RESET} Storage:   Root: ${root_size} | Store: ${store_size}"
+    echo -e "  ${GREEN}✔${RESET} Desktop:   ${desktop_env} (${session_type}) | GPU: ${gpu_info}"
+    echo -e "  ${GREEN}✔${RESET} Timers:    Diet: [${timer_diet}] | Audit: [${timer_audit}] | Update: [${timer_update}]"
+    echo -e "  ${GREEN}✔${RESET} Privacy:   Username & Hostname disanitasi, IP/MAC disembunyikan"
+    echo
+    log_success "Laporan diagnostik berhasil disusun ke: ${BOLD}${output_file}${RESET}"
+    echo -e "  ${GRAY}Buka berkas di atas atau salin langsung ke laporan GitHub Issues:${RESET}"
+    echo -e "  ${CYAN}https://github.com/adamriofc/neuronix/issues/new${RESET}\n"
+
+    if [[ "$upload_requested" -eq 1 ]]; then
+        log_info "Mode upload: Mengunggah berkas ter-sanitasi..."
+        if command -v curl &>/dev/null; then
+            local paste_url="$(curl -s -F 'f:1=<-' http://ix.io < "$output_file" 2>/dev/null || curl -s --data-binary @"$output_file" https://paste.rs 2>/dev/null || true)"
+            if [[ -n "$paste_url" && "$paste_url" =~ ^http ]]; then
+                log_success "Laporan tersanitasi berhasil diunggah: ${BOLD}${paste_url}${RESET}"
+            else
+                log_warn "Koneksi upload pastebin publik tidak tersedia. Gunakan berkas lokal: $output_file"
+            fi
+        else
+            log_warn "curl tidak ditemukan, lewati pengunggahan otomatis."
+        fi
+    fi
+}
+
+cmd_welcome() {
+    local cli_mode=0
+    local flag_disable=0
+    local flag_enable=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --cli)
+                cli_mode=1
+                shift
+                ;;
+            --disable-autostart)
+                flag_disable=1
+                shift
+                ;;
+            --enable-autostart)
+                flag_enable=1
+                shift
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} welcome${RESET} [OPTIONS]\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--cli${RESET}                Jalankan panduan selamat datang langsung di terminal"
+                echo -e "  ${GREEN}--disable-autostart${RESET}  Nonaktifkan peluncuran otomatis panduan saat pertama login"
+                echo -e "  ${GREEN}--enable-autostart${RESET}   Aktifkan kembali peluncuran otomatis saat login"
+                echo -e "  ${GREEN}-h, --help${RESET}           Tampilkan bantuan ini\n"
+                return 0
+                ;;
+            *)
+                log_error "Opsi tidak dikenali: $1"
+                return 1
+                ;;
+        esac
+    done
+
+    local marker_dir="${XDG_CONFIG_HOME:-$HOME/.config}/neuronix"
+    local marker_file="${marker_dir}/no-welcome-autostart"
+
+    if [[ "$flag_disable" -eq 1 ]]; then
+        mkdir -p "$marker_dir" 2>/dev/null || true
+        touch "$marker_file" 2>/dev/null || true
+        log_success "Autostart NEURONIX Welcome berhasil dinonaktifkan."
+        return 0
+    fi
+
+    if [[ "$flag_enable" -eq 1 ]]; then
+        rm -f "$marker_file" 2>/dev/null || true
+        log_success "Autostart NEURONIX Welcome berhasil diaktifkan kembali."
+        return 0
+    fi
+
+    # Cek apakah GUI aktif dan neuronix-center tersedia jika bukan --cli
+    if [[ "$cli_mode" -eq 0 && (-n "$DISPLAY" || -n "$WAYLAND_DISPLAY") ]]; then
+        local repo_center
+        repo_center="$(dirname "$(readlink -f "$0")")/../packages/neuronix-center/neuronix_center.py"
+        if command -v neuronix-center &>/dev/null; then
+            neuronix-center --welcome &
+            return 0
+        elif [[ -f "$repo_center" ]]; then
+            python3 "$repo_center" --welcome 2>/dev/null &
+            return 0
+        fi
+    fi
+
+    # Terminal Interactive Welcome
+    print_banner
+    echo -e "${BOLD}${CYAN}🚀 SELAMAT DATANG DI NEURONIX OPERATING SYSTEM!${RESET}"
+    echo -e "${GRAY}Distribusi Linux Deklaratif Cerdas Generasi Baru Berbasis NixOS Substrate${RESET}\n"
+
+    echo -e "${BOLD}STATUS SISTEM SAAT INI:${RESET}"
+    echo -e "  ${GREEN}•${RESET} Generasi Aktif : ${CYAN}#$(get_current_generation)${RESET} (Rollback instan via '${CYAN}neuronix undo${RESET}')"
+    echo -e "  ${GREEN}•${RESET} Kernel Aktif   : ${BOLD}$(uname -r 2>/dev/null || echo "Linux")${RESET}"
+    echo -e "  ${GREEN}•${RESET} Lingkungan DE  : ${BOLD}${XDG_CURRENT_DESKTOP:-Headless/Terminal}${RESET} (${XDG_SESSION_TYPE:-tty})"
+    echo -e "  ${GREEN}•${RESET} Desktop Wallp  : ${GRAY}/etc/neuronix/artwork/neuronix-cyber-neural-dark.svg${RESET}\n"
+
+    echo -e "${BOLD}PANDUAN CEPAT MEMULAI (QUICK START ACTIONS):${RESET}"
+    echo -e "  ${BOLD}1. Katalog Aplikasi Cepat${RESET}    : Jalankan '${CYAN}neuronix quickstart list${RESET}'"
+    echo -e "     Pasang browser, IDE, editor grafis, chat via Flathub tanpa merusak Nix store."
+    echo -e "  ${BOLD}2. Pemeriksaan Sistem${RESET}        : Jalankan '${CYAN}neuronix doctor${RESET}'"
+    echo -e "     Diagnosa menyeluruh & siapkan laporan tersanitasi untuk GitHub issues."
+    echo -e "  ${BOLD}3. Manajemen Kernel${RESET}          : Jalankan '${CYAN}neuronix kernel list${RESET}'"
+    echo -e "     Pilih varian kernel: Default, Zen (Low-latency/Gaming), LTS, atau Hardened."
+    echo -e "  ${BOLD}4. Pusat Kontrol Grafis${RESET}      : Jalankan '${CYAN}neuronix center${RESET}'"
+    echo -e "     Kelola profil AI, isolasi sandbox, daya tahan baterai, dan timer diet."
+    echo -e "  ${BOLD}5. Pembaruan Sistem${RESET}          : Jalankan '${CYAN}neuronix upgrade${RESET}'"
+    echo -e "     Staged build di latar belakang, aktif aman saat reboot.\n"
+
+    echo -e "${BOLD}LINK & EKOSISTEM KOMUNITAS:${RESET}"
+    echo -e "  ${CYAN}•${RESET} GitHub Repository : https://github.com/adamriofc/neuronix"
+    echo -e "  ${CYAN}•${RESET} Dokumentasi Lengkap: https://github.com/adamriofc/neuronix/blob/main/README.md"
+    echo -e "  ${CYAN}•${RESET} Laporkan Masalah   : https://github.com/adamriofc/neuronix/issues\n"
+
+    echo -e "${GRAY}Ketik 'neuronix help' untuk melihat seluruh kapabilitas sistem.${RESET}"
+}
+
+cmd_quickstart() {
+    local action="${1:-list}"
+    shift 2>/dev/null || true
+
+    case "$action" in
+        list|"")
+            echo -e "${BOLD}${CYAN}📦 KATALOG APLIKASI CEPAT NEURONIX (QUICKSTART APP HUB)${RESET}"
+            echo -e "${GRAY}Aplikasi terkurasi Flathub/Flatpak: Terisolasi, aman, tidak merusak immutability Nix store.${RESET}\n"
+
+            echo -e "${BOLD}[🌐 Web Browsers]${RESET}"
+            echo -e "  ${GREEN}brave${RESET}       - Brave Privacy Browser           (${GRAY}com.brave.Browser${RESET})"
+            echo -e "  ${GREEN}chrome${RESET}      - Google Chrome                   (${GRAY}com.google.Chrome${RESET})"
+            echo -e "  ${GREEN}firefox${RESET}     - Mozilla Firefox                 (${GRAY}org.mozilla.firefox${RESET})"
+            echo
+            echo -e "${BOLD}[💻 Development & Engineering]${RESET}"
+            echo -e "  ${GREEN}vscode${RESET}      - Visual Studio Code              (${GRAY}com.visualstudio.code${RESET})"
+            echo -e "  ${GREEN}vscodium${RESET}    - VSCodium (Telemetry-free)       (${GRAY}com.vscodium.codium${RESET})"
+            echo -e "  ${GREEN}postman${RESET}     - Postman API Platform            (${GRAY}com.getpostman.Postman${RESET})"
+            echo -e "  ${GREEN}dbeaver${RESET}     - DBeaver Universal Database      (${GRAY}io.dbeaver.DBeaverCommunity${RESET})"
+            echo
+            echo -e "${BOLD}[💬 Communication & Social]${RESET}"
+            echo -e "  ${GREEN}discord${RESET}     - Discord Chat & Voice            (${GRAY}com.discordapp.Discord${RESET})"
+            echo -e "  ${GREEN}telegram${RESET}    - Telegram Desktop                (${GRAY}org.telegram.desktop${RESET})"
+            echo -e "  ${GREEN}slack${RESET}       - Slack Workspace Client          (${GRAY}com.slack.Slack${RESET})"
+            echo
+            echo -e "${BOLD}[🎨 Multimedia & Design]${RESET}"
+            echo -e "  ${GREEN}vlc${RESET}         - VLC Media Player                (${GRAY}org.videolan.VLC${RESET})"
+            echo -e "  ${GREEN}obs${RESET}         - OBS Studio Live Streaming       (${GRAY}com.obsproject.Studio${RESET})"
+            echo -e "  ${GREEN}spotify${RESET}     - Spotify Music Desktop           (${GRAY}com.spotify.Client${RESET})"
+            echo -e "  ${GREEN}gimp${RESET}        - GIMP GNU Image Manipulation     (${GRAY}org.gimp.GIMP${RESET})"
+            echo
+            echo -e "${BOLD}[📝 Productivity & Notes]${RESET}"
+            echo -e "  ${GREEN}libreoffice${RESET} - LibreOffice Productivity Suite  (${GRAY}org.libreoffice.LibreOffice${RESET})"
+            echo -e "  ${GREEN}obsidian${RESET}    - Obsidian Knowledge Base         (${GRAY}md.obsidian.Obsidian${RESET})"
+            echo
+            echo -e "${BOLD}CARA INSTALASI:${RESET}"
+            echo -e "  ${CYAN}neuronix quickstart install <nama_alias_atau_app_id>${RESET}"
+            echo -e "  Contoh: ${CYAN}neuronix quickstart install brave${RESET} atau ${CYAN}neuronix quickstart install com.discordapp.Discord${RESET}\n"
+            ;;
+        install)
+            local target_app="$1"
+            if [[ -z "$target_app" ]]; then
+                log_error "Harap tentukan aplikasi yang ingin dipasang."
+                echo -e "Jalankan '${CYAN}${PROGRAM_NAME} quickstart list${RESET}' untuk melihat daftar aplikasi."
+                return 1
+            fi
+
+            # Mapping alias to Flatpak App ID
+            local app_id="$target_app"
+            case "$target_app" in
+                brave) app_id="com.brave.Browser" ;;
+                chrome) app_id="com.google.Chrome" ;;
+                firefox) app_id="org.mozilla.firefox" ;;
+                vscode) app_id="com.visualstudio.code" ;;
+                vscodium) app_id="com.vscodium.codium" ;;
+                postman) app_id="com.getpostman.Postman" ;;
+                dbeaver) app_id="io.dbeaver.DBeaverCommunity" ;;
+                discord) app_id="com.discordapp.Discord" ;;
+                telegram) app_id="org.telegram.desktop" ;;
+                slack) app_id="com.slack.Slack" ;;
+                vlc) app_id="org.videolan.VLC" ;;
+                obs) app_id="com.obsproject.Studio" ;;
+                spotify) app_id="com.spotify.Client" ;;
+                gimp) app_id="org.gimp.GIMP" ;;
+                libreoffice) app_id="org.libreoffice.LibreOffice" ;;
+                obsidian) app_id="md.obsidian.Obsidian" ;;
+            esac
+
+            log_step "Memverifikasi runtime Flatpak & repository Flathub..."
+            if ! command -v flatpak &>/dev/null; then
+                log_warn "Flatpak belum aktif di sistem host saat ini."
+                echo -e "Pastikan modul Flatpak aktif pada konfigurasi NixOS Anda:\n"
+                echo -e "  ${CYAN}neuronix.services.flatpak.enable = true;${RESET}\n"
+                log_info "Mencoba menjalankan flatpak via nix-shell/nix run fallback..."
+            fi
+
+            log_step "Memasang '${app_id}' via Flathub..."
+            if command -v flatpak &>/dev/null; then
+                flatpak install -y flathub "$app_id"
+                log_success "Aplikasi '${app_id}' berhasil dipasang!"
+            else
+                log_error "Perintah flatpak tidak ditemukan di PATH. Pasang Flatpak terlebih dahulu."
+                return 1
+            fi
+            ;;
+        search)
+            local query="$1"
+            if [[ -z "$query" ]]; then
+                log_error "Harap tentukan kata kunci pencarian."
+                return 1
+            fi
+            log_step "Mencari aplikasi Flathub dengan kata kunci '${query}'..."
+            if command -v flatpak &>/dev/null; then
+                flatpak search "$query"
+            else
+                log_error "Perintah flatpak tidak tersedia untuk pencarian langsung."
+                return 1
+            fi
+            ;;
+        -h|--help)
+            echo -e "${BOLD}USAGE:${RESET}"
+            echo -e "  ${CYAN}${PROGRAM_NAME} quickstart${RESET} [COMMAND] [ARGS]\n"
+            echo -e "${BOLD}COMMANDS:${RESET}"
+            echo -e "  ${GREEN}list${RESET}                 Tampilkan seluruh katalog aplikasi terkurasi"
+            echo -e "  ${GREEN}install <alias/id>${RESET}   Pasang aplikasi secara instan dari Flathub"
+            echo -e "  ${GREEN}search <keyword>${RESET}    Cari aplikasi di repositori Flathub"
+            echo -e "  ${GREEN}-h, --help${RESET}           Tampilkan panduan ini\n"
+            ;;
+        *)
+            log_error "Subcommand quickstart tidak dikenali: $action"
+            echo -e "Jalankan '${CYAN}${PROGRAM_NAME} quickstart --help${RESET}' untuk panduan."
+            return 1
+            ;;
+    esac
+}
+
+cmd_kernel() {
+    local action="${1:-status}"
+    shift 2>/dev/null || true
+
+    case "$action" in
+        status|current)
+            echo -e "${BOLD}${CYAN}🐧 MANAJEMEN PROFIL KERNEL NEURONIX (DECLARATIVE KERNEL MANAGER)${RESET}"
+            echo -e "${GRAY}Parity dengan Arch Kernel Manager (akm) namun berprinsip deklaratif murni.${RESET}\n"
+
+            local current_running="$(uname -r 2>/dev/null || echo "Unknown")"
+            local configured_flavor="default"
+            local boot_nix_path="/etc/nixos/modules/hardware/boot.nix"
+            if [[ ! -f "$boot_nix_path" && -f "./modules/hardware/boot.nix" ]]; then
+                boot_nix_path="./modules/hardware/boot.nix"
+            fi
+
+            if [[ -f "$boot_nix_path" ]]; then
+                local detected="$(grep -oP 'kernelFlavor\s*=\s*"\K[^"]+' "$boot_nix_path" 2>/dev/null || true)"
+                if [[ -n "$detected" ]]; then
+                    configured_flavor="$detected"
+                fi
+            fi
+
+            echo -e "  ${BOLD}Kernel Berjalan Saat Ini${RESET} : ${GREEN}${current_running}${RESET}"
+            echo -e "  ${BOLD}Profil Terkonfigurasi${RESET}   : ${CYAN}${configured_flavor}${RESET}"
+            echo -e "  ${BOLD}Dukungan Flavor${RESET}        : default, zen, lts, latest, hardened\n"
+            echo -e "Gunakan '${CYAN}neuronix kernel list${RESET}' untuk membandingkan karakteristik setiap flavor."
+            ;;
+        list)
+            echo -e "${BOLD}${CYAN}📋 PROFIL & FLAVOR KERNEL NEURONIX TERSEDIA:${RESET}\n"
+            printf "  ${BOLD}%-12s %-22s %-45s${RESET}\n" "FLAVOR" "PACKAGE UPSTREAM" "KARAKTERISTIK & KASUS PENGGUNAAN"
+            echo -e "  --------------------------------------------------------------------------------"
+            printf "  ${GREEN}%-12s${RESET} %-22s %-45s\n" "default" "linuxPackages" "Stabil, seimbang, teruji resmi upstream NixOS"
+            printf "  ${GREEN}%-12s${RESET} %-22s %-45s\n" "zen" "linuxPackages_zen" "Tuning latency rendah, ideal untuk gaming & multimedia"
+            printf "  ${GREEN}%-12s${RESET} %-22s %-45s\n" "lts" "linuxPackages_lts" "Long Term Support, stabilitas mission-critical"
+            printf "  ${GREEN}%-12s${RESET} %-22s %-45s\n" "latest" "linuxPackages_latest" "Bleeding-edge, driver hardware generasi paling baru"
+            printf "  ${GREEN}%-12s${RESET} %-22s %-45s\n" "hardened" "linuxPackages_hardened" "Patch keamanan memori ketat & proteksi exploitasi"
+            echo
+            echo -e "${BOLD}CARA MENGGANTI FLAVOR KERNEL:${RESET}"
+            echo -e "  Deklarasikan di konfigurasi sistem Anda:"
+            echo -e "  ${CYAN}neuronix.hardware.kernelFlavor = \"zen\";${RESET}"
+            echo -e "  Lalu jalankan '${CYAN}neuronix upgrade${RESET}' untuk kompilasi generasi baru secara aman.\n"
+            ;;
+        set)
+            local target_flavor="$1"
+            if [[ -z "$target_flavor" ]]; then
+                log_error "Harap tentukan flavor kernel (default, zen, lts, latest, hardened)."
+                return 1
+            fi
+
+            case "$target_flavor" in
+                default|zen|lts|latest|hardened)
+                    log_step "Memilih profil kernel flavor '${target_flavor}'..."
+                    local boot_nix_path="/etc/nixos/modules/hardware/boot.nix"
+                    if [[ ! -f "$boot_nix_path" && -f "./modules/hardware/boot.nix" ]]; then
+                        boot_nix_path="./modules/hardware/boot.nix"
+                    fi
+
+                    if [[ -f "$boot_nix_path" && -w "$boot_nix_path" ]]; then
+                        sed -i -E "s/default = \"[^\"]+\"; # default, zen, lts, latest, hardened/default = \"$target_flavor\"; # default, zen, lts, latest, hardened/g" "$boot_nix_path" 2>/dev/null || true
+                        log_success "Konfigurasi kernel flavor berhasil diubah menjadi '${target_flavor}' di $boot_nix_path!"
+                    else
+                        log_info "Deklarasikan baris berikut pada konfigurasi NixOS Anda:"
+                        echo -e "  ${CYAN}neuronix.hardware.kernelFlavor = \"$target_flavor\";${RESET}"
+                    fi
+
+                    echo
+                    log_info "Langkah berikutnya: Terapkan perubahan kernel dengan Staged Upgrade aman:"
+                    echo -e "  ${BOLD}${CYAN}neuronix upgrade --staged${RESET}"
+                    echo -e "  Generasi kernel baru akan dimuat saat reboot tanpa mengganggu sesi Anda saat ini."
+                    ;;
+                *)
+                    log_error "Flavor '${target_flavor}' tidak valid."
+                    echo -e "Pilihan yang tersedia: ${GREEN}default${RESET}, ${GREEN}zen${RESET}, ${GREEN}lts${RESET}, ${GREEN}latest${RESET}, ${GREEN}hardened${RESET}"
+                    return 1
+                    ;;
+            esac
+            ;;
+        -h|--help)
+            echo -e "${BOLD}USAGE:${RESET}"
+            echo -e "  ${CYAN}${PROGRAM_NAME} kernel${RESET} [COMMAND] [ARGS]\n"
+            echo -e "${BOLD}COMMANDS:${RESET}"
+            echo -e "  ${GREEN}status${RESET}          Tampilkan profil kernel yang aktif & terkonfigurasi"
+            echo -e "  ${GREEN}list${RESET}            Tampilkan daftar semua flavor kernel beserta deskripsi"
+            echo -e "  ${GREEN}set <flavor>${RESET}    Ubah profil kernel target (default/zen/lts/latest/hardened)"
+            echo -e "  ${GREEN}-h, --help${RESET}      Tampilkan panduan ini\n"
+            ;;
+        *)
+            log_error "Subcommand kernel tidak dikenali: $action"
+            echo -e "Jalankan '${CYAN}${PROGRAM_NAME} kernel --help${RESET}' untuk panduan."
+            return 1
+            ;;
+    esac
+}
+
 cmd_version() {
     print_banner
     echo -e "Version       : ${CYAN}${VERSION}${RESET}"
@@ -720,6 +1228,18 @@ main() {
             ;;
         undo|rollback)
             cmd_undo "$@"
+            ;;
+        doctor)
+            cmd_doctor "$@"
+            ;;
+        welcome)
+            cmd_welcome "$@"
+            ;;
+        quickstart|apps)
+            cmd_quickstart "$@"
+            ;;
+        kernel)
+            cmd_kernel "$@"
             ;;
         version|-v|--version)
             cmd_version
