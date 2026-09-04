@@ -43,7 +43,8 @@ assert_exit_code "DEV_DRY_RUN=1 $TARGET_BIN dev go" 0 "neuronix dev go validates
 assert_exit_code "$TARGET_BIN dev nonexistent_stack 2>/dev/null" 1 "Invalid stack rejected deterministically"
 
 # 25-28. NEURONIX Center Telemetry & ADRs
-CENTER_OUT=$(nix-shell -p python3 --run "python3 '${DISTRO_PATH}/packages/neuronix-center/neuronix_center.py' --cli" 2>&1)
+NC_PYTHON="$(command -v python3 2>/dev/null || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo "python3")"
+CENTER_OUT=$("$NC_PYTHON" "${DISTRO_PATH}/packages/neuronix-center/neuronix_center.py" --cli 2>&1 || true)
 assert_output_contains "echo '$CENTER_OUT'" "NEURONIX CONTROL CENTER" "neuronix-center banner emitted in CLI mode"
 assert_output_contains "echo '$CENTER_OUT'" "Active Generation" "neuronix-center telemetry inspects active generation"
 assert_eq "$(test -f "${DISTRO_PATH}/docs/adr/ADR-001-why-flakes.md" && echo "exists" || echo "missing")" "exists" "ADR-001 exists"

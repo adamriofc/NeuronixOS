@@ -260,8 +260,10 @@ fi
 suite_header "6 - NEURONIX Center Telemetry & CLI Engine"
 
 test_neuronix_center() {
+  local python_bin
+  python_bin="$(command -v python3 2>/dev/null || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo "python3")"
   local out
-  out=$(nix-shell -p python3 --run "python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --cli" 2>&1)
+  out=$("$python_bin" "${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py" --cli 2>&1 || true)
   if echo "$out" | grep -q "NEURONIX CONTROL CENTER"; then
     log_pass "neuronix-center executes in CLI mode"
   else
@@ -275,7 +277,7 @@ test_neuronix_center() {
   fi
 
   local ver
-  ver=$(nix-shell -p python3 --run "python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --version" 2>&1)
+  ver=$("$python_bin" "${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py" --version 2>&1 || true)
   local expected_ver
   expected_ver=$(grep -E 'version\s*=' "${DISTRO_ROOT}/version.nix" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.3")
   if echo "$ver" | grep -Fq "$expected_ver"; then
@@ -443,13 +445,14 @@ assert_exit_code "$NEURONIX_BIN dev 'SELECT * FROM users' 2>/dev/null" 1 "SQL in
 # ------------------------------------------------------------------------------
 suite_header "16 - NEURONIX Center Argument Matrix & Resiliency"
 
-assert_exit_code "nix-shell -p python3 --run 'python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --cli'" 0 "Flag --cli exits 0"
-assert_exit_code "nix-shell -p python3 --run 'python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --list-generations'" 0 "Flag --list-generations exits 0"
-assert_exit_code "nix-shell -p python3 --run 'python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --version'" 0 "Flag --version exits 0"
-NC_VER_OUTPUT=$(nix-shell -p python3 --run "python3 '${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py' --version")
+NC_PYTHON="$(command -v python3 2>/dev/null || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo "python3")"
+assert_exit_code "\"$NC_PYTHON\" '${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py' --cli" 0 "Flag --cli exits 0"
+assert_exit_code "\"$NC_PYTHON\" '${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py' --list-generations" 0 "Flag --list-generations exits 0"
+assert_exit_code "\"$NC_PYTHON\" '${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py' --version" 0 "Flag --version exits 0"
+NC_VER_OUTPUT=$("$NC_PYTHON" "${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py" --version 2>&1 || true)
 assert_output_contains "echo '$NC_VER_OUTPUT'" "NEURONIX Center" "Version output contains brand name"
-assert_exit_code "nix-shell -p python3 --run 'python3 ${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py --help'" 0 "Flag --help exits 0"
-NC_CLI_OUTPUT=$(nix-shell -p python3 --run "python3 '${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py' --cli")
+assert_exit_code "\"$NC_PYTHON\" '${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py' --help" 0 "Flag --help exits 0"
+NC_CLI_OUTPUT=$("$NC_PYTHON" "${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py" --cli 2>&1 || true)
 assert_output_contains "echo '$NC_CLI_OUTPUT'" "Operating System" "CLI contains Operating System field"
 assert_output_contains "echo '$NC_CLI_OUTPUT'" "Kernel Version" "CLI contains Kernel Version field"
 assert_output_contains "echo '$NC_CLI_OUTPUT'" "Processor" "CLI contains Processor field"

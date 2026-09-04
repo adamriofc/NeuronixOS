@@ -12,6 +12,10 @@ export FAILED_TESTS=0
 export SUITE_NAME="GLOBAL"
 HARNESS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export CANONICAL_VERSION=$(grep -E 'version\s*=' "${HARNESS_DIR}/../version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.3")
+if [[ -z "${NIX_PATH:-}" ]]; then
+    _PINNED_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "${HARNESS_DIR}/../version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2")
+    export NIX_PATH="nixpkgs=https://github.com/NixOS/nixpkgs/archive/${_PINNED_COMMIT}.tar.gz"
+fi
 
 # Color Codes
 if [[ -t 1 ]]; then

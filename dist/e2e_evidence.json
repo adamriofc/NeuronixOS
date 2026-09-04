@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-09-04T23:28:23Z",
-  "requested_mode": "contract",
+  "timestamp": "2026-09-04T23:35:57Z",
+  "requested_mode": "auto",
   "executed_mode": "contract",
   "kvm_available": true,
   "proof_class": "P1 (Contract Invariant)",
