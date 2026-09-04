@@ -134,7 +134,7 @@ Kernel transitions are executed via **Staged Upgrades** (`neuronix upgrade --sta
    - Source Path: `artwork/branding/neuronix-symbol.png` (512x512 square cropped 3D "N" emblem for desktop application launchers, taskbar, and avatars).
    - Declarative Exposure: Linked via `environment.etc` to `/etc/neuronix/artwork/symbol.png`.
 3. **Official GitHub Header Banner:**
-   - Source Path: `artwork/branding/neuronix-banner.png` (1920x640 high-DPI widescreen header banner featuring integrated Mondrian 3D emblem card, architecture pills, and glassmorphism system telemetry card).
+   - Source Path: `artwork/branding/neuronix-banner.png` (1920x640 widescreen header banner seamlessly unified with the authentic black patterned grid directly from the master logo, featuring clean typography and architectural pillars without bounding wrappers).
    - Declarative Exposure: Linked via `environment.etc` to `/etc/neuronix/artwork/banner.png`.
 4. **Default 4K UHD Wallpaper:**
    - Source Path: `artwork/wallpapers/neuronix-cyber-neural-dark.svg`
