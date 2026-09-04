@@ -135,11 +135,24 @@ def generate_manifest():
     standalone_total = sum(g["assertions"] for g in STANDALONE_GATES)
     grand_total = qa_total + distro_total + standalone_total
 
+    gen_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if os.path.exists(OUTPUT_MANIFEST):
+        try:
+            with open(OUTPUT_MANIFEST, "r", encoding="utf-8") as ef:
+                existing_manifest = json.load(ef)
+                if (existing_manifest.get("summary", {}).get("total_repository_assertions") == grand_total and
+                    existing_manifest.get("qa_master_harness") == {"runner": "tests/run_all_tests.sh", "suites": QA_SUITES} and
+                    existing_manifest.get("distro_component_harness") == DISTRO_SUITE and
+                    existing_manifest.get("standalone_verification_gates") == STANDALONE_GATES):
+                    gen_time = existing_manifest.get("generated_at", gen_time)
+        except Exception:
+            pass
+
     manifest = {
         "schema_version": "2.0.0",
         "distribution": "NEURONIX OS",
         "version": "1.0.3",
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_at": gen_time,
         "summary": {
             "total_repository_assertions": grand_total,
             "qa_master_harness_assertions": qa_total,

@@ -122,4 +122,4 @@ jobs:
       - name: Verify Single Source of Truth Test Manifest (987 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
-          git diff --exit-code data/test_manifest.json
+          git diff -I '"generated_at":' --exit-code data/test_manifest.json
