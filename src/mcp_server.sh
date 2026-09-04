@@ -525,7 +525,17 @@ CATALOG_EOF
 
             local manual_dir="/etc/neuronix/manual"
             if [[ ! -d "$manual_dir" ]]; then
-                manual_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docs/manual"
+                local real_bin
+                real_bin="$(readlink -f "${BASH_SOURCE[0]}")"
+                local script_dir
+                script_dir="$(cd "$(dirname "$real_bin")" && pwd)"
+                manual_dir="${script_dir}/../docs/manual"
+            fi
+            if [[ ! -d "$manual_dir" && -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/docs/manual" ]]; then
+                manual_dir="${PROJECT_ROOT}/docs/manual"
+            fi
+            if [[ ! -d "$manual_dir" && -d "$(pwd)/docs/manual" ]]; then
+                manual_dir="$(pwd)/docs/manual"
             fi
 
             local target_file=""

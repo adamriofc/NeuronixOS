@@ -97,12 +97,17 @@ run_status() {
 run_manual() {
     local target_topic="${1:-index}"
     local neuronix_bin=""
+    local real_script
+    real_script="$(readlink -f "${BASH_SOURCE[0]}")"
+    local script_dir
+    script_dir="$(cd "$(dirname "$real_script")" && pwd)"
+
     if command -v neuronix >/dev/null 2>&1; then
         neuronix_bin="neuronix"
-    elif [[ -x "$(dirname "${BASH_SOURCE[0]}")/../../bin/neuronix" ]]; then
-        neuronix_bin="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../bin" && pwd)/neuronix"
-    elif [[ -x "$(dirname "${BASH_SOURCE[0]}")/../../src/neuronix" ]]; then
-        neuronix_bin="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../src" && pwd)/neuronix"
+    elif [[ -x "${script_dir}/../../bin/neuronix" ]]; then
+        neuronix_bin="$(cd "${script_dir}/../../bin" && pwd)/neuronix"
+    elif [[ -x "${script_dir}/../../src/neuronix" ]]; then
+        neuronix_bin="$(cd "${script_dir}/../../src" && pwd)/neuronix"
     fi
 
     if [[ -n "$neuronix_bin" ]]; then
@@ -110,7 +115,13 @@ run_manual() {
     else
         local manual_dir="/etc/neuronix/manual"
         if [[ ! -d "$manual_dir" ]]; then
-            manual_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../docs/manual" && pwd)"
+            manual_dir="${script_dir}/../../docs/manual"
+        fi
+        if [[ ! -d "$manual_dir" && -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/docs/manual" ]]; then
+            manual_dir="${PROJECT_ROOT}/docs/manual"
+        fi
+        if [[ ! -d "$manual_dir" && -d "$(pwd)/docs/manual" ]]; then
+            manual_dir="$(pwd)/docs/manual"
         fi
         local target_file=""
         case "${target_topic,,}" in
