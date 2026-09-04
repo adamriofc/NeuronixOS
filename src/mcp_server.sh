@@ -219,6 +219,19 @@ handle_tools_list() {
         "type": "object",
         "properties": {}
       }
+    },
+    {
+      "name": "neuronix_manual",
+      "description": "Access the system-embedded NEURONIX OS Technical Manual, configuration references, and AI directives.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Manual topic to retrieve: index, arch, config, cli, storage, shadow, dev, mcp, hardware, security, ai, all (default: index)"
+          }
+        }
+      }
     }
   ]
 }
@@ -500,6 +513,77 @@ handle_tools_call() {
 }
 CATALOG_EOF
 )
+            local content
+            content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
+        neuronix_manual)
+            local topic
+            topic=$(echo "$params" | jq -r '.topic // .arguments.topic // "index"')
+            [[ -z "$topic" || "$topic" == "null" ]] && topic="index"
+
+            local manual_dir="/etc/neuronix/manual"
+            if [[ ! -d "$manual_dir" ]]; then
+                manual_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docs/manual"
+            fi
+
+            local target_file=""
+            case "${topic,,}" in
+                index|list|toc|"")
+                    target_file="$manual_dir/00_INDEX.md"
+                    ;;
+                arch|architecture|platform)
+                    target_file="$manual_dir/01_ARCHITECTURE.md"
+                    ;;
+                config|configuration|options)
+                    target_file="$manual_dir/02_CONFIGURATION_REFERENCE.md"
+                    ;;
+                cli|commands|syntax)
+                    target_file="$manual_dir/03_CLI_REFERENCE.md"
+                    ;;
+                storage|btrfs|rollback)
+                    target_file="$manual_dir/04_STORAGE_AND_ROLLBACK.md"
+                    ;;
+                shadow|vm|sandbox|microvm)
+                    target_file="$manual_dir/05_SHADOW_VM_AND_SANDBOX.md"
+                    ;;
+                dev|stacks|developer)
+                    target_file="$manual_dir/06_DEVELOPER_STACKS.md"
+                    ;;
+                mcp|gateway|ai-gateway)
+                    target_file="$manual_dir/07_MCP_PROTOCOL_AND_AI_GATEWAY.md"
+                    ;;
+                hardware|pillars|27-pillars)
+                    target_file="$manual_dir/08_HARDWARE_AND_27_PILLARS.md"
+                    ;;
+                security|attestation|sbom)
+                    target_file="$manual_dir/09_SECURITY_AND_ATTESTATION.md"
+                    ;;
+                ai|agent|copilot)
+                    target_file="$manual_dir/10_AI_AGENT_REFERENCE.md"
+                    ;;
+                all)
+                    target_file="ALL"
+                    ;;
+                *)
+                    target_file=""
+                    ;;
+            esac
+
+            local text_payload=""
+            if [[ "$target_file" == "ALL" ]]; then
+                for f in "$manual_dir"/[0-9][0-9]_*.md; do
+                    if [[ -f "$f" ]]; then
+                        text_payload+="$(cat "$f")"$'\n\n---\n\n'
+                    fi
+                done
+            elif [[ -n "$target_file" && -f "$target_file" ]]; then
+                text_payload=$(cat "$target_file")
+            else
+                text_payload=$(printf 'Error: Manual topic "%s" not found in %s.\nAvailable topics: index, arch, config, cli, storage, shadow, dev, mcp, hardware, security, ai, all' "$topic" "$manual_dir")
+            fi
+
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"

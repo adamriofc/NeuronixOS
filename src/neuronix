@@ -142,6 +142,7 @@ show_help() {
     echo -e "  ${GREEN}welcome${RESET}         Luncurkan panduan sambutan interaktif dan onboarding wizard"
     echo -e "  ${GREEN}quickstart${RESET}      Katalog aplikasi harian terkurasi 1-klik (Flatpak/Flathub)"
     echo -e "  ${GREEN}kernel${RESET} [flavor] Manajemen & peralihan profil kernel (default/zen/lts/latest/hardened)"
+    echo -e "  ${GREEN}manual${RESET} [topic]  Display system-embedded technical manual and AI directives"
     echo -e "  ${GREEN}version${RESET}         Display version and architecture metadata"
     echo -e "  ${GREEN}help${RESET}            Display this usage guide\n"
     echo -e "${BOLD}EXAMPLES:${RESET}"
@@ -1271,6 +1272,110 @@ cmd_kernel() {
     esac
 }
 
+cmd_manual() {
+    local topic="${1:-index}"
+    local manual_dir="/etc/neuronix/manual"
+
+    # Fallback to local repository documentation if system manual path does not exist
+    if [[ ! -d "$manual_dir" ]]; then
+        manual_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/docs/manual"
+    fi
+
+    if [[ ! -d "$manual_dir" ]]; then
+        log_error "System manual directory not found at /etc/neuronix/manual or docs/manual."
+        return 1
+    fi
+
+    local target_file=""
+    case "${topic,,}" in
+        index|list|toc|"")
+            target_file="$manual_dir/00_INDEX.md"
+            ;;
+        arch|architecture|platform)
+            target_file="$manual_dir/01_ARCHITECTURE.md"
+            ;;
+        config|configuration|options)
+            target_file="$manual_dir/02_CONFIGURATION_REFERENCE.md"
+            ;;
+        cli|commands|syntax)
+            target_file="$manual_dir/03_CLI_REFERENCE.md"
+            ;;
+        storage|btrfs|rollback)
+            target_file="$manual_dir/04_STORAGE_AND_ROLLBACK.md"
+            ;;
+        shadow|vm|sandbox|microvm)
+            target_file="$manual_dir/05_SHADOW_VM_AND_SANDBOX.md"
+            ;;
+        dev|stacks|developer)
+            target_file="$manual_dir/06_DEVELOPER_STACKS.md"
+            ;;
+        mcp|gateway|ai-gateway)
+            target_file="$manual_dir/07_MCP_PROTOCOL_AND_AI_GATEWAY.md"
+            ;;
+        hardware|pillars|27-pillars)
+            target_file="$manual_dir/08_HARDWARE_AND_27_PILLARS.md"
+            ;;
+        security|attestation|sbom)
+            target_file="$manual_dir/09_SECURITY_AND_ATTESTATION.md"
+            ;;
+        ai|agent|copilot)
+            target_file="$manual_dir/10_AI_AGENT_REFERENCE.md"
+            ;;
+        all)
+            target_file="ALL"
+            ;;
+        -h|--help)
+            echo -e "${BOLD}USAGE:${RESET}"
+            echo -e "  ${CYAN}${PROGRAM_NAME} manual${RESET} [TOPIC]\n"
+            echo -e "${BOLD}AVAILABLE TOPICS:${RESET}"
+            echo -e "  ${GREEN}index${RESET}        Master Table of Contents and System Manual Map"
+            echo -e "  ${GREEN}arch${RESET}         Platform Architecture, 4-Layer Model, and Nix Substrate"
+            echo -e "  ${GREEN}config${RESET}       Declarative Option Reference and Schema Contracts"
+            echo -e "  ${GREEN}cli${RESET}          Complete Command-Line Interface Manual (18 Commands)"
+            echo -e "  ${GREEN}storage${RESET}      Btrfs 5-Subvolume Topology, Compression, and Rollback"
+            echo -e "  ${GREEN}shadow${RESET}       Shadow Micro-VM Sandbox and Smoke Testing Engine"
+            echo -e "  ${GREEN}dev${RESET}          Hermetic Developer Environments and Manifests"
+            echo -e "  ${GREEN}mcp${RESET}          Model Context Protocol JSON-RPC 2.0 AI Gateway"
+            echo -e "  ${GREEN}hardware${RESET}     Hardware Profiles and 27 Industrial Optimization Pillars"
+            echo -e "  ${GREEN}security${RESET}     Security Boundaries, Privilege Allowlist, TPM2, and SBOM"
+            echo -e "  ${GREEN}ai${RESET}           AI Copilot Integration Directives and Guardrails"
+            echo -e "  ${GREEN}all${RESET}          Display Entire Technical Manual"
+            return 0
+            ;;
+        *)
+            log_error "Unknown manual topic: '${topic}'"
+            echo -e "Available topics: index, arch, config, cli, storage, shadow, dev, mcp, hardware, security, ai, all"
+            echo -e "Run '${CYAN}${PROGRAM_NAME} manual --help${RESET}' for topic descriptions."
+            return 1
+            ;;
+    esac
+
+    render_manual() {
+        if [[ -t 1 ]] && command -v less >/dev/null 2>&1 && [[ "${PAGER:-}" != "cat" ]]; then
+            ${PAGER:-less -R}
+        else
+            cat
+        fi
+    }
+
+    if [[ "$target_file" == "ALL" ]]; then
+        {
+            echo -e "# NEURONIX OS COMPLETE SYSTEM-EMBEDDED TECHNICAL MANUAL\n"
+            for f in "$manual_dir"/[0-9][0-9]_*.md; do
+                if [[ -f "$f" ]]; then
+                    cat "$f"
+                    echo -e "\n\n---\n"
+                fi
+            done
+        } | render_manual
+    elif [[ -f "$target_file" ]]; then
+        cat "$target_file" | render_manual
+    else
+        log_error "Manual file not found: $target_file"
+        return 1
+    fi
+}
+
 cmd_version() {
     print_banner
     echo -e "Version       : ${CYAN}${VERSION}${RESET}"
@@ -1344,6 +1449,9 @@ main() {
             ;;
         kernel)
             cmd_kernel "$@"
+            ;;
+        manual|man|docs)
+            cmd_manual "$@"
             ;;
         version|-v|--version)
             cmd_version

@@ -56,6 +56,7 @@ show_help() {
     echo -e "  ${GREEN}opencode${RESET} [COMMAND] [OPTIONS]\n"
     echo -e "${BOLD}COMMANDS:${RESET}"
     echo -e "  ${CYAN}interactive${RESET}      Start full interactive AI copilot session (default)"
+    echo -e "  ${CYAN}manual [topic]${RESET}   Consult system-embedded technical manual and AI directives"
     echo -e "  ${CYAN}status${RESET}           Query real-time hardware, kernel, and generation state"
     echo -e "  ${CYAN}verify <pkg>${RESET}     Evaluate package derivation validity in pure closure"
     echo -e "  ${CYAN}try <config>${RESET}     Test proposed configuration in an in-memory Shadow VM"
@@ -93,10 +94,55 @@ run_status() {
     fi
 }
 
+run_manual() {
+    local target_topic="${1:-index}"
+    local neuronix_bin=""
+    if command -v neuronix >/dev/null 2>&1; then
+        neuronix_bin="neuronix"
+    elif [[ -x "$(dirname "${BASH_SOURCE[0]}")/../../bin/neuronix" ]]; then
+        neuronix_bin="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../bin" && pwd)/neuronix"
+    elif [[ -x "$(dirname "${BASH_SOURCE[0]}")/../../src/neuronix" ]]; then
+        neuronix_bin="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../src" && pwd)/neuronix"
+    fi
+
+    if [[ -n "$neuronix_bin" ]]; then
+        "$neuronix_bin" manual "$target_topic"
+    else
+        local manual_dir="/etc/neuronix/manual"
+        if [[ ! -d "$manual_dir" ]]; then
+            manual_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../docs/manual" && pwd)"
+        fi
+        local target_file=""
+        case "${target_topic,,}" in
+            index|list|toc|"") target_file="$manual_dir/00_INDEX.md" ;;
+            arch|architecture) target_file="$manual_dir/01_ARCHITECTURE.md" ;;
+            config|configuration) target_file="$manual_dir/02_CONFIGURATION_REFERENCE.md" ;;
+            cli|commands) target_file="$manual_dir/03_CLI_REFERENCE.md" ;;
+            storage|btrfs|rollback) target_file="$manual_dir/04_STORAGE_AND_ROLLBACK.md" ;;
+            shadow|vm|sandbox) target_file="$manual_dir/05_SHADOW_VM_AND_SANDBOX.md" ;;
+            dev|stacks) target_file="$manual_dir/06_DEVELOPER_STACKS.md" ;;
+            mcp|gateway) target_file="$manual_dir/07_MCP_PROTOCOL_AND_AI_GATEWAY.md" ;;
+            hardware|pillars) target_file="$manual_dir/08_HARDWARE_AND_27_PILLARS.md" ;;
+            security|attestation|sbom) target_file="$manual_dir/09_SECURITY_AND_ATTESTATION.md" ;;
+            ai|agent|copilot) target_file="$manual_dir/10_AI_AGENT_REFERENCE.md" ;;
+            all) target_file="ALL" ;;
+            *) target_file="$manual_dir/00_INDEX.md" ;;
+        esac
+
+        if [[ "$target_file" == "ALL" ]]; then
+            cat "$manual_dir"/[0-9][0-9]_*.md 2>/dev/null || true
+        elif [[ -n "$target_file" && -f "$target_file" ]]; then
+            cat "$target_file"
+        else
+            echo -e "${YELLOW}System manual topic '${target_topic}' not found.${RESET}"
+        fi
+    fi
+}
+
 run_interactive() {
     print_banner
     echo -e "${BOLD}Welcome to OpenCode.${RESET} Your declarative AI copilot is initialized."
-    echo -e "${DIM}Commands: /status, /verify <pkg>, /try <cfg>, /diet, /rollback, /update, /exit${RESET}\n"
+    echo -e "${DIM}Commands: /manual [topic], /status, /verify <pkg>, /try <cfg>, /diet, /rollback, /update, /exit${RESET}\n"
 
     while true; do
         echo -ne "${BOLD}${CYAN}opencode${RESET} ➔ "
@@ -117,6 +163,11 @@ run_interactive() {
                 ;;
             /help)
                 show_help
+                ;;
+            /manual*|/doc*)
+                local target_topic
+                target_topic=$(echo "${user_input}" | awk '{print $2}')
+                run_manual "${target_topic:-index}"
                 ;;
             /status)
                 run_status
@@ -212,6 +263,10 @@ case "${CMD}" in
         else
             echo -e "Shadow VM evaluated."
         fi
+        ;;
+    manual|man|doc|docs)
+        shift || true
+        run_manual "$@"
         ;;
     interactive|"")
         # Check if running without a TTY in a graphical desktop session

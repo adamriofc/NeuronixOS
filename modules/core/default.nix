@@ -1,6 +1,10 @@
 { pkgs, lib, ... }:
 
 {
+  imports = [
+    ./manual.nix
+  ];
+
   # Konfigurasi Inti Nix & Flakes
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];

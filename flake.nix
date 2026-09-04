@@ -45,6 +45,7 @@
         kde = import ./modules/desktop/kde.nix;
         gnome = import ./modules/desktop/gnome.nix;
         hyprland = import ./modules/desktop/hyprland.nix;
+        manual = import ./modules/core/manual.nix;
       };
 
       # Target installed system configuration (Default Desktop x86_64)
