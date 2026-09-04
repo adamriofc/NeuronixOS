@@ -31,6 +31,24 @@
     interval = "daily";
   };
 
+  # Autonomous Storage Diet: Scheduled Garbage Collection & Store Deduplication
+  nix.gc = {
+    automatic = lib.mkDefault true;
+    dates = lib.mkDefault "weekly";
+    options = lib.mkDefault "--delete-older-than 14d";
+  };
+
+  nix.optimise = {
+    automatic = lib.mkDefault true;
+    dates = [ "weekly" ];
+  };
+
+  # Dynamic Storage Guard (Mencegah out-of-disk saat kompilasi/evaluasi)
+  nix.settings = {
+    min-free = lib.mkDefault 1073741824; # 1 GiB Emergency trigger
+    max-free = lib.mkDefault 3221225472; # 3 GiB Target headroom
+  };
+
   # Native ntfs3 + exFAT drivers and removable media automounting
   boot.supportedFilesystems = [ "btrfs" "ntfs" "exfat" "ext4" "vfat" ];
 
