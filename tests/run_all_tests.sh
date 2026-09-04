@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Industrial QA & Resilience Master Test Runner (280+ Tests)
-# Executes 13 deep-dive suites:
+# NEURONIX Industrial QA & Resilience Master Test Runner (561 Tests across 22 Suites)
+# Executes 22 deep-dive suites:
 # 01 - Syntax & Static Analysis
 # 02 - CLI Argument Parsing & Fuzzing
 # 03 - Unit Tests for Internal Functions
@@ -15,6 +15,15 @@
 # 11 - Concurrency & Race Conditions
 # 12 - Resource Exhaustion & POSIX ulimit Stress
 # 13 - Mutation & Negative Invariants
+# 14 - MCP JSON-RPC Protocol
+# 15 - Shadow Micro-VM Simulation
+# 16 - Distro Standalone Architecture
+# 17 - Distro Kernel & Subsystem Invariants
+# 18 - Distro Dev Stacks & Fuzzing
+# 19 - Distro ADR & Architecture Contracts
+# 20 - Distro Storage & Btrfs Resilience
+# 21 - OpenCode AI Copilot & Autonomous Updates
+# 22 - Autonomous Update Policy & Desktop Notifier
 # ==============================================================================
 
 set -uo pipefail
@@ -30,7 +39,7 @@ START_TIME=$(date +%s%N)
 
 echo -e "\n${C_BOLD}${C_CYAN}╔═══════════════════════════════════════════════════════════════════╗${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}║     NEURONIX COMPREHENSIVE INDUSTRIAL QA & RESILIENCE HARNESS     ║${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}║   Automated Mission-Critical Systems Verification (~506+ Tests)   ║${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (561 Tests)   ║${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}╚═══════════════════════════════════════════════════════════════════╝${C_RESET}"
 
 # Execute all 13 suites sequentially
