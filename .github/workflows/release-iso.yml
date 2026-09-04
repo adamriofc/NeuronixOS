@@ -57,27 +57,27 @@ jobs:
             split -b 1500M "${TARGET_NAME}" "${TARGET_NAME}.part_"
             sha256sum ${TARGET_NAME}.part_* >> SHA256SUMS
             rm "${TARGET_NAME}"
-            cat << 'EOF' > RECOMBINE_INSTRUCTIONS.txt
-================================================================================
-NEURONIX OS Official Live Installation ISO - Multipart Recombination Guide
-================================================================================
-
-This release asset was published as multipart chunks to adhere to GitHub Release
-per-asset file size constraints (max 2 GiB).
-
-To reassemble the complete, bootable ISO image:
-
-[On Linux & macOS]:
-  cat neuronix-os-*-x86_64.iso.part_* > neuronix-os-v1.0.3-x86_64.iso
-  sha256sum -c SHA256SUMS
-
-[On Windows (Command Prompt)]:
-  copy /b neuronix-os-*-x86_64.iso.part_aa + neuronix-os-*-x86_64.iso.part_ab neuronix-os-v1.0.3-x86_64.iso
-
-Verify the reconstructed ISO with:
-  sha256sum -c SHA256SUMS
-================================================================================
-EOF
+            printf '%s\n' \
+              "================================================================================" \
+              "NEURONIX OS Official Live Installation ISO - Multipart Recombination Guide" \
+              "================================================================================" \
+              "" \
+              "This release asset was published as multipart chunks to adhere to GitHub Release" \
+              "per-asset file size constraints (max 2 GiB)." \
+              "" \
+              "To reassemble the complete, bootable ISO image:" \
+              "" \
+              "[On Linux & macOS]:" \
+              "  cat neuronix-os-*-x86_64.iso.part_* > neuronix-os-v1.0.3-x86_64.iso" \
+              "  sha256sum -c SHA256SUMS" \
+              "" \
+              "[On Windows (Command Prompt)]:" \
+              "  copy /b neuronix-os-*-x86_64.iso.part_aa + neuronix-os-*-x86_64.iso.part_ab neuronix-os-v1.0.3-x86_64.iso" \
+              "" \
+              "Verify the reconstructed ISO with:" \
+              "  sha256sum -c SHA256SUMS" \
+              "================================================================================" \
+              > RECOMBINE_INSTRUCTIONS.txt
           fi
           echo "Generated Checksum Database:"
           cat SHA256SUMS
