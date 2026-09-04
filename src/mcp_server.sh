@@ -94,7 +94,7 @@ handle_tools_list() {
     },
     {
       "name": "neuronix_verify",
-      "description": "Evaluate and validate a Nix package or expression derivation prior to execution (Declarative Evaluation Gatekeeper).",
+      "description": "Evaluate and validate a Nix package or expression derivation via dry-build dependency resolution prior to execution (Declarative Build Verification Gatekeeper).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -108,7 +108,7 @@ handle_tools_list() {
     },
     {
       "name": "neuronix_undo",
-      "description": "Atomic rollback directive: revert system configuration symlink to preceding generation.",
+      "description": "Execute atomic system rollback to preceding generation (switches generation when elevated, or returns exact recovery directive).",
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -244,8 +244,8 @@ handle_tools_call() {
                 local content
                 content=$(jq -n -c --arg text "$text" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
-            elif nix-instantiate '<nixpkgs>' -A "$pkg" >/dev/null 2>&1; then
-                local text="Declarative Build Verification PASSED: Package derivation '${pkg}' evaluates cleanly in nixpkgs closure."
+            elif nix-instantiate '<nixpkgs>' -A "$pkg" >/dev/null 2>&1 && nix-build '<nixpkgs>' -A "$pkg" --dry-run >/dev/null 2>&1; then
+                local text="Declarative Build Verification PASSED: Package derivation '${pkg}' evaluates cleanly and passes dry-build in nixpkgs closure."
                 local content
                 content=$(jq -n -c --arg text "$text" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"

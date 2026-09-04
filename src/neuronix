@@ -403,9 +403,9 @@ cmd_verify() {
         return 1
     fi
 
-    log_step "Running declarative build verification for package derivation: ${BOLD}${pkg}${RESET}..."
-    if nix-instantiate '<nixpkgs>' -A "$pkg" >/dev/null 2>&1; then
-        log_success "Declarative Build Verification PASSED: Package derivation '${pkg}' evaluates cleanly in nixpkgs closure."
+    log_step "Running declarative build & dry-run verification for package derivation: ${BOLD}${pkg}${RESET}..."
+    if nix-instantiate '<nixpkgs>' -A "$pkg" >/dev/null 2>&1 && nix-build '<nixpkgs>' -A "$pkg" --dry-run >/dev/null 2>&1; then
+        log_success "Declarative Build Verification PASSED: Package derivation '${pkg}' evaluates and passes dry-build in nixpkgs closure."
         return 0
     else
         log_error "Declarative Build Verification FAILED: Package derivation '${pkg}' failed dry-build evaluation in nixpkgs."
@@ -1106,19 +1106,23 @@ cmd_kernel() {
 
             local current_running="$(uname -r 2>/dev/null || echo "Unknown")"
             local configured_flavor="default"
-            local boot_nix_path="/etc/nixos/modules/hardware/boot.nix"
-            if [[ ! -f "$boot_nix_path" && -f "./modules/hardware/boot.nix" ]]; then
-                boot_nix_path="./modules/hardware/boot.nix"
-            fi
-
-            if [[ -f "$boot_nix_path" ]]; then
-                local detected
-                detected="$(grep -oP 'kernelFlavor\s*=\s*"\K[^"]+' "$boot_nix_path" 2>/dev/null || true)"
-                if [[ -z "$detected" ]]; then
-                    detected="$(grep -oP 'default\s*=\s*"\K[a-z]+(?=";\s*#\s*default)' "$boot_nix_path" 2>/dev/null || true)"
+            if [[ -f "/etc/neuronix/kernel-profile" ]]; then
+                configured_flavor="$(cat /etc/neuronix/kernel-profile 2>/dev/null | tr -d '[:space:]')"
+            else
+                local boot_nix_path="/etc/nixos/modules/hardware/boot.nix"
+                if [[ ! -f "$boot_nix_path" && -f "./modules/hardware/boot.nix" ]]; then
+                    boot_nix_path="./modules/hardware/boot.nix"
                 fi
-                if [[ -n "$detected" ]]; then
-                    configured_flavor="$detected"
+
+                if [[ -f "$boot_nix_path" ]]; then
+                    local detected
+                    detected="$(grep -oP 'kernelFlavor\s*=\s*"\K[^"]+' "$boot_nix_path" 2>/dev/null || true)"
+                    if [[ -z "$detected" ]]; then
+                        detected="$(grep -oP 'default\s*=\s*"\K[a-z]+(?=";\s*#\s*default)' "$boot_nix_path" 2>/dev/null || true)"
+                    fi
+                    if [[ -n "$detected" ]]; then
+                        configured_flavor="$detected"
+                    fi
                 fi
             fi
 
@@ -1140,6 +1144,7 @@ cmd_kernel() {
             echo -e "${BOLD}CARA MENGGANTI FLAVOR KERNEL:${RESET}"
             echo -e "  Deklarasikan di konfigurasi sistem Anda:"
             echo -e "  ${CYAN}neuronix.hardware.kernelFlavor = \"zen\";${RESET}"
+            echo -e "  Atau atur via CLI: '${CYAN}neuronix kernel set zen${RESET}' (menyimpan ke /etc/neuronix/kernel-profile)"
             echo -e "  Lalu jalankan '${CYAN}neuronix upgrade${RESET}' untuk kompilasi generasi baru secara aman.\n"
             ;;
         set)
@@ -1151,18 +1156,21 @@ cmd_kernel() {
 
             case "$target_flavor" in
                 default|zen|lts|latest|hardened)
-                    log_step "Memilih profil kernel flavor '${target_flavor}'..."
-                    local boot_nix_path="/etc/nixos/modules/hardware/boot.nix"
-                    if [[ ! -f "$boot_nix_path" && -f "./modules/hardware/boot.nix" ]]; then
-                        boot_nix_path="./modules/hardware/boot.nix"
-                    fi
-
-                    if [[ -f "$boot_nix_path" && -w "$boot_nix_path" ]]; then
-                        sed -i -E "s/default = \"[^\"]+\"; # default, zen, lts, latest, hardened/default = \"$target_flavor\"; # default, zen, lts, latest, hardened/g" "$boot_nix_path" 2>/dev/null || true
-                        log_success "Konfigurasi kernel flavor berhasil diubah menjadi '${target_flavor}' di $boot_nix_path!"
+                    log_step "Memilih profil kernel flavor '${target_flavor}' secara deklaratif..."
+                    local profile_file="/etc/neuronix/kernel-profile"
+                    local profile_dir="/etc/neuronix"
+                    if [[ $EUID -eq 0 ]]; then
+                        mkdir -p "$profile_dir"
+                        echo "$target_flavor" > "$profile_file"
+                        log_success "Profil kernel deklaratif berhasil disimpan ke ${profile_file} (${target_flavor})!"
                     else
-                        log_info "Deklarasikan baris berikut pada konfigurasi NixOS Anda:"
-                        echo -e "  ${CYAN}neuronix.hardware.kernelFlavor = \"$target_flavor\";${RESET}"
+                        if sudo mkdir -p "$profile_dir" 2>/dev/null && echo "$target_flavor" | sudo tee "$profile_file" >/dev/null 2>&1; then
+                            log_success "Profil kernel deklaratif berhasil disimpan ke ${profile_file} (${target_flavor})!"
+                        else
+                            log_warn "Tidak dapat menulis ke ${profile_file} tanpa hak root."
+                            log_info "Deklarasikan baris berikut pada konfigurasi NixOS Anda:"
+                            echo -e "  ${CYAN}neuronix.hardware.kernelFlavor = \"$target_flavor\";${RESET}"
+                        fi
                     fi
 
                     echo

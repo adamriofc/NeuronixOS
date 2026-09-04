@@ -120,7 +120,7 @@ Storage partitioning uses an isolated subvolume layout:
 
 ### Transparent Block Compression (ZSTD:3)
 All read-write filesystem subvolumes use Zstandard level 3 (`zstd:3`) compression.
-- **Disk Usage:** Reduces physical footprint on `/nix/store` by 40% to 50%.
+- **Disk Usage:** Materially reduces physical storage consumption for compressible store paths and text/data files, with actual compression ratios varying by package composition.
 - **Throughput:** Minimizes raw byte transfers from NVMe/SATA storage, reducing solid-state write wear and improving real-world read times.
 
 ### Auto-TRIM and Omni-Purging Storage Diet Engine
@@ -149,7 +149,7 @@ While Btrfs is the default and recommended filesystem for NEURONIX, standard **E
 | Architectural Dimension | Btrfs (Default) | EXT4 (Supported Alternative) |
 | :--- | :--- | :--- |
 | **Partition Structure** | Structured subvolumes (`@`, `@nix`, `@home`, `@snapshots`, `@swap`) | Traditional monolithic root partition (`/`) |
-| **Transparent Compression** | In-kernel Zstandard level 3 (`zstd:3`) reduces `/nix/store` by 40% to 50% | Uncompressed storage (requires larger disk allocation) |
+| **Transparent Compression** | In-kernel Zstandard level 3 (`zstd:3`) materially reduces storage usage for compressible data | Uncompressed storage (requires larger disk allocation) |
 | **Maintenance Workload** | Automated monthly chunk rebalancing via `btrfs-balance.timer` | Zero filesystem maintenance overhead (standard fsck) |
 | **I/O Overhead** | Copy-on-Write metadata tracking | Minimal filesystem overhead, stable raw write throughput |
 | **Recommended Use Case** | Modern NVMe/SATA SSDs with limited physical storage capacity | Traditional magnetic disks (HDDs), USB storage, or high-throughput databases |
@@ -168,7 +168,7 @@ To prevent system lockups under memory exhaustion, NEURONIX implements a three-t
 
 ### ZRAM In-Memory Swap Pool
 - Configured using `zram-generator` with the ZSTD compression algorithm.
-- Provides an effective swap pool typically expanding memory capacity by 1.5x to 2.5x depending on workload compressibility and entropy, with RAM-speed transfer latency.
+- Provides an in-memory swap pool expanding effective memory headroom by 1.5x to 2.5x on compressible data, maintaining interactive responsiveness under memory pressure with minimal CPU overhead.
 
 ### Kernel Paging Tuning (vm.swappiness = 180)
 - The default Linux swappiness value (60) delays swapping until memory is nearly exhausted, increasing the risk of disk thrashing.
@@ -180,9 +180,9 @@ To prevent system lockups under memory exhaustion, NEURONIX implements a three-t
 
 ---
 
-## Hardware Compatibility Matrix & Profiles
+## Hardware & Subsystem Configuration Matrix
 
-NEURONIX includes declarative configurations addressing standard desktop and laptop hardware requirements. For empirical platform qualifications across reference platforms (ThinkPad, Framework, Dell XPS, ASUS ROG Zephyrus, QEMU KVM, Apple Silicon), see the [Reference Hardware Qualification Matrix](docs/hardware_profiles.md).
+NEURONIX includes declarative configurations addressing standard desktop and laptop hardware requirements across 27 subsystem domains. For empirical platform qualifications across reference platforms (ThinkPad, Framework, Dell XPS, ASUS ROG Zephyrus, QEMU KVM, Apple Silicon), see the [Reference Hardware Qualification Matrix](docs/hardware_profiles.md).
 
 | Subsystem Domain | Technical Objective | Declarative Implementation | Configuration Module |
 | :--- | :--- | :--- | :--- |
@@ -356,7 +356,7 @@ neuronix welcome --disable-autostart
 
 ### 9. System Doctor & Privacy-Sanitized Issue Reporter
 An automated deep system diagnostics engine that inspects hardware, kernel dmesg rings, active generation, filesystem health, and systemd maintenance timers.
-- **Privacy-First Data Scrubbing:** Automatically scrubs and masks real local usernames (`<sanitized-user>`), hostnames (`<sanitized-host>`), IPv4/IPv6 addresses (`[REDACTED-IP]`), and hardware MAC identifiers (`[REDACTED-MAC]`).
+- **Privacy-First Data Scrubbing:** Automatically scrubs and masks real local usernames (`<sanitized-user>`), hostnames (`<sanitized-host>`), IPv4/IPv6 addresses (`[REDACTED-IP]`), and hardware MAC identifiers (`[REDACTED-MAC]`). Personal identifiers are redacted, while system architecture and hardware topology remain intentionally visible for diagnostic accuracy.
 - **GitHub Issue Ready:** Produces formatted Markdown at `/tmp/neuronix-doctor.md` ready to copy-paste directly into community bug reports.
 
 ```bash
@@ -475,7 +475,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
   ✓ NEURONIX RELEASE GATE PASSED: BUILD, BOOT, INSTALL AND ROLLBACK VERIFIED
 ```
 
-> **Industrial QA Harness Scope:** A project-level validation framework verifying declared subsystem invariants and contracts, not a formal mathematical safety/security proof system.
+> **Industrial QA Harness Scope:** A project-level validation framework verifying 854 declared subsystem invariants and contracts across 4 specialized test suites, not a formal mathematical safety/security proof system.
 
 ### Verification Coverage:
 - **Suites 01-03:** Script syntax, POSIX compliance, static analysis, and generation parsing.

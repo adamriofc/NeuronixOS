@@ -209,7 +209,7 @@ execute_shadow_vm() {
             log_error "Micro-VM runner binary not found in build output."
             return 1
         else
-            log_warn "nixos-rebuild or /etc/nixos not configured on this host. Using synthetic sandbox runner for smoke test."
+            log_warn "nixos-rebuild or target host configuration not accessible in this context. Using synthetic sandbox runner for smoke test."
             mkdir -p "${SCRATCH_DIR}/result/bin"
             vm_runner="${SCRATCH_DIR}/result/bin/run-neuronix-vm"
             cat << 'EOF' > "$vm_runner"
