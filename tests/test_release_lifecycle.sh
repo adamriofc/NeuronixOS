@@ -95,6 +95,9 @@ assert_check "Center implements time.monotonic measurement" "grep -q 'time.monot
 assert_check "Center rollback error handling is present" "grep -Eq 'Rollback (Error|Failed)' '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py'"
 assert_check "OpenCode is configured in target configuration" "grep -q 'neuronix.services.opencode' /tmp/neuronix-mock-install/etc/nixos/configuration.nix"
 assert_check "OpenCode is registered in release manifest" "grep -q '\"ai_agent\": \"opencode\"' /tmp/neuronix-mock-install/etc/neuronix/release.json"
+assert_check "Update subsystem configured in target configuration" "grep -q 'neuronix.services.updates' /tmp/neuronix-mock-install/etc/nixos/configuration.nix"
+assert_check "Update notifier registered in release manifest" "grep -q '\"update_notifier\": \"enabled\"' /tmp/neuronix-mock-install/etc/neuronix/release.json"
+assert_check "Storage diet registered in release manifest" "grep -q '\"storage_diet\": \"autonomous_14d\"' /tmp/neuronix-mock-install/etc/neuronix/release.json"
 
 # ------------------------------------------------------------------------------
 # 5. Headless QEMU Ephemeral Micro-VM Sandbox Execution

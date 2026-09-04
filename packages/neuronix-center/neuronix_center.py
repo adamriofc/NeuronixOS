@@ -173,6 +173,14 @@ def run_cli_mode(args):
         print("  [ RUNNING STORAGE MAINTENANCE (DIET) ]")
         subprocess.run(["neuronix", "diet"], check=False)
 
+    if getattr(args, 'upgrade', False):
+        print("  [ RUNNING STAGED SYSTEM UPGRADE ]")
+        subprocess.run(["neuronix", "upgrade", "--staged"], check=False)
+
+    if getattr(args, 'check_update', False):
+        print("  [ CHECKING FOR UPSTREAM SYSTEM UPDATES ]")
+        subprocess.run(["neuronix", "check-update"], check=False)
+
     if args.opencode:
         print("  [ LAUNCHING OPENCODE AI SYSTEM COPILOT ]")
         try:
@@ -251,6 +259,16 @@ def run_gui_mode():
         frame_act = ttk.LabelFrame(root, text=" System Maintenance & Atomic Rollback ")
         frame_act.pack(fill="x", padx=15, pady=5)
 
+        def on_upgrade():
+            if messagebox.askyesno("Confirm System Upgrade", "Prepare and stage system upgrade for next reboot (zero session disruption)?"):
+                start_t = time.monotonic()
+                res = subprocess.run(["neuronix", "upgrade", "--staged"], check=False)
+                elapsed = time.monotonic() - start_t
+                if res.returncode == 0:
+                    messagebox.showinfo("Upgrade Staged", f"System upgrade staged successfully in {elapsed:.2f} seconds.\nNew generation will activate on next reboot.")
+                else:
+                    messagebox.showerror("Upgrade Failed", f"Upgrade operation exited with code {res.returncode}.")
+
         def on_rollback():
             if messagebox.askyesno("Confirm Rollback", "Revert system to previous stable NixOS generation?"):
                 start_t = time.monotonic()
@@ -273,6 +291,7 @@ def run_gui_mode():
         btn_box = ttk.Frame(frame_act)
         btn_box.pack(pady=5, padx=10, fill="x")
 
+        ttk.Button(btn_box, text="🔄 System Upgrade (Staged)", command=on_upgrade).pack(side="left", padx=5)
         ttk.Button(btn_box, text="↩ Atomic Rollback", command=on_rollback).pack(side="left", padx=5)
         ttk.Button(btn_box, text="🧹 Reclaim Storage (Diet)", command=on_diet).pack(side="left", padx=5)
         ttk.Button(btn_box, text="Close", command=root.destroy).pack(side="left", padx=5)
@@ -286,6 +305,8 @@ def run_gui_mode():
             diet = False
             opencode = False
             rollback = False
+            upgrade = False
+            check_update = False
         run_cli_mode(DummyArgs())
 
 def main():
@@ -295,11 +316,13 @@ def main():
     parser.add_argument("--diet", action="store_true", help="Run store garbage collection and TRIM")
     parser.add_argument("--opencode", action="store_true", help="Launch or check OpenCode AI System Assistant")
     parser.add_argument("--rollback", action="store_true", help="Roll back to previous generation")
+    parser.add_argument("--upgrade", action="store_true", help="Perform staged system upgrade")
+    parser.add_argument("--check-update", action="store_true", help="Check for available upstream updates")
     parser.add_argument("--version", action="version", version=f"NEURONIX Center {VERSION}")
 
     args = parser.parse_args()
 
-    if args.cli or args.list_generations or args.diet or args.opencode or args.rollback or "DISPLAY" not in os.environ:
+    if args.cli or args.list_generations or args.diet or args.opencode or args.rollback or args.upgrade or args.check_update or "DISPLAY" not in os.environ:
         run_cli_mode(args)
     else:
         run_gui_mode()

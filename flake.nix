@@ -41,6 +41,7 @@
         printing = import ./modules/services/printing.nix;
         security = import ./modules/services/security.nix;
         opencode = import ./modules/services/opencode.nix;
+        update = import ./modules/services/update.nix;
         kde = import ./modules/desktop/kde.nix;
         gnome = import ./modules/desktop/gnome.nix;
         hyprland = import ./modules/desktop/hyprland.nix;
@@ -64,6 +65,7 @@
           ./modules/services/printing.nix
           ./modules/services/security.nix
           ./modules/services/opencode.nix
+          ./modules/services/update.nix
           ./modules/desktop/kde.nix
           ./hosts/desktop
         ];

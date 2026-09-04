@@ -55,6 +55,7 @@ source "$TEST_DIR/suites/18_distro_dev_stacks_and_fuzzing.sh"
 source "$TEST_DIR/suites/19_distro_adr_and_architecture_contracts.sh"
 source "$TEST_DIR/suites/20_distro_storage_and_btrfs_resilience.sh"
 source "$TEST_DIR/suites/21_opencode_service_and_autoupdate.sh"
+source "$TEST_DIR/suites/22_update_system_and_desktop_notifier.sh"
 
 END_TIME=$(date +%s%N)
 DURATION_MS=$(( (END_TIME - START_TIME) / 1000000 ))

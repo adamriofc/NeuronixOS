@@ -118,11 +118,13 @@ All read-write filesystem subvolumes use Zstandard level 3 (`zstd:3`) compressio
 - **Disk Usage:** Reduces physical footprint on `/nix/store` by 40% to 50%.
 - **Throughput:** Minimizes raw byte transfers from NVMe/SATA storage, reducing solid-state write wear and improving real-world read times.
 
-### Auto-TRIM and Storage Reclamation
-SSD performance degradation and sparse disk image inflation (in QEMU/KVM virtual machines) are addressed automatically:
-1. **Daily TRIM (`fstrim.timer`):** Issues discard calls (`fstrim -av`) across all mounted Btrfs and ESP partitions daily. This informs SSD controllers and hypervisors of deallocated blocks.
-2. **Garbage Collection (`nix-gc.timer`):** Runs periodic garbage collection to remove orphaned package links and old profile closures.
-3. **Hardlink Deduplication (`auto-optimise-store = true`):** Automatically hardlinks identical binary files across derivations within `/nix/store`.
+### Auto-TRIM and 4-Tier Storage Diet Engine
+SSD performance degradation and sparse disk image inflation (in QEMU/KVM virtual machines) are addressed automatically through a multi-layered maintenance strategy:
+1. **Host Auto-TRIM (`fstrim.timer`):** Issues discard calls (`fstrim -av`) across all mounted Btrfs and ESP partitions daily. This informs SSD controllers and hypervisors of deallocated blocks.
+2. **Autonomous Garbage Collection (`nix.gc`):** Runs weekly garbage collection (`nix-gc.timer`) with a 14-day retention policy (`--delete-older-than 14d`), preserving instant rollback safety while purging orphaned package closures.
+3. **Hardlink Deduplication (`nix.optimise` & `auto-optimise-store = true`):** Automatically hardlinks identical binary files across derivations within `/nix/store`, saving 30% to 40% disk space.
+4. **Dynamic Storage Guard (`min-free` & `max-free`):** In-kernel Nix daemon safeguards disk space by triggering emergency collections if free space drops below 1.0 GiB until 3.0 GiB headroom is recovered.
+5. **One-Command Unified Diet (`neuronix diet`):** Allows users to orchestrate GC, store deduplication, and host TRIM in a single command, reporting reclaimed disk space.
 
 ### Btrfs Metadata Balance Timer
 Over time, Btrfs can accumulate sparsely populated block groups, causing `ENOSPC` errors even with remaining free space.
@@ -308,6 +310,23 @@ opencode status
 
 # Execute upstream update synchronization check
 opencode update
+```
+
+### 7. Autonomous Update Architecture & Desktop Notifier
+A gated, generation-preserving update architecture providing continuous rolling freshness without un-gated instability or active session disruption. See the [Update & Storage Specification](docs/specifications/07_UPDATE_AND_STORAGE_LIFECYCLE.md) for architectural details.
+- **Lightweight Desktop Notifier:** A background systemd timer (`neuronix-update-check.timer`) queries upstream flake metadata (< 50 KB) and broadcasts desktop notifications (`notify-send`) across KDE Plasma, GNOME, and Hyprland when a new generation is available.
+- **1-Click Staged Upgrades:** By default, upgrades are built in the background using `nixos-rebuild boot` (`neuronix upgrade --staged`), registering the new generation to the bootloader without restarting the display server or interrupting running applications.
+- **User Sovereignty & Full Automation:** Unattended auto-upgrades can be toggled via `neuronix.services.updates.autoUpgrade = true;` or via the NEURONIX Center GUI.
+
+```bash
+# Query upstream repository and flake release status
+neuronix check-update
+
+# Stage system upgrade in background (activates cleanly on next boot)
+neuronix upgrade --staged
+
+# Perform immediate live switch to new system generation
+neuronix upgrade --switch
 ```
 
 ---

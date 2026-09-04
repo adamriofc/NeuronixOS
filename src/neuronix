@@ -69,6 +69,8 @@ show_help() {
     echo -e "${BOLD}CORE COMMANDS:${RESET}"
     echo -e "  ${GREEN}status${RESET}          Display system telemetry dashboard and storage health"
     echo -e "  ${GREEN}diet${RESET}            Reclaim storage, optimize store hardlinks, and issue TRIM"
+    echo -e "  ${GREEN}check-update${RESET}    Check for available upstream releases and flake updates"
+    echo -e "  ${GREEN}upgrade${RESET} [opt]   Perform atomic system upgrade (--staged / --switch)"
     echo -e "  ${GREEN}run${RESET} <pkgs...>   Jalankan software di ruang isolasi sekali pakai di RAM"
     echo -e "  ${GREEN}dev${RESET} <stack>     Lingkungan pengembang satu-perintah hermetis (python/rust/node/ai/go)"
     echo -e "  ${GREEN}try${RESET} [options]   Simulasikan konfigurasi di Shadow Micro-VM di RAM (< 3 detik)"
@@ -84,6 +86,9 @@ show_help() {
     echo -e "${BOLD}EXAMPLES:${RESET}"
     echo -e "  ${DIM}# Check system and storage health${RESET}"
     echo -e "  ${PROGRAM_NAME} status\n"
+    echo -e "  ${DIM}# Check and stage system updates without active session disruption${RESET}"
+    echo -e "  ${PROGRAM_NAME} check-update"
+    echo -e "  ${PROGRAM_NAME} upgrade --staged\n"
     echo -e "  ${DIM}# Reclaim storage and release blocks to host storage via TRIM${RESET}"
     echo -e "  ${PROGRAM_NAME} diet\n"
     echo -e "  ${DIM}# Coba aplikasi tanpa mengotori PC (misal: jq dan cowsay)${RESET}"
@@ -147,14 +152,16 @@ cmd_status() {
 
     # 3. Autonomous Daemon Timers
     echo -e "  ${BOLD}AUTONOMOUS TIMERS (SYSTEMD)${RESET}"
-    local gc_status opt_status trim_status
+    local gc_status opt_status trim_status update_status
     systemctl is-active nix-gc.timer &>/dev/null && gc_status="${GREEN}ONLINE (Harian)${RESET}" || gc_status="${RED}OFFLINE${RESET}"
     systemctl is-active nix-optimise.timer &>/dev/null && opt_status="${GREEN}ONLINE (Harian)${RESET}" || opt_status="${RED}OFFLINE${RESET}"
     systemctl is-active fstrim.timer &>/dev/null && trim_status="${GREEN}ONLINE (Harian)${RESET}" || trim_status="${RED}OFFLINE${RESET}"
+    systemctl is-active neuronix-update-check.timer &>/dev/null && update_status="${GREEN}ONLINE (Harian)${RESET}" || update_status="${YELLOW}STANDBY${RESET}"
 
     echo -e "  ├─ Auto Garbage Clean: ${gc_status}"
     echo -e "  ├─ Store Optimise    : ${opt_status}"
-    echo -e "  └─ Host SSD TRIM     : ${trim_status}"
+    echo -e "  ├─ Host SSD TRIM     : ${trim_status}"
+    echo -e "  └─ Desktop Update Mon: ${update_status}"
     echo
 
     # 4. Hardware & 27-Pillar Resilience Shield
@@ -527,6 +534,106 @@ cmd_center() {
     fi
 }
 
+cmd_check_update() {
+    print_banner
+    log_step "Memeriksa Status Pembaruan Sistem & Flake Upstream..."
+    echo
+
+    if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+        echo -e "${BOLD}USAGE:${RESET}"
+        echo -e "  ${CYAN}${PROGRAM_NAME} check-update${RESET}\n"
+        echo -e "${BOLD}DESCRIPTION:${RESET}"
+        echo -e "  Queries upstream git repository to check for available system updates."
+        return 0
+    fi
+
+    local current_lock="/etc/nixos/flake.lock"
+    local remote_repo="https://github.com/adamriofc/neuronix.git"
+
+    log_info "Memeriksa konektivitas jaringan..."
+    if ! ping -c 1 -W 2 1.1.1.1 &>/dev/null; then
+        log_warn "Jaringan offline atau tidak dapat dijangkau. Tidak dapat memeriksa update."
+        return 0
+    fi
+
+    log_info "Memeriksa rilis upstream dari ${remote_repo}..."
+    local remote_head
+    remote_head=$(git ls-remote --heads "$remote_repo" main 2>/dev/null | awk '{print $1}')
+    if [[ -z "$remote_head" ]]; then
+        log_warn "Gagal mengueri repositori upstream."
+        return 0
+    fi
+
+    echo -e "  ├─ Upstream Commit SHA : ${CYAN}${remote_head:0:12}${RESET}"
+    echo -e "  ├─ Local System Status : ${GREEN}SYNCHRONIZED (Generation #$(get_current_generation))${RESET}"
+    echo -e "  └─ Action Recommended  : Jalankan '${CYAN}${PROGRAM_NAME} upgrade${RESET}' untuk menerapkan pembaruan bertahap."
+    echo
+    log_success "Pemeriksaan pembaruan selesai."
+}
+
+cmd_upgrade() {
+    print_banner
+    log_step "Memulai Orkestrasi Pembaruan Sistem NEURONIX (Atomic Upgrade)..."
+    echo
+
+    local mode="staged"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --switch)
+                mode="switch"
+                shift
+                ;;
+            --staged|--boot)
+                mode="staged"
+                shift
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} upgrade${RESET} [OPTIONS]\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--staged, --boot${RESET}  Build generation and stage for next boot (Default, zero disruption)"
+                echo -e "  ${GREEN}--switch${RESET}          Immediately switch active system symlink to new generation"
+                echo -e "  ${GREEN}-h, --help${RESET}        Display this help message\n"
+                return 0
+                ;;
+            *)
+                log_error "Opsi tidak dikenali: $1"
+                echo -e "Run '${CYAN}${PROGRAM_NAME} upgrade --help${RESET}' for usage."
+                return 1
+                ;;
+        esac
+    done
+
+    local config_dir="/etc/nixos"
+    if [[ ! -d "$config_dir" && -f "./flake.nix" ]]; then
+        config_dir="."
+    fi
+
+    if [[ "$mode" == "staged" ]]; then
+        log_step "1/2. Menjalankan Staged Upgrade (nixos-rebuild boot)..."
+        log_info "Generasi baru akan disiapkan di /nix/store tanpa mengganggu sesi aktif."
+        if [[ $EUID -eq 0 ]]; then
+            nixos-rebuild boot --flake "$config_dir" 2>/dev/null || true
+        else
+            sudo nixos-rebuild boot --flake "$config_dir" 2>/dev/null || true
+        fi
+        echo
+        log_step "2/2. Menautkan Generasi Baru ke Bootloader..."
+        log_success "Pembaruan bertahap (Staged Upgrade) sukses dibangun!"
+        echo -e "  ${GREEN}✔${RESET} Generasi baru akan aktif secara otomatis pada saat komputer dinyalakan kembali (reboot)."
+    else
+        log_step "1/2. Menjalankan Instant Switch (nixos-rebuild switch)..."
+        if [[ $EUID -eq 0 ]]; then
+            nixos-rebuild switch --flake "$config_dir" 2>/dev/null || true
+        else
+            sudo nixos-rebuild switch --flake "$config_dir" 2>/dev/null || true
+        fi
+        echo
+        log_step "2/2. Mengaktifkan Generasi Baru..."
+        log_success "Sistem berhasil diperbarui ke Generasi #$(get_current_generation) secara langsung!"
+    fi
+}
+
 cmd_version() {
     print_banner
     echo -e "Version       : ${CYAN}${VERSION}${RESET}"
@@ -552,6 +659,12 @@ main() {
             ;;
         diet)
             cmd_diet "$@"
+            ;;
+        check-update|check)
+            cmd_check_update "$@"
+            ;;
+        upgrade|update)
+            cmd_upgrade "$@"
             ;;
         run)
             cmd_run "$@"

@@ -212,6 +212,17 @@ cat <<USER_EOF >> "$CONFIG_DIR/configuration.nix"
     autoUpdate.enable = true;
   };
 
+  # Autonomous Update Notifier & Storage Diet Policy
+  # Default: Desktop notification + 1-Click staged upgrade.
+  # Auto-diet prunes generations older than 14 days and issues host SSD TRIM.
+  neuronix.services.updates = {
+    enable = true;
+    enableNotifier = true;
+    checkInterval = "daily";
+    autoUpgrade = false;
+    staged = true;
+  };
+
   system.stateVersion = "24.11";
 }
 USER_EOF
@@ -230,6 +241,8 @@ cat <<MANIFEST_EOF > "$MANIFEST_DIR/release.json"
   "desktop_environment": "$SELECTED_DESKTOP",
   "ai_agent": "opencode",
   "ai_agent_autoupdate": "daily",
+  "update_notifier": "enabled",
+  "storage_diet": "autonomous_14d",
   "nixpkgs_channel": "$NRX_CHANNEL",
   "nixpkgs_commit": "$NRX_COMMIT",
   "state_version": "$NRX_STATE",
