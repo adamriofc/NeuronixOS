@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Industrial QA & Resilience Master Test Runner (596 Tests across 23 Suites)
+# NEURONIX Industrial QA & Resilience Master Test Runner (599 Tests across 23 Suites)
 # Executes 23 deep-dive suites:
 # 01 - Syntax & Static Analysis
 # 02 - CLI Argument Parsing & Fuzzing
@@ -40,10 +40,10 @@ START_TIME=$(date +%s%N)
 
 echo -e "\n${C_BOLD}${C_CYAN}╔═══════════════════════════════════════════════════════════════════╗${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}║     NEURONIX COMPREHENSIVE INDUSTRIAL QA & RESILIENCE HARNESS     ║${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (596 Tests)   ║${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (599 Tests)   ║${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}╚═══════════════════════════════════════════════════════════════════╝${C_RESET}"
 
-# Execute all 13 suites sequentially
+# Execute all 23 suites sequentially
 source "$TEST_DIR/suites/01_syntax_and_static_analysis.sh"
 source "$TEST_DIR/suites/02_cli_argument_and_fuzzing.sh"
 source "$TEST_DIR/suites/03_unit_internal_functions.sh"

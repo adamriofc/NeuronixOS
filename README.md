@@ -454,9 +454,9 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Test Harness (851 Assertions)
+## Verification, Lifecycle Gate & Test Harness (854 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 851 automated assertions across 23 verification suites and release gates:
+System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 854 automated assertions across 23 verification suites and release gates:
 
 ```text
 ═══════════════════════════════════════════════════════════════════

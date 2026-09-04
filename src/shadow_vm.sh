@@ -104,7 +104,7 @@ parse_args() {
             --timeout)
                 shift
                 if [[ -z "${1:-}" || ! "$1" =~ ^[0-9]+$ || "$1" -le 0 ]]; then
-                    log_error "Opsi --timeout membutuhkan integer positif dalam detik."
+                    log_error "Option --timeout requires a positive integer in seconds."
                     exit 1
                 fi
                 TIMEOUT_SEC="$1"
@@ -123,7 +123,7 @@ parse_args() {
                 if [[ -z "$CONFIG_TARGET" ]]; then
                     CONFIG_TARGET="$1"
                 else
-                    log_error "Argumen tambahan tidak terduga: '${1}'"
+                    log_error "Unexpected additional argument: '${1}'"
                     exit 1
                 fi
                 shift
@@ -153,9 +153,9 @@ execute_shadow_vm() {
 
     log_step "Initializing Shadow Micro-VM Workspace in RAM (${SCRATCH_DIR})..."
     if [[ "$has_kvm" == true ]]; then
-        log_info "KVM Acceleration: ${GREEN}AVAILABLE (/dev/kvm)${RESET} - Native execution speed."
+        log_info "KVM Acceleration: ${GREEN}AVAILABLE (/dev/kvm)${RESET} - Native virtualization speed."
     else
-        log_warn "KVM acceleration not detected. Micro-VM will run via software emulation."
+        log_warn "KVM acceleration not detected (/dev/kvm). Micro-VM will run via QEMU software emulation (TCG)."
     fi
 
     log_info "Simulation Timeout   : ${BOLD}${TIMEOUT_SEC} seconds${RESET}"
@@ -191,7 +191,7 @@ execute_shadow_vm() {
         ) || build_status=$?
 
         if [[ $build_status -ne 0 ]]; then
-            log_error "Kompilasi Micro-VM runner gagal (exit code: ${build_status})."
+            log_error "Micro-VM runner compilation failed (exit code: ${build_status})."
             if [[ -f "$build_err_file" ]]; then
                 tail -n 10 "$build_err_file" >&2
             fi
@@ -228,10 +228,14 @@ EOF
     local vm_exit=0
 
     if [[ "$SMOKE_TEST" == true ]]; then
-        log_step "Menjalankan Automated Smoke Test di dalam Shadow Micro-VM..."
+        log_step "Executing automated smoke test inside Shadow Micro-VM..."
         local vm_opts=()
         if [[ "$HEADLESS" == true ]]; then
             vm_opts+=("-nographic")
+        fi
+
+        if [[ "$has_kvm" != true ]]; then
+            log_warn "KVM acceleration not available: software emulation (TCG) active."
         fi
 
         QEMU_OPTS="${vm_opts[*]}" timeout "${TIMEOUT_SEC}" "$vm_runner" >"$vm_log" 2>&1 || vm_exit=$?
@@ -256,16 +260,16 @@ EOF
             return $vm_exit
         fi
     else
-        log_info "Sesi Micro-VM siap. Meluncurkan instance..."
+        log_info "Micro-VM session ready. Launching instance..."
         local vm_opts=()
         if [[ "$HEADLESS" == true ]]; then
             vm_opts+=("-nographic")
         fi
         QEMU_OPTS="${vm_opts[*]}" "$vm_runner" || vm_exit=$?
         if [[ $vm_exit -eq 0 ]]; then
-            log_success "Sesi Micro-VM selesai secara normal."
+            log_success "Micro-VM session completed normally."
         else
-            log_error "Sesi Micro-VM keluar dengan error (exit code: ${vm_exit})."
+            log_error "Micro-VM session exited with error (exit code: ${vm_exit})."
             return $vm_exit
         fi
     fi
@@ -273,14 +277,14 @@ EOF
     # 6. One-Click Atomic Promotion
     if [[ "$PROMOTE" == true ]]; then
         echo
-        log_step "Promosi Satu Klik (--promote): Menerapkan konfigurasi teruji ke OS utama..."
+        log_step "One-Click Promotion (--promote): Applying verified configuration to host OS..."
         if [[ "$EUID" -ne 0 ]] && ! sudo -n true 2>/dev/null; then
             log_warn "Promotion requires administrative privileges. Running nixos-rebuild switch with sudo..."
         fi
         log_success "Configuration verified stable in Shadow VM and promoted to host system."
     fi
 
-    log_info "Membersihkan seluruh overlay disk di RAM (${SCRATCH_DIR})..."
+    log_info "Cleaning up transient disk overlay in RAM (${SCRATCH_DIR})..."
 }
 
 # Standalone invocation guard

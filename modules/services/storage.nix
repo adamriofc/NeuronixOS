@@ -17,7 +17,7 @@
   };
 
   systemd.timers.btrfs-balance = {
-    description = "Timer Bulanan Btrfs Auto-Balance";
+    description = "Monthly Btrfs Auto-Balance Timer";
     wantedBy = [ "timers.target" ];
     timerConfig = {
       OnCalendar = "monthly";
@@ -25,7 +25,7 @@
     };
   };
 
-  # Pemeliharaan Storage Sadar Hypervisor: fstrim terjadwal
+  # Hypervisor-Aware Storage Maintenance: Scheduled fstrim
   services.fstrim = {
     enable = lib.mkDefault true;
     interval = "daily";
@@ -43,14 +43,14 @@
     dates = [ "weekly" ];
   };
 
-  # Dynamic Storage Guard (Mencegah out-of-disk saat kompilasi/evaluasi)
+  # Dynamic Storage Guard (Prevents out-of-disk conditions during compilation/evaluation)
   nix.settings = {
     min-free = lib.mkDefault 1073741824; # 1 GiB Emergency trigger
     max-free = lib.mkDefault 3221225472; # 3 GiB Target headroom
   };
 
   # Systemd Journal Log Retention Ceiling & Autonomous Vacuuming
-  # Membatasi ukuran maksimum file log systemd agar tidak memenuhi root storage (/var/log/journal)
+  # Enforces systemd log file ceiling to protect root storage (/var/log/journal)
   services.journald.extraConfig = ''
     SystemMaxUse=500M
     SystemMaxFileSize=50M

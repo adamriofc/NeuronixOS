@@ -47,9 +47,33 @@
         hyprland = import ./modules/desktop/hyprland.nix;
       };
 
-      # Target installed system configuration (Default Desktop)
+      # Target installed system configuration (Default Desktop x86_64)
       nixosConfigurations."neuronix-desktop" = nixpkgs.lib.nixosSystem {
         system = primarySystem;
+        modules = [
+          ./modules/core
+          ./modules/hardware/boot.nix
+          ./modules/hardware/firmware.nix
+          ./modules/hardware/audio.nix
+          ./modules/hardware/power.nix
+          ./modules/hardware/cpu.nix
+          ./modules/services/memory-shield.nix
+          ./modules/services/storage.nix
+          ./modules/services/flatpak.nix
+          ./modules/services/network.nix
+          ./modules/services/desktop-tweaks.nix
+          ./modules/services/printing.nix
+          ./modules/services/security.nix
+          ./modules/services/opencode.nix
+          ./modules/services/update.nix
+          ./modules/desktop/kde.nix
+          ./hosts/desktop
+        ];
+      };
+
+      # Target installed system configuration (ARM64 / aarch64 Desktop)
+      nixosConfigurations."neuronix-desktop-aarch64" = nixpkgs.lib.nixosSystem {
+        system = "aarch64-linux";
         modules = [
           ./modules/core
           ./modules/hardware/boot.nix

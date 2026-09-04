@@ -132,10 +132,10 @@ cat <<FLAKE_EOF > "$CONFIG_DIR/flake.nix"
 }
 FLAKE_EOF
 
-log "Menghasilkan configuration.nix terkurasi..."
+log "Generating curated configuration.nix..."
 cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
 # ==============================================================================
-# NEURONIX OS: Spesifikasi Sistem Utama
+# NEURONIX OS: Primary System Specification
 # ==============================================================================
 { config, pkgs, lib, ... }:
 
@@ -143,14 +143,14 @@ cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
   networking.hostName = "$TARGET_HOSTNAME";
   networking.networkmanager.enable = true;
 
-  # Aktifkan Flakes & Nix CLI modern
+  # Enable Flakes & modern Nix CLI
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nix.settings.auto-optimise-store = true;
 
   # Unfree package licensing (Steam, NVIDIA, Spotify)
   nixpkgs.config.allowUnfree = true;
 
-  # Aktivasi Global nix-ld (Eksekusi biner Linux FHS langsung)
+  # Global nix-ld activation (Direct execution of Linux FHS binaries)
   programs.nix-ld.enable = true;
 
   # Bootloader systemd-boot with 15 generation threshold on 1.0 GiB ESP
@@ -177,7 +177,7 @@ cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
   # Flatpak & Flathub application marketplace
   services.flatpak.enable = true;
 
-  # Pemeliharaan Storage Btrfs & Auto-TRIM
+  # Btrfs Storage Maintenance & Auto-TRIM
   services.fstrim.enable = true;
 
   # Desktop Environment: $SELECTED_DESKTOP

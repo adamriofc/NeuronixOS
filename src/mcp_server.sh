@@ -219,13 +219,17 @@ handle_tools_call() {
             if [[ $EUID -eq 0 ]]; then
                 local gc_info=""
                 local trim_info=""
+                local dedup_info=""
                 if command -v nix-collect-garbage >/dev/null 2>&1; then
                     gc_info=$(nix-collect-garbage --delete-older-than 7d 2>&1 | tail -n 2 | tr '\n' ' ')
+                fi
+                if command -v nix-store >/dev/null 2>&1; then
+                    dedup_info=$(nix-store --optimise 2>&1 | tail -n 2 | tr '\n' ' ')
                 fi
                 if command -v fstrim >/dev/null 2>&1; then
                     trim_info=$(fstrim -av 2>&1 | tr '\n' ' ')
                 fi
-                text_payload="Storage optimization executed. Unused derivations collected [GC: ${gc_info:-none}], TRIM executed [TRIM: ${trim_info:-none}]."
+                text_payload="Storage optimization executed. Unused derivations collected [GC: ${gc_info:-completed}], store deduplicated [DEDUP: ${dedup_info:-completed}], TRIM executed [TRIM: ${trim_info:-none}]."
             else
                 text_payload="Storage optimization deferred: requires administrative elevation to collect system-wide derivations and run fstrim. Run 'sudo neuronix diet' on the host system."
             fi
@@ -287,7 +291,7 @@ handle_tools_call() {
         neuronix_list_generations)
             local gen_list
             gen_list=$(find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" -printf "%f -> %l\n" 2>/dev/null | sort -V | tr '\n' ';' | sed 's/;$//')
-            [[ -z "$gen_list" ]] && gen_list="system-3-link (active)"
+            [[ -z "$gen_list" ]] && gen_list="None detected (no profile links found in /nix/var/nix/profiles/)"
             local content
             content=$(jq -n -c --arg text "Available generations: ${gen_list}" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"

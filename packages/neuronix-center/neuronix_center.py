@@ -153,7 +153,9 @@ def list_generations():
             if line:
                 generations.append(line.strip())
     except Exception:
-        generations = ["1 (current) 2026-09-04 01:00:00"]
+        pass
+    if not generations:
+        generations = ["Unable to determine generations (nix-env query failed or no profile links found)"]
     return generations
 
 def run_cli_mode(args):
@@ -180,32 +182,46 @@ def run_cli_mode(args):
 
     if args.diet:
         print("  [ RUNNING STORAGE MAINTENANCE (DIET) ]")
-        subprocess.run(get_neuronix_cmd() + ["diet"], check=False)
+        res = subprocess.run(get_neuronix_cmd() + ["diet"], check=False)
+        if res.returncode != 0:
+            print(f"  ✗ Storage maintenance exited with code {res.returncode}.")
 
     if getattr(args, 'upgrade', False):
         print("  [ RUNNING STAGED SYSTEM UPGRADE ]")
-        subprocess.run(get_neuronix_cmd() + ["upgrade", "--staged"], check=False)
+        res = subprocess.run(get_neuronix_cmd() + ["upgrade", "--staged"], check=False)
+        if res.returncode != 0:
+            print(f"  ✗ System upgrade exited with code {res.returncode}.")
 
     if getattr(args, 'check_update', False):
         print("  [ CHECKING FOR UPSTREAM SYSTEM UPDATES ]")
-        subprocess.run(get_neuronix_cmd() + ["check-update"], check=False)
+        res = subprocess.run(get_neuronix_cmd() + ["check-update"], check=False)
+        if res.returncode != 0:
+            print(f"  ✗ Update check exited with code {res.returncode}.")
 
     if getattr(args, 'doctor', False):
         print("  [ RUNNING SYSTEM DOCTOR & DIAGNOSTICS ]")
-        subprocess.run(get_neuronix_cmd() + ["doctor"], check=False)
+        res = subprocess.run(get_neuronix_cmd() + ["doctor"], check=False)
+        if res.returncode != 0:
+            print(f"  ✗ System doctor exited with code {res.returncode}.")
 
     if getattr(args, 'welcome', False):
         print("  [ LAUNCHING ONBOARDING WELCOME EXPERIENCE ]")
-        subprocess.run(get_neuronix_cmd() + ["welcome", "--cli"], check=False)
+        res = subprocess.run(get_neuronix_cmd() + ["welcome", "--cli"], check=False)
+        if res.returncode != 0:
+            print(f"  ✗ Welcome experience exited with code {res.returncode}.")
 
     if getattr(args, 'quickstart', False):
         print("  [ LAUNCHING QUICKSTART APP HUB ]")
-        subprocess.run(get_neuronix_cmd() + ["quickstart", "list"], check=False)
+        res = subprocess.run(get_neuronix_cmd() + ["quickstart", "list"], check=False)
+        if res.returncode != 0:
+            print(f"  ✗ Quickstart catalog exited with code {res.returncode}.")
 
     if args.opencode:
         print("  [ LAUNCHING OPENCODE AI SYSTEM COPILOT ]")
         try:
-            subprocess.run(["opencode", "status"], check=False)
+            res = subprocess.run(["opencode", "status"], check=False)
+            if res.returncode != 0:
+                print(f"  ✗ OpenCode status exited with code {res.returncode}.")
         except FileNotFoundError:
             print("  [INFO] OpenCode binary not found in PATH. Ensure neuronix.services.opencode.enable = true.")
 
@@ -219,7 +235,7 @@ def run_cli_mode(args):
         else:
             print(f"  ✗ Rollback command exited with code {res.returncode}.")
 
-    print("  ✓ Telemetry verified against live Linux kernel and system state.")
+    print("  ● Telemetry stream: Live Linux kernel sysfs, /proc, and Nix profile state.")
     print("=" * 64)
 
 def run_gui_mode():
