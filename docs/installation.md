@@ -48,6 +48,26 @@ If you utilize Ventoy, format the USB drive with Ventoy and copy `neuronix-os-x8
 #### Method 3: Graphical Flashing Tools
 You may flash the ISO using cross-platform utilities such as BalenaEtcher or Raspberry Pi Imager.
 
+### C. Compiling the Live ISO from Source & Binary Caching
+
+You can compile the official live installer ISO directly from the declarative Flake:
+
+```bash
+# Option 1: Automated ISO utility with integrity hashing
+./scripts/build_iso.sh
+
+# Option 2: Pure Flake direct compilation
+nix build .#packages.x86_64-linux.iso --out-link result-iso
+```
+
+The compiled bootable ISO will be located at `dist/neuronix-os-1.0.3-x86_64.iso` (or `result-iso/iso/neuronix-os-*.iso`).
+
+#### High-Performance Binary Caching
+NEURONIX leverages the official NixOS binary cache alongside continuous CI caching:
+- `https://cache.nixos.org` (Official upstream packages)
+- `https://nix-community.cachix.org` (Community extensions)
+- Continuous automated GitHub Actions caching via Determinate Systems Magic Nix Cache
+
 ---
 
 ## 3. Live Environment Boot Options

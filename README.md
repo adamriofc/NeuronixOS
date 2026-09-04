@@ -3,6 +3,7 @@
 **A Declarative Linux Operating System Platform with Calamares Installer, Hardware Hardening Matrix, and Developer Substrate**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/badge/Release-v1.0.3_(Hardened_Production)-success.svg)](https://github.com/adamriofc/neuronix/releases/tag/v1.0.3)
 [![Version](https://img.shields.io/badge/Version-1.0.3-blueviolet.svg)](version.nix)
 [![NixOS](https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white)](flake.nix)
 [![Architecture](https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg)](#platform-architecture)
@@ -403,18 +404,27 @@ neuronix kernel set zen
 ## Building & Installation
 
 ### Building the Installation Medium
-To compile the official Live ISO installer image using Nix Flakes:
+To compile the official Live ISO installer image directly from source:
 ```bash
 git clone https://github.com/adamriofc/neuronix.git
 cd neuronix
 
-# Build Live ISO with Calamares graphical installer
-nix build .#packages.x86_64-linux.iso
+# Option 1: Automated ISO utility with integrity hashing
+./scripts/build_iso.sh
+
+# Option 2: Direct Flake build
+nix build .#packages.x86_64-linux.iso --out-link result-iso
 ```
-The resulting bootable image is located at `result/iso/neuronix-os-*.iso`. Flash to installation media:
+The resulting bootable image is located at `dist/neuronix-os-1.0.3-x86_64.iso` (or `result-iso/iso/neuronix-os-*.iso`). Flash to installation media:
 ```bash
-sudo dd if=result/iso/neuronix-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=dist/neuronix-os-1.0.3-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
+
+### High-Performance Binary Caching
+NEURONIX incorporates continuous binary caching across GitHub Actions workflows and local environments:
+- **Upstream Cache:** `https://cache.nixos.org` (NixOS hydra channels)
+- **Community Cache:** `https://nix-community.cachix.org` (Nix community packages)
+- **Continuous CI Cache:** Powered by Determinate Systems Magic Nix Cache for instant sub-minute builds without recompilation.
 
 ### Installation Workflow
 1. Boot the target system from the live installation medium.

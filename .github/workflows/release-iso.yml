@@ -1,0 +1,61 @@
+name: NEURONIX OS Official Live ISO Builder & Publisher
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release Tag to attach ISO artifacts to (e.g. v1.0.3)'
+        required: true
+        default: 'v1.0.3'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish-iso:
+    name: Build & Publish Live Installation ISO (x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix with Flakes Support
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            substituters = https://cache.nixos.org https://nix-community.cachix.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+
+      - name: Magic Nix Cache (Continuous Binary Caching)
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Compile Official Live ISO Installer
+        run: |
+          mkdir -p dist
+          nix build .#packages.x86_64-linux.iso --out-link result-iso
+          ISO_FILE=$(find result-iso/iso -maxdepth 1 -name "*.iso" | head -n 1)
+          if [ -z "$ISO_FILE" ]; then
+            echo "::error::Compiled ISO not found in result-iso/iso"
+            exit 1
+          fi
+          TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.3' }}"
+          TARGET_NAME="neuronix-os-${TAG}-x86_64.iso"
+          cp "$ISO_FILE" "dist/${TARGET_NAME}"
+          cd dist
+          sha256sum "${TARGET_NAME}" > SHA256SUMS
+          echo "Generated Checksum:"
+          cat SHA256SUMS
+
+      - name: Upload ISO Artifacts to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.3' }}
+          files: |
+            dist/*.iso
+            dist/SHA256SUMS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
