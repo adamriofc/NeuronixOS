@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <strong>The Autonomous, Declarative, Pure-Functional Linux Platform</strong><br>
+  <strong>The Autonomous, Declarative, Pure Functional Linux Platform</strong><br>
   <em>Engineered on NixOS Substrate &bull; Calamares GUI &bull; Hardware Hardening Matrix &bull; Developer Substrate</em>
 </p>
 
@@ -69,12 +69,12 @@
 
 ## Overview
 
-NEURONIX OS is an independent, declarative Linux distribution platform based on NixOS. It provides an automated Calamares installation workflow, pre-configured hardware and kernel profiles, transactional desktop environments, and developer CLI utilities while maintaining full compatibility with the upstream Nix package ecosystem.
+NEURONIX OS is an independent, declarative Linux distribution platform based on NixOS. It provides an automated Calamares installation workflow, pre configured hardware and kernel profiles, transactional desktop environments, and developer CLI utilities while maintaining full compatibility with the upstream Nix package ecosystem.
 
 ### Release Engineering & Version Truth
 - **Single Source of Truth (`version.nix`):** All components (CLI, GUI Center, MCP Daemon, Calamares installer engine, release manifests, package derivations) read canonical versioning from `version.nix`.
 - **Release `v1.0.0` (Frozen GA):** Immutable initial General Availability release tag.
-- **Release `v1.0.3` (Hardened Production Baseline on `main`):** Actively maintained release incorporating comprehensive architectural hardening, truthful error propagation, injection-proof verification, privacy-preserving doctor diagnostics, end-to-end lifecycle verification gates, runtime telemetry, multi-arch flake outputs, and MCP JSON-RPC protocol compliance.
+- **Release `v1.0.3` (Hardened Production Baseline on `main`):** Actively maintained release incorporating comprehensive architectural hardening, truthful error propagation, injection proof verification, privacy-preserving doctor diagnostics, end-to-end lifecycle verification gates, runtime telemetry, multi arch flake outputs, and MCP JSON-RPC protocol compliance.
 - **Development Channel Baseline:** Tracks `nixos-unstable` for modern Linux kernels, Wayland compositors, and rapid developer tooling.
 - **Production Stable Baseline:** Targets `nixos-26.05` for conservative enterprise stability and verified patch streams.
 - **State Version (`system.stateVersion = "24.11"`):** The immutable NixOS state migration baseline preserving data directory layouts and system state compatibility across upgrades.
@@ -108,7 +108,7 @@ Its primary design objectives are:
 NEURONIX OS is purpose-built for technical professionals and organizations requiring uncompromising system predictability, security isolation, and developer agility:
 
 - **Systems Engineers & Site Reliability Engineers (SREs):**
-  Engineers who treat infrastructure as code. NEURONIX provides a workstation environment that mirrors modern cloud-native deployment patterns, enabling local testing of complex declarative environments that compile directly to production-grade server appliances without environmental discrepancies.
+  Engineers who treat infrastructure as code. NEURONIX provides a workstation environment that mirrors modern cloud native deployment patterns, enabling local testing of complex declarative environments that compile directly to production-grade server appliances without environmental discrepancies.
 
 - **AI & Machine Learning Researchers:**
   Practitioners requiring isolated, reproducible compute stacks. The `neuronix dev ai` substrate provides immediate access to PyTorch, CUDA runtime libraries, JupyterLab, and Ollama without polluting system libraries or conflicting with host NVIDIA display drivers.
@@ -117,10 +117,10 @@ NEURONIX OS is purpose-built for technical professionals and organizations requi
   Specialists requiring auditable environments with minimal attack surfaces. NEURONIX supports hardened kernel branches (`linuxPackages_hardened`), cryptographically sealed package closures, ephemeral in-memory micro-VM evaluation (`neuronix try`), and isolated execution sandboxes (`neuronix run --sandbox`).
 
 - **Full-Stack & Cloud-Native Developers:**
-  Engineers working across polyglot stacks (Rust, Go, Python, TypeScript, Node.js). NEURONIX eliminates global package version conflicts through instant project-level development shells (`neuronix dev <stack>`), while `nix-ld` enables direct execution of standard pre-compiled dynamic ELF binaries.
+  Engineers working across polyglot stacks (Rust, Go, Python, TypeScript, Node.js). NEURONIX eliminates global package version conflicts through instant project level development shells (`neuronix dev <stack>`), while `nix-ld` enables direct execution of standard pre-compiled dynamic ELF binaries.
 
 - **Production Workstation Operators:**
-  Users who depend on daily system availability. Traditional rolling-release systems risk catastrophic breakage during routine updates; NEURONIX delivers modern packages (Linux Zen kernel, Wayland compositors, modern desktop environments) backed by deterministic boot-time rollback to previous working generations.
+  Users who depend on daily system availability. Traditional rolling-release systems risk catastrophic breakage during routine updates; NEURONIX delivers modern packages (Linux Zen kernel, Wayland compositors, modern desktop environments) backed by deterministic boot time rollback to previous working generations.
 
 ---
 
@@ -172,12 +172,12 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 
 ---
 
-### In-Depth Architectural Differentiators
+### In Depth Architectural Differentiators
 
 #### 1. NEURONIX OS vs. Vanilla NixOS
 Vanilla NixOS provides an exceptional functional package management paradigm, but operates fundamentally as an infrastructure toolkit rather than a cohesive, out-of-the-box desktop distribution. A user installing vanilla NixOS must manually architect their Btrfs subvolume layout, configure swap parameters, script hardware driver integrations (such as NVIDIA PRIME offloading), research dynamic linker workarounds for proprietary software (`nix-ld`), and resolve complex multi-desktop configurations.
 
-NEURONIX OS transforms this substrate into an engineered, production-ready distribution. It ships with a customized Calamares installation engine that generates production-grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5-subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against an 854-assertion test taxonomy. Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
+NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against an 854 assertion test taxonomy. Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
 
 #### 2. NEURONIX OS vs. Fedora Silverblue / Atomic Desktops
 Fedora Silverblue enforces immutability by composing system states as read-only OSTree commits. While effective at preventing host corruption, Silverblue introduces significant operational overhead:
@@ -255,9 +255,9 @@ All read-write filesystem subvolumes use Zstandard level 3 (`zstd:3`) compressio
 - **Disk Usage:** Materially reduces physical storage consumption for compressible store paths and text/data files, with actual compression ratios varying by package composition.
 - **Throughput:** Minimizes raw byte transfers from NVMe/SATA storage, reducing solid-state write wear and improving real-world read times.
 
-### Auto-TRIM and Omni-Purging Storage Diet Engine
+### Auto TRIM and Omni Purging Storage Diet Engine
 SSD performance degradation and sparse disk image inflation (in QEMU/KVM virtual machines) are addressed automatically through a multi-layered maintenance strategy:
-1. **Host Auto-TRIM (`fstrim.timer`):** Issues discard calls (`fstrim -av`) across all mounted Btrfs and ESP partitions daily. This informs SSD controllers and hypervisors of deallocated blocks.
+1. **Host Auto TRIM (`fstrim.timer`):** Issues discard calls (`fstrim -av`) across all mounted Btrfs and ESP partitions daily. This informs SSD controllers and hypervisors of deallocated blocks.
 2. **Autonomous Garbage Collection (`nix.gc`):** Runs weekly garbage collection (`nix-gc.timer`) with a 14-day retention policy (`--delete-older-than 14d`), establishing a practical policy trade-off between disk reclamation and long-term rollback availability while purging orphaned package closures.
 3. **Hardlink Deduplication (`nix.optimise` & `auto-optimise-store = true`):** Automatically hardlinks identical binary files across derivations within `/nix/store`; this can materially reduce duplicated store content, with exact savings depending on installed package composition.
 4. **Dynamic Storage Guard (`min-free` & `max-free`):** In-kernel Nix daemon safeguards disk space by triggering emergency collections if free space drops below 1.0 GiB until 3.0 GiB headroom is recovered.
@@ -349,7 +349,7 @@ NEURONIX includes declarative configurations addressing standard desktop and lap
 
 ---
 
-## Command-Line Reference (neuronix)
+## Command Line Reference (neuronix)
 
 The integrated `neuronix` CLI utility manages system telemetry, storage optimization, developer shells, and generation rollbacks:
 
@@ -422,7 +422,7 @@ neuronix dev go
 neuronix dev web3
 ```
 
-### 4. In-Memory Micro-VM Simulation (neuronix try)
+### 4. In Memory Micro VM Simulation (neuronix try)
 Enables verification of proposed system configurations, kernel options, or untrusted software inside an ephemeral QEMU micro-VM running entirely in memory (`/dev/shm`) with read-only 9P store pass-through:
 ```bash
 # Execute automated smoke test inside the in-memory Micro-VM
@@ -473,7 +473,7 @@ neuronix upgrade --staged
 neuronix upgrade --switch
 ```
 
-### 8. First-Boot Welcome Hub & Onboarding Wizard
+### 8. First Boot Welcome Hub & Onboarding Wizard
 A unified first-boot welcoming experience providing new users with immediate system orientation, quick links, system status telemetry, and shortcuts to critical distro tasks. See the [Onboarding & Distro Polish Specification](docs/specifications/08_ONBOARDING_AND_DISTRO_EXPERIENCE.md).
 - **Hybrid GUI & CLI Operation:** Launches automatically as `neuronix-welcome.desktop` upon initial desktop login, or interactively in terminal sessions via `neuronix welcome --cli`.
 - **Autostart Governance:** Seamlessly toggle auto-launch via `neuronix welcome --disable-autostart` or `--enable-autostart`.
@@ -486,7 +486,7 @@ neuronix welcome --cli
 neuronix welcome --disable-autostart
 ```
 
-### 9. System Doctor & Privacy-Sanitized Issue Reporter
+### 9. System Doctor & Privacy Sanitized Issue Reporter
 An automated deep system diagnostics engine that inspects hardware, kernel dmesg rings, active generation, filesystem health, and systemd maintenance timers.
 - **Privacy-First Data Scrubbing:** Automatically scrubs and masks real local usernames (`<sanitized-user>`), hostnames (`<sanitized-host>`), IPv4/IPv6 addresses (`[REDACTED-IP]`), and hardware MAC identifiers (`[REDACTED-MAC]`). Personal identifiers are redacted, while system architecture and hardware topology remain intentionally visible for diagnostic accuracy.
 - **GitHub Issue Ready:** Produces formatted Markdown at `/tmp/neuronix-doctor.md` ready to copy-paste directly into community bug reports.
@@ -551,7 +551,7 @@ The resulting bootable image is located at `dist/neuronix-os-1.0.3-x86_64.iso` (
 sudo dd if=dist/neuronix-os-1.0.3-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
-### High-Performance Binary Caching
+### High Performance Binary Caching
 NEURONIX incorporates continuous binary caching across GitHub Actions workflows and local environments:
 - **Upstream Cache:** `https://cache.nixos.org` (NixOS hydra channels)
 - **Community Cache:** `https://nix-community.cachix.org` (Nix community packages)
@@ -567,7 +567,7 @@ NEURONIX incorporates continuous binary caching across GitHub Actions workflows 
 
 ---
 
-## Post-Installation Administration
+## Post Installation Administration
 
 ### Modifying System Configuration
 The installed system is configured declaratively in `/etc/nixos/`:
