@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (854 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (925 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -66,9 +66,45 @@ jobs:
         run: |
           bash tests/test_neuronix_core.sh
 
+      - name: Verify Single Source of Truth (10 Tests)
+        run: |
+          bash tests/test_source_of_truth.sh
+
+      - name: Verify Multi-Architecture Evaluation Matrix (8 Tests)
+        run: |
+          bash tests/test_multiarch_matrix.sh
+
+      - name: Verify Two-Build Functional Reproducibility (5 Tests)
+        run: |
+          bash tests/test_two_build_reproducibility.sh
+
+      - name: Verify Multi-Hop Rollback Correctness (8 Tests)
+        run: |
+          bash tests/test_rollback_correctness.sh
+
+      - name: Execute Enterprise Security Audit (9 Tests)
+        run: |
+          bash tests/test_security_audit.sh
+
+      - name: Execute Fault Injection & Mutation Resilience (6 Mutants)
+        run: |
+          bash tests/test_mutation_resilience.sh
+
+      - name: Execute Historical Regression Corpus (REG-001 to REG-007)
+        run: |
+          bash tests/test_regression_corpus.sh
+
+      - name: Execute Performance Benchmarks & Latency Budgets
+        run: |
+          bash tests/test_benchmarks.sh
+
       - name: Verify Installer Dry-Run Simulation
         run: |
           DRY_RUN=1 bash installer/scripts/neuronix-install-engine.sh
+
+      - name: Execute Real E2E ISO Installation & Lifecycle Gate (8 States)
+        run: |
+          bash tests/e2e/test_iso_install.sh
 
       - name: Execute End-to-End Release Lifecycle Gate (32 Tests)
         run: |

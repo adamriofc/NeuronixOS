@@ -42,12 +42,24 @@ NEURONIX OS defines 27 declarative hardware and subsystem configuration controls
 
 ---
 
-## 4. Hardware Configuration Declarations
+## 4. Hardware Configuration Declarations (27 Pillars)
 
-Hardware configurations in NEURONIX are managed through composable NixOS modules located in `modules/hardware/`:
-- `modules/hardware/boot.nix`: EFI systemd-boot loader, local RTC clock synchronization for Windows dual-booting.
-- `modules/hardware/cpu.nix`: Automatic Intel and AMD microcode patching.
-- `modules/hardware/nvidia-prime.nix`: Dual-GPU PRIME render offload with explicit PCI bus IDs.
-- `modules/hardware/power.nix`: Charge ceilings for battery longevity (`charge_control_end_threshold`) and thermald CPU throttling prevention.
-- `modules/hardware/audio.nix`: PipeWire low-latency duplex daemon, WirePlumber session management, and high-definition Bluetooth codecs (LDAC, AptX HD, LC3Plus).
-- `modules/hardware/secureboot.nix`: Lanzaboote UEFI Secure Boot signing scaffolding with TPM2 integration.
+Hardware configurations in NEURONIX are managed through composable NixOS modules located in `modules/hardware/` and declarative substrate options, grouped into 27 configuration pillars (machine-readable taxonomy: `data/hardware_qualification.json`):
+1. **CPU Subsystem:** Intel microcode patching, AMD Zen microcode patching.
+2. **Graphics Offload:** AMDGPU Mesa RADV Vulkan, Intel Arc ANV/Xe driver, NVIDIA PRIME offload, NVIDIA Wayland synchronization.
+3. **Memory Pressure Shield:** ZRAM ZSTD compressed swap, systemd-oomd memory monitor, PSI stall-rate monitoring and max_map_count tuning.
+4. **Storage Architecture:** Btrfs automated subvolume layout, continuous async TRIM and weekly fstrim timer, EXT4 fallback support.
+5. **Audio Subsystem:** PipeWire real-time duplex server, WirePlumber endpoint rules, Bluetooth high-definition codecs (LDAC, AptX HD, LC3).
+6. **Networking:** NetworkManager declarative stack, systemd-resolved DNSSEC resolver, nftables default-drop ingress firewall.
+7. **Power Management:** Battery longevity charge ceiling (80%), thermald dynamic throttling prevention, TLP power governor profiles.
+8. **Boot Architecture:** systemd-boot EFI manager, local RTC dual-boot synchronization, selectable Linux kernel flavor profiles.
+9. **Platform Security:** Lanzaboote UEFI Secure Boot signing, TPM2 device enrollment and LUKS unlocking, AppArmor sandbox profiles.
+
+---
+
+## 5. Machine-Readable Verification Evidence
+
+To ensure continuous transparency, qualification statuses and configuration pillars are exported programmatically:
+- **Canonical Schema:** [data/hardware_qualification.json](../data/hardware_qualification.json)
+- **Multi-Arch Evaluation Suite:** [tests/test_multiarch_matrix.sh](../tests/test_multiarch_matrix.sh)
+- **E2E Lifecycle Evidence:** [dist/e2e_evidence.json](../dist/e2e_evidence.json)

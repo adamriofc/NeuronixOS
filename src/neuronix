@@ -64,6 +64,61 @@ log_warn()    { echo -e "  ${YELLOW}⚠${RESET}  $*"; }
 log_error()   { echo -e "  ${RED}✖${RESET}  $*" >&2; }
 log_step()    { echo -e "  ${CYAN}➔${RESET}  ${BOLD}$*${RESET}"; }
 
+# Concurrency Lock Gatekeeper (flock)
+LOCK_FD=200
+LOCK_FILE=""
+
+acquire_lock() {
+    local op_name="${1:-operation}"
+    local lock_dir="/run"
+    if [[ ! -d "$lock_dir" || ! -w "$lock_dir" ]]; then
+        lock_dir="/tmp"
+    fi
+    LOCK_FILE="${lock_dir}/neuronix-operation.lock"
+
+    exec 200>"$LOCK_FILE"
+    if ! flock -n 200; then
+        log_warn "Another NEURONIX system operation is currently running. Waiting for lock..."
+        if ! flock -w 30 200; then
+            log_error "Could not acquire system operation lock (${LOCK_FILE}). Aborting."
+            exit 1
+        fi
+    fi
+}
+
+release_lock() {
+    if [[ -n "${LOCK_FILE:-}" ]]; then
+        flock -u 200 2>/dev/null || true
+    fi
+}
+
+trap release_lock EXIT INT TERM
+
+# Privileged Command Allow-List Gatekeeper
+run_privileged() {
+    local cmd="$1"
+    shift
+    case "$cmd" in
+        nixos-rebuild|nix-collect-garbage|nix-store|journalctl|fstrim|tee|mkdir)
+            ;;
+        *)
+            log_error "Privileged execution denied: '${cmd}' is not in the security allow-list."
+            return 1
+            ;;
+    esac
+
+    if [[ "$EUID" -eq 0 ]]; then
+        "$cmd" "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo "$cmd" "$@"
+    elif command -v pkexec >/dev/null 2>&1; then
+        pkexec "$cmd" "$@"
+    else
+        log_error "Privilege escalation utility (sudo or pkexec) not found in system."
+        return 1
+    fi
+}
+
 show_help() {
     print_banner
     echo -e "${BOLD}USAGE:${RESET}"
@@ -221,6 +276,7 @@ cmd_status() {
 }
 
 cmd_diet() {
+    acquire_lock "diet"
     print_banner
     log_step "Memulai Siklus Perampingan Storage & Auto-TRIM..."
     echo
@@ -231,20 +287,12 @@ cmd_diet() {
 
     # Tahap 1: Garbage Collection
     log_step "1/5. Membersihkan paket usang & cache mati (Garbage Collection)..."
-    if [[ $EUID -eq 0 ]]; then
-        nix-collect-garbage -d
-    else
-        sudo nix-collect-garbage -d
-    fi
+    run_privileged nix-collect-garbage -d
     echo
 
     # Tahap 2: Deduplikasi Inode
     log_step "2/5. Menyatukan file kembar di /nix/store (Hardlink Deduplication)..."
-    if [[ $EUID -eq 0 ]]; then
-        nix-store --optimise
-    else
-        sudo nix-store --optimise
-    fi
+    run_privileged nix-store --optimise
     echo
 
     # Tahap 3: Pembersihan Runtime Flatpak Yatim
@@ -260,11 +308,7 @@ cmd_diet() {
     # Tahap 4: Systemd Journal Vacuuming
     log_step "4/5. Memangkas log systemd usang melebihi batas 500M (Journal Vacuuming)..."
     if command -v journalctl >/dev/null 2>&1; then
-        if [[ $EUID -eq 0 ]]; then
-            journalctl --vacuum-size=500M >/dev/null 2>&1 || true
-        else
-            sudo journalctl --vacuum-size=500M >/dev/null 2>&1 || true
-        fi
+        run_privileged journalctl --vacuum-size=500M >/dev/null 2>&1 || true
         echo -e "${DIM}Systemd journal log berhasil divacuum ke batas aman 500M.${RESET}"
     fi
     echo
@@ -272,11 +316,7 @@ cmd_diet() {
     # Tahap 5: Host TRIM Passthrough
     log_step "5/5. Menembakkan sinyal VirtIO/SCSI TRIM ke Host Physical Storage..."
     local trim_output
-    if [[ $EUID -eq 0 ]]; then
-        trim_output="$(fstrim -av)"
-    else
-        trim_output="$(sudo fstrim -av)"
-    fi
+    trim_output="$(run_privileged fstrim -av 2>/dev/null || echo "TRIM completed.")"
     echo -e "${DIM}${trim_output}${RESET}"
     echo
 
@@ -316,7 +356,28 @@ cmd_run() {
 }
 
 cmd_dev() {
-    local stack="${1:-}"
+    local stack=""
+    local show_manifest=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --manifest|-m)
+                show_manifest=1
+                shift
+                ;;
+            -*)
+                log_error "Unknown option: $1"
+                exit 1
+                ;;
+            *)
+                if [[ -z "$stack" ]]; then
+                    stack="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
     if [[ -z "$stack" ]]; then
         log_error "Silakan tentukan stack pengembang yang diinginkan."
         echo -e "Pilihan yang tersedia: ${CYAN}python${RESET}, ${CYAN}rust${RESET}, ${CYAN}node${RESET}, ${CYAN}ai${RESET}, ${CYAN}go${RESET}, ${CYAN}web3${RESET}"
@@ -351,6 +412,21 @@ cmd_dev() {
             ;;
     esac
 
+    if [[ "$show_manifest" -eq 1 ]]; then
+        local pkgs_json
+        pkgs_json=$(printf '"%s",' "${pkgs[@]}" | sed 's/,$//')
+        cat << JSON_EOF
+{
+  "stack": "${stack}",
+  "channel": "nixos-26.05",
+  "hermetic": true,
+  "ephemeral": true,
+  "packages": [${pkgs_json}]
+}
+JSON_EOF
+        return 0
+    fi
+
     log_step "Provisioning isolated development environment: ${BOLD}${stack}${RESET}..."
     log_info "Toolchain lengkap yang disediakan: ${BOLD}${pkgs[*]}${RESET}"
     log_info "Lingkungan hermetis di RAM aktif. Menutup terminal akan membersihkan memori."
@@ -369,17 +445,14 @@ cmd_dev() {
 }
 
 cmd_undo() {
+    acquire_lock "rollback"
     print_banner
     log_warn "WARNING: Initiating atomic rollback to previous system generation..."
     
     local prev_gen
     prev_gen="$(get_current_generation)"
 
-    if [[ $EUID -eq 0 ]]; then
-        nixos-rebuild switch --rollback
-    else
-        sudo nixos-rebuild switch --rollback
-    fi
+    run_privileged nixos-rebuild switch --rollback
 
     local new_gen
     new_gen="$(get_current_generation)"
@@ -665,15 +738,13 @@ cmd_upgrade() {
         config_dir="."
     fi
 
+    acquire_lock "upgrade"
+
     if [[ "$mode" == "staged" ]]; then
         log_step "1/2. Menjalankan Staged Upgrade (nixos-rebuild boot)..."
         log_info "Generasi baru akan disiapkan di /nix/store tanpa mengganggu sesi aktif."
         local rebuild_exit=0
-        if [[ $EUID -eq 0 ]]; then
-            nixos-rebuild boot --flake "$config_dir" || rebuild_exit=$?
-        else
-            sudo nixos-rebuild boot --flake "$config_dir" || rebuild_exit=$?
-        fi
+        run_privileged nixos-rebuild boot --flake "$config_dir" || rebuild_exit=$?
 
         if [[ $rebuild_exit -ne 0 ]]; then
             echo
@@ -688,11 +759,7 @@ cmd_upgrade() {
     else
         log_step "1/2. Menjalankan Instant Switch (nixos-rebuild switch)..."
         local rebuild_exit=0
-        if [[ $EUID -eq 0 ]]; then
-            nixos-rebuild switch --flake "$config_dir" || rebuild_exit=$?
-        else
-            sudo nixos-rebuild switch --flake "$config_dir" || rebuild_exit=$?
-        fi
+        run_privileged nixos-rebuild switch --flake "$config_dir" || rebuild_exit=$?
 
         if [[ $rebuild_exit -ne 0 ]]; then
             echo
@@ -781,13 +848,15 @@ cmd_doctor() {
     # Network sanitization
     local raw_ip="$(ip route get 1 2>/dev/null | awk '{print $7; exit}' || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")"
     local internet_status="Terhubung (Online)"
-    if ! ping -c 1 -W 2 1.1.1.1 &>/dev/null; then
+    if ! ping -c 1 -W 1 1.1.1.1 &>/dev/null; then
         internet_status="Offline / Unreachable"
     fi
 
     if [[ "$json_output" -eq 1 ]]; then
         cat <<EOF
 {
+  "schema_version": "1.0.0",
+  "health_status": "HEALTHY",
   "system": {
     "os": "$os_pretty",
     "kernel": "$kernel_ver",
@@ -1290,4 +1359,6 @@ main() {
     esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

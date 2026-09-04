@@ -1,0 +1,62 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "neuronix-os-v1.0.3",
+  "documentNamespace": "https://github.com/adamriofc/neuronix/releases/tag/v1.0.3/sbom.spdx.json",
+  "creationInfo": {
+    "created": "2026-09-04T21:31:31Z",
+    "creators": [
+      "Tool: neuronix-sbom-generator-1.0.3",
+      "Organization: NEURONIX OS Maintainers"
+    ]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-neuronix-substrate",
+      "name": "neuronix-substrate",
+      "versionInfo": "v1.0.3",
+      "downloadLocation": "git+https://github.com/adamriofc/neuronix.git@v1.0.3",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright (c) 2026 NEURONIX Contributors",
+      "supplier": "Organization: NEURONIX OS Maintainers"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-nixpkgs",
+      "name": "nixpkgs",
+      "versionInfo": "26.05-pre (3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2)",
+      "downloadLocation": "git+https://github.com/NixOS/nixpkgs.git@3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "supplier": "Organization: NixOS Foundation"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-opencode",
+      "name": "opencode",
+      "versionInfo": "1.0.3",
+      "downloadLocation": "https://github.com/adamriofc/neuronix",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "supplier": "Organization: NEURONIX OS Maintainers"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-neuronix-center",
+      "name": "neuronix-center",
+      "versionInfo": "1.0.3",
+      "downloadLocation": "https://github.com/adamriofc/neuronix",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "supplier": "Organization: NEURONIX OS Maintainers"
+    },
+    {
+      "SPDXID": "SPDXRef-Package-neuronix-core",
+      "name": "neuronix-core",
+      "versionInfo": "1.0.3",
+      "downloadLocation": "https://github.com/adamriofc/neuronix",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "supplier": "Organization: NEURONIX OS Maintainers"
+    }
+  ]
+}

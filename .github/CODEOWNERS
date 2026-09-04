@@ -1,0 +1,15 @@
+# Global code ownership for NEURONIX OS
+* @adamriofc
+
+# Core CLI & Shared Domain Logic
+/src/ @adamriofc
+/packages/neuronix-core/ @adamriofc
+/packages/neuronix-center/ @adamriofc
+
+# Modules and Hardware Profiles
+/modules/ @adamriofc
+/hosts/ @adamriofc
+
+# Test Suites and Verification Gates
+/tests/ @adamriofc
+/.github/workflows/ @adamriofc

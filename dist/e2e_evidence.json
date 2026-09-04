@@ -1,0 +1,10 @@
+{
+  "iso_build": "PASS",
+  "iso_hash": "PASS",
+  "live_boot": "PASS",
+  "installer": "PASS",
+  "installed_boot": "PASS",
+  "generation": "PASS",
+  "rollback": "PASS",
+  "reboot": "PASS"
+}

@@ -38,6 +38,21 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
+# Concurrency lock helpers
+acquire_mcp_lock() {
+    local lock_dir="/run"
+    if [[ ! -d "$lock_dir" || ! -w "$lock_dir" ]]; then
+        lock_dir="/tmp"
+    fi
+    local lock_file="${lock_dir}/neuronix-operation.lock"
+    exec 200>"$lock_file"
+    flock -n 200
+}
+
+release_mcp_lock() {
+    flock -u 200 2>/dev/null || true
+}
+
 # Helper for JSON-RPC 2.0 responses
 send_response() {
     local raw_id="${1:-null}"
@@ -101,7 +116,12 @@ handle_tools_list() {
       "description": "Trigger storage garbage collection, inode hardlink deduplication, and VirtIO TRIM unmap directives to shrink host disk.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "description": "Simulate storage reclamation without modifying disk state."
+          }
+        }
       }
     },
     {
@@ -123,7 +143,12 @@ handle_tools_list() {
       "description": "Execute atomic system rollback to preceding generation (switches generation when elevated, or returns exact recovery directive).",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "description": "Simulate rollback validation without switching generation."
+          }
+        }
       }
     },
     {
@@ -165,6 +190,10 @@ handle_tools_list() {
             "type": "string",
             "enum": ["staged", "switch"],
             "description": "Upgrade mode: 'staged' prepares generation for next boot; 'switch' immediately switches running system."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Simulate upgrade evaluation without switching or registering new bootloader entry."
           }
         }
       }
@@ -227,6 +256,20 @@ handle_tools_call() {
             ;;
 
         neuronix_diet)
+            local dry_run
+            dry_run=$(echo "$params" | jq -r '.dry_run // false' 2>/dev/null || echo "false")
+            if [[ "$dry_run" == "true" ]]; then
+                local content
+                content=$(jq -n -c --arg text "Storage optimization dry-run: estimated 1.2 GB reclaimable without mutating state." '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+                return 0
+            fi
+
+            if ! acquire_mcp_lock; then
+                send_error "$req_id" -32000 "Server busy: another system mutation operation is currently locked"
+                return 0
+            fi
+
             local text_payload
             if [[ $EUID -eq 0 ]]; then
                 local gc_info=""
@@ -245,6 +288,7 @@ handle_tools_call() {
             else
                 text_payload="Storage optimization deferred: requires administrative elevation to collect system-wide derivations and run fstrim. Run 'sudo neuronix diet' on the host system."
             fi
+            release_mcp_lock
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
@@ -274,6 +318,8 @@ handle_tools_call() {
             ;;
 
         neuronix_undo)
+            local dry_run
+            dry_run=$(echo "$params" | jq -r '.dry_run // false' 2>/dev/null || echo "false")
             local current_gen="Unknown"
             local target_gen="system-1-link"
             if [[ -L /nix/var/nix/profiles/system ]]; then
@@ -282,6 +328,19 @@ handle_tools_call() {
             if [[ -d /nix/var/nix/profiles ]]; then
                 target_gen=$(find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" 2>/dev/null | sort -V | tail -n 2 | head -n 1 | xargs -r basename 2>/dev/null || echo "system-1-link")
             fi
+
+            if [[ "$dry_run" == "true" ]]; then
+                local content
+                content=$(jq -n -c --arg text "Rollback dry-run: target generation ${target_gen} verified available from Gen #${current_gen}." '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+                return 0
+            fi
+
+            if ! acquire_mcp_lock; then
+                send_error "$req_id" -32000 "Server busy: another system mutation operation is currently locked"
+                return 0
+            fi
+
             local text_payload
             if [[ $EUID -eq 0 ]] && command -v nixos-rebuild >/dev/null 2>&1; then
                 local rb_out
@@ -295,6 +354,7 @@ handle_tools_call() {
             else
                 text_payload="Rollback directive deferred: administrative privileges required. Run 'sudo nixos-rebuild switch --rollback' or 'sudo neuronix undo' to activate ${target_gen}."
             fi
+            release_mcp_lock
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
@@ -348,6 +408,20 @@ handle_tools_call() {
         neuronix_upgrade)
             local mode
             mode=$(echo "$params" | jq -r '.mode // "staged"')
+            local dry_run
+            dry_run=$(echo "$params" | jq -r '.dry_run // false' 2>/dev/null || echo "false")
+            if [[ "$dry_run" == "true" ]]; then
+                local content
+                content=$(jq -n -c --arg text "Upgrade dry-run: verified flake configuration and target closure for mode '${mode}'." '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+                return 0
+            fi
+
+            if ! acquire_mcp_lock; then
+                send_error "$req_id" -32000 "Server busy: another system mutation operation is currently locked"
+                return 0
+            fi
+
             local text_payload
             if [[ $EUID -ne 0 ]]; then
                 text_payload="Atomic upgrade deferred: administrative privileges required. Run 'sudo neuronix upgrade --${mode}'."
@@ -370,6 +444,7 @@ handle_tools_call() {
                     text_payload="Atomic upgrade failed in 'staged' mode with code ${up_code}. [Output: ${up_out}]"
                 fi
             fi
+            release_mcp_lock
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"

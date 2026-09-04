@@ -8,5 +8,11 @@
   stateVersion = "24.11";
   channelDevelopment = "nixos-unstable";
   channelStable = "nixos-26.05";
-  nixpkgsCommit = "577972710ddbf3f000ae7f184dd26c25264d7be7";
+  isRelease = true;
+  nixpkgsCommit = "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2";
+  primarySystem = "x86_64-linux";
+  supportedSystems = [
+    "x86_64-linux"
+    "aarch64-linux"
+  ];
 }

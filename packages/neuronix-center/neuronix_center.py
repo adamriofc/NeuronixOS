@@ -24,6 +24,20 @@ try:
 except Exception:
     pass
 
+# Link shared domain logic from neuronix-core
+_CORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../neuronix-core")
+if os.path.exists(_CORE_PATH) and _CORE_PATH not in sys.path:
+    sys.path.insert(0, _CORE_PATH)
+
+try:
+    import neuronix_core
+    from neuronix_core.telemetry import get_system_telemetry as core_telemetry
+    from neuronix_core.generation import list_generations as core_list_generations, get_active_generation as core_active_gen
+    from neuronix_core.rollback import execute_rollback as core_rollback, simulate_rollback as core_simulate_rollback
+    HAS_CORE = True
+except ImportError:
+    HAS_CORE = False
+
 def get_neuronix_cmd():
     import shutil
     if shutil.which("neuronix"):
@@ -35,6 +49,8 @@ def get_neuronix_cmd():
 
 def get_system_telemetry():
     """Probes runtime system telemetry truthfully without hardcoded mock values."""
+    if HAS_CORE:
+        return core_telemetry()
     telemetry = {
         "os": "NEURONIX OS (Declarative NixOS Substrate)",
         "kernel": os.uname().release,
@@ -164,14 +180,14 @@ def run_cli_mode(args):
     print("=" * 64)
     print(f"  NEURONIX CONTROL CENTER & SYSTEM HUB (v{VERSION})")
     print("=" * 64)
-    print(f"  ● Operating System : {telemetry['os']}")
-    print(f"  ● Kernel Version   : {telemetry['kernel']}")
-    print(f"  ● Active Generation: #{telemetry['generation']}")
-    print(f"  ● Processor (CPU)  : {telemetry['cpu']}")
-    print(f"  ● Physical Memory  : {telemetry['ram']}")
-    print(f"  ● Display Adapter  : {telemetry['gpu']}")
-    print(f"  ● Storage Format   : {telemetry['storage']}")
-    print(f"  ● Battery Limit    : {telemetry['battery_limit']}")
+    print(f"  ● Operating System : {telemetry.get('os', 'NEURONIX OS')}")
+    print(f"  ● Kernel Version   : {telemetry.get('kernel', 'Linux')}")
+    print(f"  ● Active Generation: #{telemetry.get('generation', 'Unknown')}")
+    print(f"  ● Processor (CPU)  : {telemetry.get('cpu', 'Unknown')}")
+    print(f"  ● Physical Memory  : {telemetry.get('ram', 'Unknown')}")
+    print(f"  ● Display Adapter  : {telemetry.get('gpu', 'Not Detected')}")
+    print(f"  ● Storage Format   : {telemetry.get('storage', 'Unknown Filesystem')}")
+    print(f"  ● Battery Limit    : {telemetry.get('battery_limit', 'Not Supported (AC / Bare-Metal)')}")
     print("-" * 64)
 
     if args.list_generations:

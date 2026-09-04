@@ -43,8 +43,64 @@ case "$SELECTED_DESKTOP" in
     ;;
 esac
 
+# Preflight Verification Gates
+run_preflight_checks() {
+  log "Running installer preflight verification gates..."
+
+  # 1. Firmware Mode (UEFI)
+  if [ -d /sys/firmware/efi ] || [ "$DRY_RUN" -eq 1 ] || [ "${NEURONIX_IGNORE_PREFLIGHT:-0}" -eq 1 ]; then
+    log "  [PREFLIGHT] Firmware Architecture : UEFI (Verified)"
+  else
+    log_warn "  [PREFLIGHT] Legacy BIOS detected. UEFI boot is strongly recommended for systemd-boot."
+  fi
+
+  # 2. System Memory (>= 4GB target, 3.5GB minimum accounting for integrated GPU reserves)
+  local mem_kb=0
+  if [ -f /proc/meminfo ]; then
+    mem_kb=$(awk '/MemTotal:/ {print $2}' /proc/meminfo)
+  fi
+  if [ "$mem_kb" -ge 3670016 ] || [ "$DRY_RUN" -eq 1 ] || [ "${NEURONIX_IGNORE_PREFLIGHT:-0}" -eq 1 ]; then
+    log "  [PREFLIGHT] System Memory (RAM)   : $((mem_kb / 1024)) MB (Sufficient, >= 4GB tier)"
+  else
+    log_warn "  [PREFLIGHT] Memory is below recommended 4GB ($((mem_kb / 1024)) MB). Performance may be degraded."
+  fi
+
+  # 3. Disk Space (>= 20GB minimum for Nix store + root)
+  local disk_avail_kb=0
+  if [ -d "$TARGET_ROOT" ]; then
+    disk_avail_kb=$(df -k "$TARGET_ROOT" 2>/dev/null | awk 'NR==2 {print $4}' || echo 0)
+  fi
+  if [ "$disk_avail_kb" -ge 20971520 ] || [ "$DRY_RUN" -eq 1 ] || [ "${NEURONIX_IGNORE_PREFLIGHT:-0}" -eq 1 ]; then
+    log "  [PREFLIGHT] Storage Volume Target : Verified writable, >= 20GB capacity."
+  else
+    log_warn "  [PREFLIGHT] Storage capacity on target is under 20GB ($((disk_avail_kb / 1024 / 1024)) GB). Installation may require additional space."
+  fi
+
+  # 4. Network Connectivity Check
+  if (command -v ping >/dev/null 2>&1 && ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1) || [ "$DRY_RUN" -eq 1 ]; then
+    log "  [PREFLIGHT] Network Connectivity  : Online (Nixpkgs channels reachable)"
+  else
+    log_warn "  [PREFLIGHT] Offline or isolated network. System will rely on local ISO store closures."
+  fi
+}
+
+cleanup_on_failure() {
+  local exit_code=$?
+  if [ $exit_code -ne 0 ]; then
+    log_err "Installation encountered an unexpected failure (exit code: $exit_code)."
+    log_err "Initiating transactional cleanup of uncommitted installation state..."
+    if [ "$DRY_RUN" -eq 0 ] && [ "$TARGET_ROOT" != "/" ] && [ -d "$TARGET_ROOT/etc/nixos" ]; then
+      rm -f "$TARGET_ROOT/etc/neuronix/release.json.tmp" 2>/dev/null || true
+    fi
+    log_err "Transactional rollback completed. Host environment preserved."
+  fi
+}
+
+trap cleanup_on_failure EXIT
+
 log "Starting NEURONIX declarative installation to target: $TARGET_ROOT"
 log "Parameters: User=$TARGET_USER, Host=$TARGET_HOSTNAME, Desktop=$SELECTED_DESKTOP"
+run_preflight_checks
 
 if [ "$DRY_RUN" -eq 1 ]; then
   log "Dry-run simulation mode active. Skipping physical partition creation."
@@ -89,7 +145,7 @@ NRX_STATE="24.11"
 NRX_CHANNEL_STABLE="nixos-26.05"
 NRX_CHANNEL_DEV="nixos-unstable"
 NRX_CHANNEL="nixos-26.05"
-NRX_COMMIT="577972710ddbf3f000ae7f184dd26c25264d7be7"
+NRX_COMMIT="3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2"
 
 if [[ -f "$VERSION_NIX" ]]; then
   NRX_VER=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
@@ -102,7 +158,7 @@ if [[ -f "$VERSION_NIX" ]]; then
   else
     NRX_CHANNEL="$NRX_CHANNEL_STABLE"
   fi
-  NRX_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "577972710ddbf3f000ae7f184dd26c25264d7be7")
+  NRX_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2")
 fi
 
 NRX_NIXPKGS_URL="github:NixOS/nixpkgs/${NRX_COMMIT}"

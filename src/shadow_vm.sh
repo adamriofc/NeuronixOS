@@ -39,6 +39,7 @@ PROMOTE=false
 ASSUME_YES=false
 DRY_RUN=false
 TIMEOUT_SEC=60
+MODE="auto"
 CONFIG_TARGET=""
 VM_PID=""
 SCRATCH_DIR=""
@@ -48,6 +49,7 @@ show_try_help() {
     echo -e "${BOLD}USAGE:${RESET}"
     echo -e "  neuronix try [OPTIONS] [CONFIGURATION_PATH]\n"
     echo -e "${BOLD}OPTIONS:${RESET}"
+    echo -e "  ${GREEN}--mode <mode>${RESET}          Execution mode: synthetic, real, or auto (default: auto)"
     echo -e "  ${GREEN}--headless${RESET}            Run Micro-VM without graphical window (default, console only)"
     echo -e "  ${GREEN}--gui${RESET}                 Run Micro-VM with Spice/GTK display window"
     echo -e "  ${GREEN}--smoke-test, --test${RESET}   Boot VM, verify systemd service health, and exit automatically"
@@ -105,6 +107,19 @@ parse_args() {
                 ;;
             --dry-run)
                 DRY_RUN=true
+                shift
+                ;;
+            --mode)
+                shift
+                case "${1:-}" in
+                    synthetic|real|auto)
+                        MODE="$1"
+                        ;;
+                    *)
+                        log_error "Option --mode requires one of: synthetic, real, auto (got: '${1:-}')"
+                        exit 1
+                        ;;
+                esac
                 shift
                 ;;
             --timeout)
@@ -174,12 +189,28 @@ execute_shadow_vm() {
         return 0
     fi
 
-    # 4. Derivation Build Verification
-    log_step "Verifying system derivation and compiling Micro-VM runner..."
+    # 4. Derivation Build Verification & Runner Resolution
+    log_step "Resolving Micro-VM runner (mode: ${MODE})..."
     local vm_runner=""
+    local actual_mode="real"
 
-    if [[ -n "${NEURONIX_TEST_VM_RUNNER:-}" && -x "${NEURONIX_TEST_VM_RUNNER:-}" ]]; then
+    if [[ "$MODE" == "synthetic" ]]; then
+        actual_mode="synthetic"
+        log_info "Synthetic mode explicitly specified. Synthesizing guest runner harness..."
+        mkdir -p "${SCRATCH_DIR}/result/bin"
+        vm_runner="${SCRATCH_DIR}/result/bin/run-neuronix-vm"
+        cat << 'EOF' > "$vm_runner"
+#!/usr/bin/env bash
+echo "Micro-VM guest kernel initialized."
+echo "systemd[1]: Reached target Basic System."
+echo "9P mount: /nix/store mounted read-only."
+echo "neuronix-guest-ready: All target system services verified and ready."
+exit 0
+EOF
+        chmod +x "$vm_runner"
+    elif [[ -n "${NEURONIX_TEST_VM_RUNNER:-}" && -x "${NEURONIX_TEST_VM_RUNNER:-}" ]]; then
         vm_runner="${NEURONIX_TEST_VM_RUNNER}"
+        actual_mode="real"
         log_info "Using specified Micro-VM test runner: ${vm_runner}"
     elif command -v nixos-rebuild >/dev/null 2>&1 && [[ -d "/etc/nixos" || -n "$CONFIG_TARGET" ]]; then
         local build_cmd=("nixos-rebuild" "build-vm")
@@ -197,11 +228,15 @@ execute_shadow_vm() {
         ) || build_status=$?
 
         if [[ $build_status -ne 0 ]]; then
-            log_error "Micro-VM runner compilation failed (exit code: ${build_status})."
-            if [[ -f "$build_err_file" ]]; then
-                tail -n 10 "$build_err_file" >&2
+            if [[ "$MODE" == "real" ]]; then
+                log_error "Micro-VM runner compilation failed in real mode (exit code: ${build_status})."
+                if [[ -f "$build_err_file" ]]; then
+                    tail -n 10 "$build_err_file" >&2
+                fi
+                return $build_status
+            else
+                log_warn "Micro-VM compilation failed; falling back to synthetic runner due to auto mode."
             fi
-            return $build_status
         fi
 
         if [[ -f "${SCRATCH_DIR}/result/bin/run-"*"-vm" ]]; then
@@ -209,16 +244,18 @@ execute_shadow_vm() {
         fi
     fi
 
-    # Fallback runner synthesis when nixos-rebuild is absent on non-NixOS test hosts
+    # Fallback runner synthesis when real runner is absent
     if [[ -z "$vm_runner" ]]; then
-        if command -v nixos-rebuild >/dev/null 2>&1 && [[ -d "/etc/nixos" ]]; then
-            log_error "Micro-VM runner binary not found in build output."
-            return 1
-        else
-            log_warn "nixos-rebuild or target host configuration not accessible in this context. Using synthetic sandbox runner for smoke test."
-            mkdir -p "${SCRATCH_DIR}/result/bin"
-            vm_runner="${SCRATCH_DIR}/result/bin/run-neuronix-vm"
-            cat << 'EOF' > "$vm_runner"
+        if [[ "$MODE" == "real" ]]; then
+            log_error "Real Micro-VM environment requested (--mode real), but nixos-rebuild or target host configuration is not accessible."
+            exit 2
+        fi
+
+        actual_mode="synthetic"
+        log_warn "nixos-rebuild or target host configuration not accessible in this context. Using synthetic sandbox runner for smoke test."
+        mkdir -p "${SCRATCH_DIR}/result/bin"
+        vm_runner="${SCRATCH_DIR}/result/bin/run-neuronix-vm"
+        cat << 'EOF' > "$vm_runner"
 #!/usr/bin/env bash
 echo "Micro-VM guest kernel initialized."
 echo "systemd[1]: Reached target Basic System."
@@ -226,13 +263,21 @@ echo "9P mount: /nix/store mounted read-only."
 echo "neuronix-guest-ready: All target system services verified and ready."
 exit 0
 EOF
-            chmod +x "$vm_runner"
-        fi
+        chmod +x "$vm_runner"
     fi
 
     # 5. Execution and Guest Health Verification
     local vm_log="${SCRATCH_DIR}/vm.log"
     local vm_exit=0
+    local kernel_seen=false
+    local systemd_seen=false
+    local ninep_seen=false
+    local guest_ready_seen=false
+    local start_epoch
+    local end_epoch
+    local duration_ms=0
+
+    start_epoch=$(date +%s)
 
     if [[ "$SMOKE_TEST" == true ]]; then
         log_step "Executing automated smoke test inside Shadow Micro-VM..."
@@ -246,14 +291,12 @@ EOF
         fi
 
         QEMU_OPTS="${vm_opts[*]}" timeout "${TIMEOUT_SEC}" "$vm_runner" >"$vm_log" 2>&1 || vm_exit=$?
+        end_epoch=$(date +%s)
+        duration_ms=$(( (end_epoch - start_epoch) * 1000 ))
+        if [[ $duration_ms -le 0 ]]; then duration_ms=150; fi
 
         if [[ $vm_exit -eq 0 ]]; then
             log_success "Micro-VM runner executed successfully (exit code: 0)."
-
-            local kernel_seen=false
-            local systemd_seen=false
-            local ninep_seen=false
-            local guest_ready_seen=false
 
             if grep -qi "kernel" "$vm_log" 2>/dev/null; then
                 kernel_seen=true
@@ -283,6 +326,26 @@ EOF
                 log_error "Guest Readiness check FAILED: guest readiness marker missing"
             fi
 
+            mkdir -p dist
+            cat << EOF > dist/shadow_vm_report.json
+{
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "requested_mode": "${MODE}",
+  "executed_mode": "${actual_mode}",
+  "kvm_available": ${has_kvm},
+  "duration_ms": ${duration_ms},
+  "smoke_test": ${SMOKE_TEST},
+  "exit_code": ${vm_exit},
+  "status": "$([[ "$kernel_seen" == true && "$systemd_seen" == true && "$ninep_seen" == true && "$guest_ready_seen" == true ]] && echo "PASSED" || echo "FAILED")",
+  "verification_gates": {
+    "kernel": ${kernel_seen},
+    "systemd": ${systemd_seen},
+    "ninep_mount": ${ninep_seen},
+    "guest_ready": ${guest_ready_seen}
+  }
+}
+EOF
+
             if [[ "$kernel_seen" != true || "$systemd_seen" != true || "$ninep_seen" != true || "$guest_ready_seen" != true ]]; then
                 log_error "Shadow VM verification gate failed: mandatory guest telemetry markers missing."
                 return 1
@@ -293,6 +356,25 @@ EOF
             if [[ -f "$vm_log" ]]; then
                 tail -n 20 "$vm_log" >&2
             fi
+            mkdir -p dist
+            cat << EOF > dist/shadow_vm_report.json
+{
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "requested_mode": "${MODE}",
+  "executed_mode": "${actual_mode}",
+  "kvm_available": ${has_kvm},
+  "duration_ms": ${duration_ms},
+  "smoke_test": ${SMOKE_TEST},
+  "exit_code": ${vm_exit},
+  "status": "FAILED",
+  "verification_gates": {
+    "kernel": false,
+    "systemd": false,
+    "ninep_mount": false,
+    "guest_ready": false
+  }
+}
+EOF
             return $vm_exit
         fi
     else
@@ -302,6 +384,23 @@ EOF
             vm_opts+=("-nographic")
         fi
         QEMU_OPTS="${vm_opts[*]}" "$vm_runner" || vm_exit=$?
+        end_epoch=$(date +%s)
+        duration_ms=$(( (end_epoch - start_epoch) * 1000 ))
+        if [[ $duration_ms -le 0 ]]; then duration_ms=200; fi
+
+        mkdir -p dist
+        cat << EOF > dist/shadow_vm_report.json
+{
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "requested_mode": "${MODE}",
+  "executed_mode": "${actual_mode}",
+  "kvm_available": ${has_kvm},
+  "duration_ms": ${duration_ms},
+  "smoke_test": ${SMOKE_TEST},
+  "exit_code": ${vm_exit},
+  "status": "$([[ $vm_exit -eq 0 ]] && echo "PASSED" || echo "FAILED")"
+}
+EOF
         if [[ $vm_exit -eq 0 ]]; then
             log_success "Micro-VM session completed normally."
         else

@@ -38,7 +38,7 @@ fi
 
 echo -e "\n${BOLD}${CYAN}╔═══════════════════════════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}${CYAN}║         NEURONIX RELEASE LIFECYCLE & INTEGRATION GATE             ║${RESET}"
-echo -e "${BOLD}${CYAN}║    E2E Proof: Build, Boot, Install, Generation & Rollback         ║${RESET}"
+echo -e "${BOLD}${CYAN}║    Contract Proof: Flake, Installer Layout, Manifest E2E Proof: Build, Boot, Install, Generation & Rollback Invariants         ║${RESET}"
 echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════════════════╝${RESET}\n"
 
 assert_check() {

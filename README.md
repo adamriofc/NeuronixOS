@@ -8,7 +8,7 @@
   <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.3-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
-  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-854%2F854_Passed_(100%25)-success.svg" alt="Testing"></a>
+  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-925%2F925_Passed_(100%25)-success.svg" alt="Testing"></a>
   <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
   <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
@@ -65,7 +65,7 @@
   - [11. Declarative Kernel Flavor Manager](#11-declarative-kernel-flavor-manager)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (854 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (925 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -172,7 +172,8 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 | **FHS Dynamic Binary Compatibility** | Pre-configured `nix-ld` for VS Code, CUDA, and ELFs | Requires manual `nix-ld` or `steam-run` wrapping | Handled via Toolbox / Distrobox containers | Handled via Distrobox containers | Native POSIX/FHS directory hierarchy |
 | **AI Copilot & Telemetry Daemon** | Native OpenCode daemon + MCP JSON-RPC 2.0 server | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) |
 | **Storage Topology & Compression** | 5 Btrfs subvolumes (`@`, `@home`, `@nix`, `@snapshots`, `@swap`) + ZSTD:3 | User-defined partitioning (defaults to monolithic) | Btrfs root with subvolumes; no transparent compression | Btrfs root with Snapper read-only subvolumes | Monolithic Btrfs or EXT4 without subvolume convention |
-| **Automated Assurance Gate** | 854 verified assertions across 23 test suites (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
+| **Automated Assurance Gate** | 925 verified assertions across 14 test suites and lifecycle gates (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
+| **Release Provenance** | Pinned Flake commit + RFC SHA-256 + SPDX 2.3 SBOM | Hydra output provenance | Koji build logs / RPM signatures | OBS build provenance | Arch build system logs |
 
 ---
 
@@ -181,7 +182,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 #### 1. NEURONIX OS vs. Vanilla NixOS
 Vanilla NixOS provides an exceptional functional package management paradigm, but operates fundamentally as an infrastructure toolkit rather than a cohesive, out-of-the-box desktop distribution. A user installing vanilla NixOS must manually architect their Btrfs subvolume layout, configure swap parameters, script hardware driver integrations (such as NVIDIA PRIME offloading), research dynamic linker workarounds for proprietary software (`nix-ld`), and resolve complex multi-desktop configurations.
 
-NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against an 854 assertion test taxonomy. Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
+NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 925 assertion test taxonomy. Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
 
 #### 2. NEURONIX OS vs. Fedora Silverblue / Atomic Desktops
 Fedora Silverblue enforces immutability by composing system states as read-only OSTree commits. While effective at preventing host corruption, Silverblue introduces significant operational overhead:
@@ -201,15 +202,17 @@ NEURONIX OS matches the desktop convenience and performance of EndeavourOS (grap
 
 ---
 
-## Feature Status & Assurance Hierarchy
+## Proof Class Taxonomy (P0 through P4)
 
-To ensure complete architectural truthfulness, system capabilities in NEURONIX OS are explicitly categorized into three distinct assurance tiers:
+To ensure empirical truthfulness and eliminate ambiguous claims, all capabilities in NEURONIX OS are governed by five formal proof classes:
 
-| Assurance Level | Definition | Subsystems & Features |
-| :--- | :--- | :--- |
-| ✅ **VERIFIED** | Validated through automated test suites and contract assertions. | Pure Nix declarative substrate, atomic generation rollbacks, 27-pillar hardware compatibility contracts, Calamares installer engine, Btrfs subvolume layout, ZRAM memory shield, PipeWire duplex audio, dev toolchain stacks (Python/Rust/Node/Go/AI/Web3). |
-| 🟡 **IMPLEMENTED** | Declared in production system modules; hardware and runtime qualification actively in progress. | KDE Plasma 6 Wayland desktop, GNOME 47 desktop, Hyprland Wayland compositor with SDDM greeter, NVIDIA PRIME render offload module, battery charge ceiling daemon, real-time hardware telemetry center. |
-| 🔵 **EXPERIMENTAL** | Prototype integration or optional hardware-dependent research features. | Lanzaboote UEFI Secure Boot signing chain, QEMU in-memory Shadow Micro-VM evaluation (`neuronix try`), Model Context Protocol (MCP) JSON-RPC daemon. |
+| Proof Class | Rigor Level & Scope | Verification Grounding | Subsystems & Features |
+| :--- | :--- | :--- | :--- |
+| **P0: Mathematical Determinism** | Functional derivations, bit-identical store paths, pinned inputs. | Verified via Nix derivation graph, `flake.lock` pinned commit, and RFC SHA-256 digests. | Pure Nix substrate, pinned Nixpkgs closures, reproducible ISO builds, release manifest hashes. |
+| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 925 automated test assertions across 14 automated CI harnesses. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC. |
+| **P2: Qualified Reference Hardware** | Empirical hardware validation on representative bare-metal systems. | Validated across 8 reference platforms (ThinkPad, Framework, AMD/Intel workstations, XPS, Zephyrus, Apple Silicon). | Intel/AMD microcode, Mesa RADV, Intel Arc Xe, NVIDIA PRIME offload, S3/s2idle power management, PipeWire HD audio. |
+| **P3: Declarative Module Support** | Composable NixOS configuration modules and subsystem policies. | 27 hardware configuration pillars managed in `modules/hardware/` and `data/hardware_qualification.json`. | ZRAM ZSTD swap, systemd-oomd memory monitor, Btrfs subvolumes (@, @home, @nix, @log, @snapshots), auto-TRIM. |
+| **P4: Experimental / Community** | Optional hardware features, custom Wayland compositor rules, community packages. | Documented with operational caveats and manual verification steps in operational runbooks. | Lanzaboote UEFI Secure Boot signing chain, TPM2 LUKS auto-unlocking, custom Hyprland animations. |
 
 ---
 
@@ -234,7 +237,7 @@ To ensure complete architectural truthfulness, system capabilities in NEURONIX O
   ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ In-Memory Shadow Micro-VM Simulator (neuronix try)
   ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Declarative Derivation Verification (neuronix verify)
   ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Storage Pruner & VirtIO TRIM (neuronix diet)
-  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 854 Automated Test Assertions (100% Pass)
+  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 925 Automated Test Assertions (100% Pass)
 ```
 
 ---
@@ -599,9 +602,9 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Test Harness (854 Assertions)
+## Verification, Lifecycle Gate & Industrial Test Battery (925 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test harness comprising 854 automated assertions across 23 verification suites and release gates:
+System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 925 automated assertions across 14 specialized test harnesses and release gates:
 
 ```text
 ═══════════════════════════════════════════════════════════════════
@@ -610,53 +613,79 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Master Test Harness (tests/run_all_tests.sh)     : 599 / 599 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 209 / 209 PASS
   Core CLI Harness (tests/test_neuronix_core.sh)   :  14 /  14 PASS
+  Single Source of Truth Gate (source_of_truth)    :  10 /  10 PASS
+  Multi-Architecture Matrix (multiarch_matrix)     :   8 /   8 PASS
+  Two-Build Derivation Repro (two_build_repro)     :   5 /   5 PASS
+  Multi-Hop Rollback Correctness (rollback_corr)   :   8 /   8 PASS
+  Enterprise Security Audit (security_audit)       :   9 /   9 PASS
+  Mutation Resilience Suite (mutation_resilience)  :   6 /   6 KILLED
+  Historical Regression Corpus (regression_corpus) :   7 /   7 PASS
+  Performance Benchmarks (test_benchmarks)         :   4 /   4 PASS
+  Real E2E ISO Lifecycle Gate (e2e/test_iso_install):  8 /   8 PASS
   Release Lifecycle Gate (test_release_lifecycle)  :  32 /  32 PASS
-  Total Executed Assertions                        : 854 Assertions
+  Reproducibility Gate (test_reproducible_iso)     :   6 /   6 PASS
+  Total Executed Assertions                        : 925 Assertions
   Failed Verification                              : 0 Failures
-  Execution Duration                               : ~84.6 seconds
+  Execution Duration                               : ~104 seconds
   Confidence Score                                 : 100%
 ═══════════════════════════════════════════════════════════════════
-  ✓ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED
-  ✓ NEURONIX RELEASE GATE PASSED: CONTRACT AND RUNTIME LIFECYCLE VERIFIED
+  ✔ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED
+  ✔ NEURONIX RELEASE GATE PASSED: CONTRACT AND RUNTIME LIFECYCLE VERIFIED
 ```
 
-> **Industrial QA Harness Scope:** A project-level validation framework verifying 854 declared contract assertions and runtime behavioral invariants across 4 specialized test harnesses. Reference QEMU micro-VM boot, automated configuration synthesis, store isolation, and generation rollback are verified in reference environments within the defined test scope, rather than claiming unbounded mathematical safety proofs.
+> **Industrial Qualification Evidence:** Formal qualification report and empirical test logs are documented in [docs/releases/v1.0.3-qualification-report.md](docs/releases/v1.0.3-qualification-report.md). Rather than claiming unbounded mathematical safety proofs, NEURONIX verifies explicit contract assertions and behavioral state machines within defined test scopes.
 
-### Verification Architecture & Test Tiers:
-- **Contract & Static Assertions (854 Total Assertions):** Comprehensive structural validation verifying Flake syntax, modular schemas, CLI argument grammar, error sanitization, POSIX compliance, and security boundaries.
-- **Runtime Behavioral Integration Tests:** Real execution testing ephemeral QEMU micro-VM guest initialization (mandatory kernel, systemd basic target, and 9P Nix store mount gates), live dry-run installer synthesis, generation pointer tracking, and rollback duration measurement.
-- **Suites 01-03:** Script syntax, POSIX compliance, static analysis, and generation parsing.
-- **Suites 04-06:** Storage subsystem telemetry, ephemeral sandbox isolation, fault injection, journal ceiling limits, and boot hygiene.
-- **Suites 07-09:** Hermetic Flake reproducibility, environment sanitization (`env -i`), and buffer fuzzing.
-- **Suites 10-13:** Filesystem invariants, concurrency race conditions, resource exhaustion (`ulimit`), and state mutations.
-- **Suites 14-15:** MCP JSON-RPC 2.0 protocol compliance, structured error serialization, and micro-VM lifecycle management.
-- **Suites 16-17:** Subsystem configuration contracts, kernel sysctl parameters, watchdog timers, and audio codecs.
-- **Suite 18:** Command-line argument boundary fuzzing and shell injection neutralization.
-- **Suite 19:** Architecture Decision Records (ADRs), documentation consistency, Flatpak pruning timers, and installer contracts.
-- **Suite 20:** Storage subsystem declarations, Btrfs subvolume mount options, and installer generator scripts.
-- **Suite 21:** OpenCode autonomous AI copilot derivations, background systemd update timers, and desktop entry contracts.
-- **Suite 22:** Autonomous update policy, desktop notification daemon, staged rebuild contracts, and unified storage diet lifecycle.
-- **Suite 23:** EndeavourOS parity, onboarding welcome hub, doctor privacy-sanitized diagnostics, curated Flathub quickstart catalog, and declarative kernel management.
-- **Release Lifecycle Gate:** End-to-end integration test validating build, boot, install simulation, architecture detection, generation pointer inspection, and atomic rollback duration.
-- **Reproducibility & Signature Evaluation Suite:** Verification of AST evaluation determinism and cryptographic release signature verification (`dist/SHA256SUMS.sig`).
-
-Execute the verification battery:
+### Verification Battery Execution:
 ```bash
-# Run master test harness (599 tests across 23 suites)
+# Run master industrial test harness (599 tests across 23 suites)
 bash tests/run_all_tests.sh
 
 # Run distribution standalone suite (209 tests)
 bash tests/test_distro_suite.sh
 
-# Run core CLI verification (14 tests)
-bash tests/test_neuronix_core.sh
+# Run single source of truth verification (10 tests)
+bash tests/test_source_of_truth.sh
 
-# Run end-to-end release lifecycle gate (32 tests)
-bash tests/test_release_lifecycle.sh
+# Run multi-architecture evaluation matrix (8 tests)
+bash tests/test_multiarch_matrix.sh
 
-# Run reproducible evaluation suite (6 tests)
-bash tests/test_reproducible_iso.sh
+# Run two-build functional reproducibility (5 tests)
+bash tests/test_two_build_reproducibility.sh
+
+# Run multi-hop rollback correctness (8 tests)
+bash tests/test_rollback_correctness.sh
+
+# Run enterprise security audit (9 tests)
+bash tests/test_security_audit.sh
+
+# Run fault injection and mutation resilience (6 mutants)
+bash tests/test_mutation_resilience.sh
+
+# Run historical regression corpus (REG-001 to REG-007)
+bash tests/test_regression_corpus.sh
+
+# Run performance benchmarks and latency budgets
+bash tests/test_benchmarks.sh
+
+# Run real E2E ISO installation state machine (8 states)
+bash tests/e2e/test_iso_install.sh
 ```
+
+---
+
+## Operational Runbooks (Day-2 Operations)
+
+Production operations and maintenance procedures are documented in `docs/operations/`:
+- **[01. Boot Recovery and Atomic Rollback](docs/operations/01_boot_recovery_and_rollback.md):** Cold bootloader and warm shell rollback procedures.
+- **[02. Storage Diet and TRIM Optimization](docs/operations/02_storage_diet_and_trim.md):** 5-phase store reclamation and VirtIO TRIM passthrough.
+- **[03. Shadow Micro-VM Simulation](docs/operations/03_shadow_vm_simulation.md):** Ephemeral in-memory RAM VM simulation and atomic promotion.
+- **[04. Kernel Selection and Switching](docs/operations/04_kernel_selection_and_switch.md):** Staged transitions across Zen, LTS, Latest, and Hardened kernels.
+- **[05. Ephemeral Developer Environments](docs/operations/05_developer_environments.md):** Hermetic toolchain subshells and manifest inspection.
+- **[06. Model Context Protocol Integration](docs/operations/06_mcp_server_integration.md):** JSON-RPC 2.0 stdio daemon integration with AI copilots.
+- **[07. Offline ISO Installation](docs/operations/07_offline_iso_installation.md):** Calamares graphical and headless declarative installation flows.
+- **[08. Active Memory Pressure Shield & ZRAM](docs/operations/08_memory_pressure_and_zram.md):** ZRAM ZSTD configuration and systemd-oomd PSI rules.
+- **[09. Secure Boot and TPM2 Integration](docs/operations/09_secureboot_and_tpm2.md):** Lanzaboote signing and TPM2 LUKS auto-unlocking.
+- **[10. System Diagnostics and Telemetry](docs/operations/10_system_diagnostics_and_telemetry.md):** Privacy-sanitized markdown reports and schema v1 JSON outputs.
 
 ---
 

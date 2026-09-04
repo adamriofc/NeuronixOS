@@ -1,29 +1,27 @@
 ---
-name: Bug Report
-about: Create a report to help us improve NEURONIX OS
-title: '[BUG] '
-labels: 'bug'
+name: Bug report
+about: Create a report to help improve NEURONIX OS
+title: '[BUG]: '
+labels: ['bug']
 assignees: ''
 ---
 
-**Describe the Bug**
+### Diagnostic Report
+Please paste the sanitized output of `neuronix doctor` below:
+```text
+(paste neuronix doctor output here)
+```
+
+### Describe the Bug
 A clear and concise description of what the bug is.
 
-**Environment Information**
-- Hardware / Machine model:
-- CPU & GPU:
-- Installation target: [e.g. Bare-Metal, QEMU/KVM, VirtualBox]
-- Desktop Environment: [e.g. KDE Plasma, GNOME, Hyprland]
-- Output of `neuronix status`:
+### Steps to Reproduce
+1. Run command '...'
+2. View error '...'
+3. See regression '...'
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Boot into ...
-2. Run command '...'
-3. See error
-
-**Expected Behavior**
+### Expected Behavior
 A clear and concise description of what you expected to happen.
 
-**Logs and Screenshots**
-If applicable, add terminal logs, `journalctl -xe` output, or screenshots to help explain your problem.
+### Additional Context
+Add any other context about the problem here (e.g. GPU, hardware model, kernel flavor).

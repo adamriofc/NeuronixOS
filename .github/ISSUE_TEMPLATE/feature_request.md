@@ -1,19 +1,19 @@
 ---
-name: Feature Request
-about: Suggest an idea or module for NEURONIX OS
-title: '[FEAT] '
-labels: 'enhancement'
+name: Feature request
+about: Suggest an idea or architectural enhancement for NEURONIX OS
+title: '[ENHANCEMENT]: '
+labels: ['enhancement']
 assignees: ''
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem or limitation is.
+### Is your feature request related to a problem?
+A clear and concise description of what the problem is.
 
-**Describe the Solution You Would Like**
-A clear and concise description of what you want to happen and how it should integrate with existing NixOS modules or the `neuronix` CLI.
+### Describe the Solution You Would Like
+A clear and concise description of what you want to happen.
 
-**Describe Alternatives You Have Considered**
-A clear and concise description of any alternative solutions or features you have considered.
+### Declarative Integration
+How should this feature be represented in NixOS declarative modules or CLI commands?
 
-**Additional Context**
-Add any other context or references about the feature request here.
+### Alternatives Considered
+A clear and concise description of any alternative solutions or features you considered.

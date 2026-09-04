@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-09-04T21:47:13Z",
+  "benchmarks": {
+    "cli_startup_ms": 20,
+    "dev_manifest_ms": 25,
+    "doctor_probe_ms": 153,
+    "runtime_memory_used_mb": 2565
+  },
+  "budgets": {
+    "cli_startup_budget_ms": 500,
+    "dev_manifest_budget_ms": 500,
+    "doctor_probe_budget_ms": 3500
+  },
+  "status": "PASSED"
+}

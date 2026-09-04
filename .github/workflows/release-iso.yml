@@ -15,6 +15,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build-and-publish-iso:
@@ -83,6 +85,12 @@ jobs:
           cat SHA256SUMS
           cd ..
           bash installer/scripts/sign_release.sh sign
+          bash installer/scripts/generate_sbom.sh "${TAG}"
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/*'
 
       - name: Upload ISO Artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
