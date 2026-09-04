@@ -73,11 +73,11 @@ rm -rf "$MOCK_ROOT"
 
 assert_check "Installer script is executable" "test -x '${INSTALLER_BIN}'"
 assert_check "Installer dry-run generates target files" "TARGET_ROOT='${MOCK_ROOT}' DRY_RUN=1 bash '${INSTALLER_BIN}'"
-assert_check "Target configuration.nix generated" "test -f /tmp/neuronix-mock-install/etc/nixos/configuration.nix"
-assert_check "Target flake.nix generated" "test -f /tmp/neuronix-mock-install/etc/nixos/flake.nix"
-assert_check "Target release.json generated" "test -f /tmp/neuronix-mock-install/etc/neuronix/release.json"
-assert_check "Target release.json contains canonical version" "grep -q '1.0.3' /tmp/neuronix-mock-install/etc/neuronix/release.json"
-assert_check "Target release.json contains target architecture" "grep -q 'system' /tmp/neuronix-mock-install/etc/neuronix/release.json"
+assert_check "Target configuration.nix generated & syntactically verified" "test -f '${MOCK_ROOT}/etc/nixos/configuration.nix' && nix-instantiate --parse '${MOCK_ROOT}/etc/nixos/configuration.nix'"
+assert_check "Target flake.nix generated" "test -f '${MOCK_ROOT}/etc/nixos/flake.nix'"
+assert_check "Target release.json generated" "test -f '${MOCK_ROOT}/etc/neuronix/release.json'"
+assert_check "Target release.json contains canonical version" "grep -q '1.0.3' '${MOCK_ROOT}/etc/neuronix/release.json'"
+assert_check "Target release.json contains target architecture" "grep -q 'system' '${MOCK_ROOT}/etc/neuronix/release.json'"
 
 # ------------------------------------------------------------------------------
 # 3. System Generation Pointer Invariant Simulation
@@ -93,11 +93,11 @@ assert_check "Center --list-generations succeeds" "nix-shell -p python3 --run 'p
 echo -e "\n${BOLD}Phase 4: Atomic Rollback Duration Measurement Invariant${RESET}"
 assert_check "Center implements time.monotonic measurement" "grep -q 'time.monotonic' '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py'"
 assert_check "Center rollback error handling is present" "grep -Eq 'Rollback (Error|Failed)' '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py'"
-assert_check "OpenCode is configured in target configuration" "grep -q 'neuronix.services.opencode' /tmp/neuronix-mock-install/etc/nixos/configuration.nix"
-assert_check "OpenCode is registered in release manifest" "grep -q '\"ai_agent\": \"opencode\"' /tmp/neuronix-mock-install/etc/neuronix/release.json"
-assert_check "Update subsystem configured in target configuration" "grep -q 'neuronix.services.updates' /tmp/neuronix-mock-install/etc/nixos/configuration.nix"
-assert_check "Update notifier registered in release manifest" "grep -q '\"update_notifier\": \"enabled\"' /tmp/neuronix-mock-install/etc/neuronix/release.json"
-assert_check "Storage diet registered in release manifest" "grep -q '\"storage_diet\": \"autonomous_14d\"' /tmp/neuronix-mock-install/etc/neuronix/release.json"
+assert_check "OpenCode is configured in target configuration" "grep -q 'neuronix.services.opencode' '${MOCK_ROOT}/etc/nixos/configuration.nix'"
+assert_check "OpenCode is registered in release manifest" "grep -q '\"ai_agent\": \"opencode\"' '${MOCK_ROOT}/etc/neuronix/release.json'"
+assert_check "Update subsystem configured in target configuration" "grep -q 'neuronix.services.updates' '${MOCK_ROOT}/etc/nixos/configuration.nix'"
+assert_check "Update notifier registered in release manifest" "grep -q '\"update_notifier\": \"enabled\"' '${MOCK_ROOT}/etc/neuronix/release.json'"
+assert_check "Storage diet registered in release manifest" "grep -q '\"storage_diet\": \"autonomous_14d\"' '${MOCK_ROOT}/etc/neuronix/release.json'"
 
 # ------------------------------------------------------------------------------
 # 5. Headless QEMU Ephemeral Micro-VM Sandbox Execution
@@ -137,7 +137,7 @@ echo -e "  Failed Validations    : ${FAILED}"
 echo -e "${BOLD}═══════════════════════════════════════════════════════════════════${RESET}\n"
 
 if [[ $FAILED -eq 0 ]]; then
-    echo -e "${BOLD}${GREEN}✔ NEURONIX RELEASE GATE PASSED: BUILD, BOOT, INSTALL AND ROLLBACK VERIFIED${RESET}\n"
+    echo -e "${BOLD}${GREEN}✔ NEURONIX RELEASE GATE PASSED: CONTRACT AND RUNTIME LIFECYCLE VERIFIED${RESET}\n"
     exit 0
 else
     echo -e "${BOLD}${RED}✖ NEURONIX RELEASE GATE FAILED: Review failed gate assertions above.${RESET}\n"

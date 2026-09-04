@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Shadow Micro-VM Simulation Engine (v0.4.0)
+# NEURONIX Shadow Micro-VM Sandbox Engine (v1.0.3)
 # Orchestrates ephemeral, in-memory (RAM-disk) QEMU virtual machine sandboxes.
-# Provides Zero-Blast Radius dry-run testing before atomic host system promotion.
+# Provides isolated Micro-VM boundary verification before atomic host system promotion.
 #
 # Copyright (c) 2026 NEURONIX Contributors
 # Licensed under the Apache License, Version 2.0
@@ -242,16 +242,37 @@ EOF
 
         if [[ $vm_exit -eq 0 ]]; then
             log_success "Micro-VM runner executed successfully (exit code: 0)."
+
+            local kernel_seen=false
+            local systemd_seen=false
+            local ninep_seen=false
+
             if grep -qi "kernel" "$vm_log" 2>/dev/null; then
+                kernel_seen=true
                 log_success "Micro-VM Kernel Boot: SUCCESS"
+            else
+                log_error "Micro-VM Kernel Boot check FAILED: kernel initialization marker missing"
             fi
+
             if grep -qi "systemd" "$vm_log" 2>/dev/null || grep -qi "target" "$vm_log" 2>/dev/null; then
+                systemd_seen=true
                 log_success "Systemd Basic Target Reached: SUCCESS (is-system-running: clean)"
+            else
+                log_error "Systemd readiness check FAILED: systemd target marker missing"
             fi
+
             if grep -qi "9p" "$vm_log" 2>/dev/null || grep -qi "nix" "$vm_log" 2>/dev/null; then
+                ninep_seen=true
                 log_success "9P Nix Store Mount: SUCCESS (/nix/store verified read-only)"
+            else
+                log_error "9P Nix Store Mount check FAILED: store mount marker missing"
             fi
-            log_success "Shadow VM simulation passed 100% with zero system failures."
+
+            if [[ "$kernel_seen" != true || "$systemd_seen" != true || "$ninep_seen" != true ]]; then
+                log_error "Shadow VM verification gate failed: mandatory guest telemetry markers missing."
+                return 1
+            fi
+            log_success "Shadow VM verification passed: all guest readiness gates verified."
         else
             log_error "Micro-VM execution failed or timed out (exit code: ${vm_exit})."
             if [[ -f "$vm_log" ]]; then
@@ -278,10 +299,44 @@ EOF
     if [[ "$PROMOTE" == true ]]; then
         echo
         log_step "One-Click Promotion (--promote): Applying verified configuration to host OS..."
-        if [[ "$EUID" -ne 0 ]] && ! sudo -n true 2>/dev/null; then
-            log_warn "Promotion requires administrative privileges. Running nixos-rebuild switch with sudo..."
+
+        local rebuild_cmd=("nixos-rebuild" "switch")
+        if [[ -n "$CONFIG_TARGET" ]]; then
+            rebuild_cmd+=("-I" "nixos-config=${CONFIG_TARGET}")
+        elif [[ -f "/etc/nixos/flake.nix" ]]; then
+            rebuild_cmd+=("--flake" "/etc/nixos")
         fi
-        log_success "Configuration verified stable in Shadow VM and promoted to host system."
+
+        if [[ "${NEURONIX_TEST_MOCK_PROMOTION:-0}" == "1" ]]; then
+            log_info "Mock promotion environment detected (NEURONIX_TEST_MOCK_PROMOTION=1)."
+            touch "${SCRATCH_DIR}/promoted_generation"
+            log_success "Configuration verified stable in Shadow VM and promoted to host system (mock generation active)."
+        elif command -v nixos-rebuild >/dev/null 2>&1 && [[ -d "/etc/nixos" || -n "$CONFIG_TARGET" ]]; then
+            if [[ "$EUID" -ne 0 ]]; then
+                if command -v sudo >/dev/null 2>&1; then
+                    log_info "Acquiring elevated privileges for atomic host switch..."
+                    sudo "${rebuild_cmd[@]}"
+                else
+                    log_error "Administrative privileges (root or sudo) required for nixos-rebuild switch."
+                    return 1
+                fi
+            else
+                "${rebuild_cmd[@]}"
+            fi
+            local switch_status=$?
+            if [[ $switch_status -eq 0 ]]; then
+                local current_gen="active"
+                if [[ -e /nix/var/nix/profiles/system ]]; then
+                    current_gen=$(readlink /nix/var/nix/profiles/system | grep -oP 'system-\K[0-9]+' || echo "active")
+                fi
+                log_success "Configuration verified stable in Shadow VM and promoted to host system (generation ${current_gen} now active)."
+            else
+                log_error "Host configuration promotion failed with exit code ${switch_status}."
+                return $switch_status
+            fi
+        else
+            log_warn "nixos-rebuild or host configuration not found in current environment. Host promotion skipped."
+        fi
     fi
 
     log_info "Cleaning up transient disk overlay in RAM (${SCRATCH_DIR})..."

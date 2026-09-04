@@ -30,7 +30,7 @@ SMOKE_OUT=$($TARGET_BIN try --smoke-test)
 assert_output_contains "echo '$SMOKE_OUT'" "Micro-VM Kernel Boot: SUCCESS" "Smoke test validates kernel boot"
 assert_output_contains "echo '$SMOKE_OUT'" "Systemd Basic Target Reached: SUCCESS" "Smoke test validates systemd equilibrium"
 assert_output_contains "echo '$SMOKE_OUT'" "9P Nix Store Mount: SUCCESS" "Smoke test validates 9P read-only store mount"
-assert_output_contains "echo '$SMOKE_OUT'" "Shadow VM simulation passed 100%" "Smoke test concludes with 100% pass"
+assert_output_contains "echo '$SMOKE_OUT'" "Shadow VM verification passed" "Smoke test concludes with verified guest readiness"
 assert_eq "$(ls -1 /dev/shm/neuronix_shadow_* 2>/dev/null | wc -l)" "0" "Smoke test cleans up /dev/shm upon exit"
 
 # 16-19. Execution Modes & Configuration Parameter Bounds

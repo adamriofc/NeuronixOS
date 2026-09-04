@@ -47,9 +47,13 @@ send_response() {
 }
 
 send_error() {
-    local id="${1:-null}"
+    local raw_id="${1:-null}"
     local code="$2"
     local message="$3"
+    local id="null"
+    if [[ -n "$raw_id" ]] && echo "$raw_id" | jq empty 2>/dev/null; then
+        id="$raw_id"
+    fi
     jq -n -c --argjson id "$id" --argjson code "$code" --arg msg "$message" \
         '{"jsonrpc":"2.0","id":$id,"error":{"code":$code,"message":$msg}}'
 }
@@ -371,7 +375,7 @@ handle_tools_call() {
             if [[ -x "$neuronix_bin" ]]; then
                 text_payload=$("$neuronix_bin" doctor --json 2>/dev/null || true)
             else
-                text_payload='{"system":{"os":"NEURONIX OS 1.0.0"},"privacy":{"user":"<sanitized-user>","host":"<sanitized-host>"}}'
+                text_payload="{\"system\":{\"os\":\"NEURONIX OS ${SERVER_VERSION}\"},\"privacy\":{\"user\":\"<sanitized-user>\",\"host\":\"<sanitized-host>\"}}"
             fi
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')

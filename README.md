@@ -117,10 +117,10 @@ NEURONIX OS is purpose-built for technical professionals and organizations requi
   Specialists requiring auditable environments with minimal attack surfaces. NEURONIX supports hardened kernel branches (`linuxPackages_hardened`), cryptographically sealed package closures, ephemeral in-memory micro-VM evaluation (`neuronix try`), and isolated execution sandboxes (`neuronix run --sandbox`).
 
 - **Full-Stack & Cloud-Native Developers:**
-  Engineers working across polyglot stacks (Rust, Go, Python, TypeScript, Node.js). NEURONIX eliminates global package version conflicts through instant project-level development shells (`neuronix dev <stack>`), while `nix-ld` guarantees compatibility with pre-compiled dynamic ELF binaries.
+  Engineers working across polyglot stacks (Rust, Go, Python, TypeScript, Node.js). NEURONIX eliminates global package version conflicts through instant project-level development shells (`neuronix dev <stack>`), while `nix-ld` enables direct execution of standard pre-compiled dynamic ELF binaries.
 
 - **Production Workstation Operators:**
-  Users who depend on daily system availability. Traditional rolling-release systems risk catastrophic breakage during routine updates; NEURONIX delivers bleeding-edge packages (Linux Zen kernel, Wayland compositors, modern desktop environments) backed by guaranteed instant boot-time rollback.
+  Users who depend on daily system availability. Traditional rolling-release systems risk catastrophic breakage during routine updates; NEURONIX delivers modern packages (Linux Zen kernel, Wayland compositors, modern desktop environments) backed by deterministic boot-time rollback to previous working generations.
 
 ---
 
@@ -258,8 +258,8 @@ All read-write filesystem subvolumes use Zstandard level 3 (`zstd:3`) compressio
 ### Auto-TRIM and Omni-Purging Storage Diet Engine
 SSD performance degradation and sparse disk image inflation (in QEMU/KVM virtual machines) are addressed automatically through a multi-layered maintenance strategy:
 1. **Host Auto-TRIM (`fstrim.timer`):** Issues discard calls (`fstrim -av`) across all mounted Btrfs and ESP partitions daily. This informs SSD controllers and hypervisors of deallocated blocks.
-2. **Autonomous Garbage Collection (`nix.gc`):** Runs weekly garbage collection (`nix-gc.timer`) with a 14-day retention policy (`--delete-older-than 14d`), preserving instant rollback safety while purging orphaned package closures.
-3. **Hardlink Deduplication (`nix.optimise` & `auto-optimise-store = true`):** Automatically hardlinks identical binary files across derivations within `/nix/store`, saving 30% to 40% disk space.
+2. **Autonomous Garbage Collection (`nix.gc`):** Runs weekly garbage collection (`nix-gc.timer`) with a 14-day retention policy (`--delete-older-than 14d`), establishing a practical policy trade-off between disk reclamation and long-term rollback availability while purging orphaned package closures.
+3. **Hardlink Deduplication (`nix.optimise` & `auto-optimise-store = true`):** Automatically hardlinks identical binary files across derivations within `/nix/store`; this can materially reduce duplicated store content, with exact savings depending on installed package composition.
 4. **Dynamic Storage Guard (`min-free` & `max-free`):** In-kernel Nix daemon safeguards disk space by triggering emergency collections if free space drops below 1.0 GiB until 3.0 GiB headroom is recovered.
 5. **Systemd Journal Retention Ceiling (`services.journald`):** Caps `/var/log/journal` storage at 500 MiB with 1-month retention, preventing runaway log file consumption.
 6. **Ephemeral `/tmp` & Flatpak Runtime Hygiene:** Purges stale `/tmp` files on every boot (`boot.tmp.cleanOnBoot = true`) and automatically prunes unreferenced Flatpak runtimes via `flatpak-prune-unused.timer`.
@@ -276,7 +276,7 @@ While Btrfs is the default and recommended filesystem for NEURONIX, standard **E
 
 - **Kernel & Driver Support:** The Linux kernel includes native drivers for both filesystems via `boot.supportedFilesystems = [ "btrfs" "ntfs" "exfat" "ext4" "vfat" ]`.
 - **Automated Configuration:** When selecting EXT4 in Calamares Manual Partitioning, `nixos-generate-config` automatically captures the partition UUID and writes `fileSystems."/".fsType = "ext4"` to `hardware-configuration.nix`.
-- **Generation Rollback Independence:** System generation immutability and atomic rollback guarantees reside in the Nix store engine, not the underlying filesystem. Generation rollbacks in systemd-boot operate identically on both Btrfs and EXT4.
+- **Generation Rollback Independence:** System generation immutability and atomic rollback mechanisms reside in the Nix store engine, not the underlying filesystem. Generation rollbacks in systemd-boot operate identically on both Btrfs and EXT4.
 
 | Architectural Dimension | Btrfs (Default) | EXT4 (Supported Alternative) |
 | :--- | :--- | :--- |
@@ -296,7 +296,7 @@ To prevent system lockups under memory exhaustion, NEURONIX implements a three-t
 | :--- | :--- | :--- | :--- |
 | **1. Swap Pool** | ZRAM (ZSTD) | `zramSwap.enable = true` | Compressed RAM block device sized to 100% of physical RAM capacity. |
 | **2. Paging Policy** | sysctl | `vm.swappiness = 180`, `page-cluster = 0` | Moves idle anonymous memory pages into compressed ZRAM early to preserve uncompressed RAM for active workloads. |
-| **3. Eviction Guard** | `systemd-oomd` | `/proc/pressure/memory` | Terminates rogue cgroup processes within 50 ms when memory pressure exceeds 10% for over 10 seconds. |
+| **3. Eviction Guard** | `systemd-oomd` | `/proc/pressure/memory` | Monitors Pressure Stall Information (PSI) to react to sustained memory saturation according to configured systemd policy. |
 
 ### ZRAM In-Memory Swap Pool
 - Configured using `zram-generator` with the ZSTD compression algorithm.
@@ -613,17 +613,19 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Confidence Score                                 : 100%
 ═══════════════════════════════════════════════════════════════════
   ✓ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED
-  ✓ NEURONIX RELEASE GATE PASSED: BUILD, BOOT, INSTALL AND ROLLBACK VERIFIED
+  ✓ NEURONIX RELEASE GATE PASSED: CONTRACT AND RUNTIME LIFECYCLE VERIFIED
 ```
 
-> **Industrial QA Harness Scope:** A project-level validation framework verifying 854 declared subsystem invariants and contracts across 4 specialized test suites, not a formal mathematical safety/security proof system.
+> **Industrial QA Harness Scope:** A project-level validation framework verifying 854 declared contract assertions and runtime behavioral invariants across 4 specialized test harnesses. Reference QEMU micro-VM boot, automated configuration synthesis, store isolation, and generation rollback are verified in reference environments within the defined test scope, rather than claiming unbounded mathematical safety proofs.
 
-### Verification Coverage:
+### Verification Architecture & Test Tiers:
+- **Contract & Static Assertions (854 Total Assertions):** Comprehensive structural validation verifying Flake syntax, modular schemas, CLI argument grammar, error sanitization, POSIX compliance, and security boundaries.
+- **Runtime Behavioral Integration Tests:** Real execution testing ephemeral QEMU micro-VM guest initialization (mandatory kernel, systemd basic target, and 9P Nix store mount gates), live dry-run installer synthesis, generation pointer tracking, and rollback duration measurement.
 - **Suites 01-03:** Script syntax, POSIX compliance, static analysis, and generation parsing.
 - **Suites 04-06:** Storage subsystem telemetry, ephemeral sandbox isolation, fault injection, journal ceiling limits, and boot hygiene.
 - **Suites 07-09:** Hermetic Flake reproducibility, environment sanitization (`env -i`), and buffer fuzzing.
 - **Suites 10-13:** Filesystem invariants, concurrency race conditions, resource exhaustion (`ulimit`), and state mutations.
-- **Suites 14-15:** MCP JSON-RPC 2.0 protocol compliance and micro-VM lifecycle management.
+- **Suites 14-15:** MCP JSON-RPC 2.0 protocol compliance, structured error serialization, and micro-VM lifecycle management.
 - **Suites 16-17:** Subsystem configuration contracts, kernel sysctl parameters, watchdog timers, and audio codecs.
 - **Suite 18:** Command-line argument boundary fuzzing and shell injection neutralization.
 - **Suite 19:** Architecture Decision Records (ADRs), documentation consistency, Flatpak pruning timers, and installer contracts.

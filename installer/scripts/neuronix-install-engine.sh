@@ -48,10 +48,15 @@ log "Parameters: User=$TARGET_USER, Host=$TARGET_HOSTNAME, Desktop=$SELECTED_DES
 
 if [ "$DRY_RUN" -eq 1 ]; then
   log "Dry-run simulation mode active. Skipping physical partition creation."
-  MOCK_DIR="/tmp/neuronix-mock-install"
-  rm -rf "$MOCK_DIR"
-  mkdir -p "$MOCK_DIR/etc/nixos"
-  TARGET_ROOT="$MOCK_DIR"
+  if [ "$TARGET_ROOT" = "/mnt" ]; then
+    TARGET_ROOT="/tmp/neuronix-mock-install"
+  fi
+  rm -rf "$TARGET_ROOT"
+  mkdir -p "$TARGET_ROOT/etc/nixos"
+  if [ "$TARGET_ROOT" != "/tmp/neuronix-mock-install" ]; then
+    rm -rf "/tmp/neuronix-mock-install"
+    ln -sfn "$TARGET_ROOT" "/tmp/neuronix-mock-install"
+  fi
 fi
 
 CONFIG_DIR="$TARGET_ROOT/etc/nixos"

@@ -64,7 +64,7 @@ Negotiates client-server protocol version and capabilities.
     },
     "serverInfo": {
       "name": "neuronix-mcp",
-      "version": "0.4.0-beta"
+      "version": "1.0.3"
     }
   }
 }

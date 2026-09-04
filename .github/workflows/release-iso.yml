@@ -3,6 +3,9 @@ name: NEURONIX OS Official Live ISO Builder & Publisher
 on:
   release:
     types: [published]
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       release_tag:

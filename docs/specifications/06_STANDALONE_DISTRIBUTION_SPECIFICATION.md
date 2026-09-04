@@ -1,7 +1,7 @@
 # NEURONIX Specification: Standalone Operating System Distribution (Phase 4)
 
 > **Document Code:** `06_DISTRO_SPEC`  
-> **Version:** 1.0.0-RELEASE  
+> **Version:** 1.0.3-RELEASE  
 > **Status:** Approved Architecture Specification  
 > **Components:** Standalone Bootable ISO, Calamares Installer, Wayland Desktop Suites, & Control Center  
 
