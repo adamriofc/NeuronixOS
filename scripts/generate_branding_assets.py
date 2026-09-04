@@ -29,121 +29,51 @@ for res in resolutions:
     scaled.save(out_path, "PNG", optimize=True)
     print(f"[*] Generated logo icon -> {out_path} ({res}x{res})")
 
-# 3. Square 3D Mondrian "N" Symbol Icon (Cropped & Centered)
-# Bounding box of N symbol: x=(51, 1977), y=(123, 1443)
-crop_w = 1940
-crop_h = 1340
-n_crop = logo_master.crop((50, 115, 50 + crop_w, 115 + crop_h))
-symbol_canvas = Image.new("RGBA", (crop_w, crop_w), (6, 8, 14, 255))
-# Center N vertically in the square canvas
-symbol_canvas.paste(n_crop, (0, (crop_w - crop_h) // 2), n_crop)
+# 3. Square 3D Mondrian "N" Symbol Icon (Authentic Grid Background)
+symbol_base = logo_master.copy()
+grid_row = logo_master.crop((0, 1843, 2048, 1945))
+symbol_base.paste(grid_row, (0, 1536))
+symbol_base.paste(grid_row, (0, 1638))
+symbol_base.paste(grid_row, (0, 1740))
 
-symbol_512 = symbol_canvas.resize((512, 512), Image.Resampling.LANCZOS)
+symbol_512 = symbol_base.resize((512, 512), Image.Resampling.LANCZOS)
 symbol_path = os.path.join(BRANDING_DIR, "neuronix-symbol.png")
 symbol_512.save(symbol_path, "PNG", optimize=True)
 print(f"[*] Generated symbol icon -> {symbol_path} (512x512)")
 
-# 4. Generate Official GitHub Header Banner (1920x640)
+# 4. Generate Official GitHub Header Banner (1920x640) - Seamless Authentic Background
 W, H = 1920, 640
-banner = Image.new("RGBA", (W, H), (6, 8, 14, 255))
-draw = ImageDraw.Draw(banner)
+logo_scaled = logo_master.resize((H, H), Image.Resampling.LANCZOS)
 
-# Vertical Non-Linear Cyber Dark Gradient
-for y in range(H):
-    ratio = y / H
-    r = int(10 * (1 - ratio*0.7) + 3 * (ratio*0.7))
-    g = int(13 * (1 - ratio*0.7) + 4 * (ratio*0.7))
-    b = int(24 * (1 - ratio*0.6) + 7 * (ratio*0.6))
-    draw.line([(0, y), (W, y)], fill=(r, g, b, 255))
+banner = Image.new("RGBA", (W, H), (0, 0, 0, 255))
+banner.paste(logo_scaled, (0, 0))
 
-# Cyber Grid
-grid_size = 40
-grid_color = (20, 28, 46, 50)
-grid_highlight = (0, 229, 255, 25)
+# Seamless background extension using authentic grid period (strip width 27, height 640)
+# Columns 613..640 in logo_scaled form an exact 27px period with zero boundary mismatch
+strip = logo_scaled.crop((613, 0, 640, H))
+for x in range(640, W, 27):
+    banner.paste(strip, (x, 0))
 
-grid_overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-grid_draw = ImageDraw.Draw(grid_overlay)
-
-for x in range(0, W, grid_size):
-    col = grid_highlight if x % (grid_size * 4) == 0 else grid_color
-    grid_draw.line([(x, 0), (x, H)], fill=col, width=1)
-
-for y in range(0, H, grid_size):
-    col = grid_highlight if y % (grid_size * 4) == 0 else grid_color
-    grid_draw.line([(0, y), (W, y)], fill=col, width=1)
-
-# Subtle grid intersections / dots
-for x in range(0, W, grid_size * 4):
-    for y in range(0, H, grid_size * 4):
-        grid_draw.ellipse([(x - 2, y - 2), (x + 2, y + 2)], fill=(0, 229, 255, 70))
-
-banner = Image.alpha_composite(banner, grid_overlay)
-
-# Ambient Glows
+# Ambient glowing atmosphere (soft cyan and purple radial glows)
 glow_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 glow_draw = ImageDraw.Draw(glow_layer)
 
-for radius in range(320, 0, -12):
-    alpha = int(24 * (1 - radius / 320))
+for radius in range(360, 0, -15):
+    alpha = int(14 * (1 - radius / 360))
     glow_draw.ellipse(
-        [(300 - radius, 320 - radius), (300 + radius, 320 + radius)],
+        [(960 - radius, 240 - radius), (960 + radius, 240 + radius)],
         fill=(0, 229, 255, alpha)
     )
 
-for radius in range(380, 0, -15):
-    alpha = int(18 * (1 - radius / 380))
-    glow_draw.ellipse(
-        [(960 - radius, 220 - radius), (960 + radius, 220 + radius)],
-        fill=(56, 189, 248, alpha)
-    )
-
 for radius in range(300, 0, -15):
-    alpha = int(20 * (1 - radius / 300))
+    alpha = int(16 * (1 - radius / 300))
     glow_draw.ellipse(
         [(1640 - radius, 320 - radius), (1640 + radius, 320 + radius)],
         fill=(139, 92, 246, alpha)
     )
 
-glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(12))
+glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(16))
 banner = Image.alpha_composite(banner, glow_layer)
-
-# Logo Card (Left Panel)
-card_size = 500
-card_x = 55
-card_y = (H - card_size) // 2
-
-card_bg = Image.new("RGBA", (card_size, card_size), (0, 0, 0, 0))
-card_draw = ImageDraw.Draw(card_bg)
-card_draw.rounded_rectangle(
-    [(0, 0), (card_size, card_size)],
-    radius=20,
-    fill=(10, 14, 24, 230),
-    outline=(0, 229, 255, 120),
-    width=2
-)
-
-logo_inner_size = card_size - 16
-logo_resized = logo_master.resize((logo_inner_size, logo_inner_size), Image.Resampling.LANCZOS)
-
-mask = Image.new("L", (logo_inner_size, logo_inner_size), 0)
-mask_draw = ImageDraw.Draw(mask)
-mask_draw.rounded_rectangle([(0, 0), (logo_inner_size, logo_inner_size)], radius=16, fill=255)
-
-card_bg.paste(logo_resized, (8, 8), mask)
-
-# Corner cyber brackets
-accent_color = (0, 229, 255, 230)
-cb_len = 24
-card_draw.line([(0, 0), (cb_len, 0)], fill=accent_color, width=3)
-card_draw.line([(0, 0), (0, cb_len)], fill=accent_color, width=3)
-card_draw.line([(card_size - cb_len, 0), (card_size, 0)], fill=accent_color, width=3)
-card_draw.line([(card_size, 0), (card_size, cb_len)], fill=accent_color, width=3)
-card_draw.line([(0, card_size), (cb_len, card_size)], fill=accent_color, width=3)
-card_draw.line([(0, card_size - cb_len), (0, card_size)], fill=accent_color, width=3)
-card_draw.line([(card_size - cb_len, card_size), (card_size, card_size)], fill=accent_color, width=3)
-card_draw.line([(card_size, card_size - cb_len), (card_size, card_size)], fill=accent_color, width=3)
-
-banner.paste(card_bg, (card_x, card_y), card_bg)
 
 # Fonts
 font_bold_path = "/nix/store/q073g38yhrjb3lh985r68k0553pmg2dd-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Bold.ttf"
@@ -164,7 +94,7 @@ font_footer_bold = ImageFont.truetype(font_bold_path, 15)
 draw_banner = ImageDraw.Draw(banner)
 
 # Center Content
-cx = 595
+cx = 620
 
 # Status Chip
 chip_y = 65
