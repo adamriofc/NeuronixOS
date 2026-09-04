@@ -8,7 +8,7 @@
   <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.3-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
-  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-925%2F925_Passed_(100%25)-success.svg" alt="Testing"></a>
+  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-969%2F969_Passed_(100%25)-success.svg" alt="Testing"></a>
   <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
   <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
@@ -63,9 +63,10 @@
   - [9. System Doctor & Privacy-Sanitized Issue Reporter](#9-system-doctor--privacy-sanitized-issue-reporter)
   - [10. Curated Quickstart App Hub (Flatpak)](#10-curated-quickstart-app-hub-flatpak)
   - [11. Declarative Kernel Flavor Manager](#11-declarative-kernel-flavor-manager)
+  - [12. System-Embedded Manual & Autonomous AI Grounding](#12-system-embedded-manual--autonomous-ai-grounding)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (925 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (969 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -386,6 +387,7 @@ USAGE:
 | `welcome` | `[--cli \| --disable-autostart]` | Interactive first-boot welcome wizard and distro onboarding guide. | `neuronix welcome` |
 | `quickstart` | `[list \| install <id>]` | Curated Flathub desktop & engineering app hub (zero store pollution). | `neuronix quickstart list` |
 | `kernel` | `[status \| list \| set <flv>]` | Declarative kernel flavor manager (default, zen, lts, latest, hardened). | `neuronix kernel list` |
+| `manual` | `[topic \| --list]` | Reads offline system manual and architecture reference (`/etc/neuronix/manual/`). | `neuronix manual config` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
 | `help` | None (`-h`, `--help`)   | Displays available commands and syntax summaries. | `neuronix help` |
 
@@ -440,24 +442,32 @@ neuronix try ./configuration.nix --timeout 60
 ```
 
 ### 5. Model Context Protocol (MCP) Server
-NEURONIX includes a built-in Model Context Protocol server communicating over `stdio` adhering to JSON-RPC 2.0 (Protocol Version `2024-11-05`). It provides structured tools for autonomous development agents:
+NEURONIX includes a built-in Model Context Protocol server communicating over `stdio` adhering to JSON-RPC 2.0 (Protocol Version `2024-11-05`). It provides structured tools, resources, and prompt templates for autonomous development agents:
+- **Tools:** Exposes `neuronix_status`, `neuronix_diet`, `neuronix_verify`, `neuronix_undo`, `neuronix_shadow_eval`, `neuronix_doctor`, `neuronix_check_update`, `neuronix_upgrade`, and `neuronix_manual`.
+- **Resources (`resources/list`, `resources/read`):** Exposes all 11 system manual chapters under the `neuronix://manual/*` URI scheme for instant semantic ingestion.
+- **Prompts (`prompts/list`, `prompts/get`):** Exposes `neuronix_system_directive` containing declarative operational guardrails for AI models.
+
 ```bash
-# Exposes neuronix_status, neuronix_diet, neuronix_verify, neuronix_undo, and neuronix_shadow_eval
+# Launch JSON-RPC 2.0 stdio MCP server
 neuronix mcp
 ```
 
 ### 6. OpenCode AI System Copilot & Autonomous Updates
 A built-in, declarative AI system copilot providing natural language and CLI-driven system intelligence across all desktop environments (KDE Plasma, GNOME, Hyprland). See the [OpenCode Architecture Specification](docs/opencode.md) for comprehensive design details.
 - **Pre-installed by Default:** Enabled out-of-the-box (`neuronix.services.opencode.enable = true;`), exposing application launcher entries (`opencode.desktop`) and desktop shortcuts across all desktop environments.
+- **Autonomous System Manual Grounding:** On launch, OpenCode automatically detects `/etc/neuronix/manual/` and pre-loads Chapter 10 (`10_AI_AGENT_REFERENCE.md`) into session context. This grounds every natural language interaction in declarative NixOS safety without requiring manual CLI invocations (`neuronix manual`).
 - **Autonomous Background Updates:** Powered by `neuronix-opencode-update.timer` which checks and synchronizes upstream releases daily without touching physical store immutability or risking running system stability.
 - **Zero-Residue Removal:** Easily disabled via `neuronix.services.opencode.enable = false;` or via the NEURONIX Center interface. Disabling immediately removes all binaries, background timers, and desktop shortcuts.
 
 ```bash
-# Launch interactive AI copilot session
+# Launch interactive AI copilot session (with auto-grounded manual reference)
 opencode
 
 # Query real-time hardware, kernel, and generation state
 opencode status
+
+# Access system manual directly within interactive copilot
+opencode manual cli
 
 # Execute upstream update synchronization check
 opencode update
@@ -537,6 +547,22 @@ neuronix kernel list
 neuronix kernel set zen
 ```
 
+### 12. System-Embedded Manual & Autonomous AI Grounding
+NEURONIX embeds an immutable, 11-chapter technical manual directly into the operating system filesystem at `/etc/neuronix/manual/` via pure Nix derivations (`modules/core/manual.nix`):
+- **Always Synchronized:** Directly symlinked to `/nix/store`, automatically re-evaluated and updated during every system generation rebuild (`nixos-rebuild switch` or `neuronix upgrade`).
+- **Autonomous AI Preloading:** AI agents (OpenCode, Cursor, Claude, Antigravity) automatically discover root directives at `/etc/neuronix/SYSTEM_PROMPT.md`, `/etc/neuronix/AGENTS.md`, and `$NEURONIX_AI_DIRECTIVE` without requiring manual user commands.
+- **Unified Multi-Interface Access:** Seamlessly accessible via CLI (`neuronix manual [topic]`), OpenCode interactive copilot (`opencode manual [topic]`), and native MCP protocol (`tools/call`, `resources/read`, `prompts/get`).
+
+```bash
+# Display full manual index and chapter topic list
+neuronix manual index
+
+# Query specific architectural, configuration, or operational manual chapters
+neuronix manual config
+neuronix manual storage
+neuronix manual ai
+```
+
 ---
 
 ## Building & Installation
@@ -602,16 +628,17 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Industrial Test Battery (925 Assertions)
+## Verification, Lifecycle Gate & Industrial Test Battery (969 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 925 automated assertions across 14 specialized test harnesses and release gates:
+System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 969 automated assertions across 15 specialized test harnesses, 24 test suites, and release gates:
 
 ```text
 ═══════════════════════════════════════════════════════════════════
                     TEST HARNESS REPORT SUMMARY                    
 ═══════════════════════════════════════════════════════════════════
-  Master Test Harness (tests/run_all_tests.sh)     : 599 / 599 PASS
+  Master Test Harness (tests/run_all_tests.sh)     : 643 / 643 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 209 / 209 PASS
+  System Manual Gate (tests/test_system_manual.sh) :  44 /  44 PASS
   Core CLI Harness (tests/test_neuronix_core.sh)   :  14 /  14 PASS
   Single Source of Truth Gate (source_of_truth)    :  10 /  10 PASS
   Multi-Architecture Matrix (multiarch_matrix)     :   8 /   8 PASS
@@ -624,7 +651,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Real E2E ISO Lifecycle Gate (e2e/test_iso_install):  8 /   8 PASS
   Release Lifecycle Gate (test_release_lifecycle)  :  32 /  32 PASS
   Reproducibility Gate (test_reproducible_iso)     :   6 /   6 PASS
-  Total Executed Assertions                        : 925 Assertions
+  Total Executed Assertions                        : 969 Assertions
   Failed Verification                              : 0 Failures
   Execution Duration                               : ~104 seconds
   Confidence Score                                 : 100%
@@ -637,8 +664,11 @@ System invariants, module structures, and CLI dispatchers are validated through 
 
 ### Verification Battery Execution:
 ```bash
-# Run master industrial test harness (599 tests across 23 suites)
+# Run master industrial test harness (643 tests across 24 suites)
 bash tests/run_all_tests.sh
+
+# Run system-embedded manual & AI reference verification (44 tests)
+bash tests/test_system_manual.sh
 
 # Run distribution standalone suite (209 tests)
 bash tests/test_distro_suite.sh

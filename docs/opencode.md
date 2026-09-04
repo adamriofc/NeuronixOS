@@ -51,12 +51,16 @@ opencode verify ripgrep
 
 # Evaluate configuration in in-memory Shadow Micro-VM
 opencode try ./configuration.nix
+
+# Query system manual chapters directly via CLI
+opencode manual cli
 ```
 
 ### Interactive Internal Commands
 
 When running in interactive mode (`opencode interactive`), the following built-in commands are available:
 - `/status`: Displays active Linux kernel, CPU/GPU telemetry, memory pressure, and generation index.
+- `/manual [topic]`: Renders system manual chapters directly inside the interactive session without leaving the chat loop.
 - `/verify <package>`: Evaluates whether a package derivation builds cleanly against the nixpkgs closure.
 - `/try [file.nix]`: Spawns a transient QEMU micro-VM in `/dev/shm` to verify proposed configurations.
 - `/diet`: Invokes `neuronix diet` to purge unreferenced store paths and issue SSD discard commands.
@@ -90,7 +94,17 @@ To ensure users always have the latest capabilities and security mitigations wit
 
 ---
 
-## 5. Declarative Module Configuration
+## 5. Autonomous System Grounding & Reference Hub
+
+OpenCode operates with native awareness of NEURONIX system architecture without requiring manual prompt crafting or user intervention:
+
+1. **Automatic Directives Ingestion:** Upon launch, OpenCode detects `/etc/neuronix/manual/10_AI_AGENT_REFERENCE.md` (and the root symlink `/etc/neuronix/SYSTEM_PROMPT.md`). It automatically injects the system directives into the active session context before user input is accepted.
+2. **Zero-Command Grounding:** Users never need to issue `neuronix manual` or type `/manual` to force the AI model into compliance. All natural language prompts are processed through the lens of declarative NixOS principles (preventing imperatively harmful actions like `apt-get`, `pacman -S`, or unrecorded root file modifications).
+3. **MCP Protocol Integration:** OpenCode natively leverages the local MCP server (`neuronix mcp`), accessing system manual resources under `neuronix://manual/*` and calling tools like `neuronix_diet` or `neuronix_manual` on demand.
+
+---
+
+## 6. Declarative Module Configuration
 
 OpenCode is controlled declaratively in `/etc/nixos/configuration.nix` via `modules/services/opencode.nix`:
 
@@ -113,7 +127,7 @@ OpenCode is controlled declaratively in `/etc/nixos/configuration.nix` via `modu
 
 ---
 
-## 6. Zero-Residue Removal Workflow
+## 7. Zero-Residue Removal Workflow
 
 NEURONIX adheres strictly to the principle of user autonomy. If a user chooses not to use OpenCode:
 
