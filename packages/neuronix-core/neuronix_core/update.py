@@ -17,6 +17,10 @@ from .lock import OperationLock, ConcurrentOperationError
 from .journal import TransactionJournal, TransactionState
 from .rollback import execute_rollback
 
+class ReleaseMetadataError(RuntimeError):
+    """Raised when release metadata or pinned revision cannot be determined."""
+    pass
+
 def get_repo_root() -> str:
     """Finds repository root containing flake.nix by ascending from current module."""
     curr = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +30,7 @@ def get_repo_root() -> str:
         curr = os.path.dirname(curr)
     return os.environ.get("NEURONIX_REPO_ROOT", "/etc/nixos")
 
-def get_pinned_commit(repo_root=None) -> str:
+def get_pinned_commit(repo_root=None, strict: bool = False) -> Optional[str]:
     """Retrieves locked nixpkgs commit from flake.lock or version.nix."""
     if repo_root is None:
         repo_root = get_repo_root()
@@ -34,7 +38,7 @@ def get_pinned_commit(repo_root=None) -> str:
     flake_lock = os.path.join(repo_root, "flake.lock")
     if os.path.exists(flake_lock):
         try:
-            with open(flake_lock, "r") as f:
+            with open(flake_lock, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 nodes = data.get("nodes", {})
                 nixpkgs = nodes.get("nixpkgs", {})
@@ -48,27 +52,114 @@ def get_pinned_commit(repo_root=None) -> str:
     version_nix = os.path.join(repo_root, "version.nix")
     if os.path.exists(version_nix):
         try:
-            with open(version_nix, "r") as f:
+            with open(version_nix, "r", encoding="utf-8") as f:
                 for line in f:
                     if "nixpkgsCommit" in line:
                         return line.split('"')[1]
         except Exception:
             pass
 
-    return "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2"
+    if strict:
+        raise ReleaseMetadataError(
+            f"Unable to resolve pinned nixpkgs commit from {repo_root}: missing or invalid flake.lock and version.nix."
+        )
+    return None
 
-def check_upstream_update(repo_root=None) -> Dict[str, Any]:
+def check_upstream_update(repo_root=None, timeout: float = 3.0) -> Dict[str, Any]:
     """
     Checks whether local system tracks pinned upstream revision.
+    Queries remote upstream git repository or API with strict timeout.
     Returns status dictionary.
     """
     pinned = get_pinned_commit(repo_root)
-    return {
-        "status": "UP_TO_DATE",
-        "pinned_commit": pinned,
-        "channel": "nixos-26.05",
-        "release_tag": "v1.0.3"
-    }
+    if pinned is None:
+        return {
+            "status": "METADATA_UNAVAILABLE",
+            "error": "Locked commit hash could not be resolved from repository.",
+            "pinned_commit": None,
+            "channel": "nixos-26.05",
+            "release_tag": "v1.0.3"
+        }
+
+    # Query upstream remote
+    remote_commit = None
+    probe_error = None
+
+    # Try git ls-remote if inside a git repository
+    if shutil.which("git"):
+        try:
+            res = subprocess.run(
+                ["git", "ls-remote", "origin", "HEAD"],
+                cwd=repo_root or get_repo_root(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=timeout,
+                check=False
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                remote_commit = res.stdout.strip().split()[0]
+        except Exception as e:
+            probe_error = str(e)
+
+    # Fallback to GitHub API probe if git ls-remote did not resolve
+    if not remote_commit:
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                "https://api.github.com/repos/adamriofc/neuronix/commits/main",
+                headers={"User-Agent": "NEURONIX-Update-Engine"}
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                remote_commit = data.get("sha")
+        except Exception as e:
+            if not probe_error:
+                probe_error = str(e)
+
+    if not remote_commit:
+        return {
+            "status": "UNKNOWN",
+            "error": f"Upstream check unreachable: {probe_error or 'Connection timed out'}",
+            "pinned_commit": pinned,
+            "channel": "nixos-26.05",
+            "release_tag": "v1.0.3"
+        }
+
+    # Check local git HEAD if available
+    local_head = None
+    if shutil.which("git"):
+        try:
+            res = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo_root or get_repo_root(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False
+            )
+            if res.returncode == 0:
+                local_head = res.stdout.strip()
+        except Exception:
+            pass
+
+    comparison_target = local_head or pinned
+    if remote_commit == comparison_target:
+        return {
+            "status": "UP_TO_DATE",
+            "pinned_commit": pinned,
+            "upstream_commit": remote_commit,
+            "channel": "nixos-26.05",
+            "release_tag": "v1.0.3"
+        }
+    else:
+        return {
+            "status": "UPDATE_AVAILABLE",
+            "pinned_commit": pinned,
+            "upstream_commit": remote_commit,
+            "channel": "nixos-26.05",
+            "release_tag": "v1.0.3"
+        }
 
 def apply_system_update(
     flake_uri: Optional[str] = None,
@@ -139,15 +230,18 @@ def apply_system_update(
 
         # Stage: HEALTH CHECK
         new_gen = get_active_generation()
-        new_gen_num = int(new_gen) if new_gen and new_gen.isdigit() else prev_gen_num
-
-        # Health verification: active generation must have incremented or be valid
+        new_gen_num = None
         health_passed = True
         health_error = None
 
-        if new_gen_num <= prev_gen_num:
+        if new_gen is None or not str(new_gen).isdigit():
             health_passed = False
-            health_error = f"Active generation did not advance (was {prev_gen_num}, now {new_gen_num})"
+            health_error = "POSTCONDITION FAILED: Active system generation could not be determined post-switch."
+        else:
+            new_gen_num = int(new_gen)
+            if new_gen_num <= prev_gen_num:
+                health_passed = False
+                health_error = f"Active generation did not advance (was {prev_gen_num}, now {new_gen_num})"
 
         # Probe systemd health if available
         if health_passed and shutil.which("systemctl"):

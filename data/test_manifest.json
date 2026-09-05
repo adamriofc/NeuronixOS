@@ -2,15 +2,15 @@
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.3",
-  "generated_at": "2026-09-05T00:48:00Z",
+  "generated_at": "2026-09-05T03:28:19Z",
   "summary": {
-    "total_repository_assertions": 1028,
+    "total_repository_assertions": 1038,
     "qa_master_harness_assertions": 673,
     "distro_component_assertions": 209,
-    "standalone_gates_assertions": 146,
+    "standalone_gates_assertions": 156,
     "qa_master_suites_count": 25,
     "distro_suites_count": 19,
-    "standalone_gates_count": 13,
+    "standalone_gates_count": 14,
     "confidence_score": 100.0,
     "status": "PASSING_ALL"
   },
@@ -19,8 +19,9 @@
     "L1_UNIT": "Fast deterministic unit testing with isolated arguments & fuzzing",
     "L2_SYSTEM": "System-level integration, service contracts & lifecycle state machines",
     "L3_REPRODUCIBILITY": "Cryptographic evaluation, store hashes & bit-identical determinism",
+    "L4_HYBRID_ENGINE": "Hybrid installer engine, direct formatting, AST parsing & state transitions",
     "L4_BENCHMARK": "Statistical latency budgets and empirical pressure benchmarks",
-    "L5_REAL_E2E": "Full end-to-end hypervisor micro-VM installation & execution"
+    "L5_REAL_E2E": "Full hardware-accelerated hypervisor OS boot, install & multi-hop rollback"
   },
   "release_blocker_policy": "Any failure across proof classes L0 to L5 strictly blocks production release",
   "qa_master_harness": {
@@ -241,6 +242,14 @@
       "file": "tests/e2e/test_iso_install.sh",
       "description": "Dual-Mode 8-State E2E ISO Lifecycle Gate",
       "assertions": 8,
+      "proof_class": "L4_HYBRID_ENGINE",
+      "release_blocker": true
+    },
+    {
+      "id": "gate_real_os_install_boot",
+      "file": "tests/e2e/real/test_real_os_install_boot.sh",
+      "description": "Full Hardware-Accelerated OS Installation & Multi-Boot Rollback Invariants",
+      "assertions": 10,
       "proof_class": "L5_REAL_E2E",
       "release_blocker": true
     },

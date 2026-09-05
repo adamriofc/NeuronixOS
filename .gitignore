@@ -20,6 +20,7 @@ __pycache__/
 *.qcow2
 *.img
 *.iso
+*.mp4
 
 # Local scratch / audit notes
 prompt.txt

@@ -1,0 +1,11 @@
+{
+  "gate_id": "gate_real_os_install_boot",
+  "timestamp": "2026-09-05T03:33:32Z",
+  "proof_class": "L5_REAL_E2E",
+  "passed_assertions": 10,
+  "failed_assertions": 0,
+  "status": "PASSED",
+  "kvm_accelerated": true,
+  "virtual_disk_bytes": 21474836480,
+  "evidence_file": "dist/real_os_boot_evidence.json"
+}

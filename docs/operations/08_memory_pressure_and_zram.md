@@ -3,7 +3,7 @@
 ## 1. Subsystem Architecture
 
 To prevent complete workstation freezes during intensive compilation or large language model inference, NEURONIX implements a dual-layer memory shield:
-1. **Dynamic Compressed RAM (`zram-generator`):** Creates an in-memory swap device utilizing the high-speed `zstd` compression algorithm. ZRAM expands effective available memory capacity by approximately 1.5x to 2.0x.
+1. **Dynamic Compressed RAM (`zram-generator`):** Creates an in-memory swap device utilizing the high-speed `zstd` compression algorithm. ZRAM expands effective available memory capacity by approximately 1.5x to 2.0x, depending on workload data compressibility and entropy.
 2. **Userspace OOM Daemon (`systemd-oomd`):** Continuously monitors kernel Pressure Stall Information (PSI). When memory pressure exceeds defined latency thresholds, it selectively terminates misbehaving runaway processes before kernel freeze occurs.
 
 ## 2. Inspecting Memory and PSI Diagnostics
@@ -29,5 +29,5 @@ systemctl status systemd-oomd
 ## 3. Kernel Virtual Memory Tuning
 
 NEURONIX configures optimized virtual memory parameters:
-- `vm.max_map_count = 2147483642`: Required for heavy memory mapping (Steam Proton, LLM memory allocators).
-- `vm.swappiness = 180`: Actively prioritizes moving idle anonymous pages into compressed ZRAM.
+- `vm.max_map_count = 2147483642`: Sets virtual memory map areas to 2^31 - 6 (the standard ceiling used by modern gaming and enterprise distributions). Required for heavy memory mapping in Steam Proton / Windows DXVK games and high-concurrency JVM, Chromium, or LLM memory allocators to prevent mmap exhaustion faults.
+- `vm.swappiness = 180`: Actively prioritizes moving idle anonymous pages into compressed ZRAM over evicting filesystem cache.

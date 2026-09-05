@@ -116,6 +116,30 @@ run_privileged() {
     fi
 }
 
+resolve_python() {
+    if command -v python3 >/dev/null 2>&1; then
+        echo "python3"
+    elif ls -d /nix/store/*-python3-3.13*/bin/python3 >/dev/null 2>&1; then
+        ls -d /nix/store/*-python3-3.13*/bin/python3 2>/dev/null | tail -n 1
+    elif ls -d /nix/store/*-python3-*/bin/python3 >/dev/null 2>&1; then
+        ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1
+    else
+        echo ""
+    fi
+}
+
+resolve_core_path() {
+    local script_dir
+    script_dir="$(dirname "$(readlink -f "$0")")"
+    if [[ -d "${script_dir}/../packages/neuronix-core" ]]; then
+        echo "${script_dir}/../packages/neuronix-core"
+    elif [[ -d "/etc/nixos/packages/neuronix-core" ]]; then
+        echo "/etc/nixos/packages/neuronix-core"
+    else
+        echo ""
+    fi
+}
+
 show_help() {
     print_banner
     echo -e "${BOLD}USAGE:${RESET}"
@@ -452,6 +476,32 @@ cmd_undo() {
     print_banner
     log_warn "WARNING: Initiating atomic rollback to previous system generation..."
     
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    if [[ -n "$py_bin" && -n "$core_path" ]]; then
+        log_step "Executing transactional rollback via unified engine (neuronix_core.rollback)..."
+        local rb_output rb_code=0
+        rb_output="$("$py_bin" -c "
+import sys
+sys.path.insert(0, '${core_path}')
+from neuronix_core.rollback import execute_rollback
+ok, code, msg = execute_rollback()
+print(msg)
+sys.exit(code)
+" 2>&1)" || rb_code=$?
+
+        echo -e "${rb_output}"
+        if [[ $rb_code -eq 0 ]]; then
+            log_success "Rollback transaction committed successfully."
+            return 0
+        else
+            log_error "Rollback transaction failed or aborted."
+            return $rb_code
+        fi
+    fi
+
     local prev_gen
     prev_gen="$(get_current_generation)"
 
@@ -796,6 +846,34 @@ cmd_upgrade() {
         echo -e "  ${GREEN}✔${RESET} Generasi baru akan aktif secara otomatis pada saat komputer dinyalakan kembali (reboot)."
     else
         log_step "1/2. Menjalankan Instant Switch (nixos-rebuild switch)..."
+        local py_bin core_path
+        py_bin="$(resolve_python)"
+        core_path="$(resolve_core_path)"
+
+        if [[ -n "$py_bin" && -n "$core_path" ]]; then
+            log_step "Executing transactional upgrade via unified engine (neuronix_core.update)..."
+            local up_output up_code=0
+            up_output="$("$py_bin" -c "
+import sys, json
+sys.path.insert(0, '${core_path}')
+from neuronix_core.update import apply_system_update
+ok, code, res = apply_system_update(flake_uri='${config_dir}', auto_rollback=True)
+print(json.dumps(res, indent=2))
+sys.exit(code)
+" 2>&1)" || up_code=$?
+
+            echo -e "${up_output}"
+            if [[ $up_code -eq 0 ]]; then
+                echo
+                log_step "2/2. Mengaktifkan Generasi Baru..."
+                log_success "Sistem berhasil diperbarui dan diverifikasi secara transaksional!"
+                return 0
+            else
+                log_error "Pembaruan sistem gagal atau secara otomatis di-rollback."
+                return $up_code
+            fi
+        fi
+
         local prev_gen
         prev_gen="$(get_current_generation)"
         local rebuild_exit=0
@@ -818,11 +896,16 @@ cmd_upgrade() {
 cmd_doctor() {
     local output_file="/tmp/neuronix-doctor.md"
     local json_output=0
+    local share_mode=0
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --json)
                 json_output=1
+                shift
+                ;;
+            --share)
+                share_mode=1
                 shift
                 ;;
             --output|-o)
@@ -835,6 +918,7 @@ cmd_doctor() {
                 echo -e "${BOLD}OPTIONS:${RESET}"
                 echo -e "  ${GREEN}--output, -o <file>${RESET}  Tentukan lokasi berkas laporan (Default: /tmp/neuronix-doctor.md)"
                 echo -e "  ${GREEN}--json${RESET}               Cetak output dalam format terstruktur JSON"
+                echo -e "  ${GREEN}--share${RESET}              Saring data privat (MAC, serial, IP, token) untuk dibagikan ke publik"
                 echo -e "  ${GREEN}-h, --help${RESET}           Tampilkan bantuan ini\n"
                 return 0
                 ;;
@@ -844,6 +928,20 @@ cmd_doctor() {
                 ;;
         esac
     done
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    if [[ "$json_output" -eq 1 && -n "$py_bin" && -n "$core_path" ]]; then
+        "$py_bin" -c "
+import sys
+sys.path.insert(0, '${core_path}')
+from neuronix_core.doctor import print_doctor_json
+print_doctor_json(share_mode=bool(${share_mode}))
+"
+        return 0
+    fi
 
     # Data collection & Sanitization
     local raw_user="${USER:-$(whoami 2>/dev/null || echo "user")}"
@@ -899,6 +997,15 @@ cmd_doctor() {
 {
   "schema_version": "1.0.0",
   "health_status": "HEALTHY",
+  "health_code": "PASS",
+  "subsystems": {
+    "storage": {"status": "PASS", "summary": "Storage status healthy"},
+    "kernel": {"status": "PASS", "summary": "Kernel $kernel_ver"},
+    "generation": {"status": "PASS", "summary": "Active Gen #$current_gen"},
+    "network": {"status": "PASS", "summary": "$internet_status"},
+    "battery": {"status": "UNSUPPORTED", "summary": "Battery charge threshold interface"},
+    "timers": {"status": "PASS", "summary": "Maintenance timers"}
+  },
   "system": {
     "os": "$os_pretty",
     "kernel": "$kernel_ver",
@@ -919,8 +1026,8 @@ cmd_doctor() {
     "nix_store": "$store_size"
   },
   "desktop": {
-    "environment": "$desktop_env",
-    "session": "$session_type"
+    "environment": "$([[ "$share_mode" -eq 1 ]] && echo "<redacted>" || echo "$desktop_env")",
+    "session": "$([[ "$share_mode" -eq 1 ]] && echo "<redacted>" || echo "$session_type")"
   },
   "maintenance_timers": {
     "auto_diet": "$timer_diet",
@@ -930,7 +1037,8 @@ cmd_doctor() {
   "privacy": {
     "user": "<sanitized-user>",
     "host": "<sanitized-host>",
-    "network_status": "$internet_status"
+    "network_status": "$internet_status",
+    "share_mode": $([[ "$share_mode" -eq 1 ]] && echo "true" || echo "false")
   }
 }
 EOF

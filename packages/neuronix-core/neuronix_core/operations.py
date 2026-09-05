@@ -7,6 +7,7 @@ Licensed under the Apache License, Version 2.0
 """
 
 import os
+import json
 import shutil
 import subprocess
 
@@ -35,6 +36,11 @@ APPROVED_PRIVILEGED_OPERATIONS = {
         "description": "Install content-addressed enterprise root certificate",
         "requires_args": True,
         "max_args": 1
+    },
+    "upgrade": {
+        "description": "Execute transactional atomic system upgrade or switch",
+        "requires_args": False,
+        "max_args": 2
     }
 }
 
@@ -129,5 +135,17 @@ def execute_privileged_operation(operation_id: str, *args):
         # Invoke verified ca installation handler
         from .ca import enroll_certificate
         return enroll_certificate(cert_path)
+
+    elif operation_id == "upgrade":
+        from .update import apply_system_update
+        flake_uri = None
+        dry_run = False
+        for a in args:
+            if a == "--dry-run":
+                dry_run = True
+            elif not a.startswith("-"):
+                flake_uri = a
+        ok, code, res = apply_system_update(flake_uri=flake_uri, dry_run=dry_run)
+        return ok, code, json.dumps(res, indent=2)
 
     return False, 1, f"Unhandled operation: {operation_id}"

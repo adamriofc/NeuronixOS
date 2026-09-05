@@ -28,6 +28,10 @@ class CorruptedJournalError(RuntimeError):
     """Raised when the journal file exists on disk but is invalid or corrupted JSON."""
     pass
 
+class JournalUnavailableError(RuntimeError):
+    """Raised when mandatory journal storage cannot be created or accessed."""
+    pass
+
 class _ReentrantJournalLock:
     """
     Re-entrant, thread-safe kernel file lock using fcntl.flock.
@@ -86,7 +90,13 @@ class TransactionJournal:
         if not self.journal_path:
             target_dir = self.DEFAULT_JOURNAL_DIR
             if os.geteuid() == 0:
-                os.makedirs(target_dir, exist_ok=True)
+                try:
+                    os.makedirs(target_dir, exist_ok=True)
+                except (PermissionError, OSError) as err:
+                    raise JournalUnavailableError(
+                        f"Mandatory privileged journal directory '{target_dir}' is inaccessible: {err}. "
+                        "Privileged system mutations cannot proceed without persistent journal storage."
+                    ) from err
                 self.journal_path = os.path.join(target_dir, "operation_journal.json")
             else:
                 # Non-root unprivileged fallback
@@ -146,7 +156,26 @@ class TransactionJournal:
             backup_path = f"{self.journal_path}.corrupt.{int(time.time())}"
             if os.path.exists(self.journal_path):
                 os.replace(self.journal_path, backup_path)
-            clean_journal = {"schema_version": "1.0.0", "transactions": {}}
+            
+            active_gen = None
+            try:
+                from .generation import get_active_generation
+                active_gen = get_active_generation()
+            except Exception:
+                pass
+
+            clean_journal = {
+                "schema_version": "1.0.0",
+                "system_status": "RECOVERY_REQUIRED",
+                "last_incident": {
+                    "incident_id": f"incident_{int(time.time())}",
+                    "quarantined_path": backup_path,
+                    "quarantined_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "active_generation_at_reset": active_gen,
+                    "status": "CORRUPTED_JOURNAL_RESET"
+                },
+                "transactions": {}
+            }
             self._write_journal(clean_journal)
             return backup_path
 
@@ -231,24 +260,32 @@ class TransactionJournal:
                 prev_gen = tx.get("details", {}).get("previous_generation")
 
                 action_taken = "MARKED_FAILED"
+                final_state = TransactionState.FAILED
+
                 if op in ("system_update", "rollback") and prev_gen:
                     action_taken = f"NEEDS_ROLLBACK_TO_GEN_{prev_gen}"
                     try:
                         from .generation import get_active_generation
                         from .rollback import execute_rollback
                         active = get_active_generation()
-                        if active is not None and str(active) != str(prev_gen):
+                        if active is not None and str(active) == str(prev_gen):
+                            action_taken = f"ALREADY_AT_GEN_{prev_gen} (NEEDS_ROLLBACK_TO_GEN_{prev_gen})"
+                            final_state = TransactionState.ROLLED_BACK
+                        elif active is not None:
                             rb_ok, rb_code, rb_out = execute_rollback(target_generation=int(prev_gen))
                             if rb_ok:
                                 action_taken = f"ROLLED_BACK_TO_GEN_{prev_gen} (NEEDS_ROLLBACK_TO_GEN_{prev_gen})"
+                                final_state = TransactionState.ROLLED_BACK
                             else:
                                 action_taken = f"FAILED_ROLLBACK_TO_GEN_{prev_gen}: {rb_out.strip()} (NEEDS_ROLLBACK_TO_GEN_{prev_gen})"
+                                final_state = TransactionState.FAILED
                     except Exception as err:
                         action_taken = f"NEEDS_ROLLBACK_TO_GEN_{prev_gen} (recovery error: {err})"
+                        final_state = TransactionState.FAILED
 
                 self.update_transaction(
                     tx_id,
-                    TransactionState.FAILED,
+                    final_state,
                     {"recovery_action": action_taken, "recovered_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
                 )
                 recovery_report.append({

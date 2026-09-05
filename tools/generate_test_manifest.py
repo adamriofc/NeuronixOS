@@ -22,8 +22,9 @@ PROOF_CLASS_TAXONOMY = {
     "L1_UNIT": "Fast deterministic unit testing with isolated arguments & fuzzing",
     "L2_SYSTEM": "System-level integration, service contracts & lifecycle state machines",
     "L3_REPRODUCIBILITY": "Cryptographic evaluation, store hashes & bit-identical determinism",
+    "L4_HYBRID_ENGINE": "Hybrid installer engine, direct formatting, AST parsing & state transitions",
     "L4_BENCHMARK": "Statistical latency budgets and empirical pressure benchmarks",
-    "L5_REAL_E2E": "Full end-to-end hypervisor micro-VM installation & execution"
+    "L5_REAL_E2E": "Full hardware-accelerated hypervisor OS boot, install & multi-hop rollback"
 }
 
 RELEASE_BLOCKER_POLICY = "Any failure across proof classes L0 to L5 strictly blocks production release"
@@ -96,6 +97,14 @@ STANDALONE_GATES = [
         "file": "tests/e2e/test_iso_install.sh",
         "description": "Dual-Mode 8-State E2E ISO Lifecycle Gate",
         "assertions": 8,
+        "proof_class": "L4_HYBRID_ENGINE",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_real_os_install_boot",
+        "file": "tests/e2e/real/test_real_os_install_boot.sh",
+        "description": "Full Hardware-Accelerated OS Installation & Multi-Boot Rollback Invariants",
+        "assertions": 10,
         "proof_class": "L5_REAL_E2E",
         "release_blocker": True
     },

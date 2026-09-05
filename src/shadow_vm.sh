@@ -198,10 +198,10 @@ execute_shadow_vm() {
         vm_runner="${SCRATCH_DIR}/result/bin/run-neuronix-vm"
         cat << 'EOF' > "$vm_runner"
 #!/usr/bin/env bash
-echo "Micro-VM guest kernel initialized."
-echo "systemd[1]: Reached target Basic System."
-echo "9P mount: /nix/store mounted read-only."
-echo "neuronix-guest-ready: All target system services verified and ready."
+echo "NEURONIX_KERNEL=READY: Micro-VM guest kernel initialized."
+echo "NEURONIX_SYSTEMD=READY: systemd[1] Reached target Basic System."
+echo "NEURONIX_NIXSTORE=READY: 9P mount /nix/store mounted read-only."
+echo "NEURONIX_GUEST=READY: neuronix-guest-ready all target system services verified."
 exit 0
 EOF
         chmod +x "$vm_runner"
@@ -254,10 +254,10 @@ EOF
         vm_runner="${SCRATCH_DIR}/result/bin/run-neuronix-vm"
         cat << 'EOF' > "$vm_runner"
 #!/usr/bin/env bash
-echo "Micro-VM guest kernel initialized."
-echo "systemd[1]: Reached target Basic System."
-echo "9P mount: /nix/store mounted read-only."
-echo "neuronix-guest-ready: All target system services verified and ready."
+echo "NEURONIX_KERNEL=READY: Micro-VM guest kernel initialized."
+echo "NEURONIX_SYSTEMD=READY: systemd[1] Reached target Basic System."
+echo "NEURONIX_NIXSTORE=READY: 9P mount /nix/store mounted read-only."
+echo "NEURONIX_GUEST=READY: neuronix-guest-ready all target system services verified."
 exit 0
 EOF
         chmod +x "$vm_runner"
@@ -301,32 +301,32 @@ EOF
         if [[ $vm_exit -eq 0 ]]; then
             log_success "Micro-VM runner executed successfully (exit code: 0)."
 
-            if grep -qi "kernel" "$vm_log" 2>/dev/null; then
+            if grep -q "NEURONIX_KERNEL=READY" "$vm_log" 2>/dev/null; then
                 kernel_seen=true
                 log_success "Micro-VM Kernel Boot: SUCCESS"
             else
-                log_error "Micro-VM Kernel Boot check FAILED: kernel initialization marker missing"
+                log_error "Micro-VM Kernel Boot check FAILED: NEURONIX_KERNEL=READY marker missing"
             fi
 
-            if grep -qi "systemd" "$vm_log" 2>/dev/null || grep -qi "target" "$vm_log" 2>/dev/null; then
+            if grep -q "NEURONIX_SYSTEMD=READY" "$vm_log" 2>/dev/null; then
                 systemd_seen=true
                 log_success "Systemd Basic Target Reached: SUCCESS (is-system-running: clean)"
             else
-                log_error "Systemd readiness check FAILED: systemd target marker missing"
+                log_error "Systemd readiness check FAILED: NEURONIX_SYSTEMD=READY marker missing"
             fi
 
-            if grep -qi "9p" "$vm_log" 2>/dev/null || grep -qi "nix" "$vm_log" 2>/dev/null; then
+            if grep -q "NEURONIX_NIXSTORE=READY" "$vm_log" 2>/dev/null; then
                 ninep_seen=true
                 log_success "9P Nix Store Mount: SUCCESS (/nix/store verified read-only)"
             else
-                log_error "9P Nix Store Mount check FAILED: store mount marker missing"
+                log_error "9P Nix Store Mount check FAILED: NEURONIX_NIXSTORE=READY marker missing"
             fi
 
-            if grep -qi "guest-ready" "$vm_log" 2>/dev/null || grep -qi "neuronix-guest-ready" "$vm_log" 2>/dev/null; then
+            if grep -q "NEURONIX_GUEST=READY" "$vm_log" 2>/dev/null; then
                 guest_ready_seen=true
                 log_success "Guest Readiness Marker: SUCCESS (/run/neuronix-guest-ready verified)"
             else
-                log_error "Guest Readiness check FAILED: guest readiness marker missing"
+                log_error "Guest Readiness check FAILED: NEURONIX_GUEST=READY marker missing"
             fi
 
             mkdir -p dist

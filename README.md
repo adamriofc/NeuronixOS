@@ -8,7 +8,7 @@
   <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.3-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
-  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1028%2F1028_Passed_(100%25)-success.svg" alt="Testing"></a>
+  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1038%2F1038_Passed_(100%25)-success.svg" alt="Testing"></a>
   <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
   <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
@@ -67,7 +67,7 @@
   - [13. Enterprise Security Boundary & Hardened Trust Architecture](#13-enterprise-security-boundary--hardened-trust-architecture)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (1,028 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (1,038 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -174,7 +174,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 | **FHS Dynamic Binary Compatibility** | Pre-configured `nix-ld` for VS Code, CUDA, and ELFs | Requires manual `nix-ld` or `steam-run` wrapping | Handled via Toolbox / Distrobox containers | Handled via Distrobox containers | Native POSIX/FHS directory hierarchy |
 | **AI Copilot & Telemetry Daemon** | Native OpenCode daemon + MCP JSON-RPC 2.0 server | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) |
 | **Storage Topology & Compression** | 5 Btrfs subvolumes (`@`, `@home`, `@nix`, `@snapshots`, `@swap`) + ZSTD:3 | User-defined partitioning (defaults to monolithic) | Btrfs root with subvolumes; no transparent compression | Btrfs root with Snapper read-only subvolumes | Monolithic Btrfs or EXT4 without subvolume convention |
-| **Automated Assurance Gate** | 1,028 verified assertions across 25 QA suites, distro harness, and lifecycle gates (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
+| **Automated Assurance Gate** | 1,038 verified assertions across 25 QA suites, distro harness, and 14 standalone gates (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
 | **Release Provenance** | Pinned Flake commit + RFC SHA-256 + SPDX 2.3 SBOM | Hydra output provenance | Koji build logs / RPM signatures | OBS build provenance | Arch build system logs |
 
 ---
@@ -184,7 +184,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 #### 1. NEURONIX OS vs. Vanilla NixOS
 Vanilla NixOS provides an exceptional functional package management paradigm, but operates fundamentally as an infrastructure toolkit rather than a cohesive, out-of-the-box desktop distribution. A user installing vanilla NixOS must manually architect their Btrfs subvolume layout, configure swap parameters, script hardware driver integrations (such as NVIDIA PRIME offloading), research dynamic linker workarounds for proprietary software (`nix-ld`), and resolve complex multi-desktop configurations.
 
-NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 1,028-assertion test taxonomy (cataloged in `data/test_manifest.json`). Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
+NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 1,038-assertion test taxonomy (cataloged in `data/test_manifest.json`). Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
 
 #### 2. NEURONIX OS vs. Fedora Silverblue / Atomic Desktops
 Fedora Silverblue enforces immutability by composing system states as read-only OSTree commits. While effective at preventing host corruption, Silverblue introduces significant operational overhead:
@@ -211,7 +211,7 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
 | Proof Class | Rigor Level & Scope | Verification Grounding | Subsystems & Features |
 | :--- | :--- | :--- | :--- |
 | **P0: Mathematical Determinism** | Functional derivations, bit-identical store paths, pinned inputs. | Verified via Nix derivation graph, `flake.lock` pinned commit, and RFC SHA-256 digests. | Pure Nix substrate, pinned Nixpkgs closures, reproducible ISO builds, release manifest hashes. |
-| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 1,028 automated test assertions across 25 QA suites, 19 distro component suites, and 13 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC. |
+| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 1,038 automated test assertions across 25 QA suites, 19 distro component suites, and 14 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC. |
 | **P2: Qualified Reference Hardware** | Empirical hardware validation on representative bare-metal systems. | Validated across 8 reference platforms (ThinkPad, Framework, AMD/Intel workstations, XPS, Zephyrus, Apple Silicon). | Intel/AMD microcode, Mesa RADV, Intel Arc Xe, NVIDIA PRIME offload, S3/s2idle power management, PipeWire HD audio. |
 | **P3: Declarative Module Support** | Composable NixOS configuration modules and subsystem policies. | 27 hardware configuration pillars managed in `modules/hardware/` and `data/hardware_qualification.json`. | ZRAM ZSTD swap, systemd-oomd memory monitor, Btrfs subvolumes (@, @home, @nix, @log, @snapshots), auto-TRIM. |
 | **P4: Experimental / Community** | Optional hardware features, custom Wayland compositor rules, community packages. | Documented with operational caveats and manual verification steps in operational runbooks. | Lanzaboote UEFI Secure Boot signing chain, TPM2 LUKS auto-unlocking, custom Hyprland animations. |
@@ -239,7 +239,7 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
   ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ In-Memory Shadow Micro-VM Simulator (neuronix try)
   ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Declarative Derivation Verification (neuronix verify)
   ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Storage Pruner & VirtIO TRIM (neuronix diet)
-  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 1,028 Automated Test Assertions (100% Pass)
+  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 1,038 Automated Test Assertions (100% Pass)
 ```
 
 ---
@@ -643,9 +643,9 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Industrial Test Battery (1,028 Assertions)
+## Verification, Lifecycle Gate & Industrial Test Battery (1,038 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,028 automated assertions across 15 specialized test harnesses, 25 test suites, and release gates:
+System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,038 automated assertions across 16 test harnesses (25 master suites, 19 distro suites, and 14 standalone gates):
 
 ```text
 ═══════════════════════════════════════════════════════════════════
@@ -656,7 +656,8 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Single Source of Truth Gate (source_of_truth)    :  13 /  13 PASS
   Multi-Architecture Matrix (multiarch_matrix)     :  13 /  13 PASS
   Two-Build Derivation Repro (two_build_repro)     :   8 /   8 PASS
-  Real E2E ISO Lifecycle Gate (e2e/test_iso_install):  8 /   8 PASS
+  Hybrid E2E ISO Lifecycle Gate (e2e/test_iso_install):  8 /   8 PASS
+  Real OS Install & Boot Gate (test_real_os_install_boot): 10 /  10 PASS
   Release Lifecycle Gate (test_release_lifecycle)  :  34 /  34 PASS
   Multi-Hop Rollback Correctness (rollback_corr)   :  13 /  13 PASS
   Enterprise Security Audit (security_audit)       :  14 /  14 PASS
@@ -666,7 +667,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Historical Regression Corpus (regression_corpus) :   7 /   7 PASS
   Reproducibility Gate (test_reproducible_iso)     :   6 /   6 PASS
   Performance Benchmarks (test_benchmarks)         :   4 /   4 PASS
-  Total Executed Assertions                        : 1,028 Assertions
+  Total Executed Assertions                        : 1,038 Assertions
   Failed Verification                              : 0 Failures
   Execution Duration                               : ~110 seconds
   Confidence Score                                 : 100%
@@ -694,8 +695,11 @@ bash tests/test_multiarch_matrix.sh
 # Run two-build functional reproducibility (8 tests)
 bash tests/test_two_build_reproducibility.sh
 
-# Run real E2E ISO installation and lifecycle gate (8 contract states / 19 real KVM hardware states)
+# Run hybrid E2E ISO installation engine gate (8 contract states / 19 real KVM hardware states)
 bash tests/e2e/test_iso_install.sh
+
+# Run real OS installation and multi-boot qualification gate (10 tests)
+bash tests/e2e/real/test_real_os_install_boot.sh
 
 # Run release lifecycle and target layout gate (34 tests)
 bash tests/test_release_lifecycle.sh
