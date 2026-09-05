@@ -29,7 +29,9 @@
 
         for bat in "''${batteries[@]}"; do
           target_file=""
-          if [ -w "$bat/charge_control_limit_max" ]; then
+          if [ -w "$bat/charge_control_end_threshold" ]; then
+            target_file="$bat/charge_control_end_threshold"
+          elif [ -w "$bat/charge_control_limit_max" ]; then
             target_file="$bat/charge_control_limit_max"
           elif [ -w "$bat/charge_stop_threshold" ]; then
             target_file="$bat/charge_stop_threshold"
@@ -50,7 +52,7 @@
               failed_count=$((failed_count + 1))
             fi
           else
-            echo "BATTERY_THRESHOLD: UNSUPPORTED sysfs interface on $bat (charge_control_limit_max / charge_stop_threshold not writable)"
+            echo "BATTERY_THRESHOLD: UNSUPPORTED sysfs interface on $bat (charge_control_end_threshold / charge_control_limit_max / charge_stop_threshold not writable)"
           fi
         done
 

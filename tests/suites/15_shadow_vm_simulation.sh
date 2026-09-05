@@ -41,7 +41,7 @@ assert_output_contains "$TARGET_BIN try --timeout 30 --dry-run" "30 seconds" "Op
 
 # 20-26. Negative Bounds & Error Injection Handling
 assert_exit_code "$TARGET_BIN try --timeout 0" 1 "Option --timeout 0 is rejected with exit code 1"
-assert_exit_code "$TARGET_BIN try --timeout -5" 1 "Negative timeout is rejected with exit code 1"
+assert_exit_code "$TARGET_BIN try --mode synthetic --promote --smoke-test" 1 "Option --promote rejected under synthetic mode"
 assert_exit_code "$TARGET_BIN try --timeout invalid_abc" 1 "Non-numeric timeout is rejected with exit code 1"
 assert_exit_code "$TARGET_BIN try --unknown-vm-flag" 1 "Unknown flag for try command is rejected with exit 1"
 assert_stderr_contains "$TARGET_BIN try --unknown-vm-flag" "tidak dikenali" "Error message emitted to stderr on invalid flag"

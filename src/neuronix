@@ -245,8 +245,13 @@ cmd_status() {
         oomd_status="${YELLOW}NONAKTIF / PSI PASSIVE${RESET}"
     fi
 
-    local batt_threshold_file
-    batt_threshold_file=$(find /sys/class/power_supply/ -name "charge_control_limit_max" 2>/dev/null | head -n 1 || true)
+    local batt_threshold_file=""
+    for cand in charge_control_end_threshold charge_control_limit_max charge_stop_threshold; do
+        batt_threshold_file=$(find /sys/class/power_supply/ -name "$cand" 2>/dev/null | head -n 1 || true)
+        if [[ -n "$batt_threshold_file" && -f "$batt_threshold_file" ]]; then
+            break
+        fi
+    done
     if [[ -n "$batt_threshold_file" && -f "$batt_threshold_file" ]]; then
         local limit_val
         limit_val=$(cat "$batt_threshold_file" 2>/dev/null || echo "100")

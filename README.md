@@ -328,7 +328,7 @@ NEURONIX includes declarative configurations addressing standard desktop and lap
 | Subsystem Domain | Technical Objective | Declarative Implementation | Configuration Module |
 | :--- | :--- | :--- | :--- |
 | **Package Licensing** | Proprietary drivers and runtime compatibility (Steam, NVIDIA, codecs) | `nixpkgs.config.allowUnfree = true` | `modules/core/default.nix` |
-| **RTC Synchronization** | Real-time clock synchronization in multi-boot environments | `time.hardwareClockInLocalTime = true` | `modules/hardware/boot.nix` |
+| **RTC Synchronization** | Real-time clock synchronization in Windows dual-boot environments | `time.hardwareClockInLocalTime` (conditional for Windows dual-boot) | `modules/hardware/boot.nix` |
 | **Filesystem Maintenance** | Metadata chunk fragmentation prevention on active Btrfs volumes | Automated monthly `btrfs-balance` systemd timer | `modules/services/storage.nix` |
 | **Storage Reclamation** | Autonomous SSD TRIM and sparse disk reclamation (Auto-TRIM) | Daily `fstrim.timer` + `auto-optimise-store` hardlink dedupe | `modules/services/storage.nix` |
 | **Application Ecosystem** | Sandboxed desktop application integration without root modification | Dual-layer distribution: immutable Nix core + Flathub Flatpak | `modules/services/flatpak.nix` |

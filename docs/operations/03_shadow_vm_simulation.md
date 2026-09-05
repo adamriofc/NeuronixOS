@@ -24,8 +24,10 @@ neuronix try --smoke-test --headless
 Simulate a custom configuration file, verify health, and atomically promote to the host upon success:
 
 ```bash
-neuronix try --smoke-test --promote --yes /etc/nixos/configuration.nix
+neuronix try --mode real --smoke-test --promote --yes /etc/nixos/configuration.nix
 ```
+
+> **Promotion Safety Invariant:** Host promotion via `--promote` is strictly blocked if the verification ran in synthetic simulation mode. Promotion requires verified execution in a real hardware/KVM micro-VM (`--mode real`).
 
 ## 4. Verification Gates and Telemetry Markers
 

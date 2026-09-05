@@ -263,6 +263,12 @@ EOF
         chmod +x "$vm_runner"
     fi
 
+    if [[ "$PROMOTE" == true && "$actual_mode" == "synthetic" && "${NEURONIX_TEST_MOCK_PROMOTION:-0}" != "1" ]]; then
+        log_error "Safety violation: Option --promote cannot be used with synthetic micro-VM runner."
+        log_error "Host configuration promotion requires verified real micro-VM execution (--mode real)."
+        return 1
+    fi
+
     # 5. Execution and Guest Health Verification
     local vm_log="${SCRATCH_DIR}/vm.log"
     local vm_exit=0
@@ -410,6 +416,12 @@ EOF
     if [[ "$PROMOTE" == true ]]; then
         echo
         log_step "One-Click Promotion (--promote): Applying verified configuration to host OS..."
+
+        if [[ "$actual_mode" == "synthetic" && "${NEURONIX_TEST_MOCK_PROMOTION:-0}" != "1" ]]; then
+            log_error "Safety violation: Cannot promote configuration to host when verified under synthetic simulation runner."
+            log_error "Host promotion requires successful verification within a real hardware/KVM micro-VM (--mode real)."
+            return 1
+        fi
 
         if [[ "$ASSUME_YES" != true && "${NEURONIX_TEST_MOCK_PROMOTION:-0}" != "1" && -t 0 ]]; then
             read -rp "Promote verified configuration to host OS? [y/N]: " confirm

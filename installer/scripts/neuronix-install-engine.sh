@@ -201,7 +201,16 @@ cat <<FLAKE_EOF > "$CONFIG_DIR/flake.nix"
 }
 FLAKE_EOF
 
-log "Generating curated configuration.nix..."
+has_windows="false"
+if [[ "${NEURONIX_DUAL_BOOT_WINDOWS:-0}" == "1" ]]; then
+  has_windows="true"
+elif command -v os-prober >/dev/null 2>&1 && os-prober 2>/dev/null | grep -iq "Windows"; then
+  has_windows="true"
+elif lsblk -no FSTYPE,LABEL 2>/dev/null | grep -iE 'ntfs|bitlocker|Windows' >/dev/null 2>&1; then
+  has_windows="true"
+fi
+
+log "Generating curated configuration.nix (Windows dual-boot RTC: ${has_windows})..."
 cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
 # ==============================================================================
 # NEURONIX OS: Primary System Specification
@@ -228,7 +237,7 @@ cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
   boot.loader.systemd-boot.enable = true;
   boot.loader.systemd-boot.configurationLimit = 15;
   boot.loader.efi.canTouchEfiVariables = true;
-  time.hardwareClockInLocalTime = true;
+  time.hardwareClockInLocalTime = ${has_windows};
 
   # Active Memory Pressure Shield (ZRAM ZSTD + systemd-oomd)
   zramSwap.enable = true;

@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-09-05T02:36:09Z",
+  "timestamp": "2026-09-05T02:58:37Z",
   "requested_mode": "auto",
-  "executed_mode": "synthetic",
+  "executed_mode": "real",
   "kvm_available": true,
   "duration_ms": 150,
   "smoke_test": true,
   "exit_code": 0,
-  "status": "PASSED",
+  "status": "FAILED",
   "verification_gates": {
     "kernel": true,
-    "systemd": true,
-    "ninep_mount": true,
-    "guest_ready": true
+    "systemd": false,
+    "ninep_mount": false,
+    "guest_ready": false
   }
 }
