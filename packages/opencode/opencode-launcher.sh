@@ -300,11 +300,13 @@ case "${CMD}" in
         run_manual "$@"
         ;;
     interactive|"")
-        # Check if running without a TTY in a graphical desktop session
-        if [[ ! -t 0 && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
+        # Check if running without a TTY or pipe in a graphical desktop session
+        if [[ ! -t 0 && ! -t 1 && ! -p /dev/stdin && -n "${DISPLAY:-${WAYLAND_DISPLAY:-}}" ]]; then
+            local script_path
+            script_path="$(readlink -f "$0")"
             for term in kitty alacritty konsole gnome-terminal xfce4-terminal x-terminal-emulator; do
                 if command -v "$term" >/dev/null 2>&1; then
-                    exec "$term" -e "$0" interactive
+                    exec "$term" -e "$script_path" interactive
                 fi
             done
         fi
