@@ -25,7 +25,7 @@ def parse_generation_number(path):
 def get_active_generation():
     """Returns the current active system generation number as a string."""
     prof = get_system_profile()
-    if os.path.exists(prof):
+    if os.path.exists(prof) or os.path.islink(prof):
         try:
             target = os.readlink(prof)
             if "system-" in target:
@@ -60,7 +60,7 @@ def list_generations():
         if gen_num is not None:
             age_days = 0.0
             try:
-                mtime = os.path.getmtime(link)
+                mtime = os.lstat(link).st_mtime
                 dt_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
                 age_days = round(max(0.0, (now_ts - mtime) / 86400.0), 2)
             except Exception:

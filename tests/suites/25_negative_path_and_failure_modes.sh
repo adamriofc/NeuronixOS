@@ -229,32 +229,50 @@ if target_filename.startswith('neuronix-ca-'):
 
 # 21-23. Rollback Safety Invariants & Idempotency
 assert_output_contains "'${PYTHON_BIN}' -c \"
-import sys
+import os, sys, tempfile
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
-from neuronix_core.rollback import simulate_rollback
-ok, msg, _ = simulate_rollback(999999)
-if not ok and 'does not exist' in msg:
-    print('NONEXISTENT_TARGET_REJECTED')
+with tempfile.TemporaryDirectory() as td:
+    prof = os.path.join(td, 'system')
+    os.symlink('/dev/null', f'{prof}-1-link')
+    os.symlink('/dev/null', f'{prof}-2-link')
+    os.symlink(f'{prof}-2-link', prof)
+    os.environ['NEURONIX_SYSTEM_PROFILE'] = prof
+    from neuronix_core.rollback import simulate_rollback
+    ok, msg, _ = simulate_rollback(999999)
+    if not ok and 'does not exist' in msg:
+        print('NONEXISTENT_TARGET_REJECTED')
 \"" "NONEXISTENT_TARGET_REJECTED" "Rollback engine rejects non-existent target generation"
 
 assert_output_contains "'${PYTHON_BIN}' -c \"
-import sys
+import os, sys, tempfile
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
-from neuronix_core.generation import get_active_generation
-from neuronix_core.rollback import execute_rollback
-active = int(get_active_generation())
-ok, code, msg = execute_rollback(target_generation=active)
-if not ok and 'already the active generation' in msg:
-    print('ACTIVE_TARGET_REJECTED')
+with tempfile.TemporaryDirectory() as td:
+    prof = os.path.join(td, 'system')
+    os.symlink('/dev/null', f'{prof}-1-link')
+    os.symlink('/dev/null', f'{prof}-2-link')
+    os.symlink(f'{prof}-2-link', prof)
+    os.environ['NEURONIX_SYSTEM_PROFILE'] = prof
+    from neuronix_core.generation import get_active_generation
+    from neuronix_core.rollback import execute_rollback
+    active = int(get_active_generation())
+    ok, code, msg = execute_rollback(target_generation=active)
+    if not ok and 'already the active generation' in msg:
+        print('ACTIVE_TARGET_REJECTED')
 \"" "ACTIVE_TARGET_REJECTED" "Rollback on current active generation is deterministically rejected"
 
 assert_output_contains "'${PYTHON_BIN}' -c \"
-import sys
+import os, sys, tempfile
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
-from neuronix_core.rollback import execute_rollback
-ok, code, msg = execute_rollback(dry_run=True)
-if ok and code == 0 and 'DRY-RUN' in msg:
-    print('DRY_RUN_ROLLBACK_OK')
+with tempfile.TemporaryDirectory() as td:
+    prof = os.path.join(td, 'system')
+    os.symlink('/dev/null', f'{prof}-1-link')
+    os.symlink('/dev/null', f'{prof}-2-link')
+    os.symlink(f'{prof}-2-link', prof)
+    os.environ['NEURONIX_SYSTEM_PROFILE'] = prof
+    from neuronix_core.rollback import execute_rollback
+    ok, code, msg = execute_rollback(dry_run=True)
+    if ok and code == 0 and 'DRY-RUN' in msg:
+        print('DRY_RUN_ROLLBACK_OK')
 \"" "DRY_RUN_ROLLBACK_OK" "Rollback dry-run validates safely without modifying profile links"
 
 # 24-25. Battery Threshold Determinism

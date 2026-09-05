@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (987 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (1028 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -59,7 +59,7 @@ jobs:
         run: |
           bash tests/test_distro_suite.sh
 
-      - name: Execute Master Test Harness (643 Tests)
+      - name: Execute Master Test Harness (673 Tests)
         run: |
           bash tests/run_all_tests.sh
 
@@ -87,9 +87,13 @@ jobs:
         run: |
           bash tests/test_rollback_correctness.sh
 
-      - name: Execute Enterprise Security Audit (9 Tests)
+      - name: Execute Enterprise Security Audit (14 Tests)
         run: |
           bash tests/test_security_audit.sh
+
+      - name: Execute Enterprise Failure Injection & Chaos Gate (6 Tests)
+        run: |
+          bash tests/test_failure_injection_scenarios.sh
 
       - name: Execute Fault Injection & Mutation Resilience (6 Mutants)
         run: |
@@ -119,7 +123,7 @@ jobs:
         run: |
           bash tests/test_reproducible_iso.sh
 
-      - name: Verify Single Source of Truth Test Manifest (987 Assertions)
+      - name: Verify Single Source of Truth Test Manifest (1028 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json

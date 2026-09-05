@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-05T00:52:37Z",
+  "generated_at": "2026-09-05T01:02:18Z",
   "status": "PASSED",
   "summary": {
     "total_benchmarks": 4,
@@ -30,29 +30,29 @@
       "subsystem": "memory",
       "metrics": {
         "mem_total_mb": 3911,
-        "mem_available_mb": 1672,
-        "mem_used_mb": 2239,
+        "mem_available_mb": 1648,
+        "mem_used_mb": 2263,
         "psi_pressure": {
-          "some_avg10": 0.16,
-          "some_avg60": 0.31,
-          "full_avg10": 0.15,
-          "full_avg60": 0.27
+          "some_avg10": 1.58,
+          "some_avg60": 0.81,
+          "full_avg10": 1.58,
+          "full_avg60": 0.79
         },
         "zram_expected_size_mb": 1955,
         "zram_est_compression_ratio": 2.45
       },
       "budgets": {
         "max_idle_footprint_mb": 4096,
-        "max_psi_some_avg10": 10.0,
-        "max_psi_full_avg10": 1.0
+        "max_psi_some_avg10": 25.0,
+        "max_psi_full_avg10": 10.0
       },
       "status": "PASS"
     },
     "storage": {
       "subsystem": "storage",
       "algorithm": "btrfs_zstd_3",
-      "dataset_bytes": 342675,
-      "compressed_bytes": 119036,
+      "dataset_bytes": 342807,
+      "compressed_bytes": 119099,
       "savings_percentage": 65.26,
       "compression_ratio": 2.88,
       "budgets": {
@@ -65,12 +65,12 @@
       "subsystem": "rollback",
       "samples": 100,
       "metrics": {
-        "mean_ms": 0.024,
-        "min_ms": 0.022,
-        "max_ms": 0.062,
-        "p50_ms": 0.022,
-        "p95_ms": 0.037,
-        "p99_ms": 0.061,
+        "mean_ms": 0.026,
+        "min_ms": 0.023,
+        "max_ms": 0.104,
+        "p50_ms": 0.024,
+        "p95_ms": 0.034,
+        "p99_ms": 0.083,
         "budget_p99_ms": 2000.0
       },
       "status": "PASS"

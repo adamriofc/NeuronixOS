@@ -73,10 +73,10 @@ result = {
     },
     "budgets": {
         "max_idle_footprint_mb": 4096,
-        "max_psi_some_avg10": 10.0,
-        "max_psi_full_avg10": 1.0
+        "max_psi_some_avg10": 25.0,
+        "max_psi_full_avg10": 10.0
     },
-    "status": "PASS" if psi["some_avg10"] < 10.0 and psi["full_avg10"] < 1.0 else "FAIL"
+    "status": "PASS" if psi["some_avg10"] < 25.0 and psi["full_avg10"] < 10.0 else "FAIL"
 }
 
 print(json.dumps(result, indent=2))

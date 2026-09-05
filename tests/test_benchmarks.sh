@@ -46,7 +46,8 @@ echo -e "${BOLD}${CYAN}║    Boot, Memory/PSI, Btrfs ZSTD:3 & 100-Iteration Rol
 echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════════════════╝${RESET}\n"
 
 # 1. Boot Stage Latency Benchmark
-BOOT_OUT=$(bash "${BENCHMARKS_DIR}/boot_benchmark.sh" 2>/dev/null || echo '{"status":"FAIL"}')
+BOOT_OUT=$(bash "${BENCHMARKS_DIR}/boot_benchmark.sh" 2>/dev/null || true)
+[[ -z "$BOOT_OUT" ]] && BOOT_OUT='{"status":"FAIL"}'
 BOOT_STATUS=$("$PYTHON_BIN" -c "import json; print(json.loads('''$BOOT_OUT''').get('status', 'FAIL'))" 2>/dev/null || echo "FAIL")
 BOOT_P99=$("$PYTHON_BIN" -c "import json; print(json.loads('''$BOOT_OUT''').get('metrics', {}).get('p99_ms', 0))" 2>/dev/null || echo "0")
 echo -ne "  [BENCHMARK] Boot stage latency budget (p99: ${BOOT_P99}ms < 10000ms) ... "
@@ -59,7 +60,8 @@ else
 fi
 
 # 2. Memory Footprint & ZRAM/PSI Benchmark
-MEM_OUT=$(bash "${BENCHMARKS_DIR}/memory_benchmark.sh" 2>/dev/null || echo '{"status":"FAIL"}')
+MEM_OUT=$(bash "${BENCHMARKS_DIR}/memory_benchmark.sh" 2>/dev/null || true)
+[[ -z "$MEM_OUT" ]] && MEM_OUT='{"status":"FAIL"}'
 MEM_STATUS=$("$PYTHON_BIN" -c "import json; print(json.loads('''$MEM_OUT''').get('status', 'FAIL'))" 2>/dev/null || echo "FAIL")
 MEM_USED=$("$PYTHON_BIN" -c "import json; print(json.loads('''$MEM_OUT''').get('metrics', {}).get('mem_used_mb', 0))" 2>/dev/null || echo "0")
 echo -ne "  [BENCHMARK] Runtime memory & PSI pressure budget (${MEM_USED} MB used) ... "
@@ -72,7 +74,8 @@ else
 fi
 
 # 3. Storage Subsystem & Btrfs ZSTD:3 Benchmark
-STORAGE_OUT=$(bash "${BENCHMARKS_DIR}/storage_benchmark.sh" 2>/dev/null || echo '{"status":"FAIL"}')
+STORAGE_OUT=$(bash "${BENCHMARKS_DIR}/storage_benchmark.sh" 2>/dev/null || true)
+[[ -z "$STORAGE_OUT" ]] && STORAGE_OUT='{"status":"FAIL"}'
 STORAGE_STATUS=$("$PYTHON_BIN" -c "import json; print(json.loads('''$STORAGE_OUT''').get('status', 'FAIL'))" 2>/dev/null || echo "FAIL")
 SAVINGS_PCT=$("$PYTHON_BIN" -c "import json; print(json.loads('''$STORAGE_OUT''').get('savings_percentage', 0))" 2>/dev/null || echo "0")
 echo -ne "  [BENCHMARK] Btrfs ZSTD:3 store compression budget (${SAVINGS_PCT}% savings) ... "
@@ -85,7 +88,8 @@ else
 fi
 
 # 4. Multi-Hop Atomic Rollback Benchmark (100 Iterations)
-ROLLBACK_OUT=$(bash "${BENCHMARKS_DIR}/rollback_benchmark.sh" 2>/dev/null || echo '{"status":"FAIL"}')
+ROLLBACK_OUT=$(bash "${BENCHMARKS_DIR}/rollback_benchmark.sh" 2>/dev/null || true)
+[[ -z "$ROLLBACK_OUT" ]] && ROLLBACK_OUT='{"status":"FAIL"}'
 ROLLBACK_STATUS=$("$PYTHON_BIN" -c "import json; print(json.loads('''$ROLLBACK_OUT''').get('status', 'FAIL'))" 2>/dev/null || echo "FAIL")
 ROLLBACK_P99=$("$PYTHON_BIN" -c "import json; print(json.loads('''$ROLLBACK_OUT''').get('metrics', {}).get('p99_ms', 0))" 2>/dev/null || echo "0")
 echo -ne "  [BENCHMARK] Atomic generation rollback budget (100 runs, p99: ${ROLLBACK_P99}ms < 2000ms) ... "
