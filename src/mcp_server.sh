@@ -38,6 +38,31 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
+# Discover Python in environment, system profiles, or nix store
+resolve_python() {
+    if command -v python3 >/dev/null 2>&1; then
+        echo "python3"
+    elif ls -d /nix/store/*-python3-3.13*/bin/python3 >/dev/null 2>&1; then
+        ls -d /nix/store/*-python3-3.13*/bin/python3 2>/dev/null | tail -n 1
+    elif ls -d /nix/store/*-python3-*/bin/python3 >/dev/null 2>&1; then
+        ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1
+    else
+        echo ""
+    fi
+}
+
+resolve_core_path() {
+    local script_dir
+    script_dir="$(dirname "$(readlink -f "$0")")"
+    if [[ -d "${script_dir}/../packages/neuronix-core" ]]; then
+        echo "${script_dir}/../packages/neuronix-core"
+    elif [[ -d "/etc/nixos/packages/neuronix-core" ]]; then
+        echo "/etc/nixos/packages/neuronix-core"
+    else
+        echo ""
+    fi
+}
+
 # Concurrency lock helpers
 acquire_mcp_lock() {
     local lock_dir="/run"
@@ -275,39 +300,30 @@ handle_tools_call() {
         neuronix_diet)
             local dry_run
             dry_run=$(echo "$params" | jq -r '.dry_run // false' 2>/dev/null || echo "false")
-            if [[ "$dry_run" == "true" ]]; then
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local opt_arg=""
+                [[ "$dry_run" == "true" ]] && opt_arg="--dry-run"
+                local diet_res diet_code=0
+                diet_res=$("$py_bin" -c "
+import sys
+sys.path.insert(0, '${core_path}')
+from neuronix_core.operations import execute_privileged_operation
+ok, code, msg = execute_privileged_operation('diet'${opt_arg:+, '$opt_arg'})
+print(msg)
+sys.exit(code)
+" 2>&1) || diet_code=$?
                 local content
-                content=$(jq -n -c --arg text "Storage optimization dry-run: estimated 1.2 GB reclaimable without mutating state." '{"content":[{"type":"text","text":$text}]}')
+                content=$(jq -n -c --arg text "$diet_res" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
                 return 0
             fi
 
-            if ! acquire_mcp_lock; then
-                send_error "$req_id" -32000 "Server busy: another system mutation operation is currently locked"
-                return 0
-            fi
-
-            local text_payload
-            if [[ $EUID -eq 0 ]]; then
-                local gc_info=""
-                local trim_info=""
-                local dedup_info=""
-                if command -v nix-collect-garbage >/dev/null 2>&1; then
-                    gc_info=$(nix-collect-garbage --delete-older-than 7d 2>&1 | tail -n 2 | tr '\n' ' ')
-                fi
-                if command -v nix-store >/dev/null 2>&1; then
-                    dedup_info=$(nix-store --optimise 2>&1 | tail -n 2 | tr '\n' ' ')
-                fi
-                if command -v fstrim >/dev/null 2>&1; then
-                    trim_info=$(fstrim -av 2>&1 | tr '\n' ' ')
-                fi
-                text_payload="Storage optimization executed. Unused derivations collected [GC: ${gc_info:-completed}], store deduplicated [DEDUP: ${dedup_info:-completed}], TRIM executed [TRIM: ${trim_info:-none}]."
-            else
-                text_payload="Storage optimization deferred: requires administrative elevation to collect system-wide derivations and run fstrim. Run 'sudo neuronix diet' on the host system."
-            fi
-            release_mcp_lock
             local content
-            content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
+            content=$(jq -n -c --arg text "Storage optimization deferred: transactional engine (neuronix_core.operations) unavailable." '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
             ;;
 
@@ -337,41 +353,43 @@ handle_tools_call() {
         neuronix_undo)
             local dry_run
             dry_run=$(echo "$params" | jq -r '.dry_run // false' 2>/dev/null || echo "false")
-            local current_gen="Unknown"
-            local target_gen="system-1-link"
-            if [[ -L /nix/var/nix/profiles/system ]]; then
-                current_gen=$(basename "$(readlink /nix/var/nix/profiles/system)" | sed -E 's/^system-?//; s/-?link$//')
-            fi
-            if [[ -d /nix/var/nix/profiles ]]; then
-                target_gen=$(find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" 2>/dev/null | sort -V | tail -n 2 | head -n 1 | xargs -r basename 2>/dev/null || echo "system-1-link")
-            fi
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
 
-            if [[ "$dry_run" == "true" ]]; then
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                if [[ "$dry_run" == "true" ]]; then
+                    local sim_res sim_code=0
+                    sim_res=$("$py_bin" -c "
+import sys
+sys.path.insert(0, '${core_path}')
+from neuronix_core.rollback import simulate_rollback
+ok, target, msg = simulate_rollback()
+print(f'Rollback simulation: {msg}')
+sys.exit(0 if ok else 1)
+" 2>&1) || sim_code=$?
+                    local content
+                    content=$(jq -n -c --arg text "$sim_res" '{"content":[{"type":"text","text":$text}]}')
+                    send_response "$req_id" "$content"
+                    return 0
+                fi
+
+                local rb_res rb_code=0
+                rb_res=$("$py_bin" -c "
+import sys
+sys.path.insert(0, '${core_path}')
+from neuronix_core.operations import execute_privileged_operation
+ok, code, msg = execute_privileged_operation('rollback')
+print(msg)
+sys.exit(code)
+" 2>&1) || rb_code=$?
                 local content
-                content=$(jq -n -c --arg text "Rollback dry-run: target generation ${target_gen} verified available from Gen #${current_gen}." '{"content":[{"type":"text","text":$text}]}')
+                content=$(jq -n -c --arg text "$rb_res" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
                 return 0
             fi
 
-            if ! acquire_mcp_lock; then
-                send_error "$req_id" -32000 "Server busy: another system mutation operation is currently locked"
-                return 0
-            fi
-
-            local text_payload
-            if [[ $EUID -eq 0 ]] && command -v nixos-rebuild >/dev/null 2>&1; then
-                local rb_out
-                local rb_code=0
-                rb_out=$(nixos-rebuild switch --rollback 2>&1 | tail -n 2 | tr '\n' ' ') || rb_code=$?
-                if [[ $rb_code -eq 0 ]]; then
-                    text_payload="Rollback executed successfully: system generation switched atomically from Gen #${current_gen} to ${target_gen}. [Output: ${rb_out}]"
-                else
-                    text_payload="Rollback execution failed with exit code ${rb_code}. [Output: ${rb_out}]"
-                fi
-            else
-                text_payload="Rollback directive deferred: administrative privileges required. Run 'sudo nixos-rebuild switch --rollback' or 'sudo neuronix undo' to activate ${target_gen}."
-            fi
-            release_mcp_lock
+            local text_payload="Rollback operation rejected: transactional rollback engine unavailable."
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
@@ -411,12 +429,44 @@ handle_tools_call() {
             ;;
 
         neuronix_check_update)
-            local remote_repo="https://github.com/adamriofc/NeuronixOS.git"
-            local remote_head="Synchronized"
-            if command -v git >/dev/null 2>&1; then
-                remote_head=$(git ls-remote --heads "$remote_repo" main 2>/dev/null | awk '{print $1}' | cut -c1-12 || echo "Synchronized")
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local chk_res
+                chk_res=$("$py_bin" -c "
+import sys, json
+sys.path.insert(0, '${core_path}')
+from neuronix_core.update import check_upstream_update
+res = check_upstream_update()
+status = res.get('status', 'UNKNOWN')
+local_c = res.get('local_commit')
+up_c = res.get('upstream_commit')
+pinned = res.get('pinned_nixpkgs_commit')
+tag = res.get('release_tag', 'v1.0.3')
+channel = res.get('channel', 'nixos-26.05')
+
+summary = f'NEURONIX OS Release Status: {status}\n'
+summary += f'- Release Tag: {tag} (Channel: {channel})\n'
+summary += f'- Local System Commit: {local_c or \"Clean Production Tag\"}\n'
+summary += f'- Upstream Release Commit: {up_c or \"Unreachable\"}\n'
+summary += f'- Pinned Nixpkgs Revision: {pinned or \"Unspecified\"}\n'
+if status == 'UPDATE_AVAILABLE':
+    summary += 'Action: Staged upgrade available via neuronix_upgrade tool.'
+elif status == 'UP_TO_DATE':
+    summary += 'System is fully synchronized with latest upstream release.'
+else:
+    summary += f'Note: Upstream check status is {status}.'
+print(summary)
+" 2>&1)
+                local content
+                content=$(jq -n -c --arg text "$chk_res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+                return 0
             fi
-            local text_payload="System update check complete. Upstream head: ${remote_head}. Staged upgrade available via neuronix_upgrade tool."
+
+            local text_payload="Release update status unavailable: Python core engine not found."
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
@@ -427,41 +477,32 @@ handle_tools_call() {
             mode=$(echo "$params" | jq -r '.mode // "staged"')
             local dry_run
             dry_run=$(echo "$params" | jq -r '.dry_run // false' 2>/dev/null || echo "false")
-            if [[ "$dry_run" == "true" ]]; then
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local op_name="upgrade"
+                [[ "$mode" == "staged" ]] && op_name="stage"
+                local extra_args=""
+                [[ "$dry_run" == "true" ]] && extra_args="--dry-run"
+
+                local up_res up_code=0
+                up_res=$("$py_bin" -c "
+import sys
+sys.path.insert(0, '${core_path}')
+from neuronix_core.operations import execute_privileged_operation
+ok, code, msg = execute_privileged_operation('${op_name}'${extra_args:+, '$extra_args'})
+print(msg)
+sys.exit(code)
+" 2>&1) || up_code=$?
                 local content
-                content=$(jq -n -c --arg text "Upgrade dry-run: verified flake configuration and target closure for mode '${mode}'." '{"content":[{"type":"text","text":$text}]}')
+                content=$(jq -n -c --arg text "$up_res" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
                 return 0
             fi
 
-            if ! acquire_mcp_lock; then
-                send_error "$req_id" -32000 "Server busy: another system mutation operation is currently locked"
-                return 0
-            fi
-
-            local text_payload
-            if [[ $EUID -ne 0 ]]; then
-                text_payload="Atomic upgrade deferred: administrative privileges required. Run 'sudo neuronix upgrade --${mode}'."
-            elif [[ "$mode" == "switch" ]]; then
-                local up_out
-                local up_code=0
-                up_out=$(nixos-rebuild switch 2>&1 | tail -n 2 | tr '\n' ' ') || up_code=$?
-                if [[ $up_code -eq 0 ]]; then
-                    text_payload="Atomic upgrade executed in 'switch' mode. New system generation active. [Output: ${up_out}]"
-                else
-                    text_payload="Atomic upgrade failed in 'switch' mode with code ${up_code}. [Output: ${up_out}]"
-                fi
-            else
-                local up_out
-                local up_code=0
-                up_out=$(nixos-rebuild boot 2>&1 | tail -n 2 | tr '\n' ' ') || up_code=$?
-                if [[ $up_code -eq 0 ]]; then
-                    text_payload="Atomic upgrade executed in 'staged' mode. New system generation registered to bootloader. [Output: ${up_out}]"
-                else
-                    text_payload="Atomic upgrade failed in 'staged' mode with code ${up_code}. [Output: ${up_out}]"
-                fi
-            fi
-            release_mcp_lock
+            local text_payload="System upgrade rejected: transactional upgrade engine unavailable."
             local content
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"

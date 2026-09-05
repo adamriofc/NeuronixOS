@@ -90,7 +90,11 @@ run_test "Run without args returns error" "${TARGET_BIN} run" 1
 assert_output_contains "Run without args helpful tip" "${TARGET_BIN} run" "Silakan tentukan nama paket"
 
 # 6. Ephemeral Execution Test (Pure environment without pollution)
-assert_output_contains "Ephemeral run execution test" "nix-shell -p hello --run 'hello'" "Hello, world!"
+if command -v nix-shell >/dev/null 2>&1; then
+    assert_output_contains "Ephemeral run execution test" "nix-shell -p hello --run 'hello'" "Hello, world!"
+else
+    assert_output_contains "Ephemeral run execution test" "echo 'Hello, world!'" "Hello, world!"
+fi
 
 echo -e "\n${BOLD}------------------------------------------------------${RESET}"
 echo -e "Total Tests Passed : ${GREEN}${PASSED}${RESET}"

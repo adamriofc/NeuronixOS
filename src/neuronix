@@ -189,7 +189,11 @@ get_current_generation() {
 }
 
 count_generations() {
-    find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" 2>/dev/null | wc -l
+    if [[ -d /nix/var/nix/profiles ]]; then
+        find /nix/var/nix/profiles/ -maxdepth 1 -name "system-*-link" 2>/dev/null | wc -l
+    else
+        echo "0"
+    fi
 }
 
 cmd_status() {
@@ -217,10 +221,16 @@ cmd_status() {
 
     # 2. Storage Health
     echo -e "  ${BOLD}STORAGE SUBSYSTEM TELEMETRY${RESET}"
-    local nix_used nix_avail nix_pct
-    read -r nix_used nix_avail nix_pct < <(df -h /nix 2>/dev/null | awk 'NR==2 {print $3, $4, $5}')
-    local boot_used boot_avail boot_pct
-    read -r boot_used boot_avail boot_pct < <(df -h /boot 2>/dev/null | awk 'NR==2 {print $3, $4, $5}')
+    local nix_used="" nix_avail="" nix_pct=""
+    read -r nix_used nix_avail nix_pct < <(df -h /nix 2>/dev/null | awk 'NR==2 {print $3, $4, $5}') || true
+    nix_used="${nix_used:-N/A}"
+    nix_avail="${nix_avail:-N/A}"
+    nix_pct="${nix_pct:-N/A}"
+    local boot_used="" boot_avail="" boot_pct=""
+    read -r boot_used boot_avail boot_pct < <(df -h /boot 2>/dev/null | awk 'NR==2 {print $3, $4, $5}') || true
+    boot_used="${boot_used:-N/A}"
+    boot_avail="${boot_avail:-N/A}"
+    boot_pct="${boot_pct:-N/A}"
 
     echo -e "  ├─ /nix Store Volume : Terpakai ${BOLD}${nix_used}${RESET} (${nix_pct}) | Sisa: ${GREEN}${nix_avail}${RESET}"
     echo -e "  ├─ Boot Partition    : Terpakai ${boot_used} (${boot_pct}) | Sisa: ${boot_avail}"
@@ -308,6 +318,33 @@ cmd_diet() {
     log_step "Memulai Siklus Perampingan Storage & Auto-TRIM..."
     echo
 
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    if [[ -n "$py_bin" && -n "$core_path" ]]; then
+        log_step "Executing transactional storage diet via unified engine (neuronix_core.operations)..."
+        local diet_output diet_code=0
+        diet_output="$("$py_bin" -c "
+import sys
+sys.path.insert(0, '${core_path}')
+from neuronix_core.operations import execute_privileged_operation
+res = execute_privileged_operation('diet')
+print(res.get('message', ''))
+sys.exit(0 if res.get('success') else 1)
+" 2>&1)" || diet_code=$?
+
+        echo -e "${diet_output}"
+        if [[ $diet_code -eq 0 ]]; then
+            log_success "Storage diet transaction completed and journaled successfully."
+            return 0
+        else
+            log_error "Storage diet transaction failed."
+            return $diet_code
+        fi
+    fi
+
+    # Fallback when transactional core is unavailable (maintains CLI diet integrates journalctl --vacuum-size=500M invariant)
     # Catat pemakaian awal
     local before_used
     before_used="$(df -k /nix | awk 'NR==2 {print $3}')"
@@ -500,36 +537,10 @@ sys.exit(code)
             log_error "Rollback transaction failed or aborted."
             return $rb_code
         fi
-    fi
-
-    local prev_gen
-    prev_gen="$(get_current_generation)"
-
-    if [[ -z "$prev_gen" || "$prev_gen" == "1" || "$prev_gen" == "Unknown" ]]; then
-        log_error "Cannot execute rollback: Current generation (#${prev_gen}) has no preceding generation."
+    else
+        log_error "Transactional engine unavailable. Refusing unmanaged rollback command."
         return 1
     fi
-
-    local rb_status=0
-    run_privileged nixos-rebuild switch --rollback || rb_status=$?
-
-    if [[ $rb_status -ne 0 ]]; then
-        log_error "Rollback command failed with exit code ${rb_status}."
-        return $rb_status
-    fi
-
-    local expected_gen=$(( prev_gen - 1 ))
-    local new_gen
-    new_gen="$(get_current_generation)"
-
-    if [[ "$new_gen" != "$expected_gen" ]]; then
-        log_error "Postcondition verification failed: Expected predecessor generation #${expected_gen}, but active generation is #${new_gen}."
-        return 1
-    fi
-
-    echo
-    log_success "Rollback successful: Switched from Gen #${prev_gen} -> ${BOLD}Gen #${new_gen}${RESET}."
-    log_info "All packages, configurations, and services restored to previous generation."
 }
 
 cmd_verify() {
@@ -854,13 +865,8 @@ sys.exit(code)
                 return $stage_code
             fi
         else
-            local rebuild_exit=0
-            run_privileged nixos-rebuild boot --flake "$config_dir" || rebuild_exit=$?
-            if [[ $rebuild_exit -ne 0 ]]; then
-                echo
-                log_error "Pembaruan bertahap gagal dibangun (nixos-rebuild boot keluar dengan kode: ${rebuild_exit})."
-                return $rebuild_exit
-            fi
+            log_error "Transactional engine unavailable. Refusing unmanaged staged upgrade command."
+            return 1
         fi
 
         echo
@@ -895,24 +901,10 @@ sys.exit(code)
                 log_error "Pembaruan sistem gagal atau secara otomatis di-rollback."
                 return $up_code
             fi
+        else
+            log_error "Transactional engine unavailable. Refusing unmanaged switch upgrade command."
+            return 1
         fi
-
-        local prev_gen
-        prev_gen="$(get_current_generation)"
-        local rebuild_exit=0
-        run_privileged nixos-rebuild switch --flake "$config_dir" || rebuild_exit=$?
-
-        if [[ $rebuild_exit -ne 0 ]]; then
-            echo
-            log_error "Peralihan langsung generasi gagal (nixos-rebuild switch keluar dengan kode: ${rebuild_exit})."
-            return $rebuild_exit
-        fi
-
-        local new_gen
-        new_gen="$(get_current_generation)"
-        echo
-        log_step "2/2. Mengaktifkan Generasi Baru..."
-        log_success "Sistem berhasil diperbarui dari Generasi #${prev_gen} ke Generasi #${new_gen} secara langsung!"
     fi
 }
 

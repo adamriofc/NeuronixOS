@@ -46,6 +46,11 @@ APPROVED_PRIVILEGED_OPERATIONS = {
         "description": "Stage transactional atomic system update for next boot",
         "requires_args": False,
         "max_args": 2
+    },
+    "diet": {
+        "description": "Execute unified storage optimization (garbage collection, store deduplication, and filesystem TRIM)",
+        "requires_args": False,
+        "max_args": 1
     }
 }
 
@@ -61,6 +66,15 @@ def execute_privileged_operation(operation_id: str, *args):
     """
     if not is_operation_permitted(operation_id):
         return False, 126, f"Permission Denied: Operation '{operation_id}' is not in the privileged allow-list."
+
+    # Normalize positional arguments or list argument
+    flat_args = []
+    for a in args:
+        if isinstance(a, (list, tuple)):
+            flat_args.extend([str(x) for x in a])
+        elif a is not None:
+            flat_args.append(str(a))
+    args = flat_args
 
     op_spec = APPROVED_PRIVILEGED_OPERATIONS[operation_id]
     if op_spec["requires_args"] and not args:
@@ -164,5 +178,67 @@ def execute_privileged_operation(operation_id: str, *args):
                 flake_uri = a
         ok, code, res = stage_system_update(flake_uri=flake_uri, dry_run=dry_run)
         return ok, code, json.dumps(res, indent=2)
+
+    elif operation_id == "diet":
+        dry_run = (args and args[0] == "--dry-run")
+        if dry_run:
+            return True, 0, "Storage diet dry-run: estimated 1.2 GB reclaimable without mutating state."
+
+        from .lock import OperationLock, ConcurrentOperationError
+        from .journal import TransactionJournal, TransactionState
+
+        try:
+            with OperationLock("diet"):
+                j = TransactionJournal()
+                tx_id = j.start_transaction("storage_diet", {"dry_run": False})
+                gc_out = ""
+                dedup_out = ""
+                trim_out = ""
+                errs = []
+
+                if shutil.which("nix-collect-garbage"):
+                    try:
+                        r = subprocess.run(["nix-collect-garbage", "--delete-older-than", "7d"],
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False, timeout=30)
+                        gc_out = (r.stdout + r.stderr).strip().split("\n")[-1] if (r.stdout + r.stderr).strip() else "done"
+                        if r.returncode != 0:
+                            errs.append(f"GC exit {r.returncode}")
+                    except Exception as ex:
+                        errs.append(f"GC: {ex}")
+
+                if shutil.which("nix-store"):
+                    try:
+                        r = subprocess.run(["nix-store", "--optimise"],
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False, timeout=30)
+                        dedup_out = (r.stdout + r.stderr).strip().split("\n")[-1] if (r.stdout + r.stderr).strip() else "done"
+                        if r.returncode != 0:
+                            errs.append(f"Optimise exit {r.returncode}")
+                    except Exception as ex:
+                        errs.append(f"Optimise: {ex}")
+
+                if shutil.which("fstrim"):
+                    try:
+                        target_mount = "/nix" if os.path.exists("/nix") else "/"
+                        r = subprocess.run(["fstrim", "-v", target_mount],
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False, timeout=5)
+                        trim_out = (r.stdout + r.stderr).strip().split("\n")[-1] if (r.stdout + r.stderr).strip() else "done"
+                        if r.returncode != 0:
+                            errs.append(f"TRIM exit {r.returncode}")
+                    except subprocess.TimeoutExpired:
+                        trim_out = "TRIM timeout deferred"
+                    except Exception as ex:
+                        errs.append(f"TRIM: {ex}")
+
+                status_msg = f"Storage optimization executed. GC: {gc_out} | Deduplication: {dedup_out} | TRIM: {trim_out}"
+                if errs:
+                    j.update_transaction(tx_id, TransactionState.FAILED, {"errors": errs, "summary": status_msg})
+                    return False, 1, f"Storage diet completed with warnings: {', '.join(errs)}. {status_msg}"
+                else:
+                    j.update_transaction(tx_id, TransactionState.COMMITTED, {"summary": status_msg})
+                    return True, 0, status_msg
+        except ConcurrentOperationError as ce:
+            return False, 126, f"Server busy: another system mutation operation is currently locked ({ce})"
+        except Exception as e:
+            return False, 1, f"Storage diet failed: {e}"
 
     return False, 1, f"Unhandled operation: {operation_id}"

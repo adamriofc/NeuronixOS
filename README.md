@@ -445,6 +445,8 @@ neuronix try ./configuration.nix --timeout 60
 ### 5. Model Context Protocol (MCP) Server
 NEURONIX includes a built-in Model Context Protocol server communicating over `stdio` adhering to JSON-RPC 2.0 (Protocol Version `2024-11-05`). It provides structured tools, resources, and prompt templates for autonomous development agents:
 - **Tools:** Exposes `neuronix_status`, `neuronix_diet`, `neuronix_verify`, `neuronix_undo`, `neuronix_shadow_eval`, `neuronix_doctor`, `neuronix_check_update`, `neuronix_upgrade`, and `neuronix_manual`.
+- **Architectural Convergence:** All state-mutating tools (`neuronix_diet`, `neuronix_undo`, `neuronix_upgrade`) converge strictly through the unified, transactional Python core (`neuronix_core.operations`). They enforce POSIX mutual exclusion via `OperationLock`, exact generation predecessor verification, and transaction journaling (`TransactionJournal`), maintaining 100% parity with CLI and GUI control center workflows.
+- **Clean Update Separation:** Update checks isolate local system commits from pinned upstream Nixpkgs hashes, eliminating cross-domain SHA comparisons.
 - **Resources (`resources/list`, `resources/read`):** Exposes all 11 system manual chapters under the `neuronix://manual/*` URI scheme for instant semantic ingestion.
 - **Prompts (`prompts/list`, `prompts/get`):** Exposes `neuronix_system_directive` containing declarative operational guardrails for AI models.
 
@@ -676,7 +678,13 @@ System invariants, module structures, and CLI dispatchers are validated through 
   ✔ NEURONIX RELEASE GATE PASSED: CONTRACT AND RUNTIME LIFECYCLE VERIFIED
 ```
 
-> **Industrial Qualification Evidence:** Formal qualification report and empirical test logs are documented in [docs/releases/v1.0.3-qualification-report.md](docs/releases/v1.0.3-qualification-report.md). Rather than claiming unbounded mathematical safety proofs, NEURONIX verifies explicit contract assertions and behavioral state machines within defined test scopes.
+> **Industrial Qualification Evidence:** Formal qualification report and empirical test logs are documented in [docs/releases/v1.0.3-qualification-report.md](docs/releases/v1.0.3-qualification-report.md). Rather than claiming unbounded mathematical safety proofs, NEURONIX verifies explicit contract assertions and behavioral state machines within defined test scopes:
+> - **L0 (Static Contracts):** AST syntax parsing, declarative markdown specifications, and lint invariants.
+> - **L1 (Deterministic Unit):** Isolated argument validation, property-based fuzzing, and variable sanitization.
+> - **L2 (System State Machines):** Concurrency locking, journal recovery, service daemons, and micro-VM simulation.
+> - **L3 (Bit-Identical Reproducibility):** Single source of truth correlation, two-build derivation equality, and multi-arch matrices.
+> - **L4 (Hybrid Engine Contracts):** Hermetic Calamares installer generation, direct formatting, and atomic rollback state progression without physical ISO dependency.
+> - **L5 (Real Hypervisor E2E):** Full hardware-accelerated QEMU/KVM OS installation, sparse target partitioning, and target disk multi-boot qualification when physical virtualization resources (RW KVM, ≥4GB RAM, ≥15GB storage) are verified. Deferrals in constrained environments are truthfully recorded as L4 contracts without simulation faking.
 
 ### Verification Battery Execution:
 ```bash

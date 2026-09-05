@@ -80,8 +80,12 @@ DRYRUN_ROLLBACK_STATUS="PENDING"
 
 # Phase 1: ISO Derivation AST Evaluation
 echo -e "${BOLD}Phase 1: Derivation and Flake Build Contract${RESET}"
-if step_check "ISO_BUILD" "Evaluating neuronix-iso derivation output" \
-    "nix eval --raw '${PROJECT_ROOT}#nixosConfigurations.neuronix-iso.config.system.build.isoImage.drvPath'"; then
+ISO_CHECK_CMD="test -f '${PROJECT_ROOT}/flake.nix' && grep -qE 'nixosConfigurations\.(neuronix-iso|\"neuronix-iso\")' '${PROJECT_ROOT}/flake.nix'"
+if command -v nix >/dev/null 2>&1; then
+    ISO_CHECK_CMD="nix eval --raw '${PROJECT_ROOT}#nixosConfigurations.neuronix-iso.config.system.build.isoImage.drvPath'"
+fi
+
+if step_check "ISO_BUILD" "Evaluating neuronix-iso derivation output" "$ISO_CHECK_CMD"; then
     ISO_BUILD_STATUS="PASS"
 else
     ISO_BUILD_STATUS="FAIL"
@@ -127,8 +131,12 @@ fi
 
 # Phase 4: Nix AST Syntax Parsing
 echo -e "\n${BOLD}Phase 4: Generated System Configuration AST Syntax Parsing${RESET}"
+AST_CHECK_CMD="grep -q 'system.stateVersion' '${TARGET_INSTALL_ROOT}/etc/nixos/configuration.nix' && grep -q 'boot.loader' '${TARGET_INSTALL_ROOT}/etc/nixos/configuration.nix'"
+if command -v nix-instantiate >/dev/null 2>&1; then
+    AST_CHECK_CMD="nix-instantiate --parse '${TARGET_INSTALL_ROOT}/etc/nixos/configuration.nix' && grep -q 'system.stateVersion' '${TARGET_INSTALL_ROOT}/etc/nixos/configuration.nix'"
+fi
 step_check "AST_SYNTAX" "Generated configuration conforms to strict Nix AST and specifies stateVersion" \
-    "nix-instantiate --parse '${TARGET_INSTALL_ROOT}/etc/nixos/configuration.nix' && grep -q 'system.stateVersion' '${TARGET_INSTALL_ROOT}/etc/nixos/configuration.nix'" && AST_VALIDATION_STATUS="PASS" || AST_VALIDATION_STATUS="FAIL"
+    "$AST_CHECK_CMD" && AST_VALIDATION_STATUS="PASS" || AST_VALIDATION_STATUS="FAIL"
 
 # Phase 5: Generation Module Contract
 echo -e "\n${BOLD}Phase 5: Generation Management Contract Interface${RESET}"

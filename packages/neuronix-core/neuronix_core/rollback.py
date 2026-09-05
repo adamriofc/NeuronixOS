@@ -21,11 +21,11 @@ def simulate_rollback(target_generation: Optional[int] = None) -> Tuple[bool, st
     """
     history = list_generations()
     if not history:
-        return False, "No system generations found in Nix profile registry.", None
+        return False, "Rollback rejected: No system generations found in Nix profile registry.", None
 
     active_str = get_active_generation()
     if active_str is None or not active_str.isdigit():
-        return False, "Active system generation cannot be determined. Profile symlink is missing or broken.", None
+        return False, "Rollback rejected: Active system generation cannot be determined. Profile symlink is missing or broken.", None
     active_num = int(active_str)
 
     if target_generation is not None:

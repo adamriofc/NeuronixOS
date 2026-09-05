@@ -30,7 +30,7 @@ def get_repo_root() -> str:
         curr = os.path.dirname(curr)
     return os.environ.get("NEURONIX_REPO_ROOT", "/etc/nixos")
 
-def get_pinned_commit(repo_root=None, strict: bool = False) -> Optional[str]:
+def get_pinned_nixpkgs_commit(repo_root=None, strict: bool = False) -> Optional[str]:
     """Retrieves locked nixpkgs commit from flake.lock or version.nix."""
     if repo_root is None:
         repo_root = get_repo_root()
@@ -65,32 +65,109 @@ def get_pinned_commit(repo_root=None, strict: bool = False) -> Optional[str]:
         )
     return None
 
-def check_upstream_update(repo_root=None, timeout: float = 3.0) -> Dict[str, Any]:
-    """
-    Checks whether local system tracks pinned upstream revision.
-    Queries remote upstream git repository or API with strict timeout.
-    Returns status dictionary.
-    """
-    pinned = get_pinned_commit(repo_root)
-    if pinned is None:
-        return {
-            "status": "METADATA_UNAVAILABLE",
-            "error": "Locked commit hash could not be resolved from repository.",
-            "pinned_commit": None,
-            "channel": "nixos-26.05",
-            "release_tag": "v1.0.3"
-        }
+# Canonical alias preserving existing API contracts
+get_pinned_commit = get_pinned_nixpkgs_commit
 
-    # Query upstream remote
+def get_local_release_metadata(repo_root=None) -> Dict[str, Any]:
+    """Resolves local distribution release metadata from version.nix and release.json."""
+    if repo_root is None:
+        repo_root = get_repo_root()
+
+    meta = {
+        "version": "1.0.3",
+        "release_tag": "v1.0.3",
+        "state_version": "24.11",
+        "channel": "nixos-26.05",
+        "nixpkgs_commit": None,
+        "release_commit": None
+    }
+
+    # Extract declarative metadata from version.nix
+    version_nix = os.path.join(repo_root, "version.nix")
+    if os.path.exists(version_nix):
+        try:
+            with open(version_nix, "r", encoding="utf-8") as f:
+                for line in f:
+                    if "version =" in line:
+                        meta["version"] = line.split('"')[1]
+                    elif "releaseTag =" in line:
+                        meta["release_tag"] = line.split('"')[1]
+                    elif "stateVersion =" in line:
+                        meta["state_version"] = line.split('"')[1]
+                    elif "channelStable =" in line:
+                        meta["channel"] = line.split('"')[1]
+                    elif "nixpkgsCommit =" in line:
+                        meta["nixpkgs_commit"] = line.split('"')[1]
+        except Exception:
+            pass
+
+    # Extract release commit from release manifest if present
+    for candidate in [
+        os.path.join(repo_root, "dist/release.json"),
+        "/etc/neuronix/release.json"
+    ]:
+        if os.path.exists(candidate):
+            try:
+                with open(candidate, "r", encoding="utf-8") as f:
+                    rdata = json.load(f)
+                    c = rdata.get("commit")
+                    if c:
+                        meta["release_commit"] = c
+                        break
+            except Exception:
+                pass
+
+    return meta
+
+def get_local_release_commit(repo_root=None) -> Optional[str]:
+    """
+    Resolves current local NEURONIX OS release commit hash.
+    Prioritizes active git checkout commit; falls back to static release manifest.
+    Never returns nixpkgs commit to eliminate cross-domain semantic confusion.
+    """
+    if repo_root is None:
+        repo_root = get_repo_root()
+
+    # 1. Inspect git workspace
+    if shutil.which("git"):
+        try:
+            res = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                return res.stdout.strip()
+        except Exception:
+            pass
+
+    # 2. Inspect declarative release manifest
+    meta = get_local_release_metadata(repo_root)
+    if meta.get("release_commit"):
+        return meta["release_commit"]
+
+    return None
+
+def get_upstream_release_commit(repo_root=None, timeout: float = 3.0) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Probes remote NEURONIX OS upstream repository for latest release commit.
+    Returns (remote_commit_hash, error_message).
+    """
+    if repo_root is None:
+        repo_root = get_repo_root()
+
     remote_commit = None
     probe_error = None
 
-    # Try git ls-remote if inside a git repository
+    # Try git ls-remote if inside git repository
     if shutil.which("git"):
         try:
             res = subprocess.run(
                 ["git", "ls-remote", "origin", "HEAD"],
-                cwd=repo_root or get_repo_root(),
+                cwd=repo_root,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -102,7 +179,7 @@ def check_upstream_update(repo_root=None, timeout: float = 3.0) -> Dict[str, Any
         except Exception as e:
             probe_error = str(e)
 
-    # Fallback to GitHub API probe if git ls-remote did not resolve
+    # Fallback to GitHub API probe
     if not remote_commit:
         try:
             import urllib.request
@@ -117,49 +194,61 @@ def check_upstream_update(repo_root=None, timeout: float = 3.0) -> Dict[str, Any
             if not probe_error:
                 probe_error = str(e)
 
+    return remote_commit, probe_error
+
+def check_upstream_update(repo_root=None, timeout: float = 3.0) -> Dict[str, Any]:
+    """
+    Checks whether local system tracks latest upstream NEURONIX OS release.
+    Strictly separates NEURONIX OS release commits from Nixpkgs revisions.
+    Returns standardized status dictionary with zero cross-domain SHA comparison.
+    """
+    if repo_root is None:
+        repo_root = get_repo_root()
+
+    meta = get_local_release_metadata(repo_root)
+    local_commit = get_local_release_commit(repo_root)
+    pinned_nixpkgs = get_pinned_nixpkgs_commit(repo_root)
+
+    if local_commit is None and pinned_nixpkgs is None:
+        return {
+            "status": "METADATA_UNAVAILABLE",
+            "error": "Neither local release commit nor locked nixpkgs commit could be resolved.",
+            "local_commit": None,
+            "pinned_nixpkgs_commit": None,
+            "channel": meta.get("channel", "nixos-26.05"),
+            "release_tag": meta.get("release_tag", "v1.0.3")
+        }
+
+    remote_commit, probe_error = get_upstream_release_commit(repo_root, timeout=timeout)
+
     if not remote_commit:
         return {
             "status": "UNKNOWN",
             "error": f"Upstream check unreachable: {probe_error or 'Connection timed out'}",
-            "pinned_commit": pinned,
-            "channel": "nixos-26.05",
-            "release_tag": "v1.0.3"
+            "local_commit": local_commit,
+            "pinned_nixpkgs_commit": pinned_nixpkgs,
+            "channel": meta.get("channel", "nixos-26.05"),
+            "release_tag": meta.get("release_tag", "v1.0.3")
         }
 
-    # Check local git HEAD if available
-    local_head = None
-    if shutil.which("git"):
-        try:
-            res = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                cwd=repo_root or get_repo_root(),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False
-            )
-            if res.returncode == 0:
-                local_head = res.stdout.strip()
-        except Exception:
-            pass
-
-    comparison_target = local_head or pinned
-    if remote_commit == comparison_target:
-        return {
-            "status": "UP_TO_DATE",
-            "pinned_commit": pinned,
-            "upstream_commit": remote_commit,
-            "channel": "nixos-26.05",
-            "release_tag": "v1.0.3"
-        }
+    # Strict domain comparison: NEURONIX OS local commit vs NEURONIX OS remote commit
+    is_up_to_date = False
+    if local_commit:
+        is_up_to_date = (local_commit == remote_commit)
     else:
-        return {
-            "status": "UPDATE_AVAILABLE",
-            "pinned_commit": pinned,
-            "upstream_commit": remote_commit,
-            "channel": "nixos-26.05",
-            "release_tag": "v1.0.3"
-        }
+        # If running on bare installed host without git or commit metadata,
+        # consider version tag comparison
+        is_up_to_date = False
+
+    status = "UP_TO_DATE" if is_up_to_date else "UPDATE_AVAILABLE"
+    return {
+        "status": status,
+        "local_commit": local_commit,
+        "upstream_commit": remote_commit,
+        "pinned_nixpkgs_commit": pinned_nixpkgs,
+        "channel": meta.get("channel", "nixos-26.05"),
+        "release_tag": meta.get("release_tag", "v1.0.3")
+    }
 
 def apply_system_update(
     flake_uri: Optional[str] = None,
