@@ -53,7 +53,8 @@ QA_SUITES = [
     {"suite_file": "21_opencode_service_and_autoupdate.sh", "title": "OpenCode AI Copilot & Autonomous Updates", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True},
     {"suite_file": "22_update_system_and_desktop_notifier.sh", "title": "Autonomous Update Policy & Desktop Notifier", "assertions": 30, "proof_class": "L2_SYSTEM", "release_blocker": True},
     {"suite_file": "23_endeavouros_parity_and_onboarding.sh", "title": "EndeavourOS Parity, Onboarding & Distro Polish", "assertions": 30, "proof_class": "L2_SYSTEM", "release_blocker": True},
-    {"suite_file": "24_system_manual_and_ai_reference.sh", "title": "System Manual & Native AI Reference Verification", "assertions": 44, "proof_class": "L0_STATIC", "release_blocker": True}
+    {"suite_file": "24_system_manual_and_ai_reference.sh", "title": "System Manual & Native AI Reference Verification", "assertions": 44, "proof_class": "L0_STATIC", "release_blocker": True},
+    {"suite_file": "25_negative_path_and_failure_modes.sh", "title": "Negative Paths & Failure Mode Verification", "assertions": 30, "proof_class": "L2_SYSTEM", "release_blocker": True}
 ]
 
 DISTRO_SUITE = {
@@ -118,8 +119,16 @@ STANDALONE_GATES = [
         "id": "gate_security_audit",
         "file": "tests/test_security_audit.sh",
         "description": "Enterprise Security, Secret Scanning & Injection Defense",
-        "assertions": 9,
+        "assertions": 14,
         "proof_class": "L0_STATIC",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_failure_injection",
+        "file": "tests/test_failure_injection_scenarios.sh",
+        "description": "Enterprise Failure Injection & Chaos Resilience",
+        "assertions": 6,
+        "proof_class": "L2_SYSTEM",
         "release_blocker": True
     },
     {
@@ -215,7 +224,7 @@ def generate_manifest():
         json.dump(manifest, f, indent=2)
 
     print(f"[SUCCESS] Canonical Test Manifest generated at: {OUTPUT_MANIFEST}")
-    print(f"  QA Master Harness (24 suites) : {qa_total} tests")
+    print(f"  QA Master Harness (25 suites) : {qa_total} tests")
     print(f"  Distro Component Harness      : {distro_total} tests")
     print(f"  Standalone Lifecycle Gates    : {standalone_total} tests")
     print(f"  Total Repository Footprint    : {grand_total} tests")

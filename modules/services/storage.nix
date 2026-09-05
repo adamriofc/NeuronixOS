@@ -5,8 +5,14 @@
   # Background balance service with filesystem detection to prevent unnecessary wear
   systemd.services.btrfs-balance = {
     description = "NEURONIX Btrfs Metadata Auto-Balance Service";
+    unitConfig = {
+      ConditionACPower = true;
+    };
     serviceConfig = {
       Type = "oneshot";
+      IOSchedulingClass = "idle";
+      CPUSchedulingPolicy = "idle";
+      CPUWeight = 20;
       ExecStart = pkgs.writeShellScript "neuronix-btrfs-balance" ''
         # Verify root filesystem is Btrfs before executing maintenance
         if ${pkgs.util-linux}/bin/findmnt -n -o FSTYPE / 2>/dev/null | grep -q "btrfs"; then

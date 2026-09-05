@@ -2,15 +2,15 @@
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.3",
-  "generated_at": "2026-09-05T00:14:35Z",
+  "generated_at": "2026-09-05T00:48:00Z",
   "summary": {
-    "total_repository_assertions": 987,
-    "qa_master_harness_assertions": 643,
+    "total_repository_assertions": 1028,
+    "qa_master_harness_assertions": 673,
     "distro_component_assertions": 209,
-    "standalone_gates_assertions": 135,
-    "qa_master_suites_count": 24,
+    "standalone_gates_assertions": 146,
+    "qa_master_suites_count": 25,
     "distro_suites_count": 19,
-    "standalone_gates_count": 12,
+    "standalone_gates_count": 13,
     "confidence_score": 100.0,
     "status": "PASSING_ALL"
   },
@@ -193,6 +193,13 @@
         "assertions": 44,
         "proof_class": "L0_STATIC",
         "release_blocker": true
+      },
+      {
+        "suite_file": "25_negative_path_and_failure_modes.sh",
+        "title": "Negative Paths & Failure Mode Verification",
+        "assertions": 30,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": true
       }
     ]
   },
@@ -257,8 +264,16 @@
       "id": "gate_security_audit",
       "file": "tests/test_security_audit.sh",
       "description": "Enterprise Security, Secret Scanning & Injection Defense",
-      "assertions": 9,
+      "assertions": 14,
       "proof_class": "L0_STATIC",
+      "release_blocker": true
+    },
+    {
+      "id": "gate_failure_injection",
+      "file": "tests/test_failure_injection_scenarios.sh",
+      "description": "Enterprise Failure Injection & Chaos Resilience",
+      "assertions": 6,
+      "proof_class": "L2_SYSTEM",
       "release_blocker": true
     },
     {

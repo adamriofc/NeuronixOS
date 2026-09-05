@@ -54,19 +54,26 @@ def list_generations():
         }]
 
     links = glob.glob(f"{prof}-*-link")
+    now_ts = datetime.now().timestamp()
     for link in links:
         gen_num = parse_generation_number(link)
         if gen_num is not None:
+            age_days = 0.0
             try:
                 mtime = os.path.getmtime(link)
                 dt_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+                age_days = round(max(0.0, (now_ts - mtime) / 86400.0), 2)
             except Exception:
                 dt_str = "Unknown"
+            
+            is_active = (str(gen_num) == str(active))
             generations.append({
                 "generation": gen_num,
                 "date": dt_str,
-                "active": (str(gen_num) == str(active)),
-                "path": link
+                "active": is_active,
+                "path": link,
+                "age_days": age_days,
+                "gc_eligible": (not is_active and age_days >= 14.0)
             })
 
     generations.sort(key=lambda x: x["generation"])
@@ -75,7 +82,9 @@ def list_generations():
             "generation": int(active) if active.isdigit() else 1,
             "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "active": True,
-            "path": prof
+            "path": prof,
+            "age_days": 0.0,
+            "gc_eligible": False
         })
 
     return generations

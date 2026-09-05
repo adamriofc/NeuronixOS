@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Industrial QA & Resilience Master Test Runner (643 Tests across 24 Suites)
+# NEURONIX Industrial QA & Resilience Master Test Runner (673 Tests across 25 Suites)
 # Executes 24 deep-dive suites:
 # 01 - Syntax & Static Analysis
 # 02 - CLI Argument Parsing & Fuzzing
@@ -26,6 +26,7 @@
 # 22 - Autonomous Update Policy & Desktop Notifier
 # 23 - EndeavourOS Parity, Onboarding & Distro Polish
 # 24 - System Manual & Native AI Reference Verification
+# 25 - Negative Paths & Failure Mode Verification
 # ==============================================================================
 
 set -uo pipefail
@@ -41,7 +42,7 @@ START_TIME=$(date +%s%N)
 
 echo -e "\n${C_BOLD}${C_CYAN}╔═══════════════════════════════════════════════════════════════════╗${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}║     NEURONIX COMPREHENSIVE INDUSTRIAL QA & RESILIENCE HARNESS     ║${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (643 Tests)   ║${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (673 Tests)   ║${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}╚═══════════════════════════════════════════════════════════════════╝${C_RESET}"
 
 # Execute all 24 suites sequentially
@@ -69,6 +70,7 @@ source "$TEST_DIR/suites/21_opencode_service_and_autoupdate.sh"
 source "$TEST_DIR/suites/22_update_system_and_desktop_notifier.sh"
 source "$TEST_DIR/suites/23_endeavouros_parity_and_onboarding.sh"
 source "$TEST_DIR/suites/24_system_manual_and_ai_reference.sh"
+source "$TEST_DIR/suites/25_negative_path_and_failure_modes.sh"
 
 END_TIME=$(date +%s%N)
 DURATION_MS=$(( (END_TIME - START_TIME) / 1000000 ))

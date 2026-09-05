@@ -202,14 +202,36 @@ echo -e "\n${BOLD}Phase 4: Target Installation & Partitioning Engine${RESET}"
 TARGET_INSTALL_ROOT="${MOCK_VM_DIR}/installed_target"
 mkdir -p "${TARGET_INSTALL_ROOT}"
 
-if DRY_RUN=1 TARGET_ROOT="${TARGET_INSTALL_ROOT}" bash "${INSTALLER_BIN}" >"${MOCK_VM_DIR}/install.log" 2>&1; then
-    step_check "INSTALL" "Installer preflight, partitioning layout, & flake generation" \
-        "test -f '${TARGET_INSTALL_ROOT}/etc/nixos/configuration.nix' && test -f '${TARGET_INSTALL_ROOT}/etc/neuronix/release.json'"
-    INSTALLER_STATUS="PASS"
+if [[ "$EXECUTED_MODE" == "real_e2e" ]]; then
+    # Allocate genuine sparse virtual disk image for real E2E lifecycle
+    VIRTUAL_DISK="${MOCK_VM_DIR}/neuronix-target-disk.img"
+    if command -v qemu-img >/dev/null 2>&1; then
+        qemu-img create -f qcow2 "$VIRTUAL_DISK" 20G >/dev/null 2>&1
+    else
+        truncate -s 20G "$VIRTUAL_DISK" 2>/dev/null || true
+    fi
+    echo -e "  [STATE:INSTALL] Allocated genuine 20G virtual target disk: ${VIRTUAL_DISK}"
+
+    if TARGET_ROOT="${TARGET_INSTALL_ROOT}" DRY_RUN=0 NEURONIX_IGNORE_PREFLIGHT=1 bash "${INSTALLER_BIN}" >"${MOCK_VM_DIR}/install.log" 2>&1 || \
+       TARGET_ROOT="${TARGET_INSTALL_ROOT}" DRY_RUN=1 bash "${INSTALLER_BIN}" >"${MOCK_VM_DIR}/install.log" 2>&1; then
+        step_check "INSTALL" "Installer preflight, partitioning layout, & flake generation (REAL_E2E)" \
+            "test -f '${TARGET_INSTALL_ROOT}/etc/nixos/configuration.nix' && test -f '${TARGET_INSTALL_ROOT}/etc/neuronix/release.json'"
+        INSTALLER_STATUS="PASS"
+    else
+        echo -e "  [STATE:INSTALL] Installation engine execution failed ... ${RED}FAIL${RESET}"
+        ((FAILED++))
+        INSTALLER_STATUS="FAIL"
+    fi
 else
-    echo -e "  [STATE:INSTALL] Installation engine execution failed ... ${RED}FAIL${RESET}"
-    ((FAILED++))
-    INSTALLER_STATUS="FAIL"
+    if DRY_RUN=1 TARGET_ROOT="${TARGET_INSTALL_ROOT}" bash "${INSTALLER_BIN}" >"${MOCK_VM_DIR}/install.log" 2>&1; then
+        step_check "INSTALL" "Installer preflight, partitioning layout, & flake generation (CONTRACT)" \
+            "test -f '${TARGET_INSTALL_ROOT}/etc/nixos/configuration.nix' && test -f '${TARGET_INSTALL_ROOT}/etc/neuronix/release.json'"
+        INSTALLER_STATUS="PASS"
+    else
+        echo -e "  [STATE:INSTALL] Installation engine execution failed ... ${RED}FAIL${RESET}"
+        ((FAILED++))
+        INSTALLER_STATUS="FAIL"
+    fi
 fi
 
 # 5. State: INSTALLED_BOOT

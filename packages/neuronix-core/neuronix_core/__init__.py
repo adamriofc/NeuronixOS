@@ -10,7 +10,12 @@ from .telemetry import get_system_telemetry, get_cpu_info, get_ram_info
 from .generation import list_generations, get_active_generation, parse_generation_number
 from .rollback import execute_rollback, simulate_rollback
 from .storage import probe_storage_hygiene, calculate_store_size
-from .update import check_upstream_update, get_pinned_commit
+from .update import check_upstream_update, get_pinned_commit, apply_system_update
+from .lock import OperationLock, ConcurrentOperationError
+from .journal import TransactionJournal, TransactionState
+from .operations import execute_privileged_operation, is_operation_permitted
+from .ca import enroll_certificate
+from .doctor import get_sanitized_diagnostics, print_doctor_json
 
 __all__ = [
     "__version__",
@@ -26,4 +31,14 @@ __all__ = [
     "calculate_store_size",
     "check_upstream_update",
     "get_pinned_commit",
+    "apply_system_update",
+    "OperationLock",
+    "ConcurrentOperationError",
+    "TransactionJournal",
+    "TransactionState",
+    "execute_privileged_operation",
+    "is_operation_permitted",
+    "enroll_certificate",
+    "get_sanitized_diagnostics",
+    "print_doctor_json",
 ]

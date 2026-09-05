@@ -64,9 +64,10 @@
   - [10. Curated Quickstart App Hub (Flatpak)](#10-curated-quickstart-app-hub-flatpak)
   - [11. Declarative Kernel Flavor Manager](#11-declarative-kernel-flavor-manager)
   - [12. System-Embedded Manual & Autonomous AI Grounding](#12-system-embedded-manual--autonomous-ai-grounding)
+  - [13. Enterprise Security Boundary & Hardened Trust Architecture](#13-enterprise-security-boundary--hardened-trust-architecture)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (987 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (1,028 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -210,7 +211,7 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
 | Proof Class | Rigor Level & Scope | Verification Grounding | Subsystems & Features |
 | :--- | :--- | :--- | :--- |
 | **P0: Mathematical Determinism** | Functional derivations, bit-identical store paths, pinned inputs. | Verified via Nix derivation graph, `flake.lock` pinned commit, and RFC SHA-256 digests. | Pure Nix substrate, pinned Nixpkgs closures, reproducible ISO builds, release manifest hashes. |
-| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 987 automated test assertions across 24 QA suites, 19 distro component suites, and 12 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC. |
+| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 1,028 automated test assertions across 25 QA suites, 19 distro component suites, and 13 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC. |
 | **P2: Qualified Reference Hardware** | Empirical hardware validation on representative bare-metal systems. | Validated across 8 reference platforms (ThinkPad, Framework, AMD/Intel workstations, XPS, Zephyrus, Apple Silicon). | Intel/AMD microcode, Mesa RADV, Intel Arc Xe, NVIDIA PRIME offload, S3/s2idle power management, PipeWire HD audio. |
 | **P3: Declarative Module Support** | Composable NixOS configuration modules and subsystem policies. | 27 hardware configuration pillars managed in `modules/hardware/` and `data/hardware_qualification.json`. | ZRAM ZSTD swap, systemd-oomd memory monitor, Btrfs subvolumes (@, @home, @nix, @log, @snapshots), auto-TRIM. |
 | **P4: Experimental / Community** | Optional hardware features, custom Wayland compositor rules, community packages. | Documented with operational caveats and manual verification steps in operational runbooks. | Lanzaboote UEFI Secure Boot signing chain, TPM2 LUKS auto-unlocking, custom Hyprland animations. |
@@ -563,6 +564,20 @@ neuronix manual storage
 neuronix manual ai
 ```
 
+### 13. Enterprise Security Boundary & Hardened Trust Architecture
+NEURONIX implements rigorous least-privilege security boundaries and transactional invariants:
+- **Nix Daemon Least-Privilege (SEC-TRUST-001):** Restricted to `nix.settings.trusted-users = [ "root" ];`. Ordinary `wheel` users build in isolated sandboxes and cannot substitute arbitrary binary store paths.
+- **Privileged Operation Allow-List:** Mutation operations (`rollback`, `gc`, `trim`, `battery`, `ca-install`) are strictly vetted through `neuronix_core.operations` with input sanitization and command injection defense.
+- **Content-Addressed CA Enrollment:** Enterprise root certificates are validated for PEM delimiters and stored with cryptographic SHA-256 content-addressing (`neuronix-ca-<sha256>.crt`) to prevent path traversal.
+- **Fail-Closed Release Signing:** Checksum signing strictly enforces genuine Ed25519 private keys, eliminating insecure mock key fallbacks.
+- **Transactional State & Recovery:** All updates and generation switches use non-blocking `OperationLock` mutual exclusion, `TransactionJournal` crash recovery, and automated rollback upon health check regressions.
+- **Pure Declarative Subsystem Options:**
+  - `neuronix.hardware.kernelFlavor`: upstream kernel selection (`"default"`, `"latest"`, `"lts"`, `"zen"`, `"hardened"`).
+  - `neuronix.power.sleepMode`: modern suspend states (`"auto"`, `"deep"`, `"s2idle"`).
+  - `neuronix.boot.windowsDualBoot`: clean RTC clock synchronization without ad-hoc scripts.
+  - `neuronix.audio.antiPop`: opt-in DAC power-management anti-pop override while preserving laptop power savings.
+  - `neuronix.desktop.inputMethodProfile`: modular internationalization (`"standard"`, `"cjk-full"`, `"minimal"`).
+
 ---
 
 ## Building & Installation
@@ -628,15 +643,15 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Industrial Test Battery (987 Assertions)
+## Verification, Lifecycle Gate & Industrial Test Battery (1,028 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 987 automated assertions across 14 specialized test harnesses, 24 test suites, and release gates:
+System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,028 automated assertions across 15 specialized test harnesses, 25 test suites, and release gates:
 
 ```text
 ═══════════════════════════════════════════════════════════════════
                     TEST HARNESS REPORT SUMMARY                    
 ═══════════════════════════════════════════════════════════════════
-  Master Test Harness (tests/run_all_tests.sh)     : 643 / 643 PASS
+  Master Test Harness (tests/run_all_tests.sh)     : 673 / 673 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 209 / 209 PASS
   Single Source of Truth Gate (source_of_truth)    :  13 /  13 PASS
   Multi-Architecture Matrix (multiarch_matrix)     :  13 /  13 PASS
@@ -644,15 +659,16 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Real E2E ISO Lifecycle Gate (e2e/test_iso_install):  8 /   8 PASS
   Release Lifecycle Gate (test_release_lifecycle)  :  34 /  34 PASS
   Multi-Hop Rollback Correctness (rollback_corr)   :  13 /  13 PASS
-  Enterprise Security Audit (security_audit)       :   9 /   9 PASS
+  Enterprise Security Audit (security_audit)       :  14 /  14 PASS
+  Failure Injection & Chaos (failure_injection)    :   6 /   6 PASS
   Neuronix Core Engine CLI (test_neuronix_core)    :  14 /  14 PASS
   Mutation Resilience Suite (mutation_resilience)  :   6 /   6 KILLED
   Historical Regression Corpus (regression_corpus) :   7 /   7 PASS
   Reproducibility Gate (test_reproducible_iso)     :   6 /   6 PASS
   Performance Benchmarks (test_benchmarks)         :   4 /   4 PASS
-  Total Executed Assertions                        : 987 Assertions
+  Total Executed Assertions                        : 1,028 Assertions
   Failed Verification                              : 0 Failures
-  Execution Duration                               : ~104 seconds
+  Execution Duration                               : ~110 seconds
   Confidence Score                                 : 100%
 ═══════════════════════════════════════════════════════════════════
   ✔ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED

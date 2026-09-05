@@ -15,7 +15,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 DIST_DIR="${PROJECT_ROOT}/dist"
 CHECKSUM_FILE="${DIST_DIR}/SHA256SUMS"
 SIG_FILE="${DIST_DIR}/SHA256SUMS.sig"
-KEY_DIR="${PROJECT_ROOT}/.keys"
+KEY_DIR="${NEURONIX_KEY_DIR:-${PROJECT_ROOT}/.keys}"
 TRUSTED_PUB_KEY="${PROJECT_ROOT}/docs/security/RELEASE_SIGNING_KEY.pub"
 
 action="${1:-verify}"
@@ -41,14 +41,9 @@ case "$action" in
                 chmod 600 "$PRIV_KEY"
             fi
         elif [[ ! -f "$PRIV_KEY" ]]; then
-            if [[ "${NEURONIX_ALLOW_INSECURE_DEV_KEY:-0}" == "1" ]]; then
-                echo "[WARN] Generating temporary dev signing key because NEURONIX_ALLOW_INSECURE_DEV_KEY=1"
-                openssl genpkey -algorithm ED25519 -out "$PRIV_KEY" 2>/dev/null
-            else
-                echo "[ERROR] Release signing key not found at $PRIV_KEY." >&2
-                echo "[ERROR] Set NEURONIX_SIGNING_KEY secret or set NEURONIX_ALLOW_INSECURE_DEV_KEY=1 for dev." >&2
-                exit 1
-            fi
+            echo "[ERROR] Release signing key not found at $PRIV_KEY." >&2
+            echo "[ERROR] Provide NEURONIX_SIGNING_KEY secret or provision key at $PRIV_KEY." >&2
+            exit 1
         fi
 
         openssl pkeyutl -sign -inkey "$PRIV_KEY" -in "$CHECKSUM_FILE" -rawin -out "$SIG_FILE"

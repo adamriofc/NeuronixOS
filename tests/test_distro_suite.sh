@@ -469,7 +469,7 @@ assert_contains "${DISTRO_ROOT}/modules/services/security.nix" "security.polkit.
 assert_contains "${DISTRO_ROOT}/modules/services/security.nix" "programs.gnupg.agent" "GnuPG agent is enabled"
 assert_contains "${DISTRO_ROOT}/modules/services/security.nix" "enableSSHSupport = true;" "GnuPG SSH agent forwarding is enabled"
 assert_contains "${DISTRO_ROOT}/modules/services/security.nix" "pinentry-gnome3" "Pinentry GUI package is declared"
-assert_contains "${DISTRO_ROOT}/modules/core/default.nix" "trusted-users = [ \"root\" \"@wheel\" ];" "Nix trusted users are restricted to root and @wheel"
+assert_contains "${DISTRO_ROOT}/modules/core/default.nix" "trusted-users = [ \"root\" ];" "Nix trusted users are restricted to root only (SEC-TRUST-001)"
 assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "security.sudo.wheelNeedsPassword = false;" "Live ISO enables passwordless sudo for live tester convenience"
 assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "extraGroups = [ \"wheel\" \"networkmanager\" \"video\" \"audio\" ];" "Live ISO user has audio/video/network permissions"
 assert_contains "${DISTRO_ROOT}/hosts/desktop/default.nix" "extraGroups = [ \"wheel\" \"networkmanager\" \"video\" \"audio\" ];" "Desktop user has audio/video/network permissions"

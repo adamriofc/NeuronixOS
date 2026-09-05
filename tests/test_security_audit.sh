@@ -87,6 +87,26 @@ security_assert "CLI engine enforces strict run_privileged allow-list" \
 security_assert "Installer engine rejects unsafe username traversal" \
     "! TARGET_USER='../root' bash '${PROJECT_ROOT}/installer/scripts/neuronix-install-engine.sh' >/dev/null 2>&1"
 
+# 6. Nix Daemon Trusted Users Least-Privilege Invariant (SEC-TRUST-001)
+security_assert "SEC-TRUST-001: nix.settings.trusted-users restricted strictly to root" \
+    "grep -q 'trusted-users = \\[ \"root\" \\];' '${PROJECT_ROOT}/modules/core/default.nix' && ! grep -q '@wheel' '${PROJECT_ROOT}/modules/core/default.nix'"
+
+# 7. Privileged Operation Allow-List Execution Bounds
+security_assert "Privileged operation handler rejects arbitrary command execution" \
+    "PYTHON_BIN=\"\$(command -v python3 2>/dev/null || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo python3)\"; \"\$PYTHON_BIN\" -c \"import sys; sys.path.insert(0, '${PROJECT_ROOT}/packages/neuronix-core'); from neuronix_core.operations import execute_privileged_operation; ok, code, _ = execute_privileged_operation('malicious_cmd; rm -rf /'); sys.exit(0 if (not ok and code == 126) else 1)\""
+
+# 8. Content-Addressed CA Enrollment Validation
+security_assert "CA enrollment engine validates PEM headers before installation" \
+    "PYTHON_BIN=\"\$(command -v python3 2>/dev/null || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo python3)\"; \"\$PYTHON_BIN\" -c \"import sys, tempfile; sys.path.insert(0, '${PROJECT_ROOT}/packages/neuronix-core'); from neuronix_core.ca import enroll_certificate; tf = tempfile.NamedTemporaryFile('w', delete=False); tf.write('NOT_A_CERTIFICATE'); tf.close(); ok, code, _ = enroll_certificate(tf.name); sys.exit(0 if (not ok and code == 1) else 1)\""
+
+# 9. Release Signing Real-Key Invariant
+security_assert "Release signer fails closed when genuine private key is missing" \
+    "! NEURONIX_KEY_DIR=\$(mktemp -d) bash '${PROJECT_ROOT}/installer/scripts/sign_release.sh' sign >/dev/null 2>&1"
+
+# 10. Battery Threshold Deterministic State Machine
+security_assert "Battery threshold controller eliminates non-deterministic || true" \
+    "grep -q 'BATTERY_THRESHOLD: APPLIED' '${PROJECT_ROOT}/modules/hardware/power.nix' && ! grep -q '|| true' '${PROJECT_ROOT}/modules/hardware/power.nix'"
+
 echo -e "\n${BOLD}═══════════════════════════════════════════════════════════════════${RESET}"
 echo -e "  Total Security Invariants : $((PASSED + FAILED))"
 echo -e "  Passed Validations        : ${PASSED}"

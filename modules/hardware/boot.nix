@@ -4,14 +4,20 @@
   options = {
     neuronix.hardware.kernelFlavor = lib.mkOption {
       type = lib.types.enum [ "default" "zen" "lts" "latest" "hardened" ];
-      default =
-        if builtins.pathExists /etc/neuronix/kernel-profile then
-          let
-            raw = lib.strings.trim (builtins.readFile /etc/neuronix/kernel-profile);
-          in
-            if builtins.elem raw [ "default" "zen" "lts" "latest" "hardened" ] then raw else "default"
-        else "default"; # default, zen, lts, latest, hardened
+      default = "default";
       description = "Linux kernel profile flavor (zen: gaming/low-latency, lts: long-term, latest: bleeding-edge, hardened: high-security)";
+    };
+
+    neuronix.power.sleepMode = lib.mkOption {
+      type = lib.types.enum [ "auto" "deep" "s2idle" ];
+      default = "auto";
+      description = "Target system sleep mode (auto: kernel default, deep: S3, s2idle: modern standby)";
+    };
+
+    neuronix.boot.windowsDualBoot = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Synchronize RTC in local time for Windows dual-boot consistency";
     };
   };
 
@@ -35,8 +41,8 @@
       timeout = lib.mkDefault 5;
     };
 
-    # Dual-boot Windows synchronization (RTC local time & UEFI boot discovery)
-    time.hardwareClockInLocalTime = lib.mkDefault true;
+    # Dual-boot Windows synchronization (RTC local time when explicitly enabled)
+    time.hardwareClockInLocalTime = lib.mkDefault (config.neuronix.boot.windowsDualBoot or false);
 
     # Ephemeral /tmp Directory Hygiene
     # Purge stale temporary files in /tmp during system boot
@@ -46,13 +52,13 @@
     systemd.watchdog.runtimeTime = "30s";
     systemd.watchdog.rebootTime = "10min";
 
-    # Kernel tuning (SteamOS vm.max_map_count and S0ix deep sleep)
+    # Kernel tuning (SteamOS vm.max_map_count and adaptive sleep)
     boot.kernelParams = [
-      "mem_sleep_default=deep"
       "quiet"
       "splash"
       "loglevel=4"
-    ];
+    ] ++ (lib.optional ((config.neuronix.power.sleepMode or "auto") == "deep") "mem_sleep_default=deep")
+      ++ (lib.optional ((config.neuronix.power.sleepMode or "auto") == "s2idle") "mem_sleep_default=s2idle");
 
     boot.kernel.sysctl = {
       # SteamOS 3 / Fedora standard for high-concurrency gaming, Proton, and large IDEs

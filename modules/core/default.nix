@@ -9,7 +9,7 @@
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
     auto-optimise-store = true;
-    trusted-users = [ "root" "@wheel" ];
+    trusted-users = [ "root" ];
     substituters = [
       "https://cache.nixos.org"
       "https://nix-community.cachix.org"
