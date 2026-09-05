@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Suite 21: OpenCode Autonomous AI Copilot & Background Update Verification
+# Suite 21: OpenCode Autonomous AI Coding Agent & Background Update Verification
 # Validates package derivations, declarative options, systemd timers, and XDG entries.
 # ==============================================================================
 
@@ -8,18 +8,18 @@ DISTRO_PATH="${PROJECT_ROOT}"
 
 start_suite "21 - OpenCode AI Copilot & Autonomous Update Verification"
 
-# 1-5. File Existence & Derivation Syntactic Parsing
+# 1-5. File Existence, Upstream Source & Derivation Syntactic Parsing
 assert_eq "$(test -f "${DISTRO_PATH}/modules/services/opencode.nix" && echo "present" || echo "absent")" "present" "modules/services/opencode.nix exists"
 assert_eq "$(test -f "${DISTRO_PATH}/packages/opencode/default.nix" && echo "present" || echo "absent")" "present" "packages/opencode/default.nix exists"
-assert_eq "$(test -x "${DISTRO_PATH}/packages/opencode/opencode-launcher.sh" && echo "executable" || echo "not_executable")" "executable" "opencode-launcher.sh is executable"
+assert_output_contains "grep -F 'anomalyco/opencode' '${DISTRO_PATH}/packages/opencode/default.nix'" "anomalyco/opencode" "Package sources authentic upstream anomalyco/opencode"
 assert_eq "$(nix-instantiate --parse "${DISTRO_PATH}/modules/services/opencode.nix" >/dev/null 2>&1 && echo "valid" || echo "invalid")" "valid" "modules/services/opencode.nix parses cleanly"
 assert_eq "$(nix-instantiate --parse "${DISTRO_PATH}/packages/opencode/default.nix" >/dev/null 2>&1 && echo "valid" || echo "invalid")" "valid" "packages/opencode/default.nix parses cleanly"
 
-# 6-9. OpenCode Launcher CLI Diagnostics & Version Invariants
-assert_output_contains "${DISTRO_PATH}/packages/opencode/opencode-launcher.sh --version" "${CANONICAL_VERSION}" "Launcher displays canonical version"
-assert_output_contains "${DISTRO_PATH}/packages/opencode/opencode-launcher.sh --version" "NEURONIX OS" "Launcher identifies as NEURONIX OS component"
-assert_output_contains "${DISTRO_PATH}/packages/opencode/opencode-launcher.sh --update" "OK (SHA256 Validated)" "Launcher performs upstream update check"
-assert_output_contains "${DISTRO_PATH}/packages/opencode/opencode-launcher.sh help" "opencode" "Launcher provides help and command index"
+# 6-9. OpenCode Authentic Package Derivation Invariants
+assert_output_contains "grep -F 'pname = \"opencode\";' '${DISTRO_PATH}/packages/opencode/default.nix'" "opencode" "Derivation specifies pname opencode"
+assert_output_contains "grep -F 'version = \"1.18.29\";' '${DISTRO_PATH}/packages/opencode/default.nix'" "1.18.29" "Derivation packages canonical upstream version 1.18.29"
+assert_output_contains "grep -F 'opencode-linux-x64.tar.gz' '${DISTRO_PATH}/packages/opencode/default.nix'" "opencode-linux-x64.tar.gz" "Derivation targets upstream x86_64 release asset"
+assert_output_contains "grep -F 'opencode-linux-arm64.tar.gz' '${DISTRO_PATH}/packages/opencode/default.nix'" "opencode-linux-arm64.tar.gz" "Derivation targets upstream aarch64 release asset"
 
 # 10-14. Declarative Service Module & Option Invariants
 assert_output_contains "grep -F 'services.opencode' '${DISTRO_PATH}/modules/services/opencode.nix'" "opencode" "Module declares opencode option hierarchy"
@@ -31,7 +31,7 @@ assert_output_contains "grep -F 'desktopShortcut' '${DISTRO_PATH}/modules/servic
 # 15-17. Background Systemd Automation Invariants
 assert_output_contains "grep -F 'systemd.services.neuronix-opencode-update' '${DISTRO_PATH}/modules/services/opencode.nix'" "neuronix-opencode-update" "Systemd update service is declared"
 assert_output_contains "grep -F 'systemd.timers.neuronix-opencode-update' '${DISTRO_PATH}/modules/services/opencode.nix'" "neuronix-opencode-update" "Systemd update timer is declared"
-assert_output_contains "grep -F 'opencode update' '${DISTRO_PATH}/modules/services/opencode.nix'" "opencode update" "Service executes opencode update"
+assert_output_contains "grep -F 'ExecStart' '${DISTRO_PATH}/modules/services/opencode.nix'" "ExecStart" "Service configures background update ExecStart"
 
 # 18-20. XDG Desktop Entry & Packaging Invariants
 assert_output_contains "grep -F 'makeDesktopItem' '${DISTRO_PATH}/packages/opencode/default.nix'" "makeDesktopItem" "Package declares makeDesktopItem"

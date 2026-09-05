@@ -455,25 +455,30 @@ NEURONIX includes a built-in Model Context Protocol server communicating over `s
 neuronix mcp
 ```
 
-### 6. OpenCode AI System Copilot & Autonomous Updates
-A built-in, declarative AI system copilot providing natural language and CLI-driven system intelligence across all desktop environments (KDE Plasma, GNOME, Hyprland). See the [OpenCode Architecture Specification](docs/opencode.md) for comprehensive design details.
+### 6. OpenCode AI Coding Agent & Autonomous Updates
+A built-in, declarative AI coding agent providing interactive TUI and CLI-driven intelligence across all desktop environments (KDE Plasma, GNOME, Hyprland). Powered by upstream [OpenCode](https://opencode.ai) ([anomalyco/opencode](https://github.com/anomalyco/opencode)). See the [OpenCode Architecture Specification](docs/opencode.md) for comprehensive design details.
 - **Pre-installed by Default:** Enabled out-of-the-box (`neuronix.services.opencode.enable = true;`), exposing application launcher entries (`opencode.desktop`) and desktop shortcuts across all desktop environments.
-- **Autonomous System Manual Grounding:** On launch, OpenCode automatically detects `/etc/neuronix/manual/` and pre-loads Chapter 10 (`10_AI_AGENT_REFERENCE.md`) into session context. This grounds every natural language interaction in declarative NixOS safety without requiring manual CLI invocations (`neuronix manual`).
+- **Native MCP Substrate Integration:** Pre-configured with the local NEURONIX Model Context Protocol (MCP) server, granting OpenCode immediate access to system inspection, verification, and atomic rollback tools.
+- **Autonomous System Manual Grounding:** OpenCode automatically discovers root directives at `/etc/neuronix/SYSTEM_PROMPT.md`, `/etc/neuronix/AGENTS.md`, and `$NEURONIX_AI_DIRECTIVE` without requiring manual CLI invocations (`neuronix manual`).
 - **Autonomous Background Updates:** Powered by `neuronix-opencode-update.timer` which checks and synchronizes upstream releases daily without touching physical store immutability or risking running system stability.
 - **Zero-Residue Removal:** Easily disabled via `neuronix.services.opencode.enable = false;` or via the NEURONIX Center interface. Disabling immediately removes all binaries, background timers, and desktop shortcuts.
 
 ```bash
-# Launch interactive AI copilot session (with auto-grounded manual reference)
+# Launch interactive terminal user interface (TUI)
 opencode
 
-# Query real-time hardware, kernel, and generation state
-opencode status
+# Start OpenCode directly in a specific project directory
+opencode /path/to/project
 
-# Access system manual directly within interactive copilot
-opencode manual cli
+# Execute prompts directly via non-interactive CLI mode
+opencode run "explain flake inputs in flake.nix"
 
-# Execute upstream update synchronization check
-opencode update
+# Manage Model Context Protocol (MCP) connections
+opencode mcp list
+
+# Check OpenCode version and upgrade options
+opencode --version
+opencode upgrade --help
 ```
 
 ### 7. Autonomous Update Architecture & Desktop Notifier
@@ -554,7 +559,7 @@ neuronix kernel set zen
 NEURONIX embeds an immutable, 11-chapter technical manual directly into the operating system filesystem at `/etc/neuronix/manual/` via pure Nix derivations (`modules/core/manual.nix`):
 - **Always Synchronized:** Directly symlinked to `/nix/store`, automatically re-evaluated and updated during every system generation rebuild (`nixos-rebuild switch` or `neuronix upgrade`).
 - **Autonomous AI Preloading:** AI agents (OpenCode, Cursor, Claude, Antigravity) automatically discover root directives at `/etc/neuronix/SYSTEM_PROMPT.md`, `/etc/neuronix/AGENTS.md`, and `$NEURONIX_AI_DIRECTIVE` without requiring manual user commands.
-- **Unified Multi-Interface Access:** Seamlessly accessible via CLI (`neuronix manual [topic]`), OpenCode interactive copilot (`opencode manual [topic]`), and native MCP protocol (`tools/call`, `resources/read`, `prompts/get`).
+- **Unified Multi-Interface Access:** Seamlessly accessible via CLI (`neuronix manual [topic]`), OpenCode MCP integration, and native MCP protocol (`tools/call`, `resources/read`, `prompts/get`).
 
 ```bash
 # Display full manual index and chapter topic list

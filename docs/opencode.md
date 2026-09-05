@@ -1,20 +1,21 @@
-# NEURONIX OpenCode AI System Copilot Specification
+# NEURONIX OpenCode AI System Specification
 
-**Component:** OpenCode Autonomous AI Copilot  
-**Substrate Version:** 1.0.3  
-**License:** Apache License 2.0  
+**Component:** Authentic Upstream OpenCode CLI/TUI  
+**Upstream Project:** [anomalyco/opencode](https://github.com/anomalyco/opencode) ([opencode.ai](https://opencode.ai))  
+**Version:** 1.18.29  
+**License:** MIT  
 **Integration:** Universal across KDE Plasma 6, GNOME, and Hyprland  
 
 ---
 
 ## 1. Abstract & Architectural Role
 
-NEURONIX OS integrates **OpenCode** as its native, built-in AI system copilot. Operating as an intelligent bridge between the user and the declarative NixOS substrate, OpenCode transforms complex system administration, hardware management, and package orchestration into natural language commands and automated routines.
+NEURONIX OS integrates the authentic upstream **OpenCode** CLI/TUI as its default, pre-installed terminal AI coding agent. OpenCode is an open-source, terminal-native AI agent designed to run directly in the terminal, featuring both an interactive Terminal User Interface (TUI) and a non-interactive Command-Line Interface (CLI).
 
-Unlike conventional Linux distributions where AI agents execute unconstrained imperative shell scripts that can corrupt root filesystems, OpenCode operates within the deterministic constraints of NEURONIX:
-1. All changes are mediated through pure Nix expressions or validated via the local Model Context Protocol (MCP) server.
-2. System modifications produce new NixOS profile generations with instant rollback capabilities (`neuronix undo`).
-3. Proposed configurations can be evaluated inside an ephemeral in-memory Shadow Micro-VM (`neuronix try`) prior to host deployment.
+In NEURONIX OS, OpenCode operates within the deterministic constraints of the NixOS substrate:
+1. Native integration with the local Model Context Protocol (MCP) server (`neuronix mcp`), providing immediate access to system inspection, verification, and atomic rollback tools.
+2. Ambient system awareness via `/etc/neuronix/SYSTEM_PROMPT.md` and `/etc/neuronix/manual/` references.
+3. Completely unaltered upstream binary packaged natively with zero mocks or synthetic wrappers.
 
 ---
 
@@ -24,8 +25,8 @@ OpenCode is packaged natively (`packages/opencode/`) and exposed across all supp
 
 | Desktop Environment | Display Server | Launcher Location | Interaction Pattern |
 | :--- | :--- | :--- | :--- |
-| **KDE Plasma 6** | Wayland / KWin | Application Launcher (Kickoff), KRunner (`Alt + Space`), Desktop Shortcut (`~/Desktop/opencode.desktop`) | Graphical terminal window (Kitty/Konsole) with rich ANSI styling. |
-| **GNOME 47** | Wayland / Mutter | Application Grid, Dash to Dock | Full terminal window integration with Wayland clipboard bridging. |
+| **KDE Plasma 6** | Wayland / KWin | Application Launcher (Kickoff), KRunner (`Alt + Space`), Desktop Shortcut (`~/Desktop/opencode.desktop`) | Launches the authentic interactive TUI in default terminal window. |
+| **GNOME 47** | Wayland / Mutter | Application Grid, Dash to Dock | Launches the authentic interactive TUI with clipboard integration. |
 | **Hyprland** | Dynamic Tiling Wayland | Wofi, Rofi, Anyrun, keybind `SUPER + Return` | Launches dynamically inside default tiling terminal instance. |
 
 The XDG desktop entry (`opencode.desktop`) is installed into `/run/current-system/sw/share/applications/` and seeded into `/etc/skel/Desktop/` during system activation.
@@ -34,40 +35,53 @@ The XDG desktop entry (`opencode.desktop`) is installed into `/run/current-syste
 
 ## 3. Interactive Commands & Tooling
 
-OpenCode provides an interactive command loop and command-line arguments:
+OpenCode provides an interactive Terminal User Interface (TUI) and flexible CLI commands:
 
 ```bash
-# Launch interactive session
+# Launch interactive TUI session
 opencode
 
-# Query real-time hardware, kernel, and generation state
-opencode status
+# Start OpenCode inside a specific project path
+opencode /path/to/project
 
-# Execute upstream update synchronization check
-opencode update
+# Execute prompt directly via non-interactive CLI mode
+opencode run "inspect flake.nix and summarize inputs"
 
-# Verify derivation in pure nixpkgs closure
-opencode verify ripgrep
+# Manage Model Context Protocol (MCP) connections
+opencode mcp list
+opencode mcp add neuronix
 
-# Evaluate configuration in in-memory Shadow Micro-VM
-opencode try ./configuration.nix
+# Inspect AI providers, credentials, and models
+opencode models
+opencode providers
 
-# Query system manual chapters directly via CLI
-opencode manual cli
+# Upgrade or check OpenCode releases
+opencode upgrade --help
 ```
 
-### Interactive Internal Commands
+### Native Model Context Protocol (MCP) Integration
 
-When running in interactive mode (`opencode interactive`), the following built-in commands are available:
-- `/status`: Displays active Linux kernel, CPU/GPU telemetry, memory pressure, and generation index.
-- `/manual [topic]`: Renders system manual chapters directly inside the interactive session without leaving the chat loop.
-- `/verify <package>`: Evaluates whether a package derivation builds cleanly against the nixpkgs closure.
-- `/try [file.nix]`: Spawns a transient QEMU micro-VM in `/dev/shm` to verify proposed configurations.
-- `/diet`: Invokes `neuronix diet` to purge unreferenced store paths and issue SSD discard commands.
-- `/rollback`: Reverts the operating system to the previous generation via atomic symlink swap.
-- `/update`: Queries upstream distribution channels and validates release checksums.
-- `/help`: Displays available commands and usage guidance.
-- `/exit`: Terminates the interactive copilot session.
+OpenCode natively supports the Model Context Protocol. When `mcpIntegration` is enabled, NEURONIX automatically provisions the MCP client configuration in `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "neuronix": {
+      "type": "stdio",
+      "command": "neuronix",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Through this bridge, OpenCode accesses:
+- `neuronix_status`: Query active kernel, CPU/GPU, memory pressure, and generation state.
+- `neuronix_diet`: Purge stale store generations and reclaim storage.
+- `neuronix_verify`: Evaluate package derivations hermetically.
+- `neuronix_undo`: Atomically roll back to prior system generations.
+- `neuronix_manual`: Query system manual chapters directly via structured tool calls.
 
 ---
 

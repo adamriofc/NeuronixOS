@@ -5,7 +5,7 @@
   "name": "neuronix-os-v1.0.3",
   "documentNamespace": "https://github.com/adamriofc/NeuronixOS/releases/tag/v1.0.3/sbom.spdx.json",
   "creationInfo": {
-    "created": "2026-09-04T23:20:46Z",
+    "created": "2026-09-05T22:41:40Z",
     "creators": [
       "Tool: neuronix-sbom-generator-1.0.3",
       "Organization: NEURONIX OS Maintainers"
@@ -34,11 +34,11 @@
     {
       "SPDXID": "SPDXRef-Package-opencode",
       "name": "opencode",
-      "versionInfo": "1.0.3",
-      "downloadLocation": "https://github.com/adamriofc/NeuronixOS",
-      "licenseConcluded": "Apache-2.0",
-      "licenseDeclared": "Apache-2.0",
-      "supplier": "Organization: NEURONIX OS Maintainers"
+      "versionInfo": "1.18.29",
+      "downloadLocation": "https://github.com/anomalyco/opencode",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "supplier": "Organization: OpenCode Maintainers (anomalyco)"
     },
     {
       "SPDXID": "SPDXRef-Package-neuronix-center",

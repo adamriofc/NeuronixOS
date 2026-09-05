@@ -56,11 +56,10 @@ assert_output_contains "echo '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/l
 assert_output_contains "echo '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"neuronix_manual\",\"topic\":\"arch\"}}' | '${MCP_SERVER}'" "Platform Architecture" "MCP server tool call returns chapter 1 content"
 assert_output_contains "echo '{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"neuronix_manual\",\"topic\":\"ai\"}}' | '${MCP_SERVER}'" "AI Copilot System Directive" "MCP server tool call returns chapter 10 content"
 
-# 33-35. OpenCode AI Copilot Integration
-OPENCODE_BIN="${DISTRO_PATH}/packages/opencode/opencode-launcher.sh"
-assert_output_contains "'${OPENCODE_BIN}' help" "manual [topic]" "OpenCode help lists manual command"
-assert_output_contains "'${OPENCODE_BIN}' manual cli" "Unified CLI Command Reference" "OpenCode manual cli renders chapter 3"
-assert_output_contains "echo '/manual config' | '${OPENCODE_BIN}'" "Declarative Configuration" "OpenCode interactive /manual renders chapter 2"
+# 33-35. OpenCode Authentic Packaging & Substrate Grounding
+assert_output_contains "grep -F 'opencode' '${DISTRO_PATH}/packages/opencode/default.nix'" "opencode" "OpenCode package specifies authentic binary name"
+assert_output_contains "grep -F 'ripgrep' '${DISTRO_PATH}/packages/opencode/default.nix'" "ripgrep" "OpenCode packages ripgrep dependency in PATH"
+assert_output_contains "grep -F 'mcpIntegration' '${DISTRO_PATH}/modules/services/opencode.nix'" "mcpIntegration" "OpenCode service declares native MCP integration"
 
 # 36-39. MCP Resources & Prompts Engine
 assert_output_contains "echo '{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"resources/list\"}' | '${MCP_SERVER}'" "neuronix://manual/ai-directives" "MCP server exports resources/list with manual URIs"
@@ -71,4 +70,4 @@ assert_output_contains "echo '{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"prompts
 # 40-42. Ambient System Prompts & Autonomous AI Grounding
 assert_output_contains "grep -F 'SYSTEM_PROMPT.md' '${DISTRO_PATH}/modules/core/manual.nix'" "SYSTEM_PROMPT.md" "manual.nix provisions root SYSTEM_PROMPT.md"
 assert_output_contains "grep -F 'NEURONIX_MANUAL_DIR' '${DISTRO_PATH}/modules/core/manual.nix'" "NEURONIX_MANUAL_DIR" "manual.nix sets ambient NEURONIX_MANUAL_DIR"
-assert_output_contains "echo 'exit' | '${OPENCODE_BIN}'" "Auto-Loaded (10_AI_AGENT_REFERENCE.md)" "OpenCode auto-loads system reference without user command"
+assert_output_contains "grep -F 'opencodeMcpConfig' '${DISTRO_PATH}/modules/services/opencode.nix'" "opencodeMcpConfig" "OpenCode service provisions ambient MCP configuration"

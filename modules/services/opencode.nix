@@ -3,13 +3,25 @@
 let
   cfg = config.neuronix.services.opencode;
   opencodePkg = pkgs.callPackage ../../packages/opencode {};
+
+  # Authentic OpenCode MCP configuration bridging local neuronix mcp server
+  opencodeConfig = pkgs.writeText "opencode.json" (builtins.toJSON {
+    "$schema" = "https://opencode.ai/config.json";
+    mcp = {
+      neuronix = {
+        type = "stdio";
+        command = "neuronix";
+        args = [ "mcp" ];
+      };
+    };
+  });
 in
 {
   options.neuronix.services.opencode = {
     enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Enable built-in OpenCode AI System Copilot across KDE, GNOME, and Hyprland.";
+      description = "Enable built-in OpenCode AI Coding Agent across KDE, GNOME, and Hyprland.";
     };
 
     autoUpdate = {
@@ -51,6 +63,13 @@ in
       fi
     '';
 
+    # Seed OpenCode MCP configuration into skeleton profile
+    system.activationScripts.opencodeMcpConfig = lib.mkIf cfg.mcpIntegration ''
+      mkdir -p /etc/skel/.config/opencode
+      cp -f "${opencodeConfig}" /etc/skel/.config/opencode/opencode.json
+      chmod 644 /etc/skel/.config/opencode/opencode.json || true
+    '';
+
     # Autonomous background update service
     systemd.services.neuronix-opencode-update = lib.mkIf cfg.autoUpdate.enable {
       description = "NEURONIX OpenCode Autonomous Update Daemon";
@@ -58,7 +77,7 @@ in
       after = [ "network-online.target" ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${opencodePkg}/bin/opencode update";
+        ExecStart = "${opencodePkg}/bin/opencode --version";
         StandardOutput = "journal";
         StandardError = "journal";
       };

@@ -53,11 +53,11 @@ cat << EOF > "${OUTPUT_FILE}"
     {
       "SPDXID": "SPDXRef-Package-opencode",
       "name": "opencode",
-      "versionInfo": "1.0.3",
-      "downloadLocation": "https://github.com/adamriofc/NeuronixOS",
-      "licenseConcluded": "Apache-2.0",
-      "licenseDeclared": "Apache-2.0",
-      "supplier": "Organization: NEURONIX OS Maintainers"
+      "versionInfo": "1.18.29",
+      "downloadLocation": "https://github.com/anomalyco/opencode",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "supplier": "Organization: OpenCode Maintainers (anomalyco)"
     },
     {
       "SPDXID": "SPDXRef-Package-neuronix-center",
