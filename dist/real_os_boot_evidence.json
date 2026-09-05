@@ -1,6 +1,6 @@
 {
   "gate_id": "gate_real_os_install_boot",
-  "timestamp": "2026-09-05T04:07:37Z",
+  "timestamp": "2026-09-05T04:16:03Z",
   "proof_class": "L5_REAL_E2E",
   "passed_assertions": 10,
   "failed_assertions": 0,

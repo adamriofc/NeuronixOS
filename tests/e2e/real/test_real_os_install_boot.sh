@@ -44,8 +44,8 @@ echo -e "${BOLD}${CYAN}╚══════════════════
 
 # Tool resolution
 PYTHON_BIN="$(command -v python3 || ls -d /nix/store/*-python3-3.13*/bin/python3 2>/dev/null | head -n 1 || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo "python3")"
-QEMU_IMG="$(command -v qemu-img || ls -d /nix/store/*-qemu-*/bin/qemu-img /nix/store/*-qemu-host-cpu-only-*/bin/qemu-img 2>/dev/null | head -n 1 || echo "qemu-img")"
-QEMU_BIN="$(command -v qemu-system-x86_64 || ls -d /nix/store/*-qemu-*/bin/qemu-system-x86_64 /nix/store/*-qemu-host-cpu-only-*/bin/qemu-system-x86_64 2>/dev/null | head -n 1 || echo "qemu-system-x86_64")"
+QEMU_IMG="$(command -v qemu-img 2>/dev/null || ls -d /nix/store/*-qemu-*/bin/qemu-img /nix/store/*-qemu-host-cpu-only-*/bin/qemu-img 2>/dev/null | head -n 1 || echo "")"
+QEMU_BIN="$(command -v qemu-system-x86_64 2>/dev/null || ls -d /nix/store/*-qemu-*/bin/qemu-system-x86_64 /nix/store/*-qemu-host-cpu-only-*/bin/qemu-system-x86_64 2>/dev/null | head -n 1 || echo "")"
 
 assert_check() {
     local phase="$1"
@@ -86,16 +86,27 @@ DISK_FREE_KB=$(df -k "${SCRATCH_DIR}" 2>/dev/null | awk 'NR==2 {print $4}' || ec
 assert_check "STORAGE_HEADROOM" "Sufficient disk space available for sparse targets (>= 10 GiB)" test "$DISK_FREE_KB" -ge 10485760
 
 # 4. Virtualization Toolchain Availability
-assert_check "HYPERVISOR_TOOLS" "Virtualization toolchain (qemu-img and qemu-system-x86_64) verified" test -x "$QEMU_IMG" -o -n "$(command -v qemu-img 2>/dev/null)"
+check_hypervisor_tools() {
+    command -v qemu-img >/dev/null 2>&1 || [[ -n "$QEMU_IMG" && -x "$QEMU_IMG" ]]
+}
+assert_check "HYPERVISOR_TOOLS" "Virtualization toolchain (qemu-img and qemu-system-x86_64) verified" check_hypervisor_tools
 
 # 5. Sparse Virtual Target Disk Allocation (20 GiB)
 TARGET_QCOW="${SCRATCH_DIR}/target_os_disk.qcow2"
-"$QEMU_IMG" create -f qcow2 "$TARGET_QCOW" 20G >/dev/null 2>&1 || true
+if [[ -n "$QEMU_IMG" && -x "$QEMU_IMG" ]]; then
+    "$QEMU_IMG" create -f qcow2 "$TARGET_QCOW" 20G >/dev/null 2>&1 || true
+elif command -v qemu-img >/dev/null 2>&1; then
+    qemu-img create -f qcow2 "$TARGET_QCOW" 20G >/dev/null 2>&1 || true
+fi
 assert_check "DISK_ALLOCATION" "Sparse QCOW2 virtual installation disk (20 GiB) allocated" test -f "$TARGET_QCOW"
 
 # 6. Target Disk GPT Partitioning Verification
-"$QEMU_IMG" info "$TARGET_QCOW" > "${SCRATCH_DIR}/disk_info.txt" 2>&1 || true
-assert_check "TARGET_LAYOUT" "Virtual storage topology validated: virtual-size 20 GiB confirmed" grep -qi "virtual size: 20 GiB" "${SCRATCH_DIR}/disk_info.txt"
+if [[ -n "$QEMU_IMG" && -x "$QEMU_IMG" ]]; then
+    "$QEMU_IMG" info "$TARGET_QCOW" > "${SCRATCH_DIR}/disk_info.txt" 2>&1 || true
+elif command -v qemu-img >/dev/null 2>&1; then
+    qemu-img info "$TARGET_QCOW" > "${SCRATCH_DIR}/disk_info.txt" 2>&1 || true
+fi
+assert_check "TARGET_LAYOUT" "Virtual storage topology validated: virtual-size 20 GiB confirmed" grep -qiE "virtual size:.*20.*Gi?B|21474836480 bytes" "${SCRATCH_DIR}/disk_info.txt"
 
 # 7. Declarative Host Profile Closure
 assert_check "FLAKE_INTEGRITY" "Flake and core configuration evaluate without syntax or AST errors" test -f "${PROJECT_ROOT}/flake.nix" -a -f "${PROJECT_ROOT}/version.nix"

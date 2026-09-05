@@ -29,8 +29,9 @@ jobs:
       - name: Magic Nix Cache (Continuous Binary Caching)
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Setup Local Environment & Tooling
+      - name: Setup Hypervisor Tools & Local Environment
         run: |
+          sudo apt-get update -qy && sudo apt-get install -qy qemu-utils qemu-system-x86
           mkdir -p ~/.local/bin
           ln -sf "$PWD/bin/neuronix" ~/.local/bin/neuronix
           echo "$PWD/bin" >> $GITHUB_PATH
