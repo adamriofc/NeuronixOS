@@ -339,9 +339,13 @@ MANIFEST_EOF
 log "✓ Declarative configuration and release manifest at $CONFIG_DIR generated successfully."
 
 if [ "$DRY_RUN" -eq 0 ]; then
-  log "Executing hermetic installation via nixos-install..."
-  nixos-install --flake "$CONFIG_DIR#$TARGET_HOSTNAME" --no-root-passwd
-  log "✓ System installation completed successfully!"
+  if [ "${NEURONIX_SKIP_NIXOS_INSTALL:-0}" -eq 1 ]; then
+    log "Declarative target installation tree generated successfully (nixos-install skipped via NEURONIX_SKIP_NIXOS_INSTALL)."
+  else
+    log "Executing hermetic installation via nixos-install..."
+    nixos-install --root "$TARGET_ROOT" --flake "$CONFIG_DIR#$TARGET_HOSTNAME" --no-root-passwd
+    log "✓ System installation completed successfully!"
+  fi
 else
   log "✓ Dry-run verification successful! Configuration files are valid and hermetic."
 fi

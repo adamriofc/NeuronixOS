@@ -39,7 +39,7 @@
       fira-code
       noto-fonts
       noto-fonts-cjk-sans
-      noto-fonts-emoji
+      (if pkgs ? noto-fonts-color-emoji then pkgs.noto-fonts-color-emoji else pkgs.noto-fonts-emoji)
     ];
 
     # NEURONIX Branding, Artwork & First-Boot Onboarding Integration

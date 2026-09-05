@@ -2,10 +2,11 @@
 
 {
   # Konfigurasi Live Media ISO Mandiri NEURONIX
-  isoImage.isoBaseName = lib.mkForce "neuronix-os";
+  image.baseName = lib.mkForce "neuronix-os";
   isoImage.volumeID = "NEURONIX_LIVE";
   isoImage.makeEfiBootable = true;
   isoImage.makeUsbBootable = true;
+  boot.zfs.forceImportRoot = false;
 
   # Optimize squashfs compression and live media closure size to stay within 2 GiB asset limits
   isoImage.squashfsCompression = "zstd -Xcompression-level 19 -b 1048576";

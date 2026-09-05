@@ -61,5 +61,5 @@
   i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
 
   # Integrasi Shell Default
-  programs.bash.enableCompletion = true;
+  programs.bash.completion.enable = true;
 }

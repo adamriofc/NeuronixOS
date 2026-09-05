@@ -10,6 +10,12 @@
     description = "NEURONIX Default User";
   };
 
+  # Default root filesystem fallback for pure flake evaluation
+  fileSystems."/" = lib.mkDefault {
+    device = "/dev/disk/by-label/nixos";
+    fsType = "ext4";
+  };
+
   # System state version
   system.stateVersion = "24.11";
 }

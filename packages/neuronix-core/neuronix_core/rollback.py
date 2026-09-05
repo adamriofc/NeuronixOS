@@ -10,7 +10,7 @@ import os
 import subprocess
 import shutil
 from typing import Tuple, Optional
-from .generation import list_generations, get_active_generation
+from .generation import list_generations, get_active_generation, get_system_profile
 from .lock import OperationLock, ConcurrentOperationError
 from .journal import TransactionJournal, TransactionState
 
@@ -77,17 +77,18 @@ def execute_rollback(target_generation: Optional[int] = None, dry_run: bool = Fa
         journal.update_transaction(tx_id, TransactionState.APPLYING)
 
         cmd = []
-        if os.geteuid() != 0 and shutil.which("sudo"):
+        if os.geteuid() != 0 and shutil.which("sudo") and not os.environ.get("NEURONIX_NO_SUDO"):
             cmd.append("sudo")
 
         if target_generation is None:
             cmd.extend(["nixos-rebuild", "switch", "--rollback"])
         else:
-            target_bin = f"/nix/var/nix/profiles/system-{target_num}-link/bin/switch-to-configuration"
+            prof = get_system_profile()
+            target_bin = f"{prof}-{target_num}-link/bin/switch-to-configuration"
             if os.path.exists(target_bin):
                 cmd.extend([target_bin, "switch"])
             else:
-                cmd.extend(["nix-env", "--profile", "/nix/var/nix/profiles/system", "--switch-generation", str(target_num)])
+                cmd.extend(["nix-env", "--profile", prof, "--switch-generation", str(target_num)])
 
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
         raw_output = proc.stdout + proc.stderr
