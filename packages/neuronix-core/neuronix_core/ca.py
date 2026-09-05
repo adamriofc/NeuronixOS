@@ -78,6 +78,7 @@ def enroll_certificate(cert_path: str, target_ca_dir=None, target_ssl_dir=None):
 
     # Install into system SSL directory
     system_cert_dest = os.path.join(ssl_certs_dir, content_addressed_name)
+    trust_status = "INSTALLED_NOT_TRUSTED"
     try:
         if os.path.exists(ssl_certs_dir):
             shutil.copy2(storage_cert_path, system_cert_dest)
@@ -85,6 +86,9 @@ def enroll_certificate(cert_path: str, target_ca_dir=None, target_ssl_dir=None):
                 res = subprocess.run(["update-ca-certificates"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
                 if res.returncode != 0:
                     return False, res.returncode, f"Error updating CA certificates: {res.stderr}"
+                trust_status = "TRUSTED"
+            else:
+                trust_status = "INSTALLED_NOT_TRUSTED"
     except PermissionError:
         return False, 13, f"Permission Denied: Unable to write to '{ssl_certs_dir}' (root required)."
     except Exception as e:
@@ -94,4 +98,4 @@ def enroll_certificate(cert_path: str, target_ca_dir=None, target_ssl_dir=None):
     if os.path.exists(ssl_certs_dir) and not os.path.exists(system_cert_dest):
         return False, 1, f"Postcondition Verification Failed: '{system_cert_dest}' not found after installation."
 
-    return True, 0, f"APPLIED: Enrolled certificate {meta['source_filename']} (SHA-256: {sha256[:16]}...) successfully."
+    return True, 0, f"APPLIED: Enrolled certificate {meta['source_filename']} [Trust: {trust_status}] (SHA-256: {sha256[:16]}...) successfully."

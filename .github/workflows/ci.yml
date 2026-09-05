@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (1028 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (1038 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -111,9 +111,13 @@ jobs:
         run: |
           DRY_RUN=1 bash installer/scripts/neuronix-install-engine.sh
 
-      - name: Execute Real E2E ISO Installation & Lifecycle Gate (8 States)
+      - name: Execute Hybrid E2E ISO Installation Engine Gate (8 States)
         run: |
           bash tests/e2e/test_iso_install.sh
+
+      - name: Execute Real OS Installation & Boot Gate (10 Tests)
+        run: |
+          bash tests/e2e/real/test_real_os_install_boot.sh
 
       - name: Execute End-to-End Release Lifecycle Gate (34 Tests)
         run: |
@@ -123,7 +127,7 @@ jobs:
         run: |
           bash tests/test_reproducible_iso.sh
 
-      - name: Verify Single Source of Truth Test Manifest (1028 Assertions)
+      - name: Verify Single Source of Truth Test Manifest (1038 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json

@@ -45,10 +45,19 @@
       sudo cp "$CERT_PATH" "$TARGET_CA_FILE"
       sudo chmod 644 "$TARGET_CA_FILE"
 
+      TRUST_STATUS="INSTALLED_NOT_TRUSTED"
       if [ -d "/etc/ssl/certs" ]; then
         sudo cp "$TARGET_CA_FILE" "$SYSTEM_SSL_FILE"
         if command -v update-ca-certificates >/dev/null 2>&1; then
-          sudo update-ca-certificates
+          if sudo update-ca-certificates; then
+            TRUST_STATUS="TRUSTED"
+          else
+            echo "Error: update-ca-certificates failed." >&2
+            exit 1
+          fi
+        else
+          echo "Warning: update-ca-certificates not found. Certificate copied but trust database update pending." >&2
+          TRUST_STATUS="INSTALLED_NOT_TRUSTED"
         fi
       fi
 
@@ -58,7 +67,7 @@
         exit 1
       fi
 
-      echo "✓ Certificate enrolled successfully with content-addressed ID: neuronix-ca-$CERT_HASH"
+      echo "✓ Certificate enrolled [Status: $TRUST_STATUS] with content-addressed ID: neuronix-ca-$CERT_HASH"
     '')
   ];
 }

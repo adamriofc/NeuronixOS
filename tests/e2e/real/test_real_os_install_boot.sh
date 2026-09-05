@@ -100,15 +100,17 @@ assert_check "TARGET_LAYOUT" "Virtual storage topology validated: virtual-size 2
 # 7. Declarative Host Profile Closure
 assert_check "FLAKE_INTEGRITY" "Flake and core configuration evaluate without syntax or AST errors" test -f "${PROJECT_ROOT}/flake.nix" -a -f "${PROJECT_ROOT}/version.nix"
 
-# 8. Micro-VM Kernel Boot Telemetry
-VM_LOG="${SCRATCH_DIR}/vm_boot.log"
-cat << 'BOOT_LOG' > "$VM_LOG"
-NEURONIX_KERNEL=READY: Linux kernel 6.18 initialized with KVM acceleration.
-NEURONIX_SYSTEMD=READY: systemd 256 reached default.target with 0 failed units.
-NEURONIX_NIXSTORE=READY: Root and /nix/store Btrfs subvolumes mounted with zstd:3.
-NEURONIX_GUEST=READY: Installation environment initialized successfully.
-BOOT_LOG
-assert_check "GUEST_TELEMETRY" "Micro-VM guest boot emitted verified structured telemetry markers" grep -q "NEURONIX_GUEST=READY" "$VM_LOG"
+# 8. Micro-VM Hypervisor Telemetry Verification
+bash "${PROJECT_ROOT}/src/shadow_vm.sh" --smoke-test --headless --mode auto > "${SCRATCH_DIR}/shadow_exec.log" 2>&1 || true
+assert_check "GUEST_TELEMETRY" "Micro-VM guest boot emitted verified structured telemetry markers" "$PYTHON_BIN" -c "
+import json
+with open('${PROJECT_ROOT}/dist/shadow_vm_report.json') as f:
+    d = json.load(f)
+assert d['status'] == 'PASSED'
+assert d['verification_gates']['guest_ready'] is True
+assert d['verification_gates']['kernel'] is True
+assert d['verification_gates']['systemd'] is True
+"
 
 # 9. Multi-Generation State Progression Invariant
 "$PYTHON_BIN" -c "

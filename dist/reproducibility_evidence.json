@@ -1,21 +1,21 @@
 {
   "artifact": "neuronix-cli",
-  "timestamp": "2026-09-05T03:32:34Z",
+  "timestamp": "2026-09-05T04:08:46Z",
   "level_1_evaluation": {
-    "drv_a": ""/nix/store/v7qic1skv8naisghsz2g8h8p192g2xpf-neuronix-cli-1.0.3.drv"",
-    "drv_b": ""/nix/store/v7qic1skv8naisghsz2g8h8p192g2xpf-neuronix-cli-1.0.3.drv"",
+    "drv_a": ""/nix/store/b7gh5cnjypdq3kgxa6gn75p1vz14k43i-neuronix-cli-1.0.3.drv"",
+    "drv_b": ""/nix/store/b7gh5cnjypdq3kgxa6gn75p1vz14k43i-neuronix-cli-1.0.3.drv"",
     "identical": true
   },
   "level_2_store_output": {
-    "store_path_a": "/nix/store/8cyqcsa16rlqkfzhb0z06554khrpa55m-neuronix-cli-1.0.3",
-    "store_path_b": "/nix/store/8cyqcsa16rlqkfzhb0z06554khrpa55m-neuronix-cli-1.0.3",
-    "nar_hash_a": "sha256-sTMWLDXpewSJaEDcO+iuf+/vFFO6i4VMH2r27MZSeCk=",
-    "nar_hash_b": "sha256-sTMWLDXpewSJaEDcO+iuf+/vFFO6i4VMH2r27MZSeCk=",
+    "store_path_a": "/nix/store/4qqa7113pfr1gkwxac3kkggm365h2b8p-neuronix-cli-1.0.3",
+    "store_path_b": "/nix/store/4qqa7113pfr1gkwxac3kkggm365h2b8p-neuronix-cli-1.0.3",
+    "nar_hash_a": "sha256-mlhn0iCxI+WSzKzISm/1CqnlEQeaxBgtMXBn+zZSu/U=",
+    "nar_hash_b": "sha256-mlhn0iCxI+WSzKzISm/1CqnlEQeaxBgtMXBn+zZSu/U=",
     "identical": true
   },
   "level_3_artifact_sha256": {
-    "binary_sha256_a": "101414dcab634afd02f93124485a2d71ef991c7be7928c6a8acbe5a0e4d61787",
-    "binary_sha256_b": "101414dcab634afd02f93124485a2d71ef991c7be7928c6a8acbe5a0e4d61787",
+    "binary_sha256_a": "440af4c08439ba33b1419b54b319a2c5e760fa16fe79e0dea6c4d8cac739260d",
+    "binary_sha256_b": "440af4c08439ba33b1419b54b319a2c5e760fa16fe79e0dea6c4d8cac739260d",
     "identical": true
   },
   "reproducibility_verdict": "QUALIFIED_THREE_LEVEL"

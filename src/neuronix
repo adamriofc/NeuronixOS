@@ -518,11 +518,12 @@ sys.exit(code)
         return $rb_status
     fi
 
+    local expected_gen=$(( prev_gen - 1 ))
     local new_gen
     new_gen="$(get_current_generation)"
 
-    if [[ -z "$new_gen" || "$new_gen" == "$prev_gen" ]]; then
-        log_error "Postcondition verification failed: System generation did not switch to predecessor (remained #${prev_gen})."
+    if [[ "$new_gen" != "$expected_gen" ]]; then
+        log_error "Postcondition verification failed: Expected predecessor generation #${expected_gen}, but active generation is #${new_gen}."
         return 1
     fi
 
