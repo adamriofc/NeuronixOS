@@ -84,3 +84,63 @@ sudo nixos-rebuild boot
 # Revert immediately if unsatisfied
 neuronix undo
 ```
+
+---
+
+## 4. Software Installation & Distro Transition Guide
+
+NEURONIX OS accommodates users transitioning from conventional Linux distributions (Ubuntu, Debian, Fedora) and Arch Linux through a tiered application delivery model.
+
+### 4.1 System Packages (Nixpkgs Declarative)
+To install system-wide utilities and packages permanently, add them to `environment.systemPackages` in `/etc/nixos/configuration.nix`:
+
+```nix
+environment.systemPackages = with pkgs; [
+  git
+  htop
+  ripgrep
+  neovim
+  vlc
+];
+```
+
+Apply modifications atomically:
+```bash
+sudo nixos-rebuild switch
+# or rollback immediately if undesirable
+neuronix undo
+```
+
+### 4.2 Ephemeral Software Execution (Zero-Pollution)
+Run or test software on-demand without permanently altering system state or installing globally:
+```bash
+# Execute application once and discard
+nix run nixpkgs#htop
+
+# Open transient shell with tools loaded in RAM
+nix-shell -p ffmpeg p7zip
+```
+
+### 4.3 Desktop Graphical Applications (Flatpak & Flathub)
+For desktop productivity, multimedia, gaming, and proprietary applications (Spotify, Steam, Discord, Chrome, Obsidian), NEURONIX auto-provisions Flathub out-of-the-box:
+- Visual Store: Search and install directly via **KDE Discover** or **GNOME Software**.
+- CLI Execution:
+  ```bash
+  flatpak install flathub com.spotify.Client
+  ```
+- Storage Maintenance: Unused runtimes are pruned weekly by `systemd.timers.flatpak-prune-unused` or on-demand via `neuronix clean`.
+
+### 4.4 Unpatched Generic Linux Binaries (Global nix-ld)
+Unlike standard NixOS which fails on pre-compiled foreign ELF executables, NEURONIX enables `programs.nix-ld.enable = true` globally. Unpatched dynamic ELF executables, proprietary CLI utilities, CUDA toolchains, and AppImages execute directly out-of-the-box without manual patchelf intervention.
+
+### 4.5 Foreign Distro Compatibility: Arch AUR & Debian PPA (Distrobox)
+To run specialized packages exclusive to the Arch User Repository (AUR) or Ubuntu PPAs without polluting the declarative host, run an integrated OCI container with native Wayland, PipeWire, and GPU acceleration:
+```bash
+# Spawn Arch Linux environment
+distrobox create --name arch --image archlinux:latest
+distrobox enter arch
+# Inside container: access pacman, makepkg, and AUR helpers (yay / paru)
+
+# Export GUI application to host desktop launcher
+distrobox-export --app <app-name>
+```

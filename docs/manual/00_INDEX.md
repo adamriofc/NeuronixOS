@@ -20,7 +20,7 @@ Because this manual is packaged directly into the NixOS system derivation, it au
 | File | Topic Title | Scope & Description |
 | :--- | :--- | :--- |
 | `01_ARCHITECTURE.md` | Platform Architecture | 4-layer model, Nix substrate, immutability, and P0-P4 proof class taxonomy. |
-| `02_CONFIGURATION_REFERENCE.md` | Declarative Configuration | Complete `neuronix.*` NixOS module option hierarchy and schema contracts. |
+| `02_CONFIGURATION_REFERENCE.md` | Declarative Configuration | Complete `neuronix.*` options, declarative package management, and distro transition guide. |
 | `03_CLI_REFERENCE.md` | Unified CLI Manual | Comprehensive syntax, options, and exit codes for all 18 `neuronix` commands. |
 | `04_STORAGE_AND_ROLLBACK.md` | Storage & Rollback Engine | Btrfs 5-subvolume topology, ZSTD compression, atomic rollbacks, GC, and TRIM. |
 | `05_SHADOW_VM_AND_SANDBOX.md` | Shadow Micro-VM Simulation | In-memory RAM Micro-VMs (`/dev/shm`), smoke testing, and zero blast radius execution. |
