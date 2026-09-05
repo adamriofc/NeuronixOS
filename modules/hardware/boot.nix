@@ -49,10 +49,8 @@
     boot.tmp.cleanOnBoot = lib.mkDefault true;
 
     # UEFI Boot Assessment Watchdog (power-loss protection during update)
-    systemd.settings.Manager = {
-      RuntimeWatchdogSec = "30s";
-      RebootWatchdogSec = "10min";
-    };
+    systemd.watchdog.runtimeTime = "30s";
+    systemd.watchdog.rebootTime = "10min";
 
     # Kernel tuning (SteamOS vm.max_map_count and adaptive sleep)
     boot.kernelParams = [
