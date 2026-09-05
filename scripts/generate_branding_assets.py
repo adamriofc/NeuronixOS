@@ -116,7 +116,7 @@ pillars_row1 = [
 pillars_row2 = [
     ("Native AI Copilot & MCP", (34, 211, 238)),
     ("Active Memory Shield (ZRAM + PSI)", (192, 132, 252)),
-    ("854 Verified Industrial Assertions", (74, 222, 128))
+    ("1,028 Verified Industrial Assertions", (74, 222, 128))
 ]
 
 p_y1 = 310

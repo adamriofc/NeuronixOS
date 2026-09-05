@@ -45,7 +45,7 @@ echo -e "${C_BOLD}${C_CYAN}║     NEURONIX COMPREHENSIVE INDUSTRIAL QA & RESILI
 echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (673 Tests)   ║${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}╚═══════════════════════════════════════════════════════════════════╝${C_RESET}"
 
-# Execute all 24 suites sequentially
+# Execute all 25 suites sequentially
 source "$TEST_DIR/suites/01_syntax_and_static_analysis.sh"
 source "$TEST_DIR/suites/02_cli_argument_and_fuzzing.sh"
 source "$TEST_DIR/suites/03_unit_internal_functions.sh"
