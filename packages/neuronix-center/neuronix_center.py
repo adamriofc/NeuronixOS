@@ -143,8 +143,9 @@ def get_system_telemetry():
             telemetry["gpu"] = "Not Detected"
 
     # 6. Probing Real Battery Charge Threshold
-    battery_limit_paths = glob.glob("/sys/class/power_supply/*/charge_control_limit_max") + \
-                          glob.glob("/sys/class/power_supply/*/charge_control_end_threshold")
+    battery_limit_paths = glob.glob("/sys/class/power_supply/*/charge_control_end_threshold") + \
+                          glob.glob("/sys/class/power_supply/*/charge_control_limit_max") + \
+                          glob.glob("/sys/class/power_supply/*/charge_stop_threshold")
     if battery_limit_paths:
         try:
             with open(battery_limit_paths[0], "r") as f:

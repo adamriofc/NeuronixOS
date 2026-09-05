@@ -455,10 +455,26 @@ cmd_undo() {
     local prev_gen
     prev_gen="$(get_current_generation)"
 
-    run_privileged nixos-rebuild switch --rollback
+    if [[ -z "$prev_gen" || "$prev_gen" == "1" || "$prev_gen" == "Unknown" ]]; then
+        log_error "Cannot execute rollback: Current generation (#${prev_gen}) has no preceding generation."
+        return 1
+    fi
+
+    local rb_status=0
+    run_privileged nixos-rebuild switch --rollback || rb_status=$?
+
+    if [[ $rb_status -ne 0 ]]; then
+        log_error "Rollback command failed with exit code ${rb_status}."
+        return $rb_status
+    fi
 
     local new_gen
     new_gen="$(get_current_generation)"
+
+    if [[ -z "$new_gen" || "$new_gen" == "$prev_gen" ]]; then
+        log_error "Postcondition verification failed: System generation did not switch to predecessor (remained #${prev_gen})."
+        return 1
+    fi
 
     echo
     log_success "Rollback successful: Switched from Gen #${prev_gen} -> ${BOLD}Gen #${new_gen}${RESET}."
@@ -780,6 +796,8 @@ cmd_upgrade() {
         echo -e "  ${GREEN}✔${RESET} Generasi baru akan aktif secara otomatis pada saat komputer dinyalakan kembali (reboot)."
     else
         log_step "1/2. Menjalankan Instant Switch (nixos-rebuild switch)..."
+        local prev_gen
+        prev_gen="$(get_current_generation)"
         local rebuild_exit=0
         run_privileged nixos-rebuild switch --flake "$config_dir" || rebuild_exit=$?
 
@@ -789,9 +807,11 @@ cmd_upgrade() {
             return $rebuild_exit
         fi
 
+        local new_gen
+        new_gen="$(get_current_generation)"
         echo
         log_step "2/2. Mengaktifkan Generasi Baru..."
-        log_success "Sistem berhasil diperbarui ke Generasi #$(get_current_generation) secara langsung!"
+        log_success "Sistem berhasil diperbarui dari Generasi #${prev_gen} ke Generasi #${new_gen} secara langsung!"
     fi
 }
 

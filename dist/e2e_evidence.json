@@ -1,14 +1,14 @@
 {
-  "timestamp": "2026-09-05T02:36:46Z",
-  "requested_mode": "all",
-  "executed_contract": true,
+  "timestamp": "2026-09-05T03:02:13Z",
+  "requested_mode": "real_e2e",
+  "executed_contract": false,
   "executed_real": true,
   "kvm_available": true,
   "qemu_available": true,
   "contract_exit_code": 0,
   "real_exit_code": 0,
   "contract_evidence": {
-  "timestamp": "2026-09-05T02:36:42Z",
+  "timestamp": "2026-09-05T02:57:48Z",
   "gate_type": "contract",
   "proof_class": "P1 (Contract Invariant)",
   "verifications": {
@@ -25,7 +25,7 @@
   "assertions_failed": 0
 },
   "real_evidence": {
-  "timestamp": "2026-09-05T02:36:46Z",
+  "timestamp": "2026-09-05T03:02:13Z",
   "gate_type": "real_e2e",
   "proof_class": "L4_HYBRID_ENGINE",
   "hardware": {

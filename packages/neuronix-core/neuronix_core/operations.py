@@ -101,7 +101,7 @@ def execute_privileged_operation(operation_id: str, *args):
             for entry in os.listdir(base_dir):
                 if entry.startswith("BAT"):
                     bat_path = os.path.join(base_dir, entry)
-                    for node in ["charge_control_limit_max", "charge_stop_threshold"]:
+                    for node in ["charge_control_end_threshold", "charge_control_limit_max", "charge_stop_threshold"]:
                         target_file = os.path.join(bat_path, node)
                         if os.path.exists(target_file):
                             unsupported = False
