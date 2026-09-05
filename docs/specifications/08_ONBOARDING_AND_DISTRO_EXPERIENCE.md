@@ -72,7 +72,7 @@ Before diagnostic output is written to disk or streamed to standard output, the 
 - IPv4 and IPv6 network addresses are replaced with `[REDACTED-IP]`.
 - Network interface hardware MAC addresses are replaced with `[REDACTED-MAC]`.
 
-Output is written by default to `/tmp/neuronix-doctor.md` in GitHub-flavored Markdown, pre-formatted for direct submission to the [NEURONIX Issue Tracker](https://github.com/adamriofc/neuronix/issues/new). The tool also supports a `--json` flag for machine consumption and Model Context Protocol (MCP) server integration.
+Output is written by default to `/tmp/neuronix-doctor.md` in GitHub-flavored Markdown, pre-formatted for direct submission to the [NEURONIX Issue Tracker](https://github.com/adamriofc/NeuronixOS/issues/new). The tool also supports a `--json` flag for machine consumption and Model Context Protocol (MCP) server integration.
 
 ---
 

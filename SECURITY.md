@@ -14,7 +14,7 @@ NEURONIX OS follows the active upstream NixOS channel lifecycle. Security update
 The NEURONIX security team takes vulnerabilities seriously. If you discover a security flaw or vulnerability within NEURONIX OS (including installer generator scripts, system modules, or CLI utilities), please report it responsibly.
 
 ### Disclosure Guidelines
-- **Do not open a public issue.** Please report security issues privately via GitHub Security Advisories at https://github.com/adamriofc/neuronix/security/advisories/new.
+- **Do not open a public issue.** Please report security issues privately via GitHub Security Advisories at https://github.com/adamriofc/NeuronixOS/security/advisories/new.
 - Alternatively, report directly by email to: `adamriofc@protonmail.com` with the subject tag `[SECURITY: NEURONIX]`.
 - Please provide:
   - Description of the vulnerability and its potential impact.

@@ -35,7 +35,7 @@ python3.pkgs.buildPythonApplication rec {
 
   meta = with lib; {
     description = "NEURONIX Control Center & Time-Travel Guard";
-    homepage = "https://github.com/adamriofc/neuronix";
+    homepage = "https://github.com/adamriofc/NeuronixOS";
     license = licenses.asl20;
     platforms = platforms.linux;
   };

@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
-  <a href="https://github.com/adamriofc/neuronix/releases/tag/v1.0.3"><img src="https://img.shields.io/badge/Release-v1.0.3_(Hardened_Production)-success.svg" alt="Release"></a>
+  <a href="https://github.com/adamriofc/NeuronixOS/releases/tag/v1.0.3"><img src="https://img.shields.io/badge/Release-v1.0.3_(Hardened_Production)-success.svg" alt="Release"></a>
   <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.3-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
@@ -585,8 +585,8 @@ NEURONIX implements rigorous least-privilege security boundaries and transaction
 ### Building the Installation Medium
 To compile the official Live ISO installer image directly from source:
 ```bash
-git clone https://github.com/adamriofc/neuronix.git
-cd neuronix
+git clone https://github.com/adamriofc/NeuronixOS.git
+cd NeuronixOS
 
 # Option 1: Automated ISO utility with integrity hashing
 ./scripts/build_iso.sh

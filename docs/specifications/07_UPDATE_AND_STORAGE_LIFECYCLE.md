@@ -37,7 +37,7 @@ NEURONIX provides three declarative upgrade execution modes:
 ### 2.2 Desktop Update Notifier Architecture
 The `systemd.services.neuronix-update-check` service and `neuronix-update-check.timer` execute with minimal resource consumption:
 1. Verify active network connectivity.
-2. Query the latest commit hash from the upstream tracking branch (`https://github.com/adamriofc/neuronix.git`) via lightweight Git reference inspection (< 50 KB metadata).
+2. Query the latest commit hash from the upstream tracking branch (`https://github.com/adamriofc/NeuronixOS.git`) via lightweight Git reference inspection (< 50 KB metadata).
 3. If an upstream update is detected, dispatch a graphical desktop notification via `notify-send` across active desktop sessions (KDE Plasma, GNOME, Hyprland).
 
 ### 2.3 Declarative NixOS Configuration
@@ -51,7 +51,7 @@ neuronix.services.updates = {
   autoUpgrade = false;       # Fully autonomous unattended upgrade (Default: false)
   staged = true;             # Use staged nixos-rebuild boot (Default: true)
   allowReboot = false;       # Automatic reboot following auto-upgrade
-  channel = "github:adamriofc/neuronix";
+  channel = "github:adamriofc/NeuronixOS";
 };
 ```
 

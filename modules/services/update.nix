@@ -43,7 +43,7 @@ in
 
     channel = lib.mkOption {
       type = lib.types.str;
-      default = "github:adamriofc/neuronix";
+      default = "github:adamriofc/NeuronixOS";
       description = "Target flake URI for upstream release and package tree tracking.";
     };
   };
@@ -67,7 +67,7 @@ in
           UPDATE_AVAILABLE=false
           CURRENT_LOCK="/etc/nixos/flake.lock"
           if [ -f "$CURRENT_LOCK" ]; then
-            REMOTE_REV=$(${pkgs.git}/bin/git ls-remote --heads https://github.com/adamriofc/neuronix.git main 2>/dev/null | awk '{print $1}' || true)
+            REMOTE_REV=$(${pkgs.git}/bin/git ls-remote --heads https://github.com/adamriofc/NeuronixOS.git main 2>/dev/null | awk '{print $1}' || true)
             if [ -n "$REMOTE_REV" ]; then
               UPDATE_AVAILABLE=true
             fi

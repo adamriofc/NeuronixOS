@@ -411,7 +411,7 @@ handle_tools_call() {
             ;;
 
         neuronix_check_update)
-            local remote_repo="https://github.com/adamriofc/neuronix.git"
+            local remote_repo="https://github.com/adamriofc/NeuronixOS.git"
             local remote_head="Synchronized"
             if command -v git >/dev/null 2>&1; then
                 remote_head=$(git ls-remote --heads "$remote_repo" main 2>/dev/null | awk '{print $1}' | cut -c1-12 || echo "Synchronized")

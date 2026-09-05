@@ -747,7 +747,7 @@ cmd_check_update() {
     fi
 
     local current_lock="/etc/nixos/flake.lock"
-    local remote_repo="https://github.com/adamriofc/neuronix.git"
+    local remote_repo="https://github.com/adamriofc/NeuronixOS.git"
 
     log_info "Memeriksa konektivitas jaringan..."
     if ! ping -c 1 -W 2 1.1.1.1 &>/dev/null; then
@@ -1104,7 +1104,7 @@ $(dmesg 2>/dev/null | grep -iE 'error|failed|fault|segfault' | tail -n 15 | sed 
 
 ## 5. Panduan Pelaporan Masalah (GitHub Issues)
 Bila Anda menemui kendala teknis pada sistem, salin isi dokumen ini dan buat issue baru di:
-👉 https://github.com/adamriofc/neuronix/issues/new
+👉 https://github.com/adamriofc/NeuronixOS/issues/new
 EOF
 
     # Terminal output
@@ -1122,7 +1122,7 @@ EOF
     echo
     log_success "Laporan diagnostik berhasil disusun ke: ${BOLD}${output_file}${RESET}"
     echo -e "  ${GRAY}Buka berkas di atas atau salin langsung ke laporan GitHub Issues:${RESET}"
-    echo -e "  ${CYAN}https://github.com/adamriofc/neuronix/issues/new${RESET}\n"
+    echo -e "  ${CYAN}https://github.com/adamriofc/NeuronixOS/issues/new${RESET}\n"
 }
 
 cmd_welcome() {
@@ -1214,9 +1214,9 @@ cmd_welcome() {
     echo -e "     Staged build di latar belakang, aktif aman saat reboot.\n"
 
     echo -e "${BOLD}LINK & EKOSISTEM KOMUNITAS:${RESET}"
-    echo -e "  ${CYAN}•${RESET} GitHub Repository : https://github.com/adamriofc/neuronix"
-    echo -e "  ${CYAN}•${RESET} Dokumentasi Lengkap: https://github.com/adamriofc/neuronix/blob/main/README.md"
-    echo -e "  ${CYAN}•${RESET} Laporkan Masalah   : https://github.com/adamriofc/neuronix/issues\n"
+    echo -e "  ${CYAN}•${RESET} GitHub Repository : https://github.com/adamriofc/NeuronixOS"
+    echo -e "  ${CYAN}•${RESET} Dokumentasi Lengkap: https://github.com/adamriofc/NeuronixOS/blob/main/README.md"
+    echo -e "  ${CYAN}•${RESET} Laporkan Masalah   : https://github.com/adamriofc/NeuronixOS/issues\n"
 
     echo -e "${GRAY}Ketik 'neuronix help' untuk melihat seluruh kapabilitas sistem.${RESET}"
 }
@@ -1566,7 +1566,7 @@ cmd_version() {
     echo -e "License       : Apache License 2.0"
     echo -e "Substrate     : NixOS / Pure-Functional Linux"
     echo -e "Engine Target : Linux x86_64, aarch64, Darwin, WSL2"
-    echo -e "Repository    : https://github.com/adamriofc/neuronix"
+    echo -e "Repository    : https://github.com/adamriofc/NeuronixOS"
 }
 
 # Main CLI Dispatcher

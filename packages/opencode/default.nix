@@ -35,7 +35,7 @@ stdenv.mkDerivation rec {
 
   meta = with lib; {
     description = "Autonomous Declarative AI Coding and System Copilot for NEURONIX OS";
-    homepage = "https://github.com/adamriofc/neuronix";
+    homepage = "https://github.com/adamriofc/NeuronixOS";
     license = licenses.asl20;
     platforms = platforms.linux;
   };

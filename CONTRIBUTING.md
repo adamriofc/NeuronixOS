@@ -7,8 +7,8 @@ Thank you for your interest in contributing to NEURONIX OS. We welcome contribut
 To start working on the repository, enter the hermetic development shell using Nix Flakes:
 
 ```bash
-git clone https://github.com/adamriofc/neuronix.git
-cd neuronix
+git clone https://github.com/adamriofc/NeuronixOS.git
+cd NeuronixOS
 nix develop
 ```
 

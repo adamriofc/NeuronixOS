@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "neuronix-os-v1.0.3",
-  "documentNamespace": "https://github.com/adamriofc/neuronix/releases/tag/v1.0.3/sbom.spdx.json",
+  "documentNamespace": "https://github.com/adamriofc/NeuronixOS/releases/tag/v1.0.3/sbom.spdx.json",
   "creationInfo": {
     "created": "2026-09-04T23:20:46Z",
     "creators": [
@@ -16,7 +16,7 @@
       "SPDXID": "SPDXRef-Package-neuronix-substrate",
       "name": "neuronix-substrate",
       "versionInfo": "v1.0.3",
-      "downloadLocation": "git+https://github.com/adamriofc/neuronix.git@v1.0.3",
+      "downloadLocation": "git+https://github.com/adamriofc/NeuronixOS.git@v1.0.3",
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "Copyright (c) 2026 NEURONIX Contributors",
@@ -35,7 +35,7 @@
       "SPDXID": "SPDXRef-Package-opencode",
       "name": "opencode",
       "versionInfo": "1.0.3",
-      "downloadLocation": "https://github.com/adamriofc/neuronix",
+      "downloadLocation": "https://github.com/adamriofc/NeuronixOS",
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "supplier": "Organization: NEURONIX OS Maintainers"
@@ -44,7 +44,7 @@
       "SPDXID": "SPDXRef-Package-neuronix-center",
       "name": "neuronix-center",
       "versionInfo": "1.0.3",
-      "downloadLocation": "https://github.com/adamriofc/neuronix",
+      "downloadLocation": "https://github.com/adamriofc/NeuronixOS",
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "supplier": "Organization: NEURONIX OS Maintainers"
@@ -53,7 +53,7 @@
       "SPDXID": "SPDXRef-Package-neuronix-core",
       "name": "neuronix-core",
       "versionInfo": "1.0.3",
-      "downloadLocation": "https://github.com/adamriofc/neuronix",
+      "downloadLocation": "https://github.com/adamriofc/NeuronixOS",
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "supplier": "Organization: NEURONIX OS Maintainers"

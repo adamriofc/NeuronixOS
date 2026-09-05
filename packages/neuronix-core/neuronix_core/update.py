@@ -107,7 +107,7 @@ def check_upstream_update(repo_root=None, timeout: float = 3.0) -> Dict[str, Any
         try:
             import urllib.request
             req = urllib.request.Request(
-                "https://api.github.com/repos/adamriofc/neuronix/commits/main",
+                "https://api.github.com/repos/adamriofc/NeuronixOS/commits/main",
                 headers={"User-Agent": "NEURONIX-Update-Engine"}
             )
             with urllib.request.urlopen(req, timeout=timeout) as resp:

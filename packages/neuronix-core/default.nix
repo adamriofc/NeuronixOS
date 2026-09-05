@@ -10,7 +10,7 @@ python3Packages.buildPythonPackage {
 
   meta = with lib; {
     description = "Canonical shared domain logic for NEURONIX OS";
-    homepage = "https://github.com/adamriofc/neuronix";
+    homepage = "https://github.com/adamriofc/NeuronixOS";
     license = licenses.asl20;
     maintainers = [ ];
   };
