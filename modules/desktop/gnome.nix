@@ -2,6 +2,7 @@
 
 {
   # Desktop Environment: GNOME Wayland (Tokyo Cyber Palette & Gesture Navigation)
+  services.xserver.enable = true;
   services.xserver.displayManager.gdm.enable = true;
   services.xserver.desktopManager.gnome.enable = true;
 

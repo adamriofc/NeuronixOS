@@ -72,7 +72,7 @@
           ./modules/services/security.nix
           ./modules/services/opencode.nix
           ./modules/services/update.nix
-          ./modules/desktop/kde.nix
+          ./modules/desktop/gnome.nix
           ./hosts/desktop
         ];
       };
@@ -96,7 +96,7 @@
           ./modules/services/security.nix
           ./modules/services/opencode.nix
           ./modules/services/update.nix
-          ./modules/desktop/kde.nix
+          ./modules/desktop/gnome.nix
           ./hosts/desktop
         ];
       };

@@ -10,6 +10,13 @@
     description = "NEURONIX Default User";
   };
 
+  # Akun pengguna Quickemu
+  users.users.adamrofc = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
+    description = "Adam (Neuronix User)";
+  };
+
   # Default root filesystem fallback for pure flake evaluation
   fileSystems."/" = lib.mkDefault {
     device = "/dev/disk/by-label/nixos";
