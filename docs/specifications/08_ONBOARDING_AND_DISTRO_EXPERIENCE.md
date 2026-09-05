@@ -4,7 +4,7 @@
 > **Status:** Ratified & Active  
 > **Target Release:** NEURONIX OS v1.0.3+  
 > **Subcomponents:** `neuronix welcome`, `neuronix doctor`, `neuronix quickstart`, `neuronix kernel`, `artwork/`, `modules/hardware/boot.nix`, `packages/neuronix-center/`  
-> **Verification:** Suite 23 Test Contracts (1,028 Total Assertions / 100% Pass)
+> **Verification:** Suite 23 Test Contracts (1,038 Total Assertions / 100% Pass)
 
 ---
 
@@ -154,4 +154,4 @@ The features specified in this document are verified by **Suite 23** in the NEUR
 - Non-blocking execution and graceful exit codes for `neuronix welcome`, `quickstart`, and `kernel`.
 - JSON-RPC 2.0 schema validation for MCP tools `neuronix_doctor` and `neuronix_quickstart_list`.
 
-The complete NEURONIX test harness executes **1,028 assertions** across 25 QA master suites, 19 distro suites, and 13 standalone gates, maintaining a **100% pass rate**.
+The complete NEURONIX test harness executes **1,038 assertions** across 25 QA master suites, 19 distro suites, and 14 standalone gates, maintaining a **100% pass rate**.

@@ -11,7 +11,7 @@
     "qa_master_suites_count": 25,
     "distro_suites_count": 19,
     "standalone_gates_count": 14,
-    "confidence_score": 100.0,
+    "validation_status": "PASSING_ALL",
     "status": "PASSING_ALL"
   },
   "proof_class_taxonomy": {

@@ -244,35 +244,53 @@ def apply_system_update(
                 health_error = f"Active generation did not advance (was {prev_gen_num}, now {new_gen_num})"
 
         # Probe systemd health if available
-        if health_passed and shutil.which("systemctl"):
-            try:
-                sc = subprocess.run(
-                    ["systemctl", "is-system-running"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
-                state = sc.stdout.strip()
-                if state in ("degraded", "maintenance"):
+        if health_passed:
+            systemctl_bin = shutil.which("systemctl")
+            if systemctl_bin:
+                try:
+                    sc = subprocess.run(
+                        [systemctl_bin, "is-system-running"],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        timeout=5.0,
+                        check=False
+                    )
+                    state = sc.stdout.strip()
+                    if state in ("degraded", "maintenance"):
+                        health_passed = False
+                        health_error = f"Systemd health probe FAILED: state is '{state}'"
+                    elif sc.returncode != 0 and state not in ("running", "starting"):
+                        health_passed = False
+                        health_error = f"Systemd health probe UNKNOWN/FAILED: state '{state}', code {sc.returncode}"
+                except subprocess.TimeoutExpired:
                     health_passed = False
-                    health_error = f"Systemd reported degraded state post-switch: {state}"
-            except Exception:
-                pass
+                    health_error = "Systemd health probe UNKNOWN: timeout expired after 5.0s"
+                except Exception as ex:
+                    health_passed = False
+                    health_error = f"Systemd health probe UNKNOWN: {ex}"
 
         if not health_passed:
             if auto_rollback:
                 rb_ok, rb_code, rb_out = execute_rollback(target_generation=prev_gen_num)
+                # Verify that active generation after rollback strictly equals prev_gen_num
+                restored_gen = get_active_generation()
+                rollback_proven = (rb_ok and restored_gen is not None and str(restored_gen) == str(prev_gen_num))
+                if not rollback_proven:
+                    rb_out = f"{rb_out} | POSTCONDITION FAILED: Expected restored generation #{prev_gen_num}, got #{restored_gen}"
+
                 journal.mark_rolled_back(tx_id, {
                     "reason": health_error,
-                    "rollback_success": rb_ok,
+                    "rollback_success": rollback_proven,
+                    "restored_generation": restored_gen,
                     "rollback_output": rb_out
                 })
-                return False, 1, {
+                return False, (0 if rollback_proven else 1), {
                     "stage": "AUTO_ROLLBACK",
                     "error": health_error,
                     "rollback_executed": True,
-                    "restored_generation": prev_gen_num,
+                    "rollback_verified": rollback_proven,
+                    "restored_generation": restored_gen,
                     "rollback_output": rb_out
                 }
             else:
@@ -300,3 +318,85 @@ def apply_system_update(
         return False, 1, {"stage": "EXCEPTION", "error": str(ex)}
     finally:
         lock.release()
+
+def stage_system_update(
+    flake_uri: Optional[str] = None,
+    dry_run: bool = False
+) -> Tuple[bool, int, Dict[str, Any]]:
+    """
+    Executes a transactional staged system update (prepared for next boot).
+    Invokes `nixos-rebuild boot --flake <target>`.
+    Acquires concurrency lock, logs to transaction journal, and commits.
+    Returns (success: bool, return_code: int, result_dict: dict).
+    """
+    repo_root = get_repo_root()
+    flake_target = flake_uri or repo_root
+
+    current_gen = get_active_generation()
+    prev_gen_num = int(current_gen) if (current_gen and str(current_gen).isdigit()) else 0
+
+    if dry_run:
+        cmd = ["nixos-rebuild", "dry-build", "--flake", flake_target]
+        try:
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+            output = proc.stdout + proc.stderr
+            return (proc.returncode == 0), proc.returncode, {
+                "stage": "DRY_RUN",
+                "output": output,
+                "current_generation": prev_gen_num
+            }
+        except Exception as e:
+            return False, 1, {"stage": "DRY_RUN", "error": str(e)}
+
+    # Acquire exclusive concurrency lock
+    try:
+        lock = OperationLock("system_stage")
+        lock.acquire()
+    except ConcurrentOperationError as e:
+        return False, 126, {"stage": "LOCK_ACQUISITION", "error": str(e)}
+
+    journal = TransactionJournal()
+    tx_id = journal.start_transaction("system_stage", {
+        "previous_generation": prev_gen_num,
+        "flake_target": flake_target,
+        "mode": "staged"
+    })
+
+    try:
+        journal.update_transaction(tx_id, TransactionState.APPLYING)
+
+        cmd = []
+        if os.geteuid() != 0 and shutil.which("sudo"):
+            cmd.append("sudo")
+        cmd.extend(["nixos-rebuild", "boot", "--flake", flake_target])
+
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+        output = proc.stdout + proc.stderr
+
+        if proc.returncode != 0:
+            journal.abort_transaction(tx_id, f"nixos-rebuild boot failed with code {proc.returncode}: {output}")
+            return False, proc.returncode, {
+                "stage": "STAGE_BUILD",
+                "error": output,
+                "generation": prev_gen_num
+            }
+
+        # Stage: COMMIT
+        journal.commit_transaction(tx_id, {
+            "previous_generation": prev_gen_num,
+            "staged_mode": True,
+            "flake_target": flake_target
+        })
+        return True, 0, {
+            "stage": "COMMITTED",
+            "mode": "staged",
+            "previous_generation": prev_gen_num,
+            "transaction_id": tx_id,
+            "message": "System staged for next boot successfully."
+        }
+    except Exception as ex:
+        journal.abort_transaction(tx_id, str(ex))
+        return False, 1, {"stage": "EXCEPTION", "error": str(ex)}
+    finally:
+        lock.release()
+

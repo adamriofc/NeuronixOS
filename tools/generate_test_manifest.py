@@ -216,7 +216,7 @@ def generate_manifest():
             "qa_master_suites_count": len(QA_SUITES),
             "distro_suites_count": DISTRO_SUITE["suites_count"],
             "standalone_gates_count": len(STANDALONE_GATES),
-            "confidence_score": 100.0,
+            "validation_status": "PASSING_ALL",
             "status": "PASSING_ALL"
         },
         "proof_class_taxonomy": PROOF_CLASS_TAXONOMY,

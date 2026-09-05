@@ -830,20 +830,42 @@ cmd_upgrade() {
     acquire_lock "upgrade"
 
     if [[ "$mode" == "staged" ]]; then
-        log_step "1/2. Menjalankan Staged Upgrade (nixos-rebuild boot)..."
-        log_info "Generasi baru akan disiapkan di /nix/store tanpa mengganggu sesi aktif."
-        local rebuild_exit=0
-        run_privileged nixos-rebuild boot --flake "$config_dir" || rebuild_exit=$?
+        log_step "1/2. Menjalankan Staged Upgrade via Transaction Core (stage_system_update)..."
+        log_info "Generasi baru akan disiapkan di /nix/store dan ditautkan ke bootloader tanpa mengganggu sesi aktif."
+        local py_bin core_path
+        py_bin="$(resolve_python)"
+        core_path="$(resolve_core_path)"
 
-        if [[ $rebuild_exit -ne 0 ]]; then
-            echo
-            log_error "Pembaruan bertahap gagal dibangun (nixos-rebuild boot keluar dengan kode: ${rebuild_exit})."
-            return $rebuild_exit
+        if [[ -n "$py_bin" && -n "$core_path" ]]; then
+            local stage_output stage_code=0
+            stage_output="$("$py_bin" -c "
+import sys, json
+sys.path.insert(0, '${core_path}')
+from neuronix_core.update import stage_system_update
+ok, code, res = stage_system_update(flake_uri='${config_dir}')
+print(json.dumps(res, indent=2))
+sys.exit(code)
+" 2>&1)" || stage_code=$?
+
+            echo -e "${stage_output}"
+            if [[ $stage_code -ne 0 ]]; then
+                echo
+                log_error "Pembaruan bertahap gagal dibangun (stage_system_update error code: ${stage_code})."
+                return $stage_code
+            fi
+        else
+            local rebuild_exit=0
+            run_privileged nixos-rebuild boot --flake "$config_dir" || rebuild_exit=$?
+            if [[ $rebuild_exit -ne 0 ]]; then
+                echo
+                log_error "Pembaruan bertahap gagal dibangun (nixos-rebuild boot keluar dengan kode: ${rebuild_exit})."
+                return $rebuild_exit
+            fi
         fi
 
         echo
         log_step "2/2. Menautkan Generasi Baru ke Bootloader..."
-        log_success "Pembaruan bertahap (Staged Upgrade) sukses dibangun!"
+        log_success "Pembaruan bertahap (Staged Upgrade) sukses dibangun dan dijurnalkan!"
         echo -e "  ${GREEN}✔${RESET} Generasi baru akan aktif secara otomatis pada saat komputer dinyalakan kembali (reboot)."
     else
         log_step "1/2. Menjalankan Instant Switch (nixos-rebuild switch)..."

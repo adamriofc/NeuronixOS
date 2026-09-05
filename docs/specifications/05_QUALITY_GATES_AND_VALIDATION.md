@@ -41,7 +41,7 @@ Before release tags are published, the following checklist must be satisfied:
 - [x] **Gate 4: Dynamic Linker Compatibility**  
   Foreign pre-compiled Linux binaries execute cleanly via `nix-ld`.
 - [x] **Gate 5: Automated Test Suite**  
-  All 1,028 automated test assertions pass with 100% success rate across all master, distro, and standalone test gates.
+  All 1,038 automated test assertions pass with 100% success rate across all master, distro, and standalone test gates.
 
 ---
 
