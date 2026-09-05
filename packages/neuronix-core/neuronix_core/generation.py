@@ -23,22 +23,24 @@ def parse_generation_number(path):
     return None
 
 def get_active_generation():
-    """Returns the current active system generation number as a string."""
+    """Returns the current active system generation number as a string, or None if unresolved."""
     prof = get_system_profile()
     if os.path.exists(prof) or os.path.islink(prof):
         try:
             target = os.readlink(prof)
-            if "system-" in target:
+            if "system-" in target and "-link" in target:
                 num = target.split("system-")[1].split("-link")[0]
-                return num
+                if num.isdigit():
+                    return num
         except Exception:
             pass
-    return "1"
+    return None
 
 def list_generations():
     """
     Returns a sorted list of dictionaries representing system generations:
     [{ 'generation': int, 'date': str, 'active': bool, 'path': str }]
+    Returns an empty list if profile directory is missing or contains no generation links.
     """
     generations = []
     active = get_active_generation()
@@ -46,12 +48,7 @@ def list_generations():
     profile_dir = os.path.dirname(prof)
 
     if not os.path.exists(profile_dir):
-        return [{
-            "generation": 1,
-            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "active": True,
-            "path": prof
-        }]
+        return []
 
     links = glob.glob(f"{prof}-*-link")
     now_ts = datetime.now().timestamp()
@@ -66,7 +63,7 @@ def list_generations():
             except Exception:
                 dt_str = "Unknown"
             
-            is_active = (str(gen_num) == str(active))
+            is_active = (active is not None and str(gen_num) == str(active))
             generations.append({
                 "generation": gen_num,
                 "date": dt_str,
@@ -77,14 +74,4 @@ def list_generations():
             })
 
     generations.sort(key=lambda x: x["generation"])
-    if not generations:
-        generations.append({
-            "generation": int(active) if active.isdigit() else 1,
-            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "active": True,
-            "path": prof,
-            "age_days": 0.0,
-            "gc_eligible": False
-        })
-
     return generations

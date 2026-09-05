@@ -13,6 +13,8 @@ import json
 import time
 import uuid
 import tempfile
+import fcntl
+import threading
 from typing import Optional, Dict, Any, List
 
 class TransactionState:
@@ -21,6 +23,54 @@ class TransactionState:
     COMMITTED = "COMMITTED"
     ROLLED_BACK = "ROLLED_BACK"
     FAILED = "FAILED"
+
+class CorruptedJournalError(RuntimeError):
+    """Raised when the journal file exists on disk but is invalid or corrupted JSON."""
+    pass
+
+class _ReentrantJournalLock:
+    """
+    Re-entrant, thread-safe kernel file lock using fcntl.flock.
+    Protects journal read-modify-write cycles across concurrent OS processes
+    while allowing safe nested calls within the same process thread.
+    """
+    _thread_local = threading.local()
+
+    def __init__(self, lock_path: str):
+        self.lock_path = os.path.abspath(lock_path)
+
+    def __enter__(self):
+        if not hasattr(self._thread_local, "active_locks"):
+            self._thread_local.active_locks = {}
+        
+        active = self._thread_local.active_locks
+        if self.lock_path in active:
+            active[self.lock_path]["depth"] += 1
+            return self
+
+        lock_dir = os.path.dirname(self.lock_path)
+        os.makedirs(lock_dir, exist_ok=True)
+        fd = os.open(self.lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        active[self.lock_path] = {"fd": fd, "depth": 1}
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        active = getattr(self._thread_local, "active_locks", {})
+        info = active.get(self.lock_path)
+        if not info:
+            return
+        info["depth"] -= 1
+        if info["depth"] <= 0:
+            try:
+                fcntl.flock(info["fd"], fcntl.LOCK_UN)
+            except OSError:
+                pass
+            try:
+                os.close(info["fd"])
+            except OSError:
+                pass
+            del active[self.lock_path]
 
 class TransactionJournal:
     """
@@ -35,25 +85,40 @@ class TransactionJournal:
         self.journal_path = journal_path or os.environ.get("NEURONIX_JOURNAL_FILE")
         if not self.journal_path:
             target_dir = self.DEFAULT_JOURNAL_DIR
-            try:
+            if os.geteuid() == 0:
                 os.makedirs(target_dir, exist_ok=True)
-            except (PermissionError, OSError):
-                target_dir = self.FALLBACK_JOURNAL_DIR
-                os.makedirs(target_dir, exist_ok=True)
-            self.journal_path = os.path.join(target_dir, "operation_journal.json")
+                self.journal_path = os.path.join(target_dir, "operation_journal.json")
+            else:
+                # Non-root unprivileged fallback
+                unprivileged_base = os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state/neuronix"))
+                try:
+                    os.makedirs(unprivileged_base, exist_ok=True)
+                    self.journal_path = os.path.join(unprivileged_base, "operation_journal.json")
+                except (PermissionError, OSError):
+                    os.makedirs(self.FALLBACK_JOURNAL_DIR, exist_ok=True)
+                    self.journal_path = os.path.join(self.FALLBACK_JOURNAL_DIR, "operation_journal.json")
+
+        self.lock_path = self.journal_path + ".lock"
 
     def _read_journal(self) -> Dict[str, Any]:
-        """Reads transactions from disk, returning default structure if missing or corrupt."""
+        """Reads transactions from disk, returning default structure if missing or raising CorruptedJournalError if malformed."""
         if not os.path.exists(self.journal_path):
             return {"schema_version": "1.0.0", "transactions": {}}
         try:
             with open(self.journal_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, dict) and "transactions" in data:
+                content = f.read().strip()
+                if not content:
+                    return {"schema_version": "1.0.0", "transactions": {}}
+                data = json.loads(content)
+                if isinstance(data, dict) and "transactions" in data and isinstance(data["transactions"], dict):
                     return data
-        except Exception:
-            pass
-        return {"schema_version": "1.0.0", "transactions": {}}
+                raise CorruptedJournalError(
+                    f"Journal structure at {self.journal_path} is invalid: missing or invalid 'transactions' key."
+                )
+        except json.JSONDecodeError as err:
+            raise CorruptedJournalError(
+                f"Journal file at {self.journal_path} contains malformed JSON: {err}"
+            ) from err
 
     def _write_journal(self, data: Dict[str, Any]) -> None:
         """Atomically persists journal data to disk."""
@@ -75,36 +140,48 @@ class TransactionJournal:
                     pass
             raise
 
+    def quarantine_and_reset(self) -> str:
+        """Quarantines corrupted journal by moving it to a timestamped backup and reinitializing."""
+        with _ReentrantJournalLock(self.lock_path):
+            backup_path = f"{self.journal_path}.corrupt.{int(time.time())}"
+            if os.path.exists(self.journal_path):
+                os.replace(self.journal_path, backup_path)
+            clean_journal = {"schema_version": "1.0.0", "transactions": {}}
+            self._write_journal(clean_journal)
+            return backup_path
+
     def start_transaction(self, operation_type: str, details: Optional[Dict[str, Any]] = None) -> str:
-        """Initializes a new transaction in PENDING state."""
+        """Initializes a new transaction in PENDING state under concurrency lock."""
         tx_id = f"tx_{int(time.time())}_{uuid.uuid4().hex[:8]}"
-        journal = self._read_journal()
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-        journal["transactions"][tx_id] = {
-            "id": tx_id,
-            "operation": operation_type,
-            "state": TransactionState.PENDING,
-            "created_at": now_iso,
-            "updated_at": now_iso,
-            "details": details or {}
-        }
-        self._write_journal(journal)
+        with _ReentrantJournalLock(self.lock_path):
+            journal = self._read_journal()
+            journal["transactions"][tx_id] = {
+                "id": tx_id,
+                "operation": operation_type,
+                "state": TransactionState.PENDING,
+                "created_at": now_iso,
+                "updated_at": now_iso,
+                "details": details or {}
+            }
+            self._write_journal(journal)
         return tx_id
 
     def update_transaction(self, tx_id: str, state: str, details: Optional[Dict[str, Any]] = None) -> None:
-        """Updates the state and details of an ongoing transaction."""
-        journal = self._read_journal()
-        if tx_id not in journal["transactions"]:
-            raise KeyError(f"Transaction '{tx_id}' not found in journal.")
+        """Updates the state and details of an ongoing transaction under concurrency lock."""
+        with _ReentrantJournalLock(self.lock_path):
+            journal = self._read_journal()
+            if tx_id not in journal["transactions"]:
+                raise KeyError(f"Transaction '{tx_id}' not found in journal.")
 
-        tx = journal["transactions"][tx_id]
-        tx["state"] = state
-        tx["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        if details:
-            tx["details"].update(details)
+            tx = journal["transactions"][tx_id]
+            tx["state"] = state
+            tx["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            if details:
+                tx["details"].update(details)
 
-        self._write_journal(journal)
+            self._write_journal(journal)
 
     def commit_transaction(self, tx_id: str, details: Optional[Dict[str, Any]] = None) -> None:
         """Marks a transaction as COMMITTED after successful postcondition verification."""
@@ -121,47 +198,63 @@ class TransactionJournal:
 
     def get_transaction(self, tx_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves a specific transaction record."""
-        journal = self._read_journal()
-        return journal["transactions"].get(tx_id)
+        with _ReentrantJournalLock(self.lock_path):
+            journal = self._read_journal()
+            return journal["transactions"].get(tx_id)
 
     def get_dangling_transactions(self) -> List[Dict[str, Any]]:
         """
         Returns all transactions left uncommitted in APPLYING or PENDING states,
         indicating process termination, crash, or unexpected failure.
         """
-        journal = self._read_journal()
-        dangling = []
-        for tx_id, tx in journal.get("transactions", {}).items():
-            if tx.get("state") in (TransactionState.APPLYING, TransactionState.PENDING):
-                dangling.append(tx)
-        return dangling
+        with _ReentrantJournalLock(self.lock_path):
+            journal = self._read_journal()
+            dangling = []
+            for tx_id, tx in journal.get("transactions", {}).items():
+                if tx.get("state") in (TransactionState.APPLYING, TransactionState.PENDING):
+                    dangling.append(tx)
+            return dangling
 
     def recover_dangling_transactions(self) -> List[Dict[str, Any]]:
         """
         Inspects and remediates dangling transactions found in journal.
+        Executes real physical rollback when target generation diverges from previous generation.
         Returns report of recovered operations.
         """
-        dangling = self.get_dangling_transactions()
-        recovery_report = []
+        with _ReentrantJournalLock(self.lock_path):
+            dangling = self.get_dangling_transactions()
+            recovery_report = []
 
-        for tx in dangling:
-            tx_id = tx["id"]
-            op = tx.get("operation")
-            prev_gen = tx.get("details", {}).get("previous_generation")
+            for tx in dangling:
+                tx_id = tx["id"]
+                op = tx.get("operation")
+                prev_gen = tx.get("details", {}).get("previous_generation")
 
-            action_taken = "MARKED_FAILED"
-            if op in ("system_update", "rollback") and prev_gen:
-                action_taken = f"NEEDS_ROLLBACK_TO_GEN_{prev_gen}"
+                action_taken = "MARKED_FAILED"
+                if op in ("system_update", "rollback") and prev_gen:
+                    action_taken = f"NEEDS_ROLLBACK_TO_GEN_{prev_gen}"
+                    try:
+                        from .generation import get_active_generation
+                        from .rollback import execute_rollback
+                        active = get_active_generation()
+                        if active is not None and str(active) != str(prev_gen):
+                            rb_ok, rb_code, rb_out = execute_rollback(target_generation=int(prev_gen))
+                            if rb_ok:
+                                action_taken = f"ROLLED_BACK_TO_GEN_{prev_gen} (NEEDS_ROLLBACK_TO_GEN_{prev_gen})"
+                            else:
+                                action_taken = f"FAILED_ROLLBACK_TO_GEN_{prev_gen}: {rb_out.strip()} (NEEDS_ROLLBACK_TO_GEN_{prev_gen})"
+                    except Exception as err:
+                        action_taken = f"NEEDS_ROLLBACK_TO_GEN_{prev_gen} (recovery error: {err})"
 
-            self.update_transaction(
-                tx_id,
-                TransactionState.FAILED,
-                {"recovery_action": action_taken, "recovered_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
-            )
-            recovery_report.append({
-                "transaction_id": tx_id,
-                "operation": op,
-                "action": action_taken
-            })
+                self.update_transaction(
+                    tx_id,
+                    TransactionState.FAILED,
+                    {"recovery_action": action_taken, "recovered_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+                )
+                recovery_report.append({
+                    "transaction_id": tx_id,
+                    "operation": op,
+                    "action": action_taken
+                })
 
-        return recovery_report
+            return recovery_report

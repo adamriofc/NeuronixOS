@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-09-05T02:13:53Z",
-  "requested_mode": "auto",
+  "timestamp": "2026-09-05T02:36:46Z",
+  "requested_mode": "all",
   "executed_contract": true,
   "executed_real": true,
   "kvm_available": true,
@@ -8,7 +8,7 @@
   "contract_exit_code": 0,
   "real_exit_code": 0,
   "contract_evidence": {
-  "timestamp": "2026-09-05T02:13:48Z",
+  "timestamp": "2026-09-05T02:36:42Z",
   "gate_type": "contract",
   "proof_class": "P1 (Contract Invariant)",
   "verifications": {
@@ -25,9 +25,9 @@
   "assertions_failed": 0
 },
   "real_evidence": {
-  "timestamp": "2026-09-05T02:13:53Z",
+  "timestamp": "2026-09-05T02:36:46Z",
   "gate_type": "real_e2e",
-  "proof_class": "L5_REAL_E2E",
+  "proof_class": "L4_HYBRID_ENGINE",
   "hardware": {
     "kvm_accelerated": true,
     "memory_total_kb": 6063008,

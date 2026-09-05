@@ -84,7 +84,12 @@ def apply_system_update(
     flake_target = flake_uri or repo_root
 
     current_gen = get_active_generation()
-    prev_gen_num = int(current_gen) if current_gen.isdigit() else 1
+    if current_gen is None or not str(current_gen).isdigit():
+        return False, 1, {
+            "stage": "PRECHECK",
+            "error": "Active system generation could not be determined. Profile symlink is missing or invalid."
+        }
+    prev_gen_num = int(current_gen)
 
     if dry_run:
         cmd = ["nixos-rebuild", "dry-build", "--flake", flake_target]
@@ -134,7 +139,7 @@ def apply_system_update(
 
         # Stage: HEALTH CHECK
         new_gen = get_active_generation()
-        new_gen_num = int(new_gen) if new_gen.isdigit() else prev_gen_num
+        new_gen_num = int(new_gen) if new_gen and new_gen.isdigit() else prev_gen_num
 
         # Health verification: active generation must have incremented or be valid
         health_passed = True
@@ -156,8 +161,8 @@ def apply_system_update(
                 )
                 state = sc.stdout.strip()
                 if state in ("degraded", "maintenance"):
-                    # Record diagnostic warning
-                    pass
+                    health_passed = False
+                    health_error = f"Systemd reported degraded state post-switch: {state}"
             except Exception:
                 pass
 

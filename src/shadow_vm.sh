@@ -10,9 +10,6 @@
 
 set -eo pipefail
 
-# Graceful SIGPIPE handling
-trap 'exec 2>/dev/null; exit 0' PIPE
-
 # Safe Path Fallback
 export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-system/sw/bin:/usr/bin:/bin"
 

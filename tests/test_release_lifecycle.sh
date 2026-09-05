@@ -86,7 +86,7 @@ assert_check "Target release.json contains git commit hash" "grep -Eq '\"commit\
 # ------------------------------------------------------------------------------
 echo -e "\n${BOLD}Phase 3: System Generation & Pointer Invariants${RESET}"
 assert_check "CLI generations query succeeds" "${TARGET_BIN} generations"
-assert_check "CLI generations contains system baseline" "${TARGET_BIN} generations | grep -Eq 'Gen #[0-9]+|\* AKTIF'"
+assert_check "CLI generations contains system baseline" "${TARGET_BIN} generations | grep -E 'Gen #[0-9]+|\* AKTIF'"
 assert_check "Center --list-generations succeeds" "\"$PYTHON_BIN\" '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py' --list-generations"
 assert_check "Center --version matches 1.0.3" "\"$PYTHON_BIN\" '${PROJECT_ROOT}/packages/neuronix-center/neuronix_center.py' --version | grep -q '1.0.3'"
 

@@ -24,7 +24,9 @@ def simulate_rollback(target_generation: Optional[int] = None) -> Tuple[bool, st
         return False, "No system generations found in Nix profile registry.", None
 
     active_str = get_active_generation()
-    active_num = int(active_str) if active_str.isdigit() else 1
+    if active_str is None or not active_str.isdigit():
+        return False, "Active system generation cannot be determined. Profile symlink is missing or broken.", None
+    active_num = int(active_str)
 
     if target_generation is not None:
         target_num = int(target_generation)
@@ -54,7 +56,9 @@ def execute_rollback(target_generation: Optional[int] = None, dry_run: bool = Fa
         return False, 1, msg
 
     active_str = get_active_generation()
-    active_num = int(active_str) if active_str.isdigit() else 1
+    if active_str is None or not active_str.isdigit():
+        return False, 1, "Active system generation cannot be determined. Profile symlink is missing or broken."
+    active_num = int(active_str)
 
     if dry_run:
         return True, 0, f"[DRY-RUN] Rollback from generation {active_num} to {target_num} validated safely."
@@ -105,7 +109,7 @@ def execute_rollback(target_generation: Optional[int] = None, dry_run: bool = Fa
         else:
             err_msg = (
                 f"POSTCONDITION FAILED: Expected active generation {target_num}, "
-                f"but active generation is {new_active}."
+                f"but active generation is {new_active if new_active is not None else 'UNKNOWN'}."
             )
             journal.abort_transaction(tx_id, err_msg)
             return False, 1, f"{err_msg}\n{raw_output}"

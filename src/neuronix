@@ -9,9 +9,6 @@
 
 set -eo pipefail
 
-# Graceful SIGPIPE handling for pipeline consumers (e.g. head, grep -q)
-trap 'exec 2>/dev/null; exit 0' PIPE
-
 # Safe Path & Environment Fallbacks (Mission-critical defensive posture)
 export PATH="/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:${PATH:-}"
 
@@ -581,20 +578,32 @@ cmd_shield() {
 
 cmd_battery() {
     local target="${1:-status}"
-    local batt_file
-    batt_file=$(find /sys/class/power_supply/ -name "charge_control_limit_max" 2>/dev/null | head -n 1 || true)
+    local batt_file=""
+    for candidate in charge_control_end_threshold charge_control_limit_max charge_stop_threshold; do
+        batt_file=$(find /sys/class/power_supply/ -name "$candidate" 2>/dev/null | head -n 1 || true)
+        if [[ -n "$batt_file" && -f "$batt_file" ]]; then
+            break
+        fi
+    done
     
     if [[ -z "$batt_file" || ! -f "$batt_file" ]]; then
-        log_warn "Laptop battery hardware with charge_control_limit_max was not detected."
+        log_warn "Laptop battery hardware with charge threshold control was not detected."
         echo -e "Perangkat beroperasi dalam mode desktop / AC permanen."
         return 0
     fi
     
     case "$target" in
         80|limit|on)
-            log_step ""
+            log_step "Mengonfigurasi ambang batas pengisian daya baterai (Maksimal 80%)..."
             if echo 80 | sudo tee "$batt_file" &>/dev/null; then
-                log_success "Battery charge threshold successfully configured to 80%."
+                local readback
+                readback=$(cat "$batt_file" 2>/dev/null || echo "")
+                if [[ "$readback" == "80" ]]; then
+                    log_success "Battery charge threshold successfully configured to 80% (verified: ${readback}%)."
+                else
+                    log_error "Verifikasi gagal: nilai terbaca '${readback}%', bukan '80%'."
+                    return 1
+                fi
             else
                 log_error "Gagal menyetel ambang batas baterai. Butuh akses root."
                 return 1
@@ -603,7 +612,14 @@ cmd_battery() {
         100|full|off)
             log_step "Menonaktifkan batasan pengisian daya (Maksimal 100%)..."
             if echo 100 | sudo tee "$batt_file" &>/dev/null; then
-                log_success "Baterai kini dapat diisi penuh hingga 100%."
+                local readback
+                readback=$(cat "$batt_file" 2>/dev/null || echo "")
+                if [[ "$readback" == "100" ]]; then
+                    log_success "Baterai kini dapat diisi penuh hingga 100% (verified: ${readback}%)."
+                else
+                    log_error "Verifikasi gagal: nilai terbaca '${readback}%', bukan '100%'."
+                    return 1
+                fi
             else
                 log_error "Gagal menyetel ambang batas baterai. Butuh akses root."
                 return 1

@@ -12,7 +12,7 @@ from .rollback import execute_rollback, simulate_rollback
 from .storage import probe_storage_hygiene, calculate_store_size
 from .update import check_upstream_update, get_pinned_commit, apply_system_update
 from .lock import OperationLock, ConcurrentOperationError
-from .journal import TransactionJournal, TransactionState
+from .journal import TransactionJournal, TransactionState, CorruptedJournalError
 from .operations import execute_privileged_operation, is_operation_permitted
 from .ca import enroll_certificate
 from .doctor import get_sanitized_diagnostics, print_doctor_json
@@ -36,6 +36,7 @@ __all__ = [
     "ConcurrentOperationError",
     "TransactionJournal",
     "TransactionState",
+    "CorruptedJournalError",
     "execute_privileged_operation",
     "is_operation_permitted",
     "enroll_certificate",
