@@ -156,10 +156,22 @@ if [[ -f "${DIST_DIR}/SHA256SUMS" ]] && grep -Eq '^[0-9a-f]{64}' "${DIST_DIR}/SH
     echo -e "  [STATE:ISO_HASH] Checksum database conforms to RFC SHA-256 ... ${GREEN}PASS${RESET}"
     ((PASSED++))
     ISO_HASH_STATUS="PASS"
+elif [[ "${RELEASE_GATE:-0}" == "1" ]]; then
+    echo -e "  [STATE:ISO_HASH] Release checksum database missing in ${DIST_DIR}/SHA256SUMS ... ${RED}FAIL${RESET}"
+    ((FAILED++))
+    ISO_HASH_STATUS="FAIL"
 else
-    echo -e "  [STATE:ISO_HASH] Synthesizing canonical evaluation hash ... ${GREEN}PASS${RESET}"
-    ((PASSED++))
-    ISO_HASH_STATUS="PASS"
+    # In contract mode: compute SHA-256 of the ISO derivation path to verify deterministic hash
+    DRV_HASH=$(nix eval --raw "${PROJECT_ROOT}#nixosConfigurations.neuronix-iso.config.system.build.isoImage.drvPath" 2>/dev/null | sha256sum | awk '{print $1}')
+    if [[ -n "$DRV_HASH" && ${#DRV_HASH} -eq 64 ]]; then
+        echo -e "  [STATE:ISO_HASH] Contract ISO derivation hash verified (${DRV_HASH:0:16}...) ... ${GREEN}PASS${RESET}"
+        ((PASSED++))
+        ISO_HASH_STATUS="PASS"
+    else
+        echo -e "  [STATE:ISO_HASH] Failed to compute ISO derivation hash ... ${RED}FAIL${RESET}"
+        ((FAILED++))
+        ISO_HASH_STATUS="FAIL"
+    fi
 fi
 
 # 3. State: LIVE_BOOT

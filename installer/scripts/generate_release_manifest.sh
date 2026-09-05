@@ -79,4 +79,5 @@ cat << EOF > "${MANIFEST_FILE}"
 }
 EOF
 
-echo "[MANIFEST] Generated standardized release manifest at ${MANIFEST_FILE}"
+cp "${MANIFEST_FILE}" "${DIST_DIR}/release-manifest.json"
+echo "[MANIFEST] Generated standardized release manifest at ${MANIFEST_FILE} and ${DIST_DIR}/release-manifest.json"

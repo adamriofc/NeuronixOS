@@ -1,21 +1,24 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.3",
   "taxonomy_definition": {
     "DECLARED": "Architecture or chip family defined in version matrix or flake inputs without hardware-specific testing.",
-    "CONFIGURED": "Declarative NixOS configuration, kernel modules, power governors, or drivers explicitly implemented.",
-    "EMULATED": "Validated under micro-VM or virtualized hypervisor execution.",
-    "CI_VALIDATED": "Automated evaluation or execution passing in continuous integration pipelines.",
-    "BARE_METAL_TESTED": "Physically executed, observed, and verified on real host hardware by maintainers."
+    "TARGET": "Hardware platform targeted with dedicated declarative modules in modules/hardware.",
+    "CI_VALIDATED": "Automated evaluation or test execution passing in continuous integration pipelines.",
+    "VM_VALIDATED": "Physically validated under micro-VM or virtualized hypervisor execution (QEMU/KVM).",
+    "BARE_METAL_TESTED": "Physically executed, observed, and verified on real host hardware by maintainers.",
+    "RELEASE_QUALIFIED": "Certified for production releases with bit-identical reproducibility and signed artifacts.",
+    "EXPERIMENTAL": "Early exploratory architecture or community-driven hardware without tier-1 release guarantees."
   },
   "summary": {
     "total_device_declarations": 27,
     "total_platforms": 8,
     "bare_metal_tested_count": 1,
+    "vm_validated_count": 1,
     "ci_validated_count": 1,
-    "configured_count": 5,
-    "declared_count": 1
+    "target_count": 5,
+    "experimental_count": 1
   },
   "platforms": [
     {
@@ -27,8 +30,8 @@
       "network": "VirtIO-Net",
       "audio": "PipeWire Virtual",
       "suspend": "S3 / S4 Virtualized",
-      "qualification_level": "CI_VALIDATED",
-      "tier": "Tier 1 (CI Target)",
+      "qualification_level": "VM_VALIDATED",
+      "tier": "Tier 1 (CI & Hypervisor Target)",
       "validation_method": "Dual-Mode E2E Runner + GitHub Actions CI"
     },
     {
@@ -41,7 +44,7 @@
       "audio": "Realtek ALC4080 (PipeWire Pro Audio)",
       "suspend": "S3 Sleep",
       "qualification_level": "BARE_METAL_TESTED",
-      "tier": "Tier 1 (Desktop Reference)",
+      "tier": "Tier 1 (Desktop Reference & Release Qualified)",
       "validation_method": "Maintainer Physical Hardware Benchmark & Workstation Test"
     },
     {
@@ -53,7 +56,7 @@
       "network": "Qualcomm Atheros / MT7922",
       "audio": "Realtek ALC257 (PipeWire HD)",
       "suspend": "Deep (mem_sleep=deep)",
-      "qualification_level": "CONFIGURED",
+      "qualification_level": "TARGET",
       "tier": "Tier 1 (Target Reference)",
       "validation_method": "Declarative Hardware Profile in modules/hardware"
     },
@@ -66,7 +69,7 @@
       "network": "Intel Wi-Fi 6E AX211",
       "audio": "Realtek ALC295 (PipeWire HD)",
       "suspend": "Modern Standby (s2idle)",
-      "qualification_level": "CONFIGURED",
+      "qualification_level": "TARGET",
       "tier": "Tier 1 (Target Reference)",
       "validation_method": "Declarative Hardware Profile in modules/hardware"
     },
@@ -79,7 +82,7 @@
       "network": "Realtek RTL8125 2.5GbE / AX211",
       "audio": "Realtek ALC1220 (PipeWire HD)",
       "suspend": "S3 Sleep",
-      "qualification_level": "CONFIGURED",
+      "qualification_level": "TARGET",
       "tier": "Tier 1 (Desktop Reference)",
       "validation_method": "Declarative Hardware Profile in modules/hardware"
     },
@@ -92,7 +95,7 @@
       "network": "Killer Wi-Fi 6E AX1675",
       "audio": "Realtek ALC3281 (PipeWire HD)",
       "suspend": "Modern Standby (s2idle)",
-      "qualification_level": "CONFIGURED",
+      "qualification_level": "TARGET",
       "tier": "Tier 2 (PRIME Offload Profile)",
       "validation_method": "PRIME Offload Declarative Module (modules/hardware/nvidia-prime.nix)"
     },
@@ -105,7 +108,7 @@
       "network": "MediaTek MT7922 Wi-Fi 6E",
       "audio": "Realtek HD Audio (PipeWire)",
       "suspend": "Deep (mem_sleep=deep)",
-      "qualification_level": "CONFIGURED",
+      "qualification_level": "TARGET",
       "tier": "Tier 2 (Hybrid PRIME Profile)",
       "validation_method": "Hybrid PRIME Declarative Module (modules/hardware/nvidia-prime.nix)"
     },
@@ -118,7 +121,7 @@
       "network": "Broadcom Wi-Fi / VirtIO",
       "audio": "PipeWire Core",
       "suspend": "Suspend Supported",
-      "qualification_level": "DECLARED",
+      "qualification_level": "EXPERIMENTAL",
       "tier": "Tier 2 (Experimental aarch64)",
       "validation_method": "Flake Multi-Arch Package Evaluation"
     }

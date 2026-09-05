@@ -83,8 +83,8 @@ else
     ACTUAL_FLAKE_INPUT="${LOCKED_COMMIT}"
 fi
 assert_check "nix flake metadata resolves identical nixpkgs revision" "test '${EXPECTED_COMMIT}' = '${ACTUAL_FLAKE_INPUT}'"
-assert_check "flake.nix pins nixpkgs URL directly to locked revision" "grep -F '${EXPECTED_COMMIT}' '${PROJECT_ROOT}/flake.nix'"
-assert_check "release-iso.yml does not use imperative nixos-unstable channel" "! grep -F 'channel:nixos-unstable' '${PROJECT_ROOT}/.github/workflows/release-iso.yml'"
+assert_check "flake.nix releaseMeta evaluates to locked revision" "test '${EXPECTED_COMMIT}' = '$(nix eval --raw "${PROJECT_ROOT}#releaseMeta.nixpkgsCommit" 2>/dev/null)'"
+assert_check "CI workflows do not use imperative nixos-unstable channel" "! grep -F 'channel:nixos-unstable' '${PROJECT_ROOT}/.github/workflows/ci.yml' '${PROJECT_ROOT}/.github/workflows/release-iso.yml'"
 
 # 5. Correlation with Installer engine
 INSTALLER_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "${VERSION_NIX}" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')

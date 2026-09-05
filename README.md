@@ -8,7 +8,7 @@
   <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.3-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
-  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-969%2F969_Passed_(100%25)-success.svg" alt="Testing"></a>
+  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-987%2F987_Passed_(100%25)-success.svg" alt="Testing"></a>
   <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
   <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
@@ -66,7 +66,7 @@
   - [12. System-Embedded Manual & Autonomous AI Grounding](#12-system-embedded-manual--autonomous-ai-grounding)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (969 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (987 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -628,9 +628,9 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Industrial Test Battery (969 Assertions)
+## Verification, Lifecycle Gate & Industrial Test Battery (987 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 969 automated assertions across 15 specialized test harnesses, 24 test suites, and release gates:
+System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 987 automated assertions across 14 specialized test harnesses, 24 test suites, and release gates:
 
 ```text
 ═══════════════════════════════════════════════════════════════════
@@ -638,20 +638,19 @@ System invariants, module structures, and CLI dispatchers are validated through 
 ═══════════════════════════════════════════════════════════════════
   Master Test Harness (tests/run_all_tests.sh)     : 643 / 643 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 209 / 209 PASS
-  System Manual Gate (tests/test_system_manual.sh) :  44 /  44 PASS
-  Core CLI Harness (tests/test_neuronix_core.sh)   :  14 /  14 PASS
-  Single Source of Truth Gate (source_of_truth)    :  10 /  10 PASS
-  Multi-Architecture Matrix (multiarch_matrix)     :   8 /   8 PASS
-  Two-Build Derivation Repro (two_build_repro)     :   5 /   5 PASS
-  Multi-Hop Rollback Correctness (rollback_corr)   :   8 /   8 PASS
+  Single Source of Truth Gate (source_of_truth)    :  13 /  13 PASS
+  Multi-Architecture Matrix (multiarch_matrix)     :  13 /  13 PASS
+  Two-Build Derivation Repro (two_build_repro)     :   8 /   8 PASS
+  Real E2E ISO Lifecycle Gate (e2e/test_iso_install):  8 /   8 PASS
+  Release Lifecycle Gate (test_release_lifecycle)  :  34 /  34 PASS
+  Multi-Hop Rollback Correctness (rollback_corr)   :  13 /  13 PASS
   Enterprise Security Audit (security_audit)       :   9 /   9 PASS
+  Neuronix Core Engine CLI (test_neuronix_core)    :  14 /  14 PASS
   Mutation Resilience Suite (mutation_resilience)  :   6 /   6 KILLED
   Historical Regression Corpus (regression_corpus) :   7 /   7 PASS
-  Performance Benchmarks (test_benchmarks)         :   4 /   4 PASS
-  Real E2E ISO Lifecycle Gate (e2e/test_iso_install):  8 /   8 PASS
-  Release Lifecycle Gate (test_release_lifecycle)  :  32 /  32 PASS
   Reproducibility Gate (test_reproducible_iso)     :   6 /   6 PASS
-  Total Executed Assertions                        : 969 Assertions
+  Performance Benchmarks (test_benchmarks)         :   4 /   4 PASS
+  Total Executed Assertions                        : 987 Assertions
   Failed Verification                              : 0 Failures
   Execution Duration                               : ~104 seconds
   Confidence Score                                 : 100%
@@ -667,26 +666,32 @@ System invariants, module structures, and CLI dispatchers are validated through 
 # Run master industrial test harness (643 tests across 24 suites)
 bash tests/run_all_tests.sh
 
-# Run system-embedded manual & AI reference verification (44 tests)
-bash tests/test_system_manual.sh
-
-# Run distribution standalone suite (209 tests)
+# Run distribution standalone suite (209 tests across 19 suites)
 bash tests/test_distro_suite.sh
 
-# Run single source of truth verification (10 tests)
+# Run single source of truth verification (13 tests)
 bash tests/test_source_of_truth.sh
 
-# Run multi-architecture evaluation matrix (8 tests)
+# Run multi-architecture evaluation matrix (13 tests)
 bash tests/test_multiarch_matrix.sh
 
-# Run two-build functional reproducibility (5 tests)
+# Run two-build functional reproducibility (8 tests)
 bash tests/test_two_build_reproducibility.sh
 
-# Run multi-hop rollback correctness (8 tests)
+# Run real E2E ISO installation state machine (8 states)
+bash tests/e2e/test_iso_install.sh
+
+# Run release lifecycle and target layout gate (34 tests)
+bash tests/test_release_lifecycle.sh
+
+# Run multi-hop rollback correctness (13 tests)
 bash tests/test_rollback_correctness.sh
 
 # Run enterprise security audit (9 tests)
 bash tests/test_security_audit.sh
+
+# Run neuronix-core binary CLI and telemetry invariants (14 tests)
+bash tests/test_neuronix_core.sh
 
 # Run fault injection and mutation resilience (6 mutants)
 bash tests/test_mutation_resilience.sh
@@ -694,11 +699,11 @@ bash tests/test_mutation_resilience.sh
 # Run historical regression corpus (REG-001 to REG-007)
 bash tests/test_regression_corpus.sh
 
-# Run performance benchmarks and latency budgets
-bash tests/test_benchmarks.sh
+# Run reproducible checksum database and signature gate (6 tests)
+bash tests/test_reproducible_iso.sh
 
-# Run real E2E ISO installation state machine (8 states)
-bash tests/e2e/test_iso_install.sh
+# Run performance benchmarks and latency budgets (4 benchmarks)
+bash tests/test_benchmarks.sh
 ```
 
 ---

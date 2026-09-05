@@ -89,6 +89,18 @@ case "$action" in
             exit 1
         fi
 
+        # Verify key fingerprint against canonical trust anchor
+        FINGERPRINT_FILE="${PROJECT_ROOT}/docs/security/RELEASE_SIGNING_KEY.fingerprint"
+        if [[ -f "$FINGERPRINT_FILE" && -f "$PUB_KEY" ]]; then
+            EXPECTED_FP=$(tr -d ' \n\r' < "$FINGERPRINT_FILE")
+            ACTUAL_FP=$(sha256sum "$PUB_KEY" | awk '{print $1}')
+            if [[ "$ACTUAL_FP" != "$EXPECTED_FP" ]]; then
+                echo "[ERROR] Public key fingerprint mismatch! Expected: $EXPECTED_FP, Got: $ACTUAL_FP" >&2
+                exit 1
+            fi
+            echo "[VERIFY] Trust anchor fingerprint verified: $ACTUAL_FP"
+        fi
+
         if openssl pkeyutl -verify -pubin -inkey "$PUB_KEY" -sigfile "$SIG_FILE" -in "$CHECKSUM_FILE" -rawin 2>/dev/null; then
             echo "[VERIFY] Cryptographic signature $SIG_FILE verified against trusted root $PUB_KEY: VALID"
         else

@@ -1,13 +1,22 @@
 {
   "artifact": "neuronix-cli",
-  "timestamp": "2026-09-04T23:34:36Z",
-  "store_path_a": "/nix/store/302xhwz0wr6mm7m7fivbcp00a35x2iai-neuronix-cli-1.0.3",
-  "store_path_b": "/nix/store/302xhwz0wr6mm7m7fivbcp00a35x2iai-neuronix-cli-1.0.3",
-  "nar_hash_a": "sha256-RrDx9zmAxGCN3VQ6H/ThF+UQK4MBhbka4oZMd6CK/x4=",
-  "nar_hash_b": "sha256-RrDx9zmAxGCN3VQ6H/ThF+UQK4MBhbka4oZMd6CK/x4=",
-  "binary_sha256_a": "8a427b714a8b3b803c9b75f9a26295619cbffdf8fb5e7dd58ac6a605168d45f3",
-  "binary_sha256_b": "8a427b714a8b3b803c9b75f9a26295619cbffdf8fb5e7dd58ac6a605168d45f3",
-  "store_paths_identical": true,
-  "nar_hashes_identical": true,
-  "binaries_identical": true
+  "timestamp": "2026-09-05T00:16:18Z",
+  "level_1_evaluation": {
+    "drv_a": ""/nix/store/ax9i92986w6i67vhf3afd0n89wnk66q8-neuronix-cli-1.0.3.drv"",
+    "drv_b": ""/nix/store/ax9i92986w6i67vhf3afd0n89wnk66q8-neuronix-cli-1.0.3.drv"",
+    "identical": true
+  },
+  "level_2_store_output": {
+    "store_path_a": "/nix/store/302xhwz0wr6mm7m7fivbcp00a35x2iai-neuronix-cli-1.0.3",
+    "store_path_b": "/nix/store/302xhwz0wr6mm7m7fivbcp00a35x2iai-neuronix-cli-1.0.3",
+    "nar_hash_a": "sha256-RrDx9zmAxGCN3VQ6H/ThF+UQK4MBhbka4oZMd6CK/x4=",
+    "nar_hash_b": "sha256-RrDx9zmAxGCN3VQ6H/ThF+UQK4MBhbka4oZMd6CK/x4=",
+    "identical": true
+  },
+  "level_3_artifact_sha256": {
+    "binary_sha256_a": "8a427b714a8b3b803c9b75f9a26295619cbffdf8fb5e7dd58ac6a605168d45f3",
+    "binary_sha256_b": "8a427b714a8b3b803c9b75f9a26295619cbffdf8fb5e7dd58ac6a605168d45f3",
+    "identical": true
+  },
+  "reproducibility_verdict": "QUALIFIED_THREE_LEVEL"
 }

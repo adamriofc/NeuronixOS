@@ -40,3 +40,15 @@ neuronix mcp
 ## 4. Concurrency and Safety Protections
 
 All mutating tools (`neuronix_diet`, `neuronix_undo`, `neuronix_upgrade`) acquire exclusive `flock` locks on `/run/neuronix-operation.lock`. If another operation holds the lock, the server returns a standard `-32000` JSON-RPC error rather than corrupting state.
+
+## 5. AI/MCP Production Safety Matrix
+
+| Operation Category | Tools / Actions | Policy & Execution Boundary |
+| :--- | :--- | :--- |
+| **Telemetry & Observability** | `neuronix_status`, `neuronix_doctor`, `neuronix_list_generations` | **Automatic:** Read-only inspection without system mutation. |
+| **Derivation & Simulation** | `neuronix_verify`, `neuronix_shadow_eval`, `neuronix_manual` | **Automatic:** Sandboxed evaluation in RAM (`/dev/shm`) without host promotion. |
+| **System Hygiene** | `neuronix_diet` | **Policy-Controlled:** Garbage collection with mandatory `dry_run` simulation support. |
+| **State Mutation** | `neuronix_upgrade`, `neuronix_undo` | **Policy-Controlled:** Atomic generation transitions with staged fallbacks and health verification. |
+| **Destructive Actions** | Disk re-partitioning, storage wipe, bare-metal overwrite | **NEVER AUTONOMOUS:** Strictly forbidden and excluded from the MCP tool registry. |
+| **Arbitrary Execution** | Shell execution (`bash`, `sh`, `exec`) | **NEVER AUTONOMOUS:** Zero arbitrary shell access through MCP. |
+

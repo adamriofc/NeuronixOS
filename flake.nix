@@ -23,6 +23,11 @@
     {
       inherit (versionData) version stateVersion;
 
+      # Declarative Single Source of Truth Release Metadata
+      releaseMeta = {
+        inherit (versionData) version releaseTag stateVersion nixpkgsCommit primarySystem supportedSystems;
+      };
+
       # Reusable declarative NEURONIX modules
       nixosModules = {
         core = import ./modules/core;

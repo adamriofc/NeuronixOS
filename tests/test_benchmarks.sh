@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # NEURONIX OS Performance Benchmark & Latency Profiling Harness
-# Measures sub-second runtime latency budgets:
-#   - CLI startup latency (Target: < 50ms)
-#   - Manifest evaluation latency
-#   - Doctor diagnostic JSON generation latency
-#   - Memory footprint metrics
+# Executes modular industrial performance benchmarks:
+#   1. Boot Stage Latency (Firmware, Kernel, Systemd, Desktop p50/p95/p99)
+#   2. Memory Footprint, ZRAM & PSI Pressure Budget
+#   3. Storage Subsystem & Btrfs ZSTD:3 Compression Efficiency
+#   4. Multi-Hop Atomic Rollback Latency (100 Iterations p50/p95/p99)
 # Produces machine-readable evidence: dist/benchmark_results.json
 #
 # Copyright (c) 2026 NEURONIX Contributors
@@ -17,7 +17,8 @@ set -uo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="${PROJECT_ROOT}/dist"
 BENCH_JSON="${DIST_DIR}/benchmark_results.json"
-CLI_BIN="${PROJECT_ROOT}/src/neuronix"
+BENCHMARKS_DIR="${PROJECT_ROOT}/tests/benchmarks"
+PYTHON_BIN="$(command -v python3 2>/dev/null || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo "python3")"
 
 mkdir -p "${DIST_DIR}"
 
@@ -41,81 +42,90 @@ fi
 
 echo -e "\n${BOLD}${CYAN}╔═══════════════════════════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}${CYAN}║         NEURONIX OS INDUSTRIAL PERFORMANCE BENCHMARK GATE         ║${RESET}"
-echo -e "${BOLD}${CYAN}║       Measuring CLI Startup, Manifest Eval & Diagnostic Latency   ║${RESET}"
+echo -e "${BOLD}${CYAN}║    Boot, Memory/PSI, Btrfs ZSTD:3 & 100-Iteration Rollback        ║${RESET}"
 echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════════════════╝${RESET}\n"
 
-measure_ms() {
-    local cmd="$1"
-    local start_ts
-    local end_ts
-    start_ts=$(date +%s%N 2>/dev/null || date +%s000000000)
-    eval "$cmd" >/dev/null 2>&1
-    end_ts=$(date +%s%N 2>/dev/null || date +%s000000000)
-    local diff_ns=$(( end_ts - start_ts ))
-    local diff_ms=$(( diff_ns / 1000000 ))
-    if [[ $diff_ms -le 0 ]]; then diff_ms=1; fi
-    echo "$diff_ms"
+# 1. Boot Stage Latency Benchmark
+BOOT_OUT=$(bash "${BENCHMARKS_DIR}/boot_benchmark.sh" 2>/dev/null || echo '{"status":"FAIL"}')
+BOOT_STATUS=$("$PYTHON_BIN" -c "import json; print(json.loads('''$BOOT_OUT''').get('status', 'FAIL'))" 2>/dev/null || echo "FAIL")
+BOOT_P99=$("$PYTHON_BIN" -c "import json; print(json.loads('''$BOOT_OUT''').get('metrics', {}).get('p99_ms', 0))" 2>/dev/null || echo "0")
+echo -ne "  [BENCHMARK] Boot stage latency budget (p99: ${BOOT_P99}ms < 10000ms) ... "
+if [[ "$BOOT_STATUS" == "PASS" ]]; then
+    echo -e "${GREEN}PASS${RESET}"
+    ((PASSED++))
+else
+    echo -e "${RED}FAIL${RESET}"
+    ((FAILED++))
+fi
+
+# 2. Memory Footprint & ZRAM/PSI Benchmark
+MEM_OUT=$(bash "${BENCHMARKS_DIR}/memory_benchmark.sh" 2>/dev/null || echo '{"status":"FAIL"}')
+MEM_STATUS=$("$PYTHON_BIN" -c "import json; print(json.loads('''$MEM_OUT''').get('status', 'FAIL'))" 2>/dev/null || echo "FAIL")
+MEM_USED=$("$PYTHON_BIN" -c "import json; print(json.loads('''$MEM_OUT''').get('metrics', {}).get('mem_used_mb', 0))" 2>/dev/null || echo "0")
+echo -ne "  [BENCHMARK] Runtime memory & PSI pressure budget (${MEM_USED} MB used) ... "
+if [[ "$MEM_STATUS" == "PASS" ]]; then
+    echo -e "${GREEN}PASS${RESET}"
+    ((PASSED++))
+else
+    echo -e "${RED}FAIL${RESET}"
+    ((FAILED++))
+fi
+
+# 3. Storage Subsystem & Btrfs ZSTD:3 Benchmark
+STORAGE_OUT=$(bash "${BENCHMARKS_DIR}/storage_benchmark.sh" 2>/dev/null || echo '{"status":"FAIL"}')
+STORAGE_STATUS=$("$PYTHON_BIN" -c "import json; print(json.loads('''$STORAGE_OUT''').get('status', 'FAIL'))" 2>/dev/null || echo "FAIL")
+SAVINGS_PCT=$("$PYTHON_BIN" -c "import json; print(json.loads('''$STORAGE_OUT''').get('savings_percentage', 0))" 2>/dev/null || echo "0")
+echo -ne "  [BENCHMARK] Btrfs ZSTD:3 store compression budget (${SAVINGS_PCT}% savings) ... "
+if [[ "$STORAGE_STATUS" == "PASS" ]]; then
+    echo -e "${GREEN}PASS${RESET}"
+    ((PASSED++))
+else
+    echo -e "${RED}FAIL${RESET}"
+    ((FAILED++))
+fi
+
+# 4. Multi-Hop Atomic Rollback Benchmark (100 Iterations)
+ROLLBACK_OUT=$(bash "${BENCHMARKS_DIR}/rollback_benchmark.sh" 2>/dev/null || echo '{"status":"FAIL"}')
+ROLLBACK_STATUS=$("$PYTHON_BIN" -c "import json; print(json.loads('''$ROLLBACK_OUT''').get('status', 'FAIL'))" 2>/dev/null || echo "FAIL")
+ROLLBACK_P99=$("$PYTHON_BIN" -c "import json; print(json.loads('''$ROLLBACK_OUT''').get('metrics', {}).get('p99_ms', 0))" 2>/dev/null || echo "0")
+echo -ne "  [BENCHMARK] Atomic generation rollback budget (100 runs, p99: ${ROLLBACK_P99}ms < 2000ms) ... "
+if [[ "$ROLLBACK_STATUS" == "PASS" ]]; then
+    echo -e "${GREEN}PASS${RESET}"
+    ((PASSED++))
+else
+    echo -e "${RED}FAIL${RESET}"
+    ((FAILED++))
+fi
+
+# Emit aggregated benchmark results JSON
+"$PYTHON_BIN" - << PYEOF
+import json
+from datetime import datetime, timezone
+
+boot_data = json.loads('''$BOOT_OUT''')
+mem_data = json.loads('''$MEM_OUT''')
+storage_data = json.loads('''$STORAGE_OUT''')
+rollback_data = json.loads('''$ROLLBACK_OUT''')
+
+report = {
+    "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "status": "PASSED" if $FAILED == 0 else "FAILED",
+    "summary": {
+        "total_benchmarks": 4,
+        "passed": $PASSED,
+        "failed": $FAILED
+    },
+    "subsystems": {
+        "boot": boot_data,
+        "memory": mem_data,
+        "storage": storage_data,
+        "rollback": rollback_data
+    }
 }
 
-# 1. Benchmark CLI Startup Latency (neuronix version)
-STARTUP_MS=$(measure_ms "bash '${CLI_BIN}' version")
-echo -ne "  [BENCHMARK] CLI cold startup latency (${STARTUP_MS}ms) ... "
-if [[ $STARTUP_MS -le 500 ]]; then
-    echo -e "${GREEN}PASS${RESET}"
-    ((PASSED++))
-else
-    echo -e "${RED}FAIL (exceeded threshold)${RESET}"
-    ((FAILED++))
-fi
-
-# 2. Benchmark Manifest Generation Latency (neuronix dev python --manifest)
-MANIFEST_MS=$(measure_ms "bash '${CLI_BIN}' dev python --manifest")
-echo -ne "  [BENCHMARK] Dev stack manifest synthesis (${MANIFEST_MS}ms) ... "
-if [[ $MANIFEST_MS -le 500 ]]; then
-    echo -e "${GREEN}PASS${RESET}"
-    ((PASSED++))
-else
-    echo -e "${RED}FAIL (exceeded threshold)${RESET}"
-    ((FAILED++))
-fi
-
-# 3. Benchmark Doctor Diagnostic JSON Latency (neuronix doctor --json)
-DOCTOR_MS=$(measure_ms "bash '${CLI_BIN}' doctor --json")
-echo -ne "  [BENCHMARK] Deep diagnostic probe latency (${DOCTOR_MS}ms) ... "
-if [[ $DOCTOR_MS -le 3500 ]]; then
-    echo -e "${GREEN}PASS${RESET}"
-    ((PASSED++))
-else
-    echo -e "${RED}FAIL (exceeded threshold)${RESET}"
-    ((FAILED++))
-fi
-
-# 4. Measure System Memory Footprint
-MEM_TOTAL_KB=$(awk '/MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 4194304)
-MEM_AVAIL_KB=$(awk '/MemAvailable:/ {print $2}' /proc/meminfo 2>/dev/null || echo 2097152)
-MEM_USED_MB=$(( (MEM_TOTAL_KB - MEM_AVAIL_KB) / 1024 ))
-echo -ne "  [BENCHMARK] Runtime memory footprint (${MEM_USED_MB} MB used) ... "
-echo -e "${GREEN}PASS${RESET}"
-((PASSED++))
-
-# Generate Structured JSON Benchmark Artifact
-cat << JSON_EOF > "${BENCH_JSON}"
-{
-  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "benchmarks": {
-    "cli_startup_ms": ${STARTUP_MS},
-    "dev_manifest_ms": ${MANIFEST_MS},
-    "doctor_probe_ms": ${DOCTOR_MS},
-    "runtime_memory_used_mb": ${MEM_USED_MB}
-  },
-  "budgets": {
-    "cli_startup_budget_ms": 500,
-    "dev_manifest_budget_ms": 500,
-    "doctor_probe_budget_ms": 3500
-  },
-  "status": "$([[ $FAILED -eq 0 ]] && echo "PASSED" || echo "FAILED")"
-}
-JSON_EOF
+with open("${BENCH_JSON}", "w") as f:
+    json.dump(report, f, indent=2)
+PYEOF
 
 echo -e "\n${BOLD}═══════════════════════════════════════════════════════════════════${RESET}"
 echo -e "  Total Benchmark Metrics   : $((PASSED + FAILED))"
