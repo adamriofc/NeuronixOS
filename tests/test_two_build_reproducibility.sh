@@ -50,15 +50,17 @@ repro_assert() {
 
 # 1. Package Derivation Reproducibility (Level 1: Evaluation Invariance)
 echo -e "${BOLD}Phase 1 (Level 1): Package Derivation Evaluation Invariance${RESET}"
-PKG_DRV_1=$(nix eval "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli.drvPath" 2>/dev/null || echo "drv1")
-PKG_DRV_2=$(nix eval "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli.drvPath" 2>/dev/null || echo "drv2")
+NIX_OPTS=(--extra-experimental-features "nix-command flakes")
+
+PKG_DRV_1=$(nix "${NIX_OPTS[@]}" eval "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli.drvPath" 2>/dev/null || echo "drv1")
+PKG_DRV_2=$(nix "${NIX_OPTS[@]}" eval "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli.drvPath" 2>/dev/null || echo "drv2")
 
 repro_assert "Level 1: Package derivation path bit-identical across runs" \
     "[[ '${PKG_DRV_1}' == '${PKG_DRV_2}' && '${PKG_DRV_1}' != 'drv1' ]]"
 
 # 2. OpenCode Copilot Derivation Reproducibility
-PKG_OC_1=$(nix eval "${PROJECT_ROOT}#packages.x86_64-linux.opencode.drvPath" 2>/dev/null || echo "oc1")
-PKG_OC_2=$(nix eval "${PROJECT_ROOT}#packages.x86_64-linux.opencode.drvPath" 2>/dev/null || echo "oc2")
+PKG_OC_1=$(nix "${NIX_OPTS[@]}" eval "${PROJECT_ROOT}#packages.x86_64-linux.opencode.drvPath" 2>/dev/null || echo "oc1")
+PKG_OC_2=$(nix "${NIX_OPTS[@]}" eval "${PROJECT_ROOT}#packages.x86_64-linux.opencode.drvPath" 2>/dev/null || echo "oc2")
 
 repro_assert "Level 1: OpenCode package derivation bit-identical across runs" \
     "[[ '${PKG_OC_1}' == '${PKG_OC_2}' && '${PKG_OC_1}' != 'oc1' ]]"
@@ -72,16 +74,25 @@ echo -e "\n${BOLD}Phase 2 (Level 2 & Level 3): Two-Build Physical Verification &
 TMP_BUILD_DIR=$(mktemp -d "/tmp/neuronix-two-build-XXXXXX")
 trap 'rm -rf "${TMP_BUILD_DIR}"' EXIT
 
-nix build "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli" --out-link "${TMP_BUILD_DIR}/result-a" >/dev/null 2>&1 || true
-nix build "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli" --out-link "${TMP_BUILD_DIR}/result-b" >/dev/null 2>&1 || true
+BUILD_LOG_A="${TMP_BUILD_DIR}/build-a.log"
+BUILD_LOG_B="${TMP_BUILD_DIR}/build-b.log"
+
+nix "${NIX_OPTS[@]}" build "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli" --out-link "${TMP_BUILD_DIR}/result-a" >"${BUILD_LOG_A}" 2>&1 || true
+nix "${NIX_OPTS[@]}" build "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli" --out-link "${TMP_BUILD_DIR}/result-b" >"${BUILD_LOG_B}" 2>&1 || true
 
 PATH_A=""
 PATH_B=""
 if [[ -L "${TMP_BUILD_DIR}/result-a" ]]; then
     PATH_A=$(readlink -f "${TMP_BUILD_DIR}/result-a")
+else
+    echo -e "${RED}  [BUILD ERROR A]${RESET}"
+    cat "${BUILD_LOG_A}"
 fi
 if [[ -L "${TMP_BUILD_DIR}/result-b" ]]; then
     PATH_B=$(readlink -f "${TMP_BUILD_DIR}/result-b")
+else
+    echo -e "${RED}  [BUILD ERROR B]${RESET}"
+    cat "${BUILD_LOG_B}"
 fi
 
 repro_assert "Level 2: Two independent physical builds produce bit-identical store paths" \
@@ -90,10 +101,10 @@ repro_assert "Level 2: Two independent physical builds produce bit-identical sto
 NAR_A=""
 NAR_B=""
 if [[ -n "${PATH_A}" ]]; then
-    NAR_A=$(nix path-info --json "${TMP_BUILD_DIR}/result-a" 2>/dev/null | sed -n 's/.*"narHash":"\([^"]*\)".*/\1/p')
+    NAR_A=$(nix "${NIX_OPTS[@]}" path-info --json "${TMP_BUILD_DIR}/result-a" 2>/dev/null | grep -o '"narHash":"[^"]*"' | head -n1 | cut -d'"' -f4)
 fi
 if [[ -n "${PATH_B}" ]]; then
-    NAR_B=$(nix path-info --json "${TMP_BUILD_DIR}/result-b" 2>/dev/null | sed -n 's/.*"narHash":"\([^"]*\)".*/\1/p')
+    NAR_B=$(nix "${NIX_OPTS[@]}" path-info --json "${TMP_BUILD_DIR}/result-b" 2>/dev/null | grep -o '"narHash":"[^"]*"' | head -n1 | cut -d'"' -f4)
 fi
 
 repro_assert "Level 2: Two independent physical builds produce bit-identical NAR hash" \
@@ -102,10 +113,10 @@ repro_assert "Level 2: Two independent physical builds produce bit-identical NAR
 BIN_A=""
 BIN_B=""
 if [[ -f "${PATH_A}/bin/neuronix" ]]; then
-    BIN_A=$(sha256sum "${PATH_A}/bin/neuronix" | awk '{print $1}')
+    BIN_A=$(sha256sum "${PATH_A}/bin/neuronix" 2>/dev/null | cut -d' ' -f1)
 fi
 if [[ -f "${PATH_B}/bin/neuronix" ]]; then
-    BIN_B=$(sha256sum "${PATH_B}/bin/neuronix" | awk '{print $1}')
+    BIN_B=$(sha256sum "${PATH_B}/bin/neuronix" 2>/dev/null | cut -d' ' -f1)
 fi
 
 repro_assert "Level 3: Physical binary SHA-256 bit-identical across builds" \
@@ -146,14 +157,14 @@ TMP_RUN_B=$(mktemp -d "/tmp/neuronix-repro-b-XXXXXX")
 DRY_RUN=1 TARGET_ROOT="${TMP_RUN_A}" bash "${PROJECT_ROOT}/installer/scripts/neuronix-install-engine.sh" >/dev/null 2>&1
 DRY_RUN=1 TARGET_ROOT="${TMP_RUN_B}" bash "${PROJECT_ROOT}/installer/scripts/neuronix-install-engine.sh" >/dev/null 2>&1
 
-HASH_CFG_A=$(sha256sum "${TMP_RUN_A}/etc/nixos/configuration.nix" | awk '{print $1}')
-HASH_CFG_B=$(sha256sum "${TMP_RUN_B}/etc/nixos/configuration.nix" | awk '{print $1}')
+HASH_CFG_A=$(sha256sum "${TMP_RUN_A}/etc/nixos/configuration.nix" 2>/dev/null | cut -d' ' -f1)
+HASH_CFG_B=$(sha256sum "${TMP_RUN_B}/etc/nixos/configuration.nix" 2>/dev/null | cut -d' ' -f1)
 
 repro_assert "Installer configuration.nix SHA-256 hash bit-identical" \
     "[[ '${HASH_CFG_A}' == '${HASH_CFG_B}' ]]"
 
-HASH_FLAKE_A=$(sha256sum "${TMP_RUN_A}/etc/nixos/flake.nix" | awk '{print $1}')
-HASH_FLAKE_B=$(sha256sum "${TMP_RUN_B}/etc/nixos/flake.nix" | awk '{print $1}')
+HASH_FLAKE_A=$(sha256sum "${TMP_RUN_A}/etc/nixos/flake.nix" 2>/dev/null | cut -d' ' -f1)
+HASH_FLAKE_B=$(sha256sum "${TMP_RUN_B}/etc/nixos/flake.nix" 2>/dev/null | cut -d' ' -f1)
 
 repro_assert "Installer flake.nix SHA-256 hash bit-identical" \
     "[[ '${HASH_FLAKE_A}' == '${HASH_FLAKE_B}' ]]"
