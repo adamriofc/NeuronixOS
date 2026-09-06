@@ -1,9 +1,9 @@
 {
   "artifact": "neuronix-cli",
-  "timestamp": "2026-09-06T00:13:00Z",
+  "timestamp": "2026-09-06T00:20:23Z",
   "level_1_evaluation": {
-    "drv_a": ""/nix/store/s8gmgj7a5q2cqaw7wcv83da7ckbby7m2-neuronix-cli-1.0.3.drv"",
-    "drv_b": ""/nix/store/s8gmgj7a5q2cqaw7wcv83da7ckbby7m2-neuronix-cli-1.0.3.drv"",
+    "drv_a": "/nix/store/s8gmgj7a5q2cqaw7wcv83da7ckbby7m2-neuronix-cli-1.0.3.drv",
+    "drv_b": "/nix/store/s8gmgj7a5q2cqaw7wcv83da7ckbby7m2-neuronix-cli-1.0.3.drv",
     "identical": true
   },
   "level_2_store_output": {

@@ -26,9 +26,6 @@ jobs:
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
           nix_path: nixpkgs=https://github.com/NixOS/nixpkgs/archive/3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2.tar.gz
 
-      - name: Magic Nix Cache (Continuous Binary Caching)
-        uses: DeterminateSystems/magic-nix-cache-action@v8
-
       - name: Setup Hypervisor Tools & Local Environment
         run: |
           sudo apt-get update -qy && sudo apt-get install -qy qemu-utils qemu-system-x86

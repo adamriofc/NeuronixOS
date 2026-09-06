@@ -50,17 +50,17 @@ repro_assert() {
 
 # 1. Package Derivation Reproducibility (Level 1: Evaluation Invariance)
 echo -e "${BOLD}Phase 1 (Level 1): Package Derivation Evaluation Invariance${RESET}"
-NIX_OPTS=(--extra-experimental-features "nix-command flakes")
+NIX_OPTS=(--extra-experimental-features "nix-command flakes" --option post-build-hook "")
 
-PKG_DRV_1=$(nix "${NIX_OPTS[@]}" eval "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli.drvPath" 2>/dev/null || echo "drv1")
-PKG_DRV_2=$(nix "${NIX_OPTS[@]}" eval "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli.drvPath" 2>/dev/null || echo "drv2")
+PKG_DRV_1=$(nix "${NIX_OPTS[@]}" eval --raw "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli.drvPath" 2>/dev/null || echo "drv1")
+PKG_DRV_2=$(nix "${NIX_OPTS[@]}" eval --raw "${PROJECT_ROOT}#packages.x86_64-linux.neuronix-cli.drvPath" 2>/dev/null || echo "drv2")
 
 repro_assert "Level 1: Package derivation path bit-identical across runs" \
     "[[ '${PKG_DRV_1}' == '${PKG_DRV_2}' && '${PKG_DRV_1}' != 'drv1' ]]"
 
 # 2. OpenCode Copilot Derivation Reproducibility
-PKG_OC_1=$(nix "${NIX_OPTS[@]}" eval "${PROJECT_ROOT}#packages.x86_64-linux.opencode.drvPath" 2>/dev/null || echo "oc1")
-PKG_OC_2=$(nix "${NIX_OPTS[@]}" eval "${PROJECT_ROOT}#packages.x86_64-linux.opencode.drvPath" 2>/dev/null || echo "oc2")
+PKG_OC_1=$(nix "${NIX_OPTS[@]}" eval --raw "${PROJECT_ROOT}#packages.x86_64-linux.opencode.drvPath" 2>/dev/null || echo "oc1")
+PKG_OC_2=$(nix "${NIX_OPTS[@]}" eval --raw "${PROJECT_ROOT}#packages.x86_64-linux.opencode.drvPath" 2>/dev/null || echo "oc2")
 
 repro_assert "Level 1: OpenCode package derivation bit-identical across runs" \
     "[[ '${PKG_OC_1}' == '${PKG_OC_2}' && '${PKG_OC_1}' != 'oc1' ]]"
