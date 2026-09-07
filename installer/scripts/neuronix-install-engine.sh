@@ -315,8 +315,9 @@ if [ "$SELECTED_DESKTOP" == "kde" ]; then
 DESK_EOF
 elif [ "$SELECTED_DESKTOP" == "gnome" ]; then
   cat <<'DESK_EOF' >> "$CONFIG_DIR/configuration.nix"
-  services.xserver.displayManager.gdm.enable = true;
-  services.xserver.desktopManager.gnome.enable = true;
+  services.xserver.enable = true;
+  services.displayManager.gdm.enable = true;
+  services.desktopManager.gnome.enable = true;
 DESK_EOF
 elif [ "$SELECTED_DESKTOP" == "hyprland" ]; then
   cat <<'DESK_EOF' >> "$CONFIG_DIR/configuration.nix"
@@ -332,6 +333,7 @@ cat <<USER_EOF >> "$CONFIG_DIR/configuration.nix"
   # System user account
   users.users.$TARGET_USER = {
     isNormalUser = true;
+    initialPassword = "${TARGET_PASSWORD:-neuronix}";
     extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
     description = "$TARGET_USER (NEURONIX)";
   };
