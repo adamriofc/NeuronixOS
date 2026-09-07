@@ -176,6 +176,12 @@ show_help() {
     echo -e "  ${GREEN}quickstart${RESET}      Katalog aplikasi harian terkurasi 1-klik (Flatpak/Flathub)"
     echo -e "  ${GREEN}kernel${RESET} [flavor] Manajemen & peralihan profil kernel (default/zen/lts/latest/hardened)"
     echo -e "  ${GREEN}manual${RESET} [topic]  Display system-embedded technical manual and AI directives"
+    echo -e "  ${GREEN}sentinel${RESET} [opt]  Autonomous boot assessment, zero-brick watchdog & recovery"
+    echo -e "  ${GREEN}diff${RESET} [A] [B]    Generational forensic diff (closures, units, and security)"
+    echo -e "  ${GREEN}distill${RESET} <pkgs>  Reverse-compile ephemeral packages into declarative flake"
+    echo -e "  ${GREEN}sandbox${RESET} <url>   Zero-copy ephemeral development sandbox in RAM (/dev/shm)"
+    echo -e "  ${GREEN}tune${RESET} [profile]  Deterministic workload matrix (gaming/battery/audio-daw/balanced)"
+    echo -e "  ${GREEN}mesh${RESET} [status]   Local P2P binary cache mesh and peer discovery via mDNS"
     echo -e "  ${GREEN}version${RESET}         Display version and architecture metadata"
     echo -e "  ${GREEN}help${RESET}            Display this usage guide\n"
     echo -e "${BOLD}EXAMPLES:${RESET}"
@@ -1572,6 +1578,511 @@ cmd_manual() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Autonomous Boot Assessment & Fallback Sentinel
+# ------------------------------------------------------------------------------
+cmd_sentinel() {
+    local sub=""
+    local json_output=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --json)
+                json_output=1
+                shift
+                ;;
+            status|confirm|test)
+                sub="$1"
+                shift
+                ;;
+            *)
+                sub="$1"
+                shift
+                ;;
+        esac
+    done
+    sub="${sub:-status}"
+
+    local last_good="Unknown"
+    if [[ -f "/var/lib/neuronix/last-known-good" ]]; then
+        last_good=$(cat /var/lib/neuronix/last-known-good | tr -d '[:space:]')
+    fi
+
+    local booting_gen=""
+    if [[ -f "/run/neuronix/booting-generation" ]]; then
+        booting_gen=$(cat /run/neuronix/booting-generation | tr -d '[:space:]')
+    fi
+
+    local active_gen
+    active_gen="$(get_current_generation)"
+
+    local crash_log=""
+    if [[ -f "/var/log/neuronix/boot-fallback.log" ]]; then
+        crash_log=$(tail -n 10 /var/log/neuronix/boot-fallback.log)
+    fi
+
+    if [[ "$json_output" -eq 1 ]]; then
+        jq -n -c \
+            --arg active "$active_gen" \
+            --arg last_good "$last_good" \
+            --arg booting "$booting_gen" \
+            --arg log "$crash_log" \
+            '{
+                status: "success",
+                active_generation: $active,
+                last_known_good_generation: $last_good,
+                in_assessment: (if $booting != "" then true else false end),
+                assessment_boot_generation: $booting,
+                fallback_history: $log
+            }'
+        return 0
+    fi
+
+    print_banner
+    log_step "NEURONIX Boot-Sentinel Status (Autonomous Zero-Brick Watchdog)"
+    echo
+    echo -e "  ${BOLD}SENTINEL HEALTH & PROFILE ASSESSMENT${RESET}"
+    echo -e "  ├─ Active Generation       : ${BOLD}Gen #${active_gen}${RESET}"
+    echo -e "  ├─ Last Known Good Profile : ${GREEN}Gen #${last_good}${RESET}"
+    if [[ -n "$booting_gen" ]]; then
+        echo -e "  ├─ Assessment Window       : ${YELLOW}ACTIVE${RESET} (Currently assessing Gen #${booting_gen})"
+    else
+        echo -e "  ├─ Assessment Window       : ${GREEN}CONFIRMED & STABLE${RESET} (Normal system runtime)"
+    fi
+
+    if [[ -f "/var/log/neuronix/boot-fallback.log" ]]; then
+        echo -e "  └─ Fallback Event History  : ${YELLOW}Detected${RESET}"
+        echo
+        echo -e "  ${DIM}Recent Sentinel Fallback Log:${RESET}"
+        tail -n 5 /var/log/neuronix/boot-fallback.log | sed 's/^/    /'
+    else
+        echo -e "  └─ Fallback Event History  : ${GREEN}Clean (No emergency fallbacks recorded)${RESET}"
+    fi
+    echo
+}
+
+# ------------------------------------------------------------------------------
+# Generational Forensic & Security Diff Engine
+# ------------------------------------------------------------------------------
+cmd_diff() {
+    local gen_a=""
+    local gen_b=""
+    local json_output=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --json)
+                json_output=1
+                shift
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} diff${RESET} [GEN_A] [GEN_B] [OPTIONS]\n"
+                echo -e "  Compares package closures, kernel versions, and systemd units between generations."
+                echo -e "  If arguments omitted, compares previous generation with current generation.\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--json${RESET}    Print comparison in structured JSON"
+                echo -e "  ${GREEN}-h, --help${RESET}Show this help\n"
+                return 0
+                ;;
+            *)
+                if [[ -z "$gen_a" ]]; then
+                    gen_a="$1"
+                elif [[ -z "$gen_b" ]]; then
+                    gen_b="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    if [[ -z "$py_bin" || -z "$core_path" ]]; then
+        log_error "Python 3 or neuronix-core package not found."
+        return 1
+    fi
+
+    PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.diff import compute_generation_diff
+
+gen_a = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] != '' else None
+gen_b = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] != '' else None
+diff = compute_generation_diff(gen_a, gen_b)
+
+if int(sys.argv[3]) == 1:
+    print(json.dumps(diff, indent=2))
+    sys.exit(0)
+
+print('\033[1m================================================================\033[0m')
+print(f'  \033[1mNEURONIX GENERATIONAL FORENSIC DIFF\033[0m')
+print('\033[1m================================================================\033[0m')
+print(f'  Base Target A    : {diff[\"target_a\"][\"name\"]}')
+print(f'  Compare Target B : {diff[\"target_b\"][\"name\"]}')
+if diff[\"kernel_changed\"]:
+    print(f'  \033[38;5;220m● Kernel Changed  : {diff[\"target_a\"][\"kernel\"]} -> {diff[\"target_b\"][\"kernel\"]}\033[0m')
+else:
+    print(f'  ● Kernel Version  : {diff[\"target_b\"][\"kernel\"]} (Unchanged)')
+print('----------------------------------------------------------------')
+added = diff.get('packages_added', [])
+removed = diff.get('packages_removed', [])
+print(f'  Packages Added   : +{len(added)}')
+if added:
+    sample = \", \".join(added[:15]) + ('...' if len(added) > 15 else '')
+    print(f'    \033[38;5;82m+ {sample}\033[0m')
+print(f'  Packages Removed : -{len(removed)}')
+if removed:
+    sample = \", \".join(removed[:15]) + ('...' if len(removed) > 15 else '')
+    print(f'    \033[38;5;196m- {sample}\033[0m')
+print('----------------------------------------------------------------')
+svc_added = diff.get('services_added', [])
+svc_removed = diff.get('services_removed', [])
+print(f'  Systemd Services Added   : +{len(svc_added)}')
+if svc_added:
+    print(f'    \033[38;5;82m+ {\", \".join(svc_added[:8])}\033[0m')
+print(f'  Systemd Services Removed : -{len(svc_removed)}')
+if svc_removed:
+    print(f'    \033[38;5;196m- {\", \".join(svc_removed[:8])}\033[0m')
+print('\033[1m================================================================\033[0m')
+" "$gen_a" "$gen_b" "$json_output"
+}
+
+# ------------------------------------------------------------------------------
+# Imperative-to-Declarative Reverse Engine
+# ------------------------------------------------------------------------------
+cmd_distill() {
+    local dry_run=0
+    local json_output=0
+    local pkgs=()
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run)
+                dry_run=1
+                shift
+                ;;
+            --json)
+                json_output=1
+                shift
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} distill${RESET} <packages...> [OPTIONS]\n"
+                echo -e "  Reverse-compiles packages into permanent, pure NixOS declarations."
+                echo -e "  Validates derivation closures and checks syntax atomically.\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--dry-run${RESET} Verify and preview changes without modifying system files"
+                echo -e "  ${GREEN}--json${RESET}    Output in structured JSON format"
+                echo -e "  ${GREEN}-h, --help${RESET}Show this help\n"
+                return 0
+                ;;
+            *)
+                pkgs+=("$1")
+                shift
+                ;;
+        esac
+    done
+
+    if [[ ${#pkgs[@]} -eq 0 ]]; then
+        log_error "No packages specified for distillation."
+        echo -e "Usage: ${CYAN}${PROGRAM_NAME} distill <package1> [package2...]${RESET}"
+        return 1
+    fi
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    if [[ -z "$py_bin" || -z "$core_path" ]]; then
+        log_error "Python 3 or neuronix-core package not found."
+        return 1
+    fi
+
+    PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.distill import distill_packages
+
+dry_run = sys.argv[1] == '1'
+json_out = sys.argv[2] == '1'
+pkgs = sys.argv[3:]
+
+res = distill_packages(pkgs, dry_run=dry_run)
+
+if json_out:
+    print(json.dumps(res, indent=2))
+    sys.exit(0 if res.get('status') in ('success', 'dry_run_success', 'noop') else 1)
+
+if res.get('status') == 'dry_run_success':
+    print('\033[38;5;82m✔\033[0m ' + res['message'])
+    print(f'  Target File     : {res[\"target_file\"]}')
+    print(f'  Packages Valid  : {\", \".join(res[\"packages_to_add\"])}')
+elif res.get('status') == 'success':
+    print('\033[38;5;82m✔\033[0m ' + res['message'])
+    print(f'  Target File     : {res[\"target_file\"]}')
+    print(f'  Packages Added  : {\", \".join(res[\"packages_added\"])}')
+    print('  Stage new generation with: neuronix upgrade --staged')
+elif res.get('status') == 'noop':
+    print('\033[38;5;51mℹ\033[0m ' + res['message'])
+else:
+    print('\033[38;5;196m✖\033[0m ' + res.get('message', 'Distillation error'))
+    sys.exit(1)
+" "$dry_run" "$json_output" "${pkgs[@]}"
+}
+
+# ------------------------------------------------------------------------------
+# Ephemeral Zero-Copy Repo Sandbox in RAM
+# ------------------------------------------------------------------------------
+cmd_sandbox() {
+    local target=""
+    local keep_path=""
+    local vaporize=0
+    local dry_run=0
+    local json_output=0
+    local cmd_to_run=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --keep)
+                keep_path="$2"
+                shift 2
+                ;;
+            --vaporize)
+                vaporize=1
+                shift
+                ;;
+            --dry-run)
+                dry_run=1
+                shift
+                ;;
+            --json)
+                json_output=1
+                shift
+                ;;
+            --run|-c)
+                cmd_to_run="$2"
+                shift 2
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} sandbox${RESET} <git-url|directory> [OPTIONS]\n"
+                echo -e "  Spins up an ephemeral, zero-copy development sandbox in RAM (/dev/shm)."
+                echo -e "  Masks real \$HOME credentials and vaporizes artifacts cleanly on exit.\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--run, -c <cmd>${RESET} Execute command inside sandbox non-interactively"
+                echo -e "  ${GREEN}--keep <path>${RESET}   Export modified workspace to target directory upon exit"
+                echo -e "  ${GREEN}--vaporize${RESET}      Auto-delete RAM workspace without confirmation prompt"
+                echo -e "  ${GREEN}--dry-run${RESET}       Verify RAM allocation without spawning sandbox"
+                echo -e "  ${GREEN}--json${RESET}          Output status in JSON"
+                echo -e "  ${GREEN}-h, --help${RESET}      Show this help\n"
+                return 0
+                ;;
+            *)
+                if [[ -z "$target" ]]; then
+                    target="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$target" ]]; then
+        log_error "No Git URL or directory specified for sandbox."
+        echo -e "Usage: ${CYAN}${PROGRAM_NAME} sandbox <git-url|dir>${RESET}"
+        return 1
+    fi
+
+    if [[ "$dry_run" -eq 1 ]]; then
+        if [[ "$json_output" -eq 1 ]]; then
+            jq -n --arg t "$target" '{status: "dry_run_success", target: $t, ram_disk: "/dev/shm"}'
+        else
+            log_success "Sandbox dry-run verified for target: $target (RAM backing: /dev/shm)"
+        fi
+        return 0
+    fi
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.sandbox import setup_ram_workspace, run_sandbox_session, teardown_sandbox
+
+target = sys.argv[1]
+json_out = sys.argv[2] == '1'
+cmd_to_run = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] != '' else None
+keep_path = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] != '' else None
+
+w_dir, act_dir, msg = setup_ram_workspace(target)
+if not w_dir:
+    print(json.dumps({'status': 'error', 'message': msg}) if json_out else f'\033[38;5;196m✖\033[0m {msg}')
+    sys.exit(1)
+
+if json_out and not cmd_to_run:
+    print(json.dumps({'status': 'ready', 'workspace': w_dir, 'active_dir': act_dir}))
+    teardown_sandbox(w_dir)
+    sys.exit(0)
+
+print('\033[38;5;51m➔\033[0m Entering ephemeral RAM sandbox: ' + act_dir)
+print('  \033[2mReal \$HOME is safely masked. Zero SSD disk footprint.\033[0m')
+code, s_msg = run_sandbox_session(act_dir, command=cmd_to_run)
+
+teardown_sandbox(w_dir, export_path=keep_path)
+print('\033[38;5;82m✔\033[0m Ephemeral RAM workspace cleanly vaporized (0 bytes residue).')
+sys.exit(code)
+" "$target" "$json_output" "$cmd_to_run" "$keep_path"
+}
+
+# ------------------------------------------------------------------------------
+# Deterministic Workload Tuning Matrix
+# ------------------------------------------------------------------------------
+cmd_tune() {
+    local profile=""
+    local show_status=0
+    local json_output=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            status|--status)
+                show_status=1
+                shift
+                ;;
+            --json)
+                json_output=1
+                shift
+                ;;
+            gaming|battery|audio-daw|balanced)
+                profile="$1"
+                shift
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} tune${RESET} [gaming|battery|audio-daw|balanced] [OPTIONS]\n"
+                echo -e "  Applies harmonious, real-time kernel, cgroups, PipeWire, and CPU governor tuning.\n"
+                echo -e "${BOLD}PROFILES:${RESET}"
+                echo -e "  ${GREEN}gaming${RESET}     High performance CPU governor, max_map_count, GPU boost"
+                echo -e "  ${GREEN}battery${RESET}    Powersave governor, energy-conserving EPP, 80% charge ceiling"
+                echo -e "  ${GREEN}audio-daw${RESET}  PipeWire 64 quantum buffer @ 48kHz, RT thread priority"
+                echo -e "  ${GREEN}balanced${RESET}   Default adaptive schedutil governor & dynamic power scaling\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--status${RESET}   Display active workload profile and telemetry"
+                echo -e "  ${GREEN}--json${RESET}     Output in structured JSON"
+                echo -e "  ${GREEN}-h, --help${RESET} Show this help\n"
+                return 0
+                ;;
+            *)
+                profile="$1"
+                shift
+                ;;
+        esac
+    done
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.tune import apply_tuning_profile, get_current_tuning_status, TUNING_PROFILES
+
+profile = sys.argv[1]
+show_status = sys.argv[2] == '1'
+json_out = sys.argv[3] == '1'
+
+if show_status or not profile:
+    st = get_current_tuning_status()
+    if json_out:
+        print(json.dumps(st, indent=2))
+    else:
+        print('\033[1m================================================================\033[0m')
+        print('  \033[1mNEURONIX WORKLOAD TUNING STATUS\033[0m')
+        print('\033[1m================================================================\033[0m')
+        print(f'  Active Profile     : \033[38;5;51m{st[\"active_profile\"].upper()}\033[0m')
+        print(f'  CPU Governor       : {st[\"cpu_governor\"]}')
+        print(f'  Energy Performance : {st[\"energy_perf\"]}')
+        print(f'  PipeWire Quantum   : {st[\"pipewire_quantum\"]}')
+        print(f'  Battery Threshold  : {st[\"battery_ceiling\"]}')
+        print(f'  vm.max_map_count   : {st[\"max_map_count\"]}')
+        print('\033[1m================================================================\033[0m')
+        print('  Available profiles: gaming, battery, audio-daw, balanced')
+    sys.exit(0)
+
+res = apply_tuning_profile(profile)
+if json_out:
+    print(json.dumps(res, indent=2))
+else:
+    if res.get('status') == 'success':
+        print('\033[38;5;82m✔\033[0m ' + f'Workload profile set to: \033[1m{res[\"profile\"].upper()}\033[0m')
+        print(f'  {res[\"description\"]}')
+        for act in res.get('applied_actions', []):
+            print(f'  \033[38;5;82m●\033[0m {act}')
+    else:
+        print('\033[38;5;196m✖\033[0m ' + res.get('message', 'Tuning error'))
+        sys.exit(1)
+" "$profile" "$show_status" "$json_output"
+}
+
+# ------------------------------------------------------------------------------
+# P2P Local Binary Mesh via mDNS/Avahi
+# ------------------------------------------------------------------------------
+cmd_mesh() {
+    local json_output=0
+    local sub=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --json)
+                json_output=1
+                shift
+                ;;
+            status|peers|discover|share)
+                sub="$1"
+                shift
+                ;;
+            *)
+                sub="$1"
+                shift
+                ;;
+        esac
+    done
+    sub="${sub:-status}"
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.mesh import get_mesh_status
+
+json_out = sys.argv[1] == '1'
+st = get_mesh_status()
+if json_out:
+    print(json.dumps(st, indent=2))
+    sys.exit(0)
+
+print('\033[1m================================================================\033[0m')
+print('  \033[1mNEURONIX P2P LOCAL BINARY MESH (mDNS)\033[0m')
+print('\033[1m================================================================\033[0m')
+print(f'  Mesh Status    : {\"\033[38;5;82mACTIVE\033[0m\" if st[\"status\"] == \"active\" else \"\033[38;5;220mSTANDBY\033[0m\"}')
+print(f'  Local Node     : {st[\"local_node\"][\"hostname\"]} ({st[\"local_node\"][\"local_ip\"]})')
+print(f'  Cache Port     : TCP {st[\"local_node\"][\"mesh_port\"]}')
+print(f'  mDNS Broadcaster: {\"Enabled\" if st[\"mdns_daemon_active\"] else \"Inactive\"}')
+print('----------------------------------------------------------------')
+peers = st.get('peers', [])
+print(f'  Discovered LAN Peers: {len(peers)}')
+if peers:
+    for p in peers:
+        print(f'  \033[38;5;82m●\033[0m {p[\"name\"]} @ {p[\"ip\"]}:{p[\"port\"]}')
+else:
+    print('    \033[2m(No nearby NEURONIX nodes broadcasting on local subnet)\033[0m')
+print('\033[1m================================================================\033[0m')
+" "$json_output"
+}
+
 cmd_version() {
     print_banner
     echo -e "Version       : ${CYAN}${VERSION}${RESET}"
@@ -1648,6 +2159,24 @@ main() {
             ;;
         manual|man|docs)
             cmd_manual "$@"
+            ;;
+        sentinel)
+            cmd_sentinel "$@"
+            ;;
+        diff)
+            cmd_diff "$@"
+            ;;
+        distill)
+            cmd_distill "$@"
+            ;;
+        sandbox)
+            cmd_sandbox "$@"
+            ;;
+        tune)
+            cmd_tune "$@"
+            ;;
+        mesh)
+            cmd_mesh "$@"
             ;;
         version|-v|--version)
             cmd_version

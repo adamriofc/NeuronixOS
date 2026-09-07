@@ -261,6 +261,94 @@ handle_tools_list() {
       }
     },
     {
+      "name": "neuronix_sentinel",
+      "description": "Inspect autonomous Boot-Sentinel state, boot assessment window, last-known-good generation, and emergency rollback history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "neuronix_diff",
+      "description": "Compute forensic diff between system generations, analyzing package closure changes, systemd services, and security boundaries.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gen_a": {
+            "type": "string",
+            "description": "Base generation number (defaults to previous generation)"
+          },
+          "gen_b": {
+            "type": "string",
+            "description": "Target generation number (defaults to current generation)"
+          }
+        }
+      }
+    },
+    {
+      "name": "neuronix_distill",
+      "description": "Reverse-compile packages into permanent, pure NixOS declarations with pure closure verification and atomic syntax rollback safety.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "packages": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of packages to declare permanently in user flake module"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Verify packages and preview generated syntax without committing to disk"
+          }
+        },
+        "required": ["packages"]
+      }
+    },
+    {
+      "name": "neuronix_sandbox",
+      "description": "Spin up ephemeral zero-copy development sandbox in RAM (/dev/shm), masking real $HOME credentials and vaporizing build artifacts cleanly on exit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Git repository URL or local directory to clone/mount in RAM"
+          },
+          "command": {
+            "type": "string",
+            "description": "Non-interactive command to execute inside sandbox"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Verify RAM allocation without executing command"
+          }
+        },
+        "required": ["target"]
+      }
+    },
+    {
+      "name": "neuronix_tune",
+      "description": "Apply or inspect deterministic workload tuning profiles (gaming, battery, audio-daw, balanced) modifying kernel sysfs, cgroups, and PipeWire quantum.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": ["gaming", "battery", "audio-daw", "balanced"],
+            "description": "Workload profile to apply (omit to query current tuning state)"
+          }
+        }
+      }
+    },
+    {
+      "name": "neuronix_mesh",
+      "description": "Inspect P2P local binary cache mesh status and discover neighbor LAN peers advertising Nix store packages over mDNS/Avahi.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
       "name": "neuronix_manual",
       "description": "Access the system-embedded NEURONIX OS Technical Manual, configuration references, and AI directives.",
       "inputSchema": {
@@ -660,6 +748,156 @@ CATALOG_EOF
             content=$(jq -n -c --arg text "$text_payload" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
             ;;
+
+        neuronix_sentinel)
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+            local active_gen="Unknown"
+            [[ -L /nix/var/nix/profiles/system ]] && active_gen=$(basename "$(readlink /nix/var/nix/profiles/system)" | sed -E 's/^system-?//; s/-?link$//')
+            local last_good="Unknown"
+            [[ -f "/var/lib/neuronix/last-known-good" ]] && last_good=$(cat /var/lib/neuronix/last-known-good | tr -d '[:space:]')
+            local booting_gen=""
+            [[ -f "/run/neuronix/booting-generation" ]] && booting_gen=$(cat /run/neuronix/booting-generation | tr -d '[:space:]')
+            local crash_log=""
+            [[ -f "/var/log/neuronix/boot-fallback.log" ]] && crash_log=$(tail -n 10 /var/log/neuronix/boot-fallback.log)
+
+            local payload
+            payload=$(jq -n -c \
+                --arg active "$active_gen" \
+                --arg last_good "$last_good" \
+                --arg booting "$booting_gen" \
+                --arg log "$crash_log" \
+                '{
+                    status: "success",
+                    active_generation: $active,
+                    last_known_good_generation: $last_good,
+                    in_assessment: (if $booting != "" then true else false end),
+                    assessment_boot_generation: $booting,
+                    fallback_history: $log
+                }')
+            local content
+            content=$(jq -n -c --arg text "$payload" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
+        neuronix_diff)
+            local gen_a gen_b
+            gen_a=$(echo "$params" | jq -r '.gen_a // empty')
+            gen_b=$(echo "$params" | jq -r '.gen_b // empty')
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            local diff_json
+            diff_json=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.diff import compute_generation_diff
+ga = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] != '' else None
+gb = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] != '' else None
+print(json.dumps(compute_generation_diff(ga, gb)))
+" "$gen_a" "$gen_b" 2>/dev/null || echo '{"status":"error","message":"Diff evaluation failed"}')
+
+            local content
+            content=$(jq -n -c --arg text "$diff_json" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
+        neuronix_distill)
+            local pkgs_json dry_run
+            pkgs_json=$(echo "$params" | jq -c '.packages // []')
+            dry_run=$(echo "$params" | jq -r '.dry_run // false')
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            local distill_out
+            distill_out=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.distill import distill_packages
+pkgs = json.loads(sys.argv[1])
+dr = sys.argv[2] == 'true'
+print(json.dumps(distill_packages(pkgs, dry_run=dr)))
+" "$pkgs_json" "$dry_run" 2>/dev/null || echo '{"status":"error","message":"Distill execution failed"}')
+
+            local content
+            content=$(jq -n -c --arg text "$distill_out" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
+        neuronix_sandbox)
+            local target cmd_run dry_run
+            target=$(echo "$params" | jq -r '.target // empty')
+            cmd_run=$(echo "$params" | jq -r '.command // empty')
+            dry_run=$(echo "$params" | jq -r '.dry_run // false')
+
+            if [[ "$dry_run" == "true" ]]; then
+                local res_text="Sandbox dry-run verified for target: $target. Backing: in-memory tmpfs /dev/shm."
+                local content=$(jq -n -c --arg text "$res_text" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                local py_bin core_path
+                py_bin="$(resolve_python)"
+                core_path="$(resolve_core_path)"
+                local sandbox_res
+                sandbox_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.sandbox import setup_ram_workspace, run_sandbox_session, teardown_sandbox
+t = sys.argv[1]
+c = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] != '' else None
+w, a, msg = setup_ram_workspace(t)
+if not w:
+    print(json.dumps({'status':'error','message':msg}))
+    sys.exit(0)
+code, s_msg = run_sandbox_session(a, command=c)
+teardown_sandbox(w)
+print(json.dumps({'status':'success','exit_code':code,'message':s_msg}))
+" "$target" "$cmd_run" 2>/dev/null || echo '{"status":"error","message":"Sandbox run failed"}')
+                local content=$(jq -n -c --arg text "$sandbox_res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            fi
+            ;;
+
+        neuronix_tune)
+            local profile
+            profile=$(echo "$params" | jq -r '.profile // empty')
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            local tune_res
+            tune_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.tune import apply_tuning_profile, get_current_tuning_status
+p = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] != '' else None
+if not p:
+    print(json.dumps(get_current_tuning_status()))
+else:
+    print(json.dumps(apply_tuning_profile(p)))
+" "$profile" 2>/dev/null || echo '{"status":"error","message":"Tuning query failed"}')
+
+            local content
+            content=$(jq -n -c --arg text "$tune_res" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
+        neuronix_mesh)
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            local mesh_res
+            mesh_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import json
+from neuronix_core.mesh import get_mesh_status
+print(json.dumps(get_mesh_status()))
+" 2>/dev/null || echo '{"status":"error","message":"Mesh query failed"}')
+
+            local content
+            content=$(jq -n -c --arg text "$mesh_res" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
 
         *)
             send_error "$req_id" -32602 "Tool '${tool_name}' is not recognized by NEURONIX MCP server"

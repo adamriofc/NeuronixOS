@@ -3,6 +3,7 @@
 {
   imports = [
     ./manual.nix
+    ./sentinel.nix
   ];
 
   # Konfigurasi Inti Nix & Flakes

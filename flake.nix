@@ -51,6 +51,9 @@
         gnome = import ./modules/desktop/gnome.nix;
         hyprland = import ./modules/desktop/hyprland.nix;
         manual = import ./modules/core/manual.nix;
+        sentinel = import ./modules/core/sentinel.nix;
+        tuning = import ./modules/hardware/tuning.nix;
+        mesh = import ./modules/services/mesh.nix;
       };
 
       # Target installed system configuration (Default Desktop x86_64)
@@ -72,6 +75,8 @@
           ./modules/services/security.nix
           ./modules/services/opencode.nix
           ./modules/services/update.nix
+          ./modules/hardware/tuning.nix
+          ./modules/services/mesh.nix
           ./modules/desktop/gnome.nix
           ./hosts/desktop
         ];
@@ -96,6 +101,8 @@
           ./modules/services/security.nix
           ./modules/services/opencode.nix
           ./modules/services/update.nix
+          ./modules/hardware/tuning.nix
+          ./modules/services/mesh.nix
           ./modules/desktop/gnome.nix
           ./hosts/desktop
         ];
