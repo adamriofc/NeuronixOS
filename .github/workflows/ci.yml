@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (1038 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (1077 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -46,20 +46,24 @@ jobs:
           nix-instantiate --parse modules/hardware/boot.nix
           nix-instantiate --parse modules/hardware/secureboot.nix
           nix-instantiate --parse modules/hardware/nvidia-prime.nix
+          nix-instantiate --parse modules/hardware/tuning.nix
           nix-instantiate --parse modules/services/storage.nix
           nix-instantiate --parse modules/services/flatpak.nix
           nix-instantiate --parse modules/services/opencode.nix
           nix-instantiate --parse modules/services/update.nix
+          nix-instantiate --parse modules/services/mesh.nix
           nix-instantiate --parse modules/services/desktop-tweaks.nix
           nix-instantiate --parse modules/core/manual.nix
+          nix-instantiate --parse modules/core/sentinel.nix
 
       - name: Execute Distro Verification Suite (209 Tests)
         run: |
           bash tests/test_distro_suite.sh
 
-      - name: Execute Master Test Harness (673 Tests)
+      - name: Execute Master Test Harness (712 Tests)
         run: |
           bash tests/run_all_tests.sh
+
 
       - name: Verify System Embedded Manual & AI Reference (44 Tests)
         run: |
@@ -125,7 +129,8 @@ jobs:
         run: |
           bash tests/test_reproducible_iso.sh
 
-      - name: Verify Single Source of Truth Test Manifest (1038 Assertions)
+      - name: Verify Single Source of Truth Test Manifest (1077 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json
+
