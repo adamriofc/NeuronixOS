@@ -1927,6 +1927,9 @@ else:
 cmd_container() {
     local target=""
     local keep_path=""
+    local stack_file=""
+    local export_oci_tar=""
+    local enable_fhs=1
     local vaporize=0
     local dry_run=0
     local json_output=0
@@ -1937,6 +1940,22 @@ cmd_container() {
             --keep)
                 keep_path="$2"
                 shift 2
+                ;;
+            --stack)
+                stack_file="$2"
+                shift 2
+                ;;
+            --export-oci)
+                export_oci_tar="$2"
+                shift 2
+                ;;
+            --fhs)
+                enable_fhs=1
+                shift
+                ;;
+            --no-fhs)
+                enable_fhs=0
+                shift
                 ;;
             --vaporize)
                 vaporize=1
@@ -1956,16 +1975,28 @@ cmd_container() {
                 ;;
             -h|--help)
                 echo -e "${BOLD}USAGE:${RESET}"
-                echo -e "  ${CYAN}${PROGRAM_NAME} container${RESET} <git-url|directory> [OPTIONS]\n"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container${RESET} <git-url|directory|oci-image> [OPTIONS]\n"
                 echo -e "  Spins up an ephemeral, zero-copy development container in RAM (/dev/shm)."
-                echo -e "  Masks real \$HOME credentials and vaporizes artifacts cleanly on exit.\n"
+                echo -e "  Features Dynamic FHS Emulation, Daemonless OCI Runner, Stacks, and OCI Export.\n"
                 echo -e "${BOLD}OPTIONS:${RESET}"
-                echo -e "  ${GREEN}--run, -c <cmd>${RESET} Execute command inside container non-interactively"
-                echo -e "  ${GREEN}--keep <path>${RESET}   Export modified workspace to target directory upon exit"
-                echo -e "  ${GREEN}--vaporize${RESET}      Auto-delete RAM workspace without confirmation prompt"
-                echo -e "  ${GREEN}--dry-run${RESET}       Verify RAM allocation without spawning container"
-                echo -e "  ${GREEN}--json${RESET}          Output status in JSON"
-                echo -e "  ${GREEN}-h, --help${RESET}      Show this help\n"
+                echo -e "  ${GREEN}--run, -c <cmd>${RESET}         Execute command inside container non-interactively"
+                echo -e "  ${GREEN}--stack <file.yaml|json>${RESET} Launch ephemeral multi-service stack in RAM"
+                echo -e "  ${GREEN}--export-oci <out.tar>${RESET}   Export workspace to standard OCI/Docker image tarball"
+                echo -e "  ${GREEN}--keep <path>${RESET}           Export modified workspace to target directory upon exit"
+                echo -e "  ${GREEN}--vaporize${RESET}              Auto-delete RAM workspace without confirmation prompt"
+                echo -e "  ${GREEN}--fhs / --no-fhs${RESET}        Enable/disable transparent dynamic FHS emulation (default: on)"
+                echo -e "  ${GREEN}--dry-run${RESET}               Verify RAM allocation without spawning container"
+                echo -e "  ${GREEN}--json${RESET}                  Output status in JSON"
+                echo -e "  ${GREEN}-h, --help${RESET}              Show this help\n"
+                echo -e "${BOLD}EXAMPLES:${RESET}"
+                echo -e "  ${DIM}# Run foreign repo in RAM with transparent FHS emulation${RESET}"
+                echo -e "  ${PROGRAM_NAME} container https://github.com/org/repo.git\n"
+                echo -e "  ${DIM}# Run Docker Hub image directly in RAM without Docker daemon${RESET}"
+                echo -e "  ${PROGRAM_NAME} container oci://alpine:latest --run \"cat /etc/os-release\"\n"
+                echo -e "  ${DIM}# Launch multi-service stack in RAM in milliseconds${RESET}"
+                echo -e "  ${PROGRAM_NAME} container --stack neuronix-stack.yaml\n"
+                echo -e "  ${DIM}# Export workspace to clean OCI image tarball${RESET}"
+                echo -e "  ${PROGRAM_NAME} container /path/to/project --export-oci my-app.tar\n"
                 return 0
                 ;;
             *)
@@ -1977,10 +2008,78 @@ cmd_container() {
         esac
     done
 
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    # Handle Multi-Service Stack Orchestration
+    if [[ -n "$stack_file" ]]; then
+        if [[ "$dry_run" -eq 1 ]]; then
+            if [[ "$json_output" -eq 1 ]]; then
+                jq -n --arg s "$stack_file" '{status: "dry_run_success", mode: "stack", stack_file: $s, ram_disk: "/dev/shm"}'
+            else
+                log_success "Multi-service stack dry-run verified for: $stack_file (RAM backing: /dev/shm)"
+            fi
+            return 0
+        fi
+
+        PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import run_stack_session
+
+stack_file = sys.argv[1]
+json_out = sys.argv[2] == '1'
+res = run_stack_session(stack_file)
+if json_out:
+    print(json.dumps(res))
+else:
+    if res.get('status') == 'success':
+        print('\033[38;5;82m✔\033[0m ' + res.get('message', 'Stack complete'))
+        for svc, sdata in res.get('services', {}).items():
+            print(f'  ├─ {svc}: {sdata.get(\"status\")} (pid: {sdata.get(\"pid\", \"N/A\")})')
+    else:
+        print('\033[38;5;196m✖\033[0m ' + res.get('message', 'Stack error'))
+sys.exit(0 if res.get('status') == 'success' else 1)
+" "$stack_file" "$json_output"
+        return $?
+    fi
+
     if [[ -z "$target" ]]; then
-        log_error "No Git URL or directory specified for container."
-        echo -e "Usage: ${CYAN}${PROGRAM_NAME} container <git-url|dir>${RESET}"
+        log_error "No Git URL, directory, or OCI image specified for container."
+        echo -e "Usage: ${CYAN}${PROGRAM_NAME} container <git-url|dir|oci-image>${RESET}"
         return 1
+    fi
+
+    # Handle OCI Export
+    if [[ -n "$export_oci_tar" ]]; then
+        if [[ "$dry_run" -eq 1 ]]; then
+            if [[ "$json_output" -eq 1 ]]; then
+                jq -n --arg t "$target" --arg o "$export_oci_tar" '{status: "dry_run_success", mode: "export_oci", target: $t, output_tar: $o}'
+            else
+                log_success "OCI export dry-run verified: $target -> $export_oci_tar"
+            fi
+            return 0
+        fi
+
+        PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import export_container_oci
+
+target = sys.argv[1]
+out_tar = sys.argv[2]
+json_out = sys.argv[3] == '1'
+
+ok, msg = export_container_oci(target, out_tar)
+if json_out:
+    print(json.dumps({'status': 'success' if ok else 'error', 'output_tar': out_tar, 'message': msg}))
+else:
+    if ok:
+        print('\033[38;5;82m✔\033[0m ' + msg)
+    else:
+        print('\033[38;5;196m✖\033[0m ' + msg)
+sys.exit(0 if ok else 1)
+" "$target" "$export_oci_tar" "$json_output"
+        return $?
     fi
 
     if [[ "$dry_run" -eq 1 ]]; then
@@ -1991,10 +2090,6 @@ cmd_container() {
         fi
         return 0
     fi
-
-    local py_bin core_path
-    py_bin="$(resolve_python)"
-    core_path="$(resolve_core_path)"
 
     PYTHONPATH="$core_path" "$py_bin" -c "
 import sys, json

@@ -19,9 +19,9 @@ assert_output_contains "$TARGET_BIN sandbox --help" "Shadow Micro-VM Sandbox" "H
 assert_exit_code "$TARGET_BIN try --help" 0 "neuronix try alias --help exits 0"
 
 # 6-9. Dry-Run & RAM Scratch Allocation Invariants
-assert_exit_code "$TARGET_BIN sandbox --dry-run" 0 "neuronix sandbox --dry-run exits 0"
+assert_exit_code "$TARGET_BIN sandbox --dry-run --persist testlab" 0 "neuronix sandbox --dry-run exits 0"
 assert_output_contains "$TARGET_BIN sandbox --dry-run" "KVM Acceleration" "Dry-run inspects KVM hypervisor status"
-assert_output_contains "$TARGET_BIN sandbox --dry-run" "Dry-run validation successful" "Dry-run verifies RAM disk reservation"
+assert_output_contains "$TARGET_BIN sandbox --dry-run --persist testlab" "Persistence verified" "Dry-run verifies RAM disk reservation and Btrfs persistence"
 assert_eq "$(ls -1 /dev/shm/neuronix_shadow_* 2>/dev/null | wc -l)" "0" "Dry-run leaves zero lingering files in /dev/shm"
 
 # 10-15. Automated Smoke Test Invariants

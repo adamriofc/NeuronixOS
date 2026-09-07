@@ -39,11 +39,15 @@ Provisions isolated, ephemeral development environments in RAM.
   * `--manifest`, `-m`: Emits declarative JSON manifest without entering subshell.
 * **Exit Codes:** `0` on clean exit, `1` on invalid stack
 
-### 2.4 `neuronix sandbox [options] [configuration_path]`
-Boots an in-memory OS Micro-VM sandbox in `/dev/shm` to test proposed Nix configurations with zero host disk mutation.
+### 2.4 `neuronix sandbox [options] [configuration_path | iso_path]`
+Boots an in-memory OS Micro-VM sandbox in `/dev/shm` to test proposed Nix configurations or external ISOs with zero host disk mutation.
 * **Alias:** `neuronix try` is retained as a fully supported backward-compatible alias.
 * **Options:**
   * `--smoke-test`: Fast verification of kernel boot, systemd targets, and 9P store mounts.
+  * `--iso <path>`: Boots custom external OS ISO directly in hardware-accelerated Micro-VM.
+  * `--os <distro>`: Boots cloud-init minimal distro image (alpine, ubuntu, arch, debian).
+  * `--persist <name>`: Enables persistent Btrfs CoW testing sandbox across reboots.
+  * `--3d-accel`: Enables VirtIO-GPU VirGL 3D hardware rendering for GUI sessions.
   * `--dry-run`: Dry-evaluates QEMU parameters and RAM disk reservation.
   * `--mode <synthetic|real|auto>`: Execution engine mode.
   * `--promote [-y|--yes]`: Atomically applies configuration to host upon clean test pass.
@@ -125,13 +129,18 @@ Reverse-compiles imperatively executed packages into declarative Flake configura
   * `--force`: Overrides human-managed file safety boundary.
   * `--json`: Outputs structured JSON report.
 
-### 2.22 `neuronix container <git-url|dir> [options]`
+### 2.22 `neuronix container <git-url|dir|oci-image> [options]`
 Spins up an ephemeral, zero-copy development container in RAM (`/dev/shm`) isolated via Bubblewrap with zero SSD disk wear.
 * **Security & Isolation:** Strictly enforces writable tmpfs `/dev/shm` without silent disk fallbacks. Sanitizes credentials and wipes secrets (`AWS_*`, `GITHUB_*`, tokens, `SSH_AUTH_SOCK`).
+* **Dynamic FHS Emulation:** Automatically resolves `/lib64/ld-linux-x86-64.so.2` and glibc shared libraries, allowing foreign Linux binaries to run without container bloat.
+* **Daemonless OCI Runner:** Directly pulls and extracts OCI/Docker Hub images (`oci://`, `docker://`) to RAM without running dockerd.
 * **Options:**
   * `--run, -c <cmd>`: Executes command inside container non-interactively.
+  * `--stack <file.yaml|json>`: Launches declarative multi-service stack in RAM with private IPC.
+  * `--export-oci <out.tar>`: Exports container workspace to standard OCI image tarball.
   * `--keep <path>`: Exports workspace changes to destination directory on exit.
   * `--vaporize`: Deletes RAM workspace on exit without prompt.
+  * `--fhs / --no-fhs`: Toggles transparent FHS dynamic linker emulation (default: on).
   * `--dry-run`: Inspects memory allocation without spawning subshell.
   * `--json`: Emits status in JSON.
 

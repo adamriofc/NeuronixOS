@@ -1,10 +1,13 @@
 {
-  "timestamp": "2026-09-07T07:51:08Z",
+  "timestamp": "2026-09-07T08:05:34Z",
   "requested_mode": "synthetic",
   "executed_mode": "synthetic",
   "kvm_available": true,
   "duration_ms": 150,
   "smoke_test": true,
+  "iso_target": "none",
+  "persist_target": "none",
+  "accel_3d": false,
   "exit_code": 0,
   "status": "PASSED",
   "verification_gates": {

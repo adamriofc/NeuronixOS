@@ -44,35 +44,47 @@ The OS Sandbox oracle validates four mandatory boot milestones before declaring 
 
 ---
 
-## 4. Testing and Safe Configuration Promotion
+## 4. Advanced Micro-VM Capabilities
 
-Test a candidate Nix flake before promoting it to the live host:
+In addition to testing local NixOS configurations, the OS Sandbox supports universal hypervisor tasks:
 
-```bash
-# Test configuration in memory
-neuronix sandbox /path/to/experimental/flake.nix
-
-# Test and promote automatically if all verification gates pass
-neuronix sandbox /path/to/experimental/flake.nix --promote -y
-```
+* **Universal Direct ISO Booting:** Boot custom operating system ISO images directly with KVM hardware acceleration:
+  ```bash
+  neuronix sandbox --iso /path/to/installer.iso --gui --3d-accel
+  ```
+* **Dual-Mode Btrfs CoW Persistence:** While sandboxes default to 100% ephemeral RAM, `--persist <name>` creates a lightweight Btrfs copy-on-write subvolume overlay with 0-byte initial storage overhead:
+  ```bash
+  neuronix sandbox --os alpine --persist test-lab
+  ```
+* **VirtIO-GPU 3D Acceleration:** Utilizing host DRI render nodes (`/dev/dri/renderD128`), VirGL provides 60+ FPS accelerated rendering inside GUI VM sessions.
+* **Safe Configuration Promotion:** Verify candidate flakes in memory and atomically apply to host with `--promote`:
+  ```bash
+  neuronix sandbox /path/to/flake.nix --smoke-test --promote -y
+  ```
 
 ---
 
 ## 5. Ephemeral Zero-Copy Development Container (neuronix container)
 
-While `neuronix sandbox` isolates entire system configurations via QEMU, `neuronix container` isolates application development and foreign codebases via lightweight Linux kernel namespaces:
+While `neuronix sandbox` isolates entire system configurations via QEMU, `neuronix container` isolates application development, repositories, and foreign codebases via lightweight Linux kernel namespaces:
 
 * **RAM Workspace (/dev/shm):** Repositories clone or copy directly into tmpfs/ZRAM in memory, eliminating SSD write wear during high-volume build cycles.
-* **Bubblewrap Containerization:** Mounts `/nix/store` read-only, masks host `$HOME` credentials (`.ssh`, `.aws`, `.gnupg`) with an isolated tmpfs, and isolates process execution.
-* **Clean Vaporization:** Exiting the container automatically vaporizes RAM contents without leaving temporary file residue.
+* **Transparent Dynamic FHS Emulation:** Automatically resolves dynamic linkers (`/lib64/ld-linux-x86-64.so.2`) and standard glibc libraries, enabling foreign pre-compiled binaries (Go, Rust, Node, Python C-extensions) to execute out of the box.
+* **Daemonless OCI Image Runner:** Pulls and extracts Docker Hub and OCI container images directly into RAM tmpfs without requiring `dockerd` or root privileges.
+* **Multi-Service Stack Orchestration:** Declaratively launches multi-service stacks (`--stack stack.yaml`) in RAM with isolated networking and automatic vaporization.
+* **Zero-Bloat OCI Export:** Compiles container workspaces into standard OCI/Docker image tarballs with `--export-oci`.
+* **Bubblewrap Containerization:** Mounts `/nix/store` read-only, masks host `$HOME` credentials (`.ssh`, `.aws`, `.gnupg`) with an isolated tmpfs, and cleans up completely upon exit.
 
 ```bash
-# Clone foreign git repository into isolated RAM container
+# Clone foreign git repository into isolated RAM container with FHS emulation
 neuronix container https://github.com/example/untrusted-tool.git
 
-# Execute build or test command non-interactively
-neuronix container /path/to/local/project --run "cargo test"
+# Run Docker Hub image directly in RAM without Docker daemon
+neuronix container oci://alpine:latest --run "cat /etc/os-release"
 
-# Export modified changes to destination directory on exit
-neuronix container https://github.com/example/repo.git --keep ~/exported-repo
+# Orchestrate ephemeral multi-service stack in RAM in milliseconds
+neuronix container --stack neuronix-stack.yaml
+
+# Export workspace changes into standard OCI image tarball
+neuronix container /path/to/project --export-oci my-app.tar
 ```

@@ -83,15 +83,20 @@ assert_output_contains "echo '$CONTAINER_JSON'" '"target": "/tmp"' "CLI containe
 assert_output_contains "'${PYTHON_BIN}' -c \"
 import sys, tempfile, os
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
-from neuronix_core.container import allocate_ram_workspace, vaporize_workspace
+from neuronix_core.container import allocate_ram_workspace, vaporize_workspace, resolve_fhs_paths, export_container_oci
+fhs = resolve_fhs_paths()
+assert isinstance(fhs, dict) and 'env' in fhs
 with tempfile.TemporaryDirectory() as src:
     ws = allocate_ram_workspace(src)
     assert os.path.isdir(ws)
     assert os.path.exists(ws)
+    tar_out = os.path.join(src, 'test.tar')
+    ok, _ = export_container_oci(src, tar_out)
+    assert ok and os.path.exists(tar_out)
     vaporize_workspace(ws)
     assert not os.path.exists(ws)
 print('RAM_CONTAINER_OK')
-\"" "RAM_CONTAINER_OK" "Python allocate_ram_workspace and vaporize_workspace execute atomically"
+\"" "RAM_CONTAINER_OK" "Python allocate_ram_workspace, FHS, and OCI export execute atomically"
 
 # ==============================================================================
 # Subsystem 5: Deterministic Workload Matrix (Tune) (Tests 22-26)

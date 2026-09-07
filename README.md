@@ -384,8 +384,8 @@ USAGE:
 | `diet` | None | Runs garbage collection, deduplicates `/nix/store` hardlinks, and issues filesystem TRIM. | `neuronix diet` |
 | `dev` | `<stack>` | Starts an isolated development shell (`python`, `rust`, `node`, `ai`, `go`, `web3`). | `neuronix dev rust` |
 | `run` | `<packages...>` | Launches an ephemeral subshell with the specified packages, cleanly discarded upon exit. | `neuronix run ffmpeg jq` |
-| `sandbox` | `[file.nix] [--smoke-test]` | In-memory OS Micro-VM sandbox in RAM via 9P store sharing (alias: `neuronix try`). | `neuronix sandbox --smoke-test` |
-| `try` | `[file.nix] [--smoke-test]` | (Alias) Backward-compatible alias for `neuronix sandbox`. | `neuronix try --smoke-test` |
+| `sandbox` | `[target\|iso] [options]` | In-memory OS Micro-VM sandbox with ISO booting, Btrfs CoW, and 3D acceleration. | `neuronix sandbox --smoke-test` |
+| `try` | `[target\|iso] [options]` | (Alias) Backward-compatible alias for `neuronix sandbox`. | `neuronix try --smoke-test` |
 | `verify` | `<package>` | Tests whether a derivation evaluates cleanly against the nixpkgs closure via dry-build. | `neuronix verify ripgrep` |
 | `center` | None | Opens the graphical NEURONIX Control Center (or runs `--cli` in headless environments). | `neuronix center` |
 | `mcp` | None | Starts the Model Context Protocol (MCP) server over `stdio` adhering to JSON-RPC 2.0. | `neuronix mcp` |
@@ -399,7 +399,7 @@ USAGE:
 | `sentinel` | `[status \| confirm]` | Autonomous Wayland/desktop boot watchdog with auto-rollback on crash-loops. | `neuronix sentinel status` |
 | `diff` | `[genA] [genB]` | Generational forensic diff engine analyzing package closures, kernel changes, and store paths. | `neuronix diff 41 42` |
 | `distill` | `<packages...> [--dry-run]` | Imperative-to-declarative reverse engine compiling packages into Flake configuration. | `neuronix distill ripgrep htop` |
-| `container` | `<target> [options]` | Ephemeral zero-copy development container in RAM (`/dev/shm`) isolated via Bubblewrap. | `neuronix container https://github.com/user/repo` |
+| `container` | `<target> [options]` | Ephemeral RAM development container with Dynamic FHS, OCI runner, and stack runner. | `neuronix container oci://alpine:latest` |
 | `tune` | `[profile \| --status]` | Declarative workload-tailored performance matrix (`gaming`, `battery`, `audio-daw`, `balanced`). | `neuronix tune gaming` |
 | `mesh` | `[status \| peers]` | Local P2P zero-config binary cache mesh over mDNS/Avahi without centralized Hydra/Cachix. | `neuronix mesh peers` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
@@ -652,21 +652,34 @@ neuronix distill ripgrep fd htop --force
 ```
 
 ### 17. Ephemeral Zero-Copy RAM Development Container (neuronix container)
-Enables instantaneous, isolated code experimentation and untrusted repo exploration without touching workstation storage or risking system state:
+Enables instantaneous, isolated code experimentation, OCI container execution, and untrusted repo exploration without touching workstation storage or risking system state:
 - **Strict RAM-Backed Workspace (/dev/shm):** Clones or unpacks target repositories into a temporary RAM filesystem with zero disk writes. Refuses silent physical disk fallback (`require_ram=True`) when RAM isolation is requested.
+- **Dynamic Transparent FHS Emulation:** Automatically resolves `/lib64/ld-linux-x86-64.so.2` and glibc shared library paths so foreign pre-compiled binaries (Go, Rust, Node, Python C-extensions) run out of the box without container bloat.
+- **Daemonless OCI Image Runner:** Pulls and extracts Docker Hub and OCI container images (`oci://`, `docker://`) directly into RAM without `dockerd` overhead or root privileges.
+- **Ephemeral Multi-Service Stacks:** Declaratively orchestrates multi-service stacks (`--stack stack.yaml`) in RAM with private IPC and millisecond startup.
+- **Zero-Bloat OCI Export:** Compiles container workspaces into standard OCI/Docker image tarballs with `--export-oci <out.tar>`.
 - **Enterprise Credential Sanitization:** Strips environment variables containing cloud tokens, SSH keys, or API credentials (`AWS_*`, `GITHUB_*`, `*_TOKEN`, `*_KEY`, `SSH_AUTH_SOCK`).
 - **Bubblewrap Namespace Isolation:** Mounts `/nix/store` as strictly read-only, masks `$HOME` with an ephemeral tmpfs, and isolates process namespaces with `--clearenv`, `--unshare-pid`, `--unshare-uts`, and `--unshare-ipc`.
 - **Clean Vaporization or Export:** Workspace automatically vaporizes from RAM on subshell exit (`--vaporize`), or optionally exports modified files back to host storage (`--keep <path>`).
 
 ```bash
-# Launch isolated ephemeral RAM container from a remote Git repository
+# Launch isolated ephemeral RAM container from a remote Git repository with FHS
 neuronix container https://github.com/astral-sh/uv
+
+# Run Docker Hub container image directly in RAM without Docker daemon
+neuronix container oci://alpine:latest --run "cat /etc/os-release"
+
+# Orchestrate ephemeral multi-service stack in RAM in milliseconds
+neuronix container --stack neuronix-stack.yaml
 
 # Run command non-interactively inside the container and vaporize immediately
 neuronix container https://github.com/astral-sh/uv --run "cargo test" --vaporize
 
 # Containerize a local directory with automated export on exit
 neuronix container ./my-project --keep ./my-project-output
+
+# Export workspace to standard OCI/Docker image tarball
+neuronix container ./my-project --export-oci my-app.tar
 ```
 
 ### 18. Deterministic Workload Performance Matrix (neuronix tune)

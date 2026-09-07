@@ -306,29 +306,40 @@ handle_tools_list() {
     },
     {
       "name": "neuronix_container",
-      "description": "Spin up ephemeral zero-copy development container in RAM (/dev/shm), masking real $HOME credentials and vaporizing build artifacts cleanly on exit.",
+      "description": "Spin up ephemeral zero-copy development container in RAM (/dev/shm) with Dynamic FHS Emulation, Daemonless OCI Runner, Stacks, and OCI Export.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "target": {
             "type": "string",
-            "description": "Git repository URL or local directory to clone/mount in RAM"
+            "description": "Git repository URL, local directory, or OCI image reference to clone/mount in RAM"
           },
           "command": {
             "type": "string",
             "description": "Non-interactive command to execute inside container"
           },
+          "stack_file": {
+            "type": "string",
+            "description": "Declarative multi-service YAML/JSON stack file to orchestrate in RAM"
+          },
+          "export_oci": {
+            "type": "string",
+            "description": "Output tarball path to export workspace as OCI/Docker image"
+          },
+          "fhs": {
+            "type": "boolean",
+            "description": "Enable transparent dynamic FHS emulation for foreign ELF binaries (default: true)"
+          },
           "dry_run": {
             "type": "boolean",
             "description": "Verify RAM allocation without executing command"
           }
-        },
-        "required": ["target"]
+        }
       }
     },
     {
       "name": "neuronix_sandbox",
-      "description": "Execute isolated in-memory OS Micro-VM sandbox simulation and smoke testing.",
+      "description": "Execute isolated in-memory OS Micro-VM sandbox simulation, ISO booting, Btrfs CoW persistence, and smoke testing.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -339,6 +350,22 @@ handle_tools_list() {
           "target": {
             "type": "string",
             "description": "Optional configuration path to simulate"
+          },
+          "iso_path": {
+            "type": "string",
+            "description": "Path to external OS ISO to boot directly in Micro-VM"
+          },
+          "os": {
+            "type": "string",
+            "description": "Cloud-init distro image to boot (alpine, ubuntu, arch, debian)"
+          },
+          "persist": {
+            "type": "string",
+            "description": "Name of persistent Btrfs CoW testing sandbox"
+          },
+          "accel_3d": {
+            "type": "boolean",
+            "description": "Enable VirtIO-GPU VirGL 3D acceleration"
           },
           "dry_run": {
             "type": "boolean",
@@ -877,14 +904,44 @@ print(json.dumps(distill_packages(pkgs, dry_run=dr, force=fc)))
             ;;
 
         neuronix_container)
-            local target cmd_run dry_run
+            local target cmd_run dry_run stack_file export_oci
             target=$(echo "$params" | jq -r '.arguments.target // .target // empty')
             cmd_run=$(echo "$params" | jq -r '.arguments.command // .command // empty')
+            stack_file=$(echo "$params" | jq -r '.arguments.stack_file // .stack_file // empty')
+            export_oci=$(echo "$params" | jq -r '.arguments.export_oci // .export_oci // empty')
             dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false')
 
             if [[ "$dry_run" == "true" ]]; then
-                local res_text="Container dry-run verified for target: $target. Backing: in-memory tmpfs /dev/shm."
+                local res_text="Container dry-run verified for target: ${target:-${stack_file}}. Backing: in-memory tmpfs /dev/shm."
                 local content=$(jq -n -c --arg text "$res_text" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            elif [[ -n "$stack_file" ]]; then
+                local py_bin core_path
+                py_bin="$(resolve_python)"
+                core_path="$(resolve_core_path)"
+                local stack_res
+                stack_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import run_stack_session
+s = sys.argv[1]
+print(json.dumps(run_stack_session(s)))
+" "$stack_file" 2>/dev/null || echo '{"status":"error","message":"Stack session failed"}')
+                local content=$(jq -n -c --arg text "$stack_res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            elif [[ -n "$export_oci" ]]; then
+                local py_bin core_path
+                py_bin="$(resolve_python)"
+                core_path="$(resolve_core_path)"
+                local exp_res
+                exp_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import export_container_oci
+t = sys.argv[1]
+o = sys.argv[2]
+ok, msg = export_container_oci(t, o)
+print(json.dumps({'status':'success' if ok else 'error','output_tar':o,'message':msg}))
+" "$target" "$export_oci" 2>/dev/null || echo '{"status":"error","message":"OCI export failed"}')
+                local content=$(jq -n -c --arg text "$exp_res" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
             else
                 local py_bin core_path
@@ -910,11 +967,15 @@ print(json.dumps({'status':'success','exit_code':code,'message':s_msg}))
             ;;
 
         neuronix_sandbox)
-            local target cmd_run dry_run mode
+            local target cmd_run dry_run mode iso_path os_distro persist_name accel_3d
             target=$(echo "$params" | jq -r '.arguments.target // .target // empty')
             cmd_run=$(echo "$params" | jq -r '.arguments.command // .command // empty')
             dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false')
             mode=$(echo "$params" | jq -r '.arguments.mode // .mode // "auto"')
+            iso_path=$(echo "$params" | jq -r '.arguments.iso_path // .iso_path // empty')
+            os_distro=$(echo "$params" | jq -r '.arguments.os // .os // empty')
+            persist_name=$(echo "$params" | jq -r '.arguments.persist // .persist // empty')
+            accel_3d=$(echo "$params" | jq -r '.arguments.accel_3d // .accel_3d // false')
 
             if [[ -n "$cmd_run" || ("$target" =~ ^https?:// || "$target" =~ ^git@) ]]; then
                 # Legacy container compatibility fallback
@@ -946,6 +1007,10 @@ print(json.dumps({'status':'success','exit_code':code,'message':s_msg}))
                     local vm_args=("--smoke-test" "--headless")
                     [[ "$dry_run" == "true" ]] && vm_args=("--dry-run")
                     [[ -n "$mode" ]] && vm_args+=("--mode" "$mode")
+                    [[ -n "$iso_path" ]] && vm_args+=("--iso" "$iso_path")
+                    [[ -n "$os_distro" ]] && vm_args+=("--os" "$os_distro")
+                    [[ -n "$persist_name" ]] && vm_args+=("--persist" "$persist_name")
+                    [[ "$accel_3d" == "true" ]] && vm_args+=("--3d-accel")
                     [[ -n "$target" ]] && vm_args+=("$target")
                     local res exit_code=0
                     res=$("$shadow_script" "${vm_args[@]}" 2>&1 | tr '\n' ' ') || exit_code=$?
