@@ -18,7 +18,15 @@ from .ca import enroll_certificate
 from .doctor import get_sanitized_diagnostics, print_doctor_json
 from .diff import compute_generation_diff
 from .distill import distill_packages, verify_package_in_nixpkgs
-from .sandbox import setup_ram_workspace, run_sandbox_session, teardown_sandbox
+from .container import (
+    setup_ram_workspace,
+    run_container_session,
+    run_sandbox_session,
+    teardown_container,
+    teardown_sandbox,
+    allocate_ram_workspace,
+    vaporize_workspace,
+)
 from .tune import apply_tuning_profile, get_current_tuning_status, PROFILES as TUNING_PROFILES
 from .mesh import get_mesh_status, discover_local_peers
 
@@ -51,8 +59,12 @@ __all__ = [
     "distill_packages",
     "verify_package_in_nixpkgs",
     "setup_ram_workspace",
+    "run_container_session",
     "run_sandbox_session",
+    "teardown_container",
     "teardown_sandbox",
+    "allocate_ram_workspace",
+    "vaporize_workspace",
     "apply_tuning_profile",
     "get_current_tuning_status",
     "TUNING_PROFILES",

@@ -42,9 +42,9 @@ VM_PID=""
 SCRATCH_DIR=""
 
 show_try_help() {
-    echo -e "${BOLD}NEURONIX Shadow Micro-VM Sandbox (neuronix try)${RESET}\n"
+    echo -e "${BOLD}NEURONIX Shadow Micro-VM Sandbox (neuronix sandbox / try)${RESET}\n"
     echo -e "${BOLD}USAGE:${RESET}"
-    echo -e "  neuronix try [OPTIONS] [CONFIGURATION_PATH]\n"
+    echo -e "  neuronix sandbox [OPTIONS] [CONFIGURATION_PATH]  (alias: neuronix try)\n"
     echo -e "${BOLD}OPTIONS:${RESET}"
     echo -e "  ${GREEN}--mode <mode>${RESET}          Execution mode: synthetic, real, or auto (default: auto)"
     echo -e "  ${GREEN}--headless${RESET}            Run Micro-VM without graphical window (default, console only)"

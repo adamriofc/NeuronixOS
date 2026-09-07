@@ -163,7 +163,9 @@ show_help() {
     echo -e "  ${GREEN}upgrade${RESET} [opt]   Perform atomic system upgrade (--staged / --switch)"
     echo -e "  ${GREEN}run${RESET} <pkgs...>   Run packages in an isolated ephemeral nix-shell"
     echo -e "  ${GREEN}dev${RESET} <stack>     Launch hermetic developer stack (python/rust/node/ai/go/web3)"
-    echo -e "  ${GREEN}try${RESET} [options]   Simulate and test configuration in an isolated Micro-VM sandbox"
+    echo -e "  ${GREEN}sandbox${RESET} [opts]  In-memory OS Micro-VM sandbox for testing system configs"
+    echo -e "  ${GREEN}container${RESET} <url>  Zero-copy ephemeral development container in RAM (/dev/shm)"
+    echo -e "  ${GREEN}try${RESET} [options]   (Alias) Simulate and test configuration in an isolated Micro-VM"
     echo -e "  ${GREEN}verify${RESET} <pkg>    Declarative build verification for package derivations"
     echo -e "  ${GREEN}shield${RESET}          Dashboard diagnosa memori, ZRAM & PSI Active Memory Shield"
     echo -e "  ${GREEN}generations${RESET}     Display chronological timeline of system generations"
@@ -179,7 +181,6 @@ show_help() {
     echo -e "  ${GREEN}sentinel${RESET} [opt]  Autonomous boot assessment, zero-brick watchdog & recovery"
     echo -e "  ${GREEN}diff${RESET} [A] [B]    Generational forensic diff (closures, units, and security)"
     echo -e "  ${GREEN}distill${RESET} <pkgs>  Reverse-compile ephemeral packages into declarative flake"
-    echo -e "  ${GREEN}sandbox${RESET} <url>   Zero-copy ephemeral development sandbox in RAM (/dev/shm)"
     echo -e "  ${GREEN}tune${RESET} [profile]  Deterministic workload matrix (gaming/battery/audio-daw/balanced)"
     echo -e "  ${GREEN}mesh${RESET} [status]   Local P2P binary cache mesh and peer discovery via mDNS"
     echo -e "  ${GREEN}version${RESET}         Display version and architecture metadata"
@@ -600,19 +601,33 @@ cmd_mcp() {
     fi
 }
 
-cmd_try() {
+cmd_sandbox() {
     local script_dir
     script_dir="$(dirname "$(readlink -f "$0")")"
+    local shadow_bin=""
     if [[ -f "${script_dir}/shadow_vm.sh" ]]; then
-        exec "${script_dir}/shadow_vm.sh" "$@"
+        shadow_bin="${script_dir}/shadow_vm.sh"
     elif [[ -f "${script_dir}/../share/neuronix/shadow_vm.sh" ]]; then
-        exec "${script_dir}/../share/neuronix/shadow_vm.sh" "$@"
+        shadow_bin="${script_dir}/../share/neuronix/shadow_vm.sh"
     elif [[ -f "${script_dir}/../src/shadow_vm.sh" ]]; then
-        exec "${script_dir}/../src/shadow_vm.sh" "$@"
+        shadow_bin="${script_dir}/../src/shadow_vm.sh"
     else
         log_error "Modul shadow_vm.sh tidak ditemukan di ${script_dir}."
         exit 1
     fi
+
+    # Transitional intelligent guidance: If user invokes sandbox with remote git URL, redirect to container
+    if [[ $# -gt 0 && ("$1" =~ ^https?:// || "$1" =~ ^git@ || "$1" =~ \.git$) ]]; then
+        log_warn "Target URL repositori terdeteksi. Mengalihkan ke '${PROGRAM_NAME} container $*'..."
+        cmd_container "$@"
+        return $?
+    fi
+
+    exec "$shadow_bin" "$@"
+}
+
+cmd_try() {
+    cmd_sandbox "$@"
 }
 
 cmd_generations() {
@@ -1907,9 +1922,9 @@ else:
 }
 
 # ------------------------------------------------------------------------------
-# Ephemeral Zero-Copy Repo Sandbox in RAM
+# Ephemeral Zero-Copy Development Container in RAM
 # ------------------------------------------------------------------------------
-cmd_sandbox() {
+cmd_container() {
     local target=""
     local keep_path=""
     local vaporize=0
@@ -1941,14 +1956,14 @@ cmd_sandbox() {
                 ;;
             -h|--help)
                 echo -e "${BOLD}USAGE:${RESET}"
-                echo -e "  ${CYAN}${PROGRAM_NAME} sandbox${RESET} <git-url|directory> [OPTIONS]\n"
-                echo -e "  Spins up an ephemeral, zero-copy development sandbox in RAM (/dev/shm)."
+                echo -e "  ${CYAN}${PROGRAM_NAME} container${RESET} <git-url|directory> [OPTIONS]\n"
+                echo -e "  Spins up an ephemeral, zero-copy development container in RAM (/dev/shm)."
                 echo -e "  Masks real \$HOME credentials and vaporizes artifacts cleanly on exit.\n"
                 echo -e "${BOLD}OPTIONS:${RESET}"
-                echo -e "  ${GREEN}--run, -c <cmd>${RESET} Execute command inside sandbox non-interactively"
+                echo -e "  ${GREEN}--run, -c <cmd>${RESET} Execute command inside container non-interactively"
                 echo -e "  ${GREEN}--keep <path>${RESET}   Export modified workspace to target directory upon exit"
                 echo -e "  ${GREEN}--vaporize${RESET}      Auto-delete RAM workspace without confirmation prompt"
-                echo -e "  ${GREEN}--dry-run${RESET}       Verify RAM allocation without spawning sandbox"
+                echo -e "  ${GREEN}--dry-run${RESET}       Verify RAM allocation without spawning container"
                 echo -e "  ${GREEN}--json${RESET}          Output status in JSON"
                 echo -e "  ${GREEN}-h, --help${RESET}      Show this help\n"
                 return 0
@@ -1963,8 +1978,8 @@ cmd_sandbox() {
     done
 
     if [[ -z "$target" ]]; then
-        log_error "No Git URL or directory specified for sandbox."
-        echo -e "Usage: ${CYAN}${PROGRAM_NAME} sandbox <git-url|dir>${RESET}"
+        log_error "No Git URL or directory specified for container."
+        echo -e "Usage: ${CYAN}${PROGRAM_NAME} container <git-url|dir>${RESET}"
         return 1
     fi
 
@@ -1972,7 +1987,7 @@ cmd_sandbox() {
         if [[ "$json_output" -eq 1 ]]; then
             jq -n --arg t "$target" '{status: "dry_run_success", target: $t, ram_disk: "/dev/shm"}'
         else
-            log_success "Sandbox dry-run verified for target: $target (RAM backing: /dev/shm)"
+            log_success "Container dry-run verified for target: $target (RAM backing: /dev/shm)"
         fi
         return 0
     fi
@@ -1983,7 +1998,7 @@ cmd_sandbox() {
 
     PYTHONPATH="$core_path" "$py_bin" -c "
 import sys, json
-from neuronix_core.sandbox import setup_ram_workspace, run_sandbox_session, teardown_sandbox
+from neuronix_core.container import setup_ram_workspace, run_container_session, teardown_container
 
 target = sys.argv[1]
 json_out = sys.argv[2] == '1'
@@ -1997,15 +2012,15 @@ if not w_dir:
 
 if json_out and not cmd_to_run:
     print(json.dumps({'status': 'ready', 'workspace': w_dir, 'active_dir': act_dir}))
-    teardown_sandbox(w_dir)
+    teardown_container(w_dir)
     sys.exit(0)
 
-print('\033[38;5;51m➔\033[0m Entering ephemeral RAM sandbox: ' + act_dir)
+print('\033[38;5;51m➔\033[0m Entering ephemeral RAM container: ' + act_dir)
 print('  \033[2mReal \$HOME is safely masked. Zero SSD disk footprint.\033[0m')
-code, s_msg = run_sandbox_session(act_dir, command=cmd_to_run)
+code, s_msg = run_container_session(act_dir, command=cmd_to_run)
 
-teardown_sandbox(w_dir, export_path=keep_path)
-print('\033[38;5;82m✔\033[0m Ephemeral RAM workspace cleanly vaporized (0 bytes residue).')
+teardown_container(w_dir, export_path=keep_path)
+print('\033[38;5;82m✔\033[0m Ephemeral RAM container cleanly vaporized (0 bytes residue).')
 sys.exit(code)
 " "$target" "$json_output" "$cmd_to_run" "$keep_path"
 }
@@ -2261,6 +2276,9 @@ main() {
             ;;
         distill)
             cmd_distill "$@"
+            ;;
+        container)
+            cmd_container "$@"
             ;;
         sandbox)
             cmd_sandbox "$@"

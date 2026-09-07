@@ -30,7 +30,7 @@ When connected via Model Context Protocol, prioritize calling these dedicated to
 | AI Objective | Recommended MCP Tool Call | Payload Example |
 | :--- | :--- | :--- |
 | Query system health & kernel | `neuronix_status` | `{}` |
-| Dry-run test a candidate Flake | `neuronix_shadow_eval` | `{"config_path": "/tmp/test-flake"}` |
+| Dry-run test a candidate Flake | `neuronix_sandbox` | `{"config_path": "/tmp/test-flake", "dry_run": true}` |
 | Prove package derivation exists | `neuronix_verify` | `{"package": "ripgrep"}` |
 | Revert broken configuration | `neuronix_undo` | `{"dry_run": false}` |
 | Free disk space & discard blocks | `neuronix_diet` | `{"dry_run": false}` |
@@ -39,7 +39,7 @@ When connected via Model Context Protocol, prioritize calling these dedicated to
 | Inspect boot assessment & fallback | `neuronix_sentinel` | `{}` |
 | Diff package closures & units | `neuronix_diff` | `{"gen_a": "41", "gen_b": "42"}` |
 | Compile package into Flake | `neuronix_distill` | `{"packages": ["jq"], "dry_run": true}` |
-| Run isolated sandbox in RAM | `neuronix_sandbox` | `{"target": "/tmp/repo", "dry_run": true}` |
+| Run isolated container in RAM | `neuronix_container` | `{"target": "/tmp/repo", "dry_run": true}` |
 | Tune workload governor/audio | `neuronix_tune` | `{"profile": "gaming"}` |
 | Discover LAN P2P cache mesh | `neuronix_mesh` | `{}` |
 

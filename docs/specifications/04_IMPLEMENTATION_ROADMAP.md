@@ -52,7 +52,7 @@ To ensure systematic software engineering, development of the NEURONIX platform 
 
 ### PHASE 3: Ephemeral Micro-VM Simulation (v0.3)
 - **Key Capabilities:**
-  1. **`neuronix try`:** Spawns an ephemeral QEMU micro-VM directly in RAM (`/dev/shm`).
+  1. **`neuronix sandbox` (alias: `neuronix try`):** Spawns an ephemeral QEMU micro-VM directly in RAM (`/dev/shm`).
   2. Connects to `/nix/store` via read-only 9P filesystem mounts.
   3. Allows dry-testing experimental configurations and kernel options without modifying host state.
 - **Exit Gate 3:** Fast micro-VM boot lifecycle with zero host state corruption.

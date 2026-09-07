@@ -39,13 +39,14 @@ Provisions isolated, ephemeral development environments in RAM.
   * `--manifest`, `-m`: Emits declarative JSON manifest without entering subshell.
 * **Exit Codes:** `0` on clean exit, `1` on invalid stack
 
-### 2.4 `neuronix try [options]`
-Boots an in-memory Shadow Micro-VM in `/dev/shm` to test proposed Nix configurations.
+### 2.4 `neuronix sandbox [options] [configuration_path]`
+Boots an in-memory OS Micro-VM sandbox in `/dev/shm` to test proposed Nix configurations with zero host disk mutation.
+* **Alias:** `neuronix try` is retained as a fully supported backward-compatible alias.
 * **Options:**
-  * `--smoke-test`: Quick verification of kernel boot and store mounts.
-  * `--dry-run`: Dry-evaluates QEMU parameters and RAM disk allocation.
+  * `--smoke-test`: Fast verification of kernel boot, systemd targets, and 9P store mounts.
+  * `--dry-run`: Dry-evaluates QEMU parameters and RAM disk reservation.
   * `--mode <synthetic|real|auto>`: Execution engine mode.
-  * `--promote [-y|--yes]`: Applies configuration to host upon clean test pass.
+  * `--promote [-y|--yes]`: Atomically applies configuration to host upon clean test pass.
 * **Exit Codes:** `0` on success, `1` on test failure, `2` if KVM unavailable in real mode
 
 ### 2.5 `neuronix verify <package>`
@@ -124,11 +125,11 @@ Reverse-compiles imperatively executed packages into declarative Flake configura
   * `--force`: Overrides human-managed file safety boundary.
   * `--json`: Outputs structured JSON report.
 
-### 2.22 `neuronix sandbox <git-url|dir> [options]`
-Spins up an ephemeral, zero-copy development sandbox in RAM (`/dev/shm`) isolated via Bubblewrap with zero SSD disk wear.
+### 2.22 `neuronix container <git-url|dir> [options]`
+Spins up an ephemeral, zero-copy development container in RAM (`/dev/shm`) isolated via Bubblewrap with zero SSD disk wear.
 * **Security & Isolation:** Strictly enforces writable tmpfs `/dev/shm` without silent disk fallbacks. Sanitizes credentials and wipes secrets (`AWS_*`, `GITHUB_*`, tokens, `SSH_AUTH_SOCK`).
 * **Options:**
-  * `--run, -c <cmd>`: Executes command inside sandbox non-interactively.
+  * `--run, -c <cmd>`: Executes command inside container non-interactively.
   * `--keep <path>`: Exports workspace changes to destination directory on exit.
   * `--vaporize`: Deletes RAM workspace on exit without prompt.
   * `--dry-run`: Inspects memory allocation without spawning subshell.

@@ -68,7 +68,7 @@
   - [14. Autonomous Boot-Sentinel & Crash-Loop Rollback](#14-autonomous-boot-sentinel--crash-loop-rollback)
   - [15. Generational Forensic Diff Engine (neuronix diff)](#15-generational-forensic-diff-engine-neuronix-diff)
   - [16. Imperative-to-Declarative Reverse Engine (neuronix distill)](#16-imperative-to-declarative-reverse-engine-neuronix-distill)
-  - [17. Ephemeral Zero-Copy RAM Sandbox (neuronix sandbox)](#17-ephemeral-zero-copy-ram-sandbox-neuronix-sandbox)
+  - [17. Ephemeral Zero-Copy RAM Development Container (neuronix container)](#17-ephemeral-zero-copy-ram-development-container-neuronix-container)
   - [18. Deterministic Workload Performance Matrix (neuronix tune)](#18-deterministic-workload-performance-matrix-neuronix-tune)
   - [19. Local P2P Binary Cache Mesh (neuronix mesh)](#19-local-p2p-binary-cache-mesh-neuronix-mesh)
 - [Building & Installation](#building--installation)
@@ -384,7 +384,8 @@ USAGE:
 | `diet` | None | Runs garbage collection, deduplicates `/nix/store` hardlinks, and issues filesystem TRIM. | `neuronix diet` |
 | `dev` | `<stack>` | Starts an isolated development shell (`python`, `rust`, `node`, `ai`, `go`, `web3`). | `neuronix dev rust` |
 | `run` | `<packages...>` | Launches an ephemeral subshell with the specified packages, cleanly discarded upon exit. | `neuronix run ffmpeg jq` |
-| `try` | `[file.nix] [--smoke-test]` | Runs configuration tests in a temporary in-memory QEMU micro-VM via 9P store sharing. | `neuronix try --smoke-test` |
+| `sandbox` | `[file.nix] [--smoke-test]` | In-memory OS Micro-VM sandbox in RAM via 9P store sharing (alias: `neuronix try`). | `neuronix sandbox --smoke-test` |
+| `try` | `[file.nix] [--smoke-test]` | (Alias) Backward-compatible alias for `neuronix sandbox`. | `neuronix try --smoke-test` |
 | `verify` | `<package>` | Tests whether a derivation evaluates cleanly against the nixpkgs closure via dry-build. | `neuronix verify ripgrep` |
 | `center` | None | Opens the graphical NEURONIX Control Center (or runs `--cli` in headless environments). | `neuronix center` |
 | `mcp` | None | Starts the Model Context Protocol (MCP) server over `stdio` adhering to JSON-RPC 2.0. | `neuronix mcp` |
@@ -398,7 +399,7 @@ USAGE:
 | `sentinel` | `[status \| confirm]` | Autonomous Wayland/desktop boot watchdog with auto-rollback on crash-loops. | `neuronix sentinel status` |
 | `diff` | `[genA] [genB]` | Generational forensic diff engine analyzing package closures, kernel changes, and store paths. | `neuronix diff 41 42` |
 | `distill` | `<packages...> [--dry-run]` | Imperative-to-declarative reverse engine compiling packages into Flake configuration. | `neuronix distill ripgrep htop` |
-| `sandbox` | `<target> [options]` | Ephemeral zero-copy repository sandbox in RAM (`/dev/shm`) isolated via Bubblewrap. | `neuronix sandbox https://github.com/user/repo` |
+| `container` | `<target> [options]` | Ephemeral zero-copy development container in RAM (`/dev/shm`) isolated via Bubblewrap. | `neuronix container https://github.com/user/repo` |
 | `tune` | `[profile \| --status]` | Declarative workload-tailored performance matrix (`gaming`, `battery`, `audio-daw`, `balanced`). | `neuronix tune gaming` |
 | `mesh` | `[status \| peers]` | Local P2P zero-config binary cache mesh over mDNS/Avahi without centralized Hydra/Cachix. | `neuronix mesh peers` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
@@ -451,12 +452,12 @@ Enables verification of proposed system configurations, kernel options, or untru
 neuronix try --smoke-test
 
 # Evaluate a target configuration file inside an isolated sandbox
-neuronix try ./configuration.nix --timeout 60
+neuronix sandbox ./configuration.nix --timeout 60
 ```
 
 ### 5. Model Context Protocol (MCP) Server
 NEURONIX includes a built-in Model Context Protocol server communicating over `stdio` adhering to JSON-RPC 2.0 (Protocol Version `2024-11-05`). It provides structured tools, resources, and prompt templates for autonomous development agents:
-- **Tools:** Exposes `neuronix_status`, `neuronix_diet`, `neuronix_verify`, `neuronix_undo`, `neuronix_shadow_eval`, `neuronix_doctor`, `neuronix_check_update`, `neuronix_upgrade`, `neuronix_manual`, `neuronix_sentinel`, `neuronix_diff`, `neuronix_distill`, `neuronix_sandbox`, `neuronix_tune`, and `neuronix_mesh`.
+- **Tools:** Exposes `neuronix_status`, `neuronix_diet`, `neuronix_verify`, `neuronix_undo`, `neuronix_shadow_eval`, `neuronix_doctor`, `neuronix_check_update`, `neuronix_upgrade`, `neuronix_manual`, `neuronix_sentinel`, `neuronix_diff`, `neuronix_distill`, `neuronix_container`, `neuronix_sandbox`, `neuronix_tune`, and `neuronix_mesh`.
 - **Architectural Convergence:** All state-mutating tools (`neuronix_diet`, `neuronix_undo`, `neuronix_upgrade`) converge strictly through the unified, transactional Python core (`neuronix_core.operations`). They enforce POSIX mutual exclusion via `OperationLock`, exact generation predecessor verification, and transaction journaling (`TransactionJournal`), maintaining 100% parity with CLI and GUI control center workflows.
 - **Clean Update Separation:** Update checks isolate local system commits from pinned upstream Nixpkgs hashes, eliminating cross-domain SHA comparisons.
 - **Resources (`resources/list`, `resources/read`):** Exposes all 11 system manual chapters under the `neuronix://manual/*` URI scheme for instant semantic ingestion.
@@ -650,7 +651,7 @@ neuronix distill ripgrep fd htop
 neuronix distill ripgrep fd htop --force
 ```
 
-### 17. Ephemeral Zero-Copy RAM Sandbox (neuronix sandbox)
+### 17. Ephemeral Zero-Copy RAM Development Container (neuronix container)
 Enables instantaneous, isolated code experimentation and untrusted repo exploration without touching workstation storage or risking system state:
 - **Strict RAM-Backed Workspace (/dev/shm):** Clones or unpacks target repositories into a temporary RAM filesystem with zero disk writes. Refuses silent physical disk fallback (`require_ram=True`) when RAM isolation is requested.
 - **Enterprise Credential Sanitization:** Strips environment variables containing cloud tokens, SSH keys, or API credentials (`AWS_*`, `GITHUB_*`, `*_TOKEN`, `*_KEY`, `SSH_AUTH_SOCK`).
@@ -658,14 +659,14 @@ Enables instantaneous, isolated code experimentation and untrusted repo explorat
 - **Clean Vaporization or Export:** Workspace automatically vaporizes from RAM on subshell exit (`--vaporize`), or optionally exports modified files back to host storage (`--keep <path>`).
 
 ```bash
-# Launch isolated ephemeral RAM sandbox from a remote Git repository
-neuronix sandbox https://github.com/astral-sh/uv
+# Launch isolated ephemeral RAM container from a remote Git repository
+neuronix container https://github.com/astral-sh/uv
 
-# Run command non-interactively inside the sandbox and vaporize immediately
-neuronix sandbox https://github.com/astral-sh/uv --run "cargo test" --vaporize
+# Run command non-interactively inside the container and vaporize immediately
+neuronix container https://github.com/astral-sh/uv --run "cargo test" --vaporize
 
-# Sandbox a local directory with automated export on exit
-neuronix sandbox ./my-project --keep ./my-project-output
+# Containerize a local directory with automated export on exit
+neuronix container ./my-project --keep ./my-project-output
 ```
 
 ### 18. Deterministic Workload Performance Matrix (neuronix tune)

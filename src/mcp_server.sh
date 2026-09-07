@@ -305,8 +305,8 @@ handle_tools_list() {
       }
     },
     {
-      "name": "neuronix_sandbox",
-      "description": "Spin up ephemeral zero-copy development sandbox in RAM (/dev/shm), masking real $HOME credentials and vaporizing build artifacts cleanly on exit.",
+      "name": "neuronix_container",
+      "description": "Spin up ephemeral zero-copy development container in RAM (/dev/shm), masking real $HOME credentials and vaporizing build artifacts cleanly on exit.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -316,7 +316,7 @@ handle_tools_list() {
           },
           "command": {
             "type": "string",
-            "description": "Non-interactive command to execute inside sandbox"
+            "description": "Non-interactive command to execute inside container"
           },
           "dry_run": {
             "type": "boolean",
@@ -324,6 +324,27 @@ handle_tools_list() {
           }
         },
         "required": ["target"]
+      }
+    },
+    {
+      "name": "neuronix_sandbox",
+      "description": "Execute isolated in-memory OS Micro-VM sandbox simulation and smoke testing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Simulation mode (synthetic, real, auto)"
+          },
+          "target": {
+            "type": "string",
+            "description": "Optional configuration path to simulate"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Verify VM derivation and RAM scratch reservation without booting"
+          }
+        }
       }
     },
     {
@@ -855,36 +876,91 @@ print(json.dumps(distill_packages(pkgs, dry_run=dr, force=fc)))
             send_response "$req_id" "$content"
             ;;
 
-        neuronix_sandbox)
+        neuronix_container)
             local target cmd_run dry_run
-            target=$(echo "$params" | jq -r '.target // empty')
-            cmd_run=$(echo "$params" | jq -r '.command // empty')
-            dry_run=$(echo "$params" | jq -r '.dry_run // false')
+            target=$(echo "$params" | jq -r '.arguments.target // .target // empty')
+            cmd_run=$(echo "$params" | jq -r '.arguments.command // .command // empty')
+            dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false')
 
             if [[ "$dry_run" == "true" ]]; then
-                local res_text="Sandbox dry-run verified for target: $target. Backing: in-memory tmpfs /dev/shm."
+                local res_text="Container dry-run verified for target: $target. Backing: in-memory tmpfs /dev/shm."
                 local content=$(jq -n -c --arg text "$res_text" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
             else
                 local py_bin core_path
                 py_bin="$(resolve_python)"
                 core_path="$(resolve_core_path)"
-                local sandbox_res
-                sandbox_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+                local container_res
+                container_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
 import sys, json
-from neuronix_core.sandbox import setup_ram_workspace, run_sandbox_session, teardown_sandbox
+from neuronix_core.container import setup_ram_workspace, run_container_session, teardown_container
 t = sys.argv[1]
 c = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] != '' else None
 w, a, msg = setup_ram_workspace(t)
 if not w:
     print(json.dumps({'status':'error','message':msg}))
     sys.exit(0)
-code, s_msg = run_sandbox_session(a, command=c)
-teardown_sandbox(w)
+code, s_msg = run_container_session(a, command=c)
+teardown_container(w)
+print(json.dumps({'status':'success','exit_code':code,'message':s_msg}))
+" "$target" "$cmd_run" 2>/dev/null || echo '{"status":"error","message":"Container run failed"}')
+                local content=$(jq -n -c --arg text "$container_res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            fi
+            ;;
+
+        neuronix_sandbox)
+            local target cmd_run dry_run mode
+            target=$(echo "$params" | jq -r '.arguments.target // .target // empty')
+            cmd_run=$(echo "$params" | jq -r '.arguments.command // .command // empty')
+            dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false')
+            mode=$(echo "$params" | jq -r '.arguments.mode // .mode // "auto"')
+
+            if [[ -n "$cmd_run" || ("$target" =~ ^https?:// || "$target" =~ ^git@) ]]; then
+                # Legacy container compatibility fallback
+                local py_bin core_path
+                py_bin="$(resolve_python)"
+                core_path="$(resolve_core_path)"
+                local sandbox_res
+                sandbox_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import setup_ram_workspace, run_container_session, teardown_container
+t = sys.argv[1]
+c = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] != '' else None
+w, a, msg = setup_ram_workspace(t)
+if not w:
+    print(json.dumps({'status':'error','message':msg}))
+    sys.exit(0)
+code, s_msg = run_container_session(a, command=c)
+teardown_container(w)
 print(json.dumps({'status':'success','exit_code':code,'message':s_msg}))
 " "$target" "$cmd_run" 2>/dev/null || echo '{"status":"error","message":"Sandbox run failed"}')
                 local content=$(jq -n -c --arg text "$sandbox_res" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
+            else
+                # Micro-VM In-Memory OS Sandbox simulation
+                local script_dir
+                script_dir="$(dirname "$(readlink -f "$0")")"
+                local shadow_script="${script_dir}/shadow_vm.sh"
+                if [[ -x "$shadow_script" ]]; then
+                    local vm_args=("--smoke-test" "--headless")
+                    [[ "$dry_run" == "true" ]] && vm_args=("--dry-run")
+                    [[ -n "$mode" ]] && vm_args+=("--mode" "$mode")
+                    [[ -n "$target" ]] && vm_args+=("$target")
+                    local res exit_code=0
+                    res=$("$shadow_script" "${vm_args[@]}" 2>&1 | tr '\n' ' ') || exit_code=$?
+                    local text
+                    if [[ $exit_code -eq 0 ]]; then
+                        text="In-Memory OS Sandbox Simulation PASSED in RAM: ${res}"
+                    else
+                        text="In-Memory OS Sandbox Simulation FAILED (exit code ${exit_code}): ${res}"
+                    fi
+                    local content=$(jq -n -c --arg text "$text" '{"content":[{"type":"text","text":$text}]}')
+                    send_response "$req_id" "$content"
+                else
+                    local content=$(jq -n -c '{"content":[{"type":"text","text":"Shadow Micro-VM simulation engine (shadow_vm.sh) not found."}]}')
+                    send_response "$req_id" "$content"
+                fi
             fi
             ;;
 

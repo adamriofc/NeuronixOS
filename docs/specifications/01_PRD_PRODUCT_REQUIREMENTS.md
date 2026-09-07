@@ -46,7 +46,7 @@ Deliver an independent declarative operating system platform and developer execu
 
 ### Scenario 4: Ephemeral System Simulation
 - **Context:** Testing experimental configuration files or packages before committing to host state.
-- **Requirement:** `neuronix try [file.nix]` spins up an in-memory QEMU micro-VM with read-only 9P store sharing, verifying that the target evaluates cleanly.
+- **Requirement:** `neuronix sandbox [file.nix]` (alias: `neuronix try`) spins up an in-memory QEMU micro-VM with read-only 9P store sharing, verifying that the target evaluates cleanly.
 
 ---
 

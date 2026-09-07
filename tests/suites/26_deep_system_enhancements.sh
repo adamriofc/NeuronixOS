@@ -71,27 +71,27 @@ print('DISTILL_VERIFY_OK')
 \"" "DISTILL_VERIFY_OK" "Python verify_nixpkgs_attribute accurately gates packages"
 
 # ==============================================================================
-# Subsystem 4: Ephemeral Zero-Copy RAM Sandbox (Tests 17-21)
+# Subsystem 4: Ephemeral Zero-Copy Development Container in RAM (Tests 17-21)
 # ==============================================================================
 assert_output_contains "grep -F 'bubblewrap' '${DISTRO_PATH}/modules/hardware/tuning.nix'" "bubblewrap" "Hardware tuning module includes bubblewrap for zero-copy isolation"
-assert_exit_code "$TARGET_BIN sandbox --dry-run /tmp" 0 "CLI sandbox --dry-run exits 0"
-SANDBOX_JSON=$($TARGET_BIN sandbox --dry-run --json /tmp)
-assert_output_contains "echo '$SANDBOX_JSON'" '"dry_run_success"' "CLI sandbox --dry-run --json reports dry_run_success"
-assert_output_contains "echo '$SANDBOX_JSON'" '"target": "/tmp"' "CLI sandbox reports correct target path"
+assert_exit_code "$TARGET_BIN container --dry-run /tmp" 0 "CLI container --dry-run exits 0"
+CONTAINER_JSON=$($TARGET_BIN container --dry-run --json /tmp)
+assert_output_contains "echo '$CONTAINER_JSON'" '"dry_run_success"' "CLI container --dry-run --json reports dry_run_success"
+assert_output_contains "echo '$CONTAINER_JSON'" '"target": "/tmp"' "CLI container reports correct target path"
 
 
 assert_output_contains "'${PYTHON_BIN}' -c \"
 import sys, tempfile, os
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
-from neuronix_core.sandbox import allocate_ram_workspace, vaporize_workspace
+from neuronix_core.container import allocate_ram_workspace, vaporize_workspace
 with tempfile.TemporaryDirectory() as src:
     ws = allocate_ram_workspace(src)
     assert os.path.isdir(ws)
     assert os.path.exists(ws)
     vaporize_workspace(ws)
     assert not os.path.exists(ws)
-print('RAM_SANDBOX_OK')
-\"" "RAM_SANDBOX_OK" "Python allocate_ram_workspace and vaporize_workspace execute atomically"
+print('RAM_CONTAINER_OK')
+\"" "RAM_CONTAINER_OK" "Python allocate_ram_workspace and vaporize_workspace execute atomically"
 
 # ==============================================================================
 # Subsystem 5: Deterministic Workload Matrix (Tune) (Tests 22-26)
@@ -121,6 +121,6 @@ MCP_LIST=$(echo '{"jsonrpc":"2.0","id":200,"method":"tools/list"}' | $TARGET_BIN
 assert_output_contains "echo '$MCP_LIST'" 'neuronix_sentinel' "MCP tools/list exposes neuronix_sentinel"
 assert_output_contains "echo '$MCP_LIST'" 'neuronix_diff' "MCP tools/list exposes neuronix_diff"
 assert_output_contains "echo '$MCP_LIST'" 'neuronix_distill' "MCP tools/list exposes neuronix_distill"
-assert_output_contains "echo '$MCP_LIST'" 'neuronix_sandbox' "MCP tools/list exposes neuronix_sandbox"
+assert_output_contains "echo '$MCP_LIST'" 'neuronix_container' "MCP tools/list exposes neuronix_container"
 assert_output_contains "echo '$MCP_LIST'" 'neuronix_tune' "MCP tools/list exposes neuronix_tune"
 assert_output_contains "echo '$MCP_LIST'" 'neuronix_mesh' "MCP tools/list exposes neuronix_mesh"

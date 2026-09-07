@@ -64,6 +64,6 @@ System configuration changes and package installations are evaluated through a 5
 ### Stage Details
 1. **Stage 1: Syntax & AST Parsing:** Evaluates whether target expressions parse into valid Nix Abstract Syntax Trees (`nix-instantiate --parse`).
 2. **Stage 2: Dry-Build Closure Evaluation:** Evaluates derivation trees against nixpkgs without building or activating binaries (`nixos-rebuild dry-build`).
-3. **Stage 3: Shadow Micro-VM Execution (`neuronix try`):** Boots target configuration inside an ephemeral in-RAM micro-VM via QEMU with read-only 9P store sharing.
+3. **Stage 3: In-Memory OS Sandbox Execution (`neuronix sandbox`, alias `neuronix try`):** Boots target configuration inside an ephemeral in-RAM micro-VM via QEMU with read-only 9P store sharing.
 4. **Stage 4: Atomic Generation Switch:** Atomically updates the `/nix/var/nix/profiles/system` symlink.
 5. **Stage 5: Post-Activation Telemetry:** Validates systemd unit health and provides instantaneous rollback (`neuronix undo`) if anomalies are detected.
