@@ -50,6 +50,8 @@ def get_pinned_nixpkgs_commit(repo_root=None, strict: bool = False) -> Optional[
             pass
 
     version_nix = os.path.join(repo_root, "version.nix")
+    if not os.path.exists(version_nix) and os.path.exists("/etc/neuronix/version.nix"):
+        version_nix = "/etc/neuronix/version.nix"
     if os.path.exists(version_nix):
         try:
             with open(version_nix, "r", encoding="utf-8") as f:
@@ -84,6 +86,8 @@ def get_local_release_metadata(repo_root=None) -> Dict[str, Any]:
 
     # Extract declarative metadata from version.nix
     version_nix = os.path.join(repo_root, "version.nix")
+    if not os.path.exists(version_nix) and os.path.exists("/etc/neuronix/version.nix"):
+        version_nix = "/etc/neuronix/version.nix"
     if os.path.exists(version_nix):
         try:
             with open(version_nix, "r", encoding="utf-8") as f:

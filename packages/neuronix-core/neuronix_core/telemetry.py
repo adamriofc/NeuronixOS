@@ -60,6 +60,13 @@ def get_gpu_info():
                         return parts[1].strip()
         except Exception:
             pass
+    if os.path.exists("/sys/class/drm"):
+        try:
+            cards = [c for c in os.listdir("/sys/class/drm") if c.startswith("card") and "-" not in c]
+            if cards:
+                return f"Direct Rendering Manager ({cards[0]})"
+        except Exception:
+            pass
     return "Integrated / Standard Display"
 
 def get_battery_info():

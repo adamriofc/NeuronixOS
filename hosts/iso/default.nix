@@ -36,7 +36,20 @@
     usbutils
     git
     curl
+    (writeShellScriptBin "neuronix-install-engine" ''
+      exec ${bash}/bin/bash /etc/calamares/scripts/neuronix-install-engine.sh "$@"
+    '')
   ];
+
+  # Provision declarative Calamares configuration and installation engine into Live Media
+  environment.etc."calamares".source = ../../installer/calamares;
+  environment.etc."calamares/scripts/neuronix-install-engine.sh" = {
+    source = ../../installer/scripts/neuronix-install-engine.sh;
+    mode = "0755";
+  };
+  environment.etc."neuronix/modules".source = ../../modules;
+  environment.etc."neuronix/packages".source = ../../packages;
+  environment.etc."neuronix/version.nix".source = ../../version.nix;
 
   # Otomatis menjalankan Calamares Installer saat Live Session dibuka
   systemd.user.services.autostart-calamares = {

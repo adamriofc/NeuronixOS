@@ -3,7 +3,7 @@
 {
   # Modern Standby S0ix power management and thermal regulation
   services.power-profiles-daemon.enable = true;
-  services.thermald.enable = lib.mkDefault true;
+  services.thermald.enable = lib.mkDefault (pkgs.stdenv.hostPlatform.isx86);
 
   # Battery charge threshold control (80% conservation ceiling)
   # Systemd service writing battery charge threshold to sysfs

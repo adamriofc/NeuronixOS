@@ -138,12 +138,12 @@
         {
           default = pkgs.mkShell {
             name = "neuronix-dev-shell";
-            buildInputs = with pkgs; [
-              nix-diff
-              nixos-generators
-              qemu
-              calamares
-              btrfs-progs
+            buildInputs = [
+              pkgs.nix-diff
+              nixos-generators.packages.${system}.default
+              pkgs.qemu
+              pkgs.calamares
+              pkgs.btrfs-progs
             ];
             shellHook = ''
               echo "========================================================"

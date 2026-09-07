@@ -16,6 +16,8 @@ import types
 VERSION = "1.0.3"
 try:
     _vfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../version.nix")
+    if not os.path.exists(_vfile):
+        _vfile = "/etc/neuronix/version.nix"
     if os.path.exists(_vfile):
         with open(_vfile, "r") as _f:
             for _line in _f:
@@ -26,9 +28,14 @@ except Exception:
     pass
 
 # Link shared domain logic from neuronix-core
-_CORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../neuronix-core")
-if os.path.exists(_CORE_PATH) and _CORE_PATH not in sys.path:
-    sys.path.insert(0, _CORE_PATH)
+for candidate in [
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "../neuronix-core"),
+    "/etc/nixos/packages/neuronix-core",
+    "/etc/neuronix/packages/neuronix-core"
+]:
+    if os.path.exists(candidate) and candidate not in sys.path:
+        sys.path.insert(0, candidate)
+        break
 
 try:
     import neuronix_core

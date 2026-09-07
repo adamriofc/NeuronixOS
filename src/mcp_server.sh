@@ -17,6 +17,11 @@ export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-syst
 SERVER_NAME="neuronix-mcp"
 SERVER_VERSION="1.0.3"
 VERSION_NIX="$(dirname "$(readlink -f "$0")")/../version.nix"
+if [[ ! -f "$VERSION_NIX" && -f "$(dirname "$(readlink -f "$0")")/version.nix" ]]; then
+    VERSION_NIX="$(dirname "$(readlink -f "$0")")/version.nix"
+elif [[ ! -f "$VERSION_NIX" && -f "/etc/neuronix/version.nix" ]]; then
+    VERSION_NIX="/etc/neuronix/version.nix"
+fi
 if [[ -f "$VERSION_NIX" ]]; then
     SERVER_VERSION=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
 fi
@@ -56,8 +61,14 @@ resolve_core_path() {
     script_dir="$(dirname "$(readlink -f "$0")")"
     if [[ -d "${script_dir}/../packages/neuronix-core" ]]; then
         echo "${script_dir}/../packages/neuronix-core"
+    elif [[ -d "${script_dir}/../share/neuronix/packages/neuronix-core" ]]; then
+        echo "${script_dir}/../share/neuronix/packages/neuronix-core"
+    elif [[ -d "${script_dir}/packages/neuronix-core" ]]; then
+        echo "${script_dir}/packages/neuronix-core"
     elif [[ -d "/etc/nixos/packages/neuronix-core" ]]; then
         echo "/etc/nixos/packages/neuronix-core"
+    elif [[ -d "/etc/neuronix/packages/neuronix-core" ]]; then
+        echo "/etc/neuronix/packages/neuronix-core"
     else
         echo ""
     fi
@@ -574,7 +585,13 @@ CATALOG_EOF
                 real_bin="$(readlink -f "${BASH_SOURCE[0]}")"
                 local script_dir
                 script_dir="$(cd "$(dirname "$real_bin")" && pwd)"
-                manual_dir="${script_dir}/../docs/manual"
+                if [[ -d "${script_dir}/manual" ]]; then
+                    manual_dir="${script_dir}/manual"
+                elif [[ -d "${script_dir}/../share/neuronix/manual" ]]; then
+                    manual_dir="${script_dir}/../share/neuronix/manual"
+                elif [[ -d "${script_dir}/../docs/manual" ]]; then
+                    manual_dir="${script_dir}/../docs/manual"
+                fi
             fi
             if [[ ! -d "$manual_dir" && -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/docs/manual" ]]; then
                 manual_dir="${PROJECT_ROOT}/docs/manual"
@@ -740,7 +757,13 @@ handle_resources_read() {
         real_bin="$(readlink -f "${BASH_SOURCE[0]}")"
         local script_dir
         script_dir="$(cd "$(dirname "$real_bin")" && pwd)"
-        manual_dir="${script_dir}/../docs/manual"
+        if [[ -d "${script_dir}/manual" ]]; then
+            manual_dir="${script_dir}/manual"
+        elif [[ -d "${script_dir}/../share/neuronix/manual" ]]; then
+            manual_dir="${script_dir}/../share/neuronix/manual"
+        elif [[ -d "${script_dir}/../docs/manual" ]]; then
+            manual_dir="${script_dir}/../docs/manual"
+        fi
     fi
     if [[ ! -d "$manual_dir" && -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/docs/manual" ]]; then
         manual_dir="${PROJECT_ROOT}/docs/manual"
@@ -811,7 +834,13 @@ handle_prompts_get() {
         real_bin="$(readlink -f "${BASH_SOURCE[0]}")"
         local script_dir
         script_dir="$(cd "$(dirname "$real_bin")" && pwd)"
-        manual_dir="${script_dir}/../docs/manual"
+        if [[ -d "${script_dir}/manual" ]]; then
+            manual_dir="${script_dir}/manual"
+        elif [[ -d "${script_dir}/../share/neuronix/manual" ]]; then
+            manual_dir="${script_dir}/../share/neuronix/manual"
+        elif [[ -d "${script_dir}/../docs/manual" ]]; then
+            manual_dir="${script_dir}/../docs/manual"
+        fi
     fi
     if [[ ! -d "$manual_dir" && -n "${PROJECT_ROOT:-}" && -d "${PROJECT_ROOT}/docs/manual" ]]; then
         manual_dir="${PROJECT_ROOT}/docs/manual"

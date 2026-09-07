@@ -16,7 +16,11 @@ stdenv.mkDerivation rec {
     cp neuronix $out/bin/neuronix
     cp mcp_server.sh $out/share/neuronix/mcp_server.sh
     cp shadow_vm.sh $out/share/neuronix/shadow_vm.sh
+    cp ${../../version.nix} $out/share/neuronix/version.nix
+    cp -r ${../../docs/manual} $out/share/neuronix/manual
     chmod +x $out/bin/neuronix $out/share/neuronix/*.sh
+    ln -s $out/share/neuronix/mcp_server.sh $out/bin/mcp_server.sh
+    ln -s $out/share/neuronix/shadow_vm.sh $out/bin/shadow_vm.sh
 
     wrapProgram $out/bin/neuronix \
       --prefix PATH : ${lib.makeBinPath [ bash coreutils nix jq ]}
