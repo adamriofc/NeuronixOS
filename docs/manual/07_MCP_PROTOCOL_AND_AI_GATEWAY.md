@@ -26,6 +26,12 @@ This architecture decouples the AI reasoning engine from unconstrained root term
 | `neuronix_upgrade` | `{"mode": "staged\|switch", "dry_run": <bool>}` | Orchestrates atomic system upgrade. |
 | `neuronix_doctor` | None | Produces sanitized JSON diagnostic report (schema version 1.0.0). |
 | `neuronix_manual` | `{"topic": "<string>"}` | Queries system-embedded technical manual and AI directives. |
+| `neuronix_sentinel` | None | Returns boot assessment status, watchdog health, and rollback logs. |
+| `neuronix_diff` | `{"gen_a": "<str>", "gen_b": "<str>"}` | Forensically compares package closures and systemd units between generations. |
+| `neuronix_distill` | `{"packages": ["<str>"], "dry_run": <bool>}` | Reverse-compiles verified packages into declarative Flake configuration. |
+| `neuronix_sandbox` | `{"target": "<str>", "command": "<str>", "dry_run": <bool>}` | Runs isolated in-memory RAM development sandbox in `/dev/shm`. |
+| `neuronix_tune` | `{"profile": "<str>"}` | Queries or applies deterministic workload tuning (gaming, battery, audio, balanced). |
+| `neuronix_mesh` | None | Queries local P2P binary cache mesh and discovered LAN neighbor nodes. |
 
 ---
 

@@ -36,6 +36,12 @@ When connected via Model Context Protocol, prioritize calling these dedicated to
 | Free disk space & discard blocks | `neuronix_diet` | `{"dry_run": false}` |
 | Read technical manual chapters | `neuronix_manual` | `{"topic": "storage"}` |
 | Collect sanitized debug diagnostics | `neuronix_doctor` | `{}` |
+| Inspect boot assessment & fallback | `neuronix_sentinel` | `{}` |
+| Diff package closures & units | `neuronix_diff` | `{"gen_a": "41", "gen_b": "42"}` |
+| Compile package into Flake | `neuronix_distill` | `{"packages": ["jq"], "dry_run": true}` |
+| Run isolated sandbox in RAM | `neuronix_sandbox` | `{"target": "/tmp/repo", "dry_run": true}` |
+| Tune workload governor/audio | `neuronix_tune` | `{"profile": "gaming"}` |
+| Discover LAN P2P cache mesh | `neuronix_mesh` | `{}` |
 
 ---
 

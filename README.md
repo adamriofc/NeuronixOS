@@ -8,7 +8,7 @@
   <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.3-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
-  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1038%2F1038_Passed_(100%25)-success.svg" alt="Testing"></a>
+  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1077%2F1077_Passed_(100%25)-success.svg" alt="Testing"></a>
   <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
   <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
@@ -65,9 +65,15 @@
   - [11. Declarative Kernel Flavor Manager](#11-declarative-kernel-flavor-manager)
   - [12. System-Embedded Manual & Autonomous AI Grounding](#12-system-embedded-manual--autonomous-ai-grounding)
   - [13. Enterprise Security Boundary & Hardened Trust Architecture](#13-enterprise-security-boundary--hardened-trust-architecture)
+  - [14. Autonomous Boot-Sentinel & Crash-Loop Rollback](#14-autonomous-boot-sentinel--crash-loop-rollback)
+  - [15. Generational Forensic Diff Engine (neuronix diff)](#15-generational-forensic-diff-engine-neuronix-diff)
+  - [16. Imperative-to-Declarative Reverse Engine (neuronix distill)](#16-imperative-to-declarative-reverse-engine-neuronix-distill)
+  - [17. Ephemeral Zero-Copy RAM Sandbox (neuronix sandbox)](#17-ephemeral-zero-copy-ram-sandbox-neuronix-sandbox)
+  - [18. Deterministic Workload Performance Matrix (neuronix tune)](#18-deterministic-workload-performance-matrix-neuronix-tune)
+  - [19. Local P2P Binary Cache Mesh (neuronix mesh)](#19-local-p2p-binary-cache-mesh-neuronix-mesh)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (1,038 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (1,077 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -174,7 +180,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 | **FHS Dynamic Binary Compatibility** | Pre-configured `nix-ld` for VS Code, CUDA, and ELFs | Requires manual `nix-ld` or `steam-run` wrapping | Handled via Toolbox / Distrobox containers | Handled via Distrobox containers | Native POSIX/FHS directory hierarchy |
 | **AI Copilot & Telemetry Daemon** | Native OpenCode daemon + MCP JSON-RPC 2.0 server | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) |
 | **Storage Topology & Compression** | 5 Btrfs subvolumes (`@`, `@home`, `@nix`, `@snapshots`, `@swap`) + ZSTD:3 | User-defined partitioning (defaults to monolithic) | Btrfs root with subvolumes; no transparent compression | Btrfs root with Snapper read-only subvolumes | Monolithic Btrfs or EXT4 without subvolume convention |
-| **Automated Assurance Gate** | 1,038 verified assertions across 25 QA suites, distro harness, and 14 standalone gates (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
+| **Automated Assurance Gate** | 1,077 verified assertions across 26 QA suites, distro harness, and 14 standalone gates (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
 | **Release Provenance** | Pinned Flake commit + RFC SHA-256 + SPDX 2.3 SBOM | Hydra output provenance | Koji build logs / RPM signatures | OBS build provenance | Arch build system logs |
 
 ---
@@ -184,7 +190,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 #### 1. NEURONIX OS vs. Vanilla NixOS
 Vanilla NixOS provides an exceptional functional package management paradigm, but operates fundamentally as an infrastructure toolkit rather than a cohesive, out-of-the-box desktop distribution. A user installing vanilla NixOS must manually architect their Btrfs subvolume layout, configure swap parameters, script hardware driver integrations (such as NVIDIA PRIME offloading), research dynamic linker workarounds for proprietary software (`nix-ld`), and resolve complex multi-desktop configurations.
 
-NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 1,038-assertion test taxonomy (cataloged in `data/test_manifest.json`). Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
+NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 1,077-assertion test taxonomy (cataloged in `data/test_manifest.json`). Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
 
 #### 2. NEURONIX OS vs. Fedora Silverblue / Atomic Desktops
 Fedora Silverblue enforces immutability by composing system states as read-only OSTree commits. While effective at preventing host corruption, Silverblue introduces significant operational overhead:
@@ -211,7 +217,7 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
 | Proof Class | Rigor Level & Scope | Verification Grounding | Subsystems & Features |
 | :--- | :--- | :--- | :--- |
 | **P0: Mathematical Determinism** | Functional derivations, bit-identical store paths, pinned inputs. | Verified via Nix derivation graph, `flake.lock` pinned commit, and RFC SHA-256 digests. | Pure Nix substrate, pinned Nixpkgs closures, reproducible ISO builds, release manifest hashes. |
-| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 1,038 automated test assertions across 25 QA suites, 19 distro component suites, and 14 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC. |
+| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 1,077 automated test assertions across 26 QA suites, 19 distro component suites, and 14 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC. |
 | **P2: Qualified Reference Hardware** | Empirical hardware validation on representative bare-metal systems. | Validated across 8 reference platforms (ThinkPad, Framework, AMD/Intel workstations, XPS, Zephyrus, Apple Silicon). | Intel/AMD microcode, Mesa RADV, Intel Arc Xe, NVIDIA PRIME offload, S3/s2idle power management, PipeWire HD audio. |
 | **P3: Declarative Module Support** | Composable NixOS configuration modules and subsystem policies. | 27 hardware configuration pillars managed in `modules/hardware/` and `data/hardware_qualification.json`. | ZRAM ZSTD swap, systemd-oomd memory monitor, Btrfs subvolumes (@, @home, @nix, @log, @snapshots), auto-TRIM. |
 | **P4: Experimental / Community** | Optional hardware features, custom Wayland compositor rules, community packages. | Documented with operational caveats and manual verification steps in operational runbooks. | Lanzaboote UEFI Secure Boot signing chain, TPM2 LUKS auto-unlocking, custom Hyprland animations. |
@@ -239,7 +245,7 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
   ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ In-Memory Shadow Micro-VM Simulator (neuronix try)
   ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Declarative Derivation Verification (neuronix verify)
   ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Storage Pruner & VirtIO TRIM (neuronix diet)
-  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 1,038 Automated Test Assertions (100% Pass)
+  └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 1,077 Automated Test Assertions (100% Pass)
 ```
 
 ---
@@ -389,6 +395,12 @@ USAGE:
 | `quickstart` | `[list \| install <id>]` | Curated Flathub desktop & engineering app hub (zero store pollution). | `neuronix quickstart list` |
 | `kernel` | `[status \| list \| set <flv>]` | Declarative kernel flavor manager (default, zen, lts, latest, hardened). | `neuronix kernel list` |
 | `manual` | `[topic \| --list]` | Reads offline system manual and architecture reference (`/etc/neuronix/manual/`). | `neuronix manual config` |
+| `sentinel` | `[status \| confirm]` | Autonomous Wayland/desktop boot watchdog with auto-rollback on crash-loops. | `neuronix sentinel status` |
+| `diff` | `[genA] [genB]` | Generational forensic diff engine analyzing package closures, kernel changes, and store paths. | `neuronix diff 41 42` |
+| `distill` | `<packages...> [--dry-run]` | Imperative-to-declarative reverse engine compiling packages into Flake configuration. | `neuronix distill ripgrep htop` |
+| `sandbox` | `<target> [options]` | Ephemeral zero-copy repository sandbox in RAM (`/dev/shm`) isolated via Bubblewrap. | `neuronix sandbox https://github.com/user/repo` |
+| `tune` | `[profile \| --status]` | Declarative workload-tailored performance matrix (`gaming`, `battery`, `audio-daw`, `balanced`). | `neuronix tune gaming` |
+| `mesh` | `[status \| peers]` | Local P2P zero-config binary cache mesh over mDNS/Avahi without centralized Hydra/Cachix. | `neuronix mesh peers` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
 | `help` | None (`-h`, `--help`)   | Displays available commands and syntax summaries. | `neuronix help` |
 
@@ -444,7 +456,7 @@ neuronix try ./configuration.nix --timeout 60
 
 ### 5. Model Context Protocol (MCP) Server
 NEURONIX includes a built-in Model Context Protocol server communicating over `stdio` adhering to JSON-RPC 2.0 (Protocol Version `2024-11-05`). It provides structured tools, resources, and prompt templates for autonomous development agents:
-- **Tools:** Exposes `neuronix_status`, `neuronix_diet`, `neuronix_verify`, `neuronix_undo`, `neuronix_shadow_eval`, `neuronix_doctor`, `neuronix_check_update`, `neuronix_upgrade`, and `neuronix_manual`.
+- **Tools:** Exposes `neuronix_status`, `neuronix_diet`, `neuronix_verify`, `neuronix_undo`, `neuronix_shadow_eval`, `neuronix_doctor`, `neuronix_check_update`, `neuronix_upgrade`, `neuronix_manual`, `neuronix_sentinel`, `neuronix_diff`, `neuronix_distill`, `neuronix_sandbox`, `neuronix_tune`, and `neuronix_mesh`.
 - **Architectural Convergence:** All state-mutating tools (`neuronix_diet`, `neuronix_undo`, `neuronix_upgrade`) converge strictly through the unified, transactional Python core (`neuronix_core.operations`). They enforce POSIX mutual exclusion via `OperationLock`, exact generation predecessor verification, and transaction journaling (`TransactionJournal`), maintaining 100% parity with CLI and GUI control center workflows.
 - **Clean Update Separation:** Update checks isolate local system commits from pinned upstream Nixpkgs hashes, eliminating cross-domain SHA comparisons.
 - **Resources (`resources/list`, `resources/read`):** Exposes all 11 system manual chapters under the `neuronix://manual/*` URI scheme for instant semantic ingestion.
@@ -585,6 +597,105 @@ NEURONIX implements rigorous least-privilege security boundaries and transaction
   - `neuronix.audio.antiPop`: opt-in DAC power-management anti-pop override while preserving laptop power savings.
   - `neuronix.desktop.inputMethodProfile`: modular internationalization (`"standard"`, `"cjk-full"`, `"minimal"`).
 
+### 14. Autonomous Boot-Sentinel & Crash-Loop Rollback
+An autonomous boot reliability monitor that protects against unbootable Wayland compositor crashes, broken display managers, or faulty kernel configurations:
+- **Watchdog Timer & Crash-Loop Detection:** Upon system boot, `neuronix-boot-sentinel.service` arms an internal timer. If the graphical target or Wayland compositor fails or enters a crash loop before user session confirmation, the sentinel automatically triggers a safe rollback to the last-known-good generation.
+- **Session Confirmation:** Successful desktop login or running `neuronix sentinel confirm` validates the current generation and disarms the watchdog.
+- **Full Parity:** Accessible via CLI (`neuronix sentinel`), GUI Control Center, and JSON-RPC MCP server (`neuronix_sentinel`).
+
+```bash
+# Query active boot health assessment and last-known-good generation pointer
+neuronix sentinel status
+
+# Manually confirm current generation and disarm watchdog
+neuronix sentinel confirm
+```
+
+### 15. Generational Forensic Diff Engine (neuronix diff)
+A deep forensic analysis engine that compares system generations to pinpoint exact causes of breakage or configuration drift:
+- **Comprehensive Three-Tier Diffing:** Compares package closures (`/sw/bin`), active systemd units, and Linux kernel versions between any two generations.
+- **Zero Ambiguity:** Defaults to comparing the current generation against its immediate predecessor if arguments are omitted.
+- **Machine-Readable Telemetry:** Supports `--json` for automated regression analysis by AI copilots and CI pipelines.
+
+```bash
+# Diff active generation against previous generation
+neuronix diff
+
+# Compare two arbitrary generations (e.g. Generation 40 vs 42)
+neuronix diff 40 42
+
+# Emit machine-readable JSON diff report
+neuronix diff --json
+```
+
+### 16. Imperative-to-Declarative Reverse Engine (neuronix distill)
+Bridges the gap between ephemeral experimentation (`neuronix run`) and declarative NixOS immutability:
+- **Reverse-Compilation Pipeline:** Captures ad-hoc packages tried imperatively, verifies them against pure nixpkgs closures, and compiles them directly into declarative Nix code at `modules/custom/user-packages.nix`.
+- **AST Syntax Validation:** Validates the generated Nix expression with `nix-instantiate --parse` before modifying any files, ensuring the system flake cannot be broken by syntax errors.
+- **Dry-Run Mode:** Supports `--dry-run` to preview the generated Nix configuration without writing changes to disk.
+
+```bash
+# Preview declarative Nix configuration for packages
+neuronix distill ripgrep fd htop --dry-run
+
+# Persist packages into modules/custom/user-packages.nix
+neuronix distill ripgrep fd htop
+```
+
+### 17. Ephemeral Zero-Copy RAM Sandbox (neuronix sandbox)
+Enables instantaneous, isolated code experimentation and untrusted repo exploration without touching workstation storage or risking system state:
+- **RAM-Backed Workspace (/dev/shm):** Clones or unpacks target repositories into a temporary RAM filesystem with zero disk writes.
+- **Bubblewrap Isolation:** Mounts `/nix/store` as strictly read-only, masks the user's real `$HOME` directory and sensitive credentials (`~/.ssh`, `~/.gnupg`, `~/.aws`) with an ephemeral tmpfs, and isolates process namespaces.
+- **Clean Vaporization or Export:** Workspace automatically vaporizes from RAM on subshell exit (`--vaporize`), or optionally exports modified files back to host storage (`--keep <path>`).
+
+```bash
+# Launch isolated ephemeral RAM sandbox from a remote Git repository
+neuronix sandbox https://github.com/astral-sh/uv
+
+# Run command non-interactively inside the sandbox and vaporize immediately
+neuronix sandbox https://github.com/astral-sh/uv --run "cargo test" --vaporize
+
+# Sandbox a local directory with automated export on exit
+neuronix sandbox ./my-project --keep ./my-project-output
+```
+
+### 18. Deterministic Workload Performance Matrix (neuronix tune)
+Dynamically optimizes host kernel, scheduler, cgroups, and audio parameters for specific computational workloads:
+- **Workload Profiles:**
+  - `gaming`: Enables high-performance CPU governor, raises `vm.max_map_count = 2147483642`, optimizes thread scheduling.
+  - `battery`: Enforces powersave CPU governor, sets 80% battery charging ceiling, engages aggressive PCIe ASPM power saving.
+  - `audio-daw`: Configures low-latency PipeWire quantum (128 samples / 48000 Hz) for pro-audio and DAW production.
+  - `balanced`: Restores default adaptive schedutil governors and standard desktop priorities.
+- **Non-Destructive & Safe:** All tunings are applied in-memory and cleanly revertible without modifying persistent Nix Flakes.
+
+```bash
+# Display active CPU governors, audio latency quantum, and power profile
+neuronix tune --status
+
+# Activate low-latency Pro Audio profile
+neuronix tune audio-daw
+
+# Switch to maximum performance Gaming profile
+neuronix tune gaming
+```
+
+### 19. Local P2P Binary Cache Mesh (neuronix mesh)
+A zero-configuration, peer-to-peer binary cache discovery mesh designed for multi-machine local networks (studios, labs, offices):
+- **mDNS / Avahi Service Discovery:** Automatically discovers neighboring NEURONIX nodes on the local LAN or Wi-Fi subnet advertising `_nix-cache._tcp` on port 5000.
+- **Bandwidth Conservation:** Enables machines to pull pre-compiled Nix derivations directly from local peers at gigabit LAN speeds instead of re-downloading or compiling from the global Internet.
+- **Decentralized & Zero-Maintenance:** Requires no central Hydra server, Cachix account, or upstream credentials.
+
+```bash
+# Display binary cache mesh status and active mDNS listeners
+neuronix mesh status
+
+# Discover available peer cache nodes on the local subnet
+neuronix mesh peers
+
+# Emit discovered peers in structured JSON
+neuronix mesh peers --json
+```
+
 ---
 
 ## Building & Installation
@@ -650,15 +761,15 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Industrial Test Battery (1,038 Assertions)
+## Verification, Lifecycle Gate & Industrial Test Battery (1,077 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,038 automated assertions across 16 test harnesses (25 master suites, 19 distro suites, and 14 standalone gates):
+System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,077 automated assertions across 16 test harnesses (26 master suites, 19 distro suites, and 14 standalone gates):
 
 ```text
 ═══════════════════════════════════════════════════════════════════
                     TEST HARNESS REPORT SUMMARY                    
 ═══════════════════════════════════════════════════════════════════
-  Master Test Harness (tests/run_all_tests.sh)     : 673 / 673 PASS
+  Master Test Harness (tests/run_all_tests.sh)     : 712 / 712 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 209 / 209 PASS
   Single Source of Truth Gate (source_of_truth)    :  13 /  13 PASS
   Multi-Architecture Matrix (multiarch_matrix)     :  13 /  13 PASS
@@ -674,7 +785,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Historical Regression Corpus (regression_corpus) :   7 /   7 PASS
   Reproducibility Gate (test_reproducible_iso)     :   6 /   6 PASS
   Performance Benchmarks (test_benchmarks)         :   4 /   4 PASS
-  Total Executed Assertions                        : 1,038 Assertions
+  Total Executed Assertions                        : 1,077 Assertions
   Failed Verification                              : 0 Failures
   Execution Duration                               : ~110 seconds
   Confidence Score                                 : 100%
@@ -693,7 +804,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
 
 ### Verification Battery Execution:
 ```bash
-# Run master industrial test harness (673 tests across 25 suites)
+# Run master industrial test harness (712 tests across 26 suites)
 bash tests/run_all_tests.sh
 
 # Run distribution standalone suite (209 tests across 19 suites)

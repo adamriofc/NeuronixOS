@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-09-05T04:09:30Z",
+  "timestamp": "2026-09-07T06:22:32Z",
   "gate_type": "real_e2e",
   "proof_class": "L4_HYBRID_ENGINE",
   "hardware": {
     "kvm_accelerated": true,
-    "memory_total_kb": 6063008,
-    "qemu_version": "QEMU emulator version 10.2.4"
+    "memory_total_kb": 15751980,
+    "qemu_version": "QEMU emulator version 11.1.1"
   },
   "storage": {
     "format": "qcow2",

@@ -56,3 +56,31 @@ NEURONIX schedules recurring storage maintenance services via systemd timers:
 * **Store Deduplication:** Hardlink deduplication merges identical package store files automatically (`auto-optimise-store = true`).
 * **Btrfs Balancing (`neuronix-btrfs-balance.timer`):** Balances underallocated chunk blocks monthly to reclaim unallocated filesystem space.
 * **Manual Maintenance:** Run `neuronix diet` anytime to trigger all reclamation steps sequentially.
+
+---
+
+## 4. Autonomous Boot-Sentinel & Crash-Loop Self-Healing
+
+The NEURONIX Boot-Sentinel (`modules/core/sentinel.nix`) protects against unbootable system states:
+
+* **Early-Boot Armed Assessment:** Arms on `basic.target` and logs `/run/neuronix/booting-generation`.
+* **Graphical Confirmation:** Confirms healthy desktop reach on `graphical.target` and records `/var/lib/neuronix/last-known-good`.
+* **Watchdog Auto-Rollback:** If display manager or compositor crash-loops before confirmation, `neuronix-boot-fallback.service` automatically points `/nix/var/nix/profiles/system` back to the verified last-known-good generation and reboots.
+
+---
+
+## 5. Generational Forensic Diff Engine
+
+Inspect exact changes between generations before or after upgrades:
+
+```bash
+# Compare previous generation with current generation
+neuronix diff
+
+# Compare explicit historical generations
+neuronix diff 40 42
+
+# Export diff report in JSON
+neuronix diff --json
+```
+

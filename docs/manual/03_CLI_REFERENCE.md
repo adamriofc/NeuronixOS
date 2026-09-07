@@ -100,3 +100,39 @@ Opens first-boot onboarding wizard and interactive welcome guide.
 
 ### 2.18 `neuronix quickstart`
 Displays curated 1-click catalog of daily desktop applications via Flatpak.
+
+### 2.19 `neuronix sentinel [status|confirm] [--json]`
+Inspects autonomous Boot-Sentinel health assessment state, watchdog timers, and emergency rollback history.
+* **Subcommands:**
+  * `status`: Displays current boot assessment and last-known-good generation pointer.
+  * `confirm`: Manually confirms current booted generation as healthy and disarms watchdog.
+* **Options:** `--json` outputs machine-readable JSON.
+
+### 2.20 `neuronix diff [GEN_A] [GEN_B] [--json]`
+Performs generational forensic diff comparing package closures (/sw/bin), systemd units, and kernel releases. Defaults to comparing previous vs active generation if arguments omitted.
+* **Options:** `--json` outputs structured JSON diff report.
+
+### 2.21 `neuronix distill <packages...> [--dry-run] [--json]`
+Reverse-compiles imperatively executed packages into declarative Flake configuration in modules/custom/user-packages.nix. Validates package derivations against pure nixpkgs closures and verifies Nix AST syntax before committing.
+* **Options:**
+  * `--dry-run`: Previews package verification and generated Nix syntax without writing to disk.
+  * `--json`: Outputs structured JSON report.
+
+### 2.22 `neuronix sandbox <git-url|dir> [options]`
+Spins up an ephemeral, zero-copy development sandbox in RAM (/dev/shm) isolated via Bubblewrap. Mounts /nix/store read-only, masks real $HOME credentials with tmpfs, and cleans up completely on exit.
+* **Options:**
+  * `--run, -c <cmd>`: Executes command inside sandbox non-interactively.
+  * `--keep <path>`: Exports workspace changes to destination directory on exit.
+  * `--vaporize`: Deletes RAM workspace on exit without prompt.
+  * `--dry-run`: Inspects memory allocation without spawning subshell.
+  * `--json`: Emits status in JSON.
+
+### 2.23 `neuronix tune [profile] [--status] [--json]`
+Applies deterministic real-time kernel, cgroups, PipeWire quantum, and CPU governor tuning profiles.
+* **Profiles:** `gaming` (performance governor, max_map_count), `battery` (powersave, 80% ceiling), `audio-daw` (PipeWire 128/48000 quantum), `balanced` (adaptive schedutil).
+* **Options:** `--status` displays current governors and audio quantum; `--json` outputs telemetry in JSON.
+
+### 2.24 `neuronix mesh [status|peers] [--json]`
+Discovers and queries local peer-to-peer binary cache nodes on the local LAN/Wi-Fi subnet advertising via mDNS/Avahi (_nix-cache._tcp on port 5000).
+* **Options:** `--json` outputs peer node list in JSON.
+

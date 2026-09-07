@@ -78,7 +78,11 @@ step_check() {
     fi
 }
 
-SCRATCH_DIR=$(mktemp -d "/tmp/neuronix-real-e2e-XXXXXX")
+if [[ $(df -k /tmp 2>/dev/null | awk 'NR==2 {print $4}' || echo 0) -ge 10485760 ]]; then
+    SCRATCH_DIR=$(mktemp -d "/tmp/neuronix-real-e2e-XXXXXX")
+else
+    SCRATCH_DIR=$(mktemp -d "/var/tmp/neuronix-real-e2e-XXXXXX")
+fi
 cleanup() {
     rm -rf "${SCRATCH_DIR}"
 }

@@ -52,3 +52,25 @@ neuronix try /path/to/experimental/flake.nix
 # Test and promote automatically if all verification gates pass
 neuronix try /path/to/experimental/flake.nix --promote -y
 ```
+
+---
+
+## 5. Ephemeral Zero-Copy Repo Sandbox (neuronix sandbox)
+
+While `neuronix try` isolates entire system configurations via QEMU, `neuronix sandbox` isolates application development and foreign codebases via lightweight Linux kernel namespaces:
+
+* **RAM Workspace (/dev/shm):** Repositories clone or copy directly into tmpfs/ZRAM in memory, eliminating SSD write wear during high-volume build cycles.
+* **Bubblewrap Containerization:** Mounts `/nix/store` read-only, masks host `$HOME` credentials (`.ssh`, `.aws`, `.gnupg`) with an isolated tmpfs, and isolates process execution.
+* **Clean Vaporization:** Exiting the sandbox automatically vaporizes RAM contents without leaving temporary file residue.
+
+```bash
+# Clone foreign git repository into isolated RAM sandbox
+neuronix sandbox https://github.com/example/untrusted-tool.git
+
+# Execute build or test command non-interactively
+neuronix sandbox /path/to/local/project --run "cargo test"
+
+# Export modified changes to destination directory on exit
+neuronix sandbox https://github.com/example/repo.git --keep ~/exported-repo
+```
+
