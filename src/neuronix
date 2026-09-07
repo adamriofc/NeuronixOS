@@ -1591,6 +1591,15 @@ cmd_sentinel() {
                 json_output=1
                 shift
                 ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${PROGRAM_NAME} sentinel [status|confirm] [OPTIONS]\n"
+                echo -e "  Inspects autonomous boot assessment state and emergency rollback history.\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${CYAN}--json${RESET}     Output status in structured JSON"
+                echo -e "  ${CYAN}-h, --help${RESET} Show this help"
+                return 0
+                ;;
             status|confirm|test)
                 sub="$1"
                 shift
@@ -1600,6 +1609,7 @@ cmd_sentinel() {
                 shift
                 ;;
         esac
+
     done
     sub="${sub:-status}"
 
@@ -2038,6 +2048,15 @@ cmd_mesh() {
                 json_output=1
                 shift
                 ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${PROGRAM_NAME} mesh [status|peers] [OPTIONS]\n"
+                echo -e "  Discovers and queries local P2P binary cache peers via mDNS/Avahi.\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${CYAN}--json${RESET}     Output status in structured JSON"
+                echo -e "  ${CYAN}-h, --help${RESET} Show this help"
+                return 0
+                ;;
             status|peers|discover|share)
                 sub="$1"
                 shift
@@ -2047,6 +2066,7 @@ cmd_mesh() {
                 shift
                 ;;
         esac
+
     done
     sub="${sub:-status}"
 
