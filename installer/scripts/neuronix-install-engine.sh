@@ -76,8 +76,17 @@ run_preflight_checks() {
     log_warn "  [PREFLIGHT] Storage capacity on target is under 20GB ($((disk_avail_kb / 1024 / 1024)) GB). Installation may require additional space."
   fi
 
-  # 4. Network Connectivity Check
-  if (command -v ping >/dev/null 2>&1 && ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1) || [ "$DRY_RUN" -eq 1 ]; then
+  # 4. Network Connectivity Check (HTTP/socket check with ICMP fallback)
+  local net_online=0
+  if [ "$DRY_RUN" -eq 1 ]; then
+    net_online=1
+  elif command -v curl >/dev/null 2>&1 && curl -s --connect-timeout 2 -I https://cache.nixos.org >/dev/null 2>&1; then
+    net_online=1
+  elif (command -v ping >/dev/null 2>&1 && ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1); then
+    net_online=1
+  fi
+
+  if [ "$net_online" -eq 1 ]; then
     log "  [PREFLIGHT] Network Connectivity  : Online (Nixpkgs channels reachable)"
   else
     log_warn "  [PREFLIGHT] Offline or isolated network. System will rely on local ISO store closures."
@@ -162,7 +171,17 @@ if [[ -f "$VERSION_NIX" ]]; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
-NRX_REPO_COMMIT="${NEURONIX_COMMIT:-$(git -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null || echo "e155afe64e7235a397ae9ceaa01b17b20e0e184c")}"
+if [[ -z "${NEURONIX_COMMIT:-}" ]]; then
+  if git -C "${REPO_ROOT}" rev-parse HEAD >/dev/null 2>&1; then
+    NRX_REPO_COMMIT=$(git -C "${REPO_ROOT}" rev-parse HEAD)
+  elif [[ -f "/etc/neuronix/release.json" ]] && command -v jq >/dev/null 2>&1; then
+    NRX_REPO_COMMIT=$(jq -r '.commit // empty' /etc/neuronix/release.json 2>/dev/null || echo "unknown")
+  else
+    NRX_REPO_COMMIT="release-v${NRX_VER}"
+  fi
+else
+  NRX_REPO_COMMIT="${NEURONIX_COMMIT}"
+fi
 
 NRX_NIXPKGS_URL="github:NixOS/nixpkgs/${NRX_COMMIT}"
 if [[ "${NEURONIX_TRACK:-stable}" == "edge" ]]; then
@@ -175,6 +194,24 @@ case "$TARGET_ARCH" in
   aarch64|arm64) NIX_ARCH="aarch64-linux" ;;
   *) NIX_ARCH="x86_64-linux" ;;
 esac
+
+# Synchronize declarative NEURONIX modules and packages to target system
+mkdir -p "$CONFIG_DIR/modules" "$CONFIG_DIR/packages"
+if [ -d "${REPO_ROOT}/modules" ]; then
+  cp -r "${REPO_ROOT}/modules/"* "$CONFIG_DIR/modules/"
+elif [ -d "/etc/neuronix/modules" ]; then
+  cp -r "/etc/neuronix/modules/"* "$CONFIG_DIR/modules/"
+fi
+
+if [ -d "${REPO_ROOT}/packages" ]; then
+  cp -r "${REPO_ROOT}/packages/"* "$CONFIG_DIR/packages/"
+elif [ -d "/etc/neuronix/packages" ]; then
+  cp -r "/etc/neuronix/packages/"* "$CONFIG_DIR/packages/"
+fi
+
+if [ -f "${REPO_ROOT}/version.nix" ]; then
+  cp "${REPO_ROOT}/version.nix" "$CONFIG_DIR/version.nix"
+fi
 
 log "Generating pure flake.nix configuration for target system ($NIX_ARCH)..."
 cat <<FLAKE_EOF > "$CONFIG_DIR/flake.nix"
@@ -194,6 +231,8 @@ cat <<FLAKE_EOF > "$CONFIG_DIR/flake.nix"
       system = "$NIX_ARCH";
       modules = [
         ./hardware-configuration.nix
+        ./modules/services/opencode.nix
+        ./modules/services/update.nix
         ./configuration.nix
       ];
     };

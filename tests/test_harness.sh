@@ -17,6 +17,10 @@ if [[ -z "${NIX_PATH:-}" ]]; then
     export NIX_PATH="nixpkgs=https://github.com/NixOS/nixpkgs/archive/${_PINNED_COMMIT}.tar.gz"
 fi
 
+if [[ -S "/nix/var/nix/daemon-socket/socket" ]]; then
+    export NIX_REMOTE="daemon"
+fi
+
 # Color Codes
 if [[ -t 1 ]]; then
     C_RESET="\033[0m"

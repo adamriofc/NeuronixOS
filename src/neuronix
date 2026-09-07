@@ -11,6 +11,9 @@ set -eo pipefail
 
 # Safe Path & Environment Fallbacks (Mission-critical defensive posture)
 export PATH="/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/usr/bin:/bin:${PATH:-}"
+if [[ -z "${NIX_REMOTE:-}" && -S "/nix/var/nix/daemon-socket/socket" ]]; then
+    export NIX_REMOTE="daemon"
+fi
 
 VERSION="1.0.3"
 VERSION_NIX="$(dirname "$(readlink -f "$0")")/../version.nix"

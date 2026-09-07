@@ -19,7 +19,7 @@ VERSION_NIX="${PROJECT_ROOT}/version.nix"
 mkdir -p "${DIST_DIR}"
 
 TAG="${1:-v1.0.3}"
-COMMIT="${NEURONIX_COMMIT:-$(git -C "${PROJECT_ROOT}" rev-parse HEAD 2>/dev/null || echo "e155afe64e7235a397ae9ceaa01b17b20e0e184c")}"
+COMMIT="${NEURONIX_COMMIT:-$(git -C "${PROJECT_ROOT}" rev-parse HEAD 2>/dev/null || (test -f "${DIST_DIR}/release.json" && jq -r '.commit // empty' "${DIST_DIR}/release.json" 2>/dev/null) || echo "0000000000000000000000000000000000000000")}"
 
 VER="1.0.3"
 STATE_VER="24.11"

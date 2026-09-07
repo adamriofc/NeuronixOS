@@ -77,7 +77,18 @@ in
       after = [ "network-online.target" ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${opencodePkg}/bin/opencode --version";
+        ExecStart = pkgs.writeShellScript "neuronix-opencode-update-checker" ''
+          set -euo pipefail
+          CURRENT_VER="$(${opencodePkg}/bin/opencode --version 2>/dev/null || echo "1.18.29")"
+          echo "[OPENCODE-UPDATE] Current installed OpenCode version: $CURRENT_VER"
+          if ${pkgs.curl}/bin/curl -s --connect-timeout 5 https://api.github.com/repos/anomalyco/opencode/releases/latest >/tmp/opencode_latest.json 2>/dev/null; then
+            LATEST_TAG="$(${pkgs.jq}/bin/jq -r '.tag_name // empty' /tmp/opencode_latest.json 2>/dev/null || true)"
+            rm -f /tmp/opencode_latest.json
+            if [ -n "$LATEST_TAG" ]; then
+              echo "[OPENCODE-UPDATE] Latest upstream OpenCode release: $LATEST_TAG"
+            fi
+          fi
+        '';
         StandardOutput = "journal";
         StandardError = "journal";
       };

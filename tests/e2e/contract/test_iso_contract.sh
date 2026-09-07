@@ -23,6 +23,10 @@ INSTALLER_BIN="${PROJECT_ROOT}/installer/scripts/neuronix-install-engine.sh"
 
 mkdir -p "${DIST_DIR}"
 
+if [[ -S "/nix/var/nix/daemon-socket/socket" ]]; then
+    export NIX_REMOTE="daemon"
+fi
+
 PYTHON_BIN="$(command -v python3 || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo "python3")"
 
 PASSED=0

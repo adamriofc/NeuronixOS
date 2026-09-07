@@ -249,16 +249,62 @@ def get_sanitized_diagnostics(share_mode: bool = False) -> Dict[str, Any]:
         overall_health = "HEALTHY"
         overall_code = HealthStatus.PASS
 
+    # Dynamic Uptime probe
+    uptime_val = "active"
+    if os.path.exists("/proc/uptime"):
+        try:
+            with open("/proc/uptime", "r") as uf:
+                secs = float(uf.readline().split()[0])
+                d = int(secs // 86400)
+                h = int((secs % 86400) // 3600)
+                m = int((secs % 3600) // 60)
+                uptime_val = f"{d}d {h}h {m}m" if d > 0 else f"{h}h {m}m"
+        except Exception:
+            pass
+
+    # Dynamic GPU probe
+    gpu_val = "Generic Display Adapter"
+    if shutil.which("lspci"):
+        try:
+            lspci_out = subprocess.check_output(["lspci"], stderr=subprocess.DEVNULL, timeout=2, text=True)
+            for line in lspci_out.splitlines():
+                if any(k in line.lower() for k in ["vga compatible controller", "3d controller", "display controller"]):
+                    parts = line.split(":", 2)
+                    if len(parts) >= 3:
+                        gpu_val = parts[2].strip()
+                        break
+        except Exception:
+            pass
+    elif os.path.exists("/sys/class/drm"):
+        try:
+            cards = [c for c in os.listdir("/sys/class/drm") if c.startswith("card") and "-" not in c]
+            if cards:
+                gpu_val = f"Direct Rendering Manager ({cards[0]})"
+        except Exception:
+            pass
+
+    # Dynamic OS pretty name
+    os_name = "NEURONIX OS 1.0.3 (NixOS Substrate)"
+    if os.path.exists("/etc/os-release"):
+        try:
+            with open("/etc/os-release", "r") as osf:
+                for line in osf:
+                    if line.startswith("PRETTY_NAME="):
+                        os_name = line.strip().split("=")[1].strip('"\'')
+                        break
+        except Exception:
+            pass
+
     return {
         "schema_version": SCHEMA_VERSION,
         "health_status": overall_health,
         "health_code": overall_code,
         "subsystems": evaluations,
         "system": {
-            "os": "NEURONIX OS 1.0.3 (NixOS Substrate)",
+            "os": os_name,
             "kernel": uname.release or "Linux-unknown",
             "arch": uname.machine or "x86_64",
-            "uptime": "active",
+            "uptime": uptime_val,
             "generation": str(active_gen),
             "total_generations": len(all_gens)
         },
@@ -267,7 +313,7 @@ def get_sanitized_diagnostics(share_mode: bool = False) -> Dict[str, Any]:
             "memory_used": mem_used,
             "memory_total": mem_total,
             "swap": swap_total,
-            "gpu": "Generic Display Adapter"
+            "gpu": gpu_val
         },
         "storage": {
             "root": root_stat,

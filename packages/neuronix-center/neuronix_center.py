@@ -11,6 +11,7 @@ import time
 import subprocess
 import argparse
 import glob
+import types
 
 VERSION = "1.0.3"
 try:
@@ -236,9 +237,9 @@ def run_cli_mode(args):
     if args.opencode:
         print("  [ LAUNCHING OPENCODE AI SYSTEM COPILOT ]")
         try:
-            res = subprocess.run(["opencode", "status"], check=False)
+            res = subprocess.run(["opencode", "--version"], check=False)
             if res.returncode != 0:
-                print(f"  ✗ OpenCode status exited with code {res.returncode}.")
+                print(f"  ✗ OpenCode version check exited with code {res.returncode}.")
         except FileNotFoundError:
             print("  [INFO] OpenCode binary not found in PATH. Ensure neuronix.services.opencode.enable = true.")
 
@@ -301,7 +302,7 @@ def run_gui_mode():
             subprocess.Popen(["x-terminal-emulator", "-e", f"neuronix dev {stack_name}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         def launch_opencode():
-            subprocess.Popen(["x-terminal-emulator", "-e", "opencode interactive"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen(["x-terminal-emulator", "-e", "opencode"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         ttk.Button(dev_box, text="OpenCode AI", command=launch_opencode).pack(side="left", padx=4)
         ttk.Button(dev_box, text="Python (uv)", command=lambda: launch_stack("python")).pack(side="left", padx=4)
@@ -362,17 +363,18 @@ def run_gui_mode():
     except Exception as e:
         # Fallback if display server is not available (Headless VM)
         print(f"[INFO] Graphical display server unavailable ({e}). Falling back to CLI mode:")
-        class DummyArgs:
-            list_generations = True
-            diet = False
-            opencode = False
-            rollback = False
-            upgrade = False
-            check_update = False
-            doctor = False
-            welcome = False
-            quickstart = False
-        run_cli_mode(DummyArgs())
+        headless_args = types.SimpleNamespace(
+            list_generations=True,
+            diet=False,
+            opencode=False,
+            rollback=False,
+            upgrade=False,
+            check_update=False,
+            doctor=False,
+            welcome=False,
+            quickstart=False,
+        )
+        run_cli_mode(headless_args)
 
 def main():
     parser = argparse.ArgumentParser(description="NEURONIX Center & GUI System Control Center")

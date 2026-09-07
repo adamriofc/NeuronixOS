@@ -1,14 +1,14 @@
 {
-  "timestamp": "2026-09-05T04:09:30Z",
-  "requested_mode": "auto",
+  "timestamp": "2026-09-07T00:52:36Z",
+  "requested_mode": "contract",
   "executed_contract": true,
-  "executed_real": true,
+  "executed_real": false,
   "kvm_available": true,
   "qemu_available": true,
   "contract_exit_code": 0,
   "real_exit_code": 0,
   "contract_evidence": {
-  "timestamp": "2026-09-05T04:09:25Z",
+  "timestamp": "2026-09-07T00:52:36Z",
   "gate_type": "contract",
   "proof_class": "P1 (Contract Invariant)",
   "verifications": {

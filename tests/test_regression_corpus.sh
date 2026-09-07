@@ -17,6 +17,11 @@
 set -uo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ -S "/nix/var/nix/daemon-socket/socket" ]]; then
+    export NIX_REMOTE="daemon"
+fi
+
 PASSED=0
 FAILED=0
 

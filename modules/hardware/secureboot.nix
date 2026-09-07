@@ -23,8 +23,8 @@
   };
 
   config = lib.mkIf config.neuronix.security.secureboot.enable {
-    # Systemd-boot is disabled when Lanzaboote replaces the default EFI loader
-    boot.loader.systemd-boot.enable = lib.mkForce false;
+    # Systemd-boot is disabled only when Lanzaboote is active and replaces the default EFI loader
+    boot.loader.systemd-boot.enable = lib.mkIf (options.boot ? lanzaboote) (lib.mkForce false);
 
     # Conditional Lanzaboote configuration if module option is present
     boot.lanzaboote = lib.mkIf (options.boot ? lanzaboote) {

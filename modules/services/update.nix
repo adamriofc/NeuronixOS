@@ -58,19 +58,27 @@ in
         Type = "oneshot";
         ExecStart = pkgs.writeShellScript "neuronix-update-checker" ''
           set -euo pipefail
-          # Verify internet connectivity
-          if ! ${pkgs.iputils}/bin/ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1; then
-            exit 0
+          # Verify internet connectivity (TCP/HTTP with ICMP fallback)
+          if ! ${pkgs.curl}/bin/curl -s --connect-timeout 3 -I https://cache.nixos.org >/dev/null 2>&1; then
+            if ! ${pkgs.iputils}/bin/ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1; then
+              exit 0
+            fi
           fi
           
-          # Check for update availability
+          # Check for update availability by comparing remote HEAD with local revision
           UPDATE_AVAILABLE=false
           CURRENT_LOCK="/etc/nixos/flake.lock"
+          CURRENT_REV=""
           if [ -f "$CURRENT_LOCK" ]; then
-            REMOTE_REV=$(${pkgs.git}/bin/git ls-remote --heads https://github.com/adamriofc/NeuronixOS.git main 2>/dev/null | awk '{print $1}' || true)
-            if [ -n "$REMOTE_REV" ]; then
-              UPDATE_AVAILABLE=true
-            fi
+            CURRENT_REV=$(${pkgs.jq}/bin/jq -r '.nodes.self.locked.rev // .nodes.nixpkgs.locked.rev // empty' "$CURRENT_LOCK" 2>/dev/null || true)
+          fi
+          if [ -z "$CURRENT_REV" ] && [ -f "/etc/neuronix/release.json" ]; then
+            CURRENT_REV=$(${pkgs.jq}/bin/jq -r '.commit // empty' /etc/neuronix/release.json 2>/dev/null || true)
+          fi
+
+          REMOTE_REV=$(${pkgs.git}/bin/git ls-remote --heads https://github.com/adamriofc/NeuronixOS.git main 2>/dev/null | awk '{print $1}' || true)
+          if [ -n "$REMOTE_REV" ] && [ -n "$CURRENT_REV" ] && [ "$REMOTE_REV" != "$CURRENT_REV" ]; then
+            UPDATE_AVAILABLE=true
           fi
 
           if [ "$UPDATE_AVAILABLE" = "true" ]; then

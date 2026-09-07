@@ -59,7 +59,16 @@ used_mb = used_kb // 1024
 
 # ZRAM expected configuration in NEURONIX (50% RAM, zstd / lzo-rle compression)
 zram_configured_mb = total_kb // (2 * 1024)
-expected_compression_ratio = 2.45 # Average zstd/lzo-rle compression ratio
+compression_ratio = 2.45
+if os.path.exists("/sys/block/zram0/orig_data_size") and os.path.exists("/sys/block/zram0/compr_data_size"):
+    try:
+        with open("/sys/block/zram0/orig_data_size") as f_orig, open("/sys/block/zram0/compr_data_size") as f_compr:
+            orig = int(f_orig.read().strip())
+            compr = int(f_compr.read().strip())
+            if compr > 0:
+                compression_ratio = round(orig / compr, 2)
+    except Exception:
+        pass
 
 result = {
     "subsystem": "memory",
@@ -69,7 +78,7 @@ result = {
         "mem_used_mb": used_mb,
         "psi_pressure": psi,
         "zram_expected_size_mb": zram_configured_mb,
-        "zram_est_compression_ratio": expected_compression_ratio
+        "zram_est_compression_ratio": compression_ratio
     },
     "budgets": {
         "max_idle_footprint_mb": 4096,

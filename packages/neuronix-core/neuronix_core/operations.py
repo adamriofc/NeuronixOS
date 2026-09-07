@@ -182,7 +182,20 @@ def execute_privileged_operation(operation_id: str, *args):
     elif operation_id == "diet":
         dry_run = (args and args[0] == "--dry-run")
         if dry_run:
-            return True, 0, "Storage diet dry-run: estimated 1.2 GB reclaimable without mutating state."
+            reclaim_desc = "0 B"
+            gc_bin = shutil.which("nix-collect-garbage") or "/nix/var/nix/profiles/default/bin/nix-collect-garbage"
+            if shutil.which("nix-collect-garbage") or os.path.exists(gc_bin):
+                try:
+                    res = subprocess.run([gc_bin, "--dry-run"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False, timeout=10)
+                    out = res.stdout + res.stderr
+                    dead_paths = [l for l in out.splitlines() if "/nix/store/" in l]
+                    if dead_paths:
+                        reclaim_desc = f"{len(dead_paths)} unreferenced store paths"
+                    else:
+                        reclaim_desc = "0 B (Nix store clean)"
+                except Exception:
+                    pass
+            return True, 0, f"Storage diet dry-run: estimated {reclaim_desc} reclaimable without mutating state."
 
         from .lock import OperationLock, ConcurrentOperationError
         from .journal import TransactionJournal, TransactionState
