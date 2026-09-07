@@ -9,9 +9,18 @@
 
 set -uo pipefail
 
-TAG="${1:-v1.0.3}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${PROJECT_ROOT}/dist"
+VERSION_NIX="${PROJECT_ROOT}/version.nix"
+
+VER="1.0.3"
+REL_TAG="v1.0.3"
+if [[ -f "$VERSION_NIX" ]]; then
+    VER=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+    REL_TAG=$(grep -E 'releaseTag\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+fi
+
+TAG="${1:-${REL_TAG:-v1.0.3}}"
 OUTPUT_FILE="${DIST_DIR}/neuronix-os-${TAG}-sbom.spdx.json"
 
 mkdir -p "${DIST_DIR}"
@@ -26,7 +35,7 @@ cat << EOF > "${OUTPUT_FILE}"
   "creationInfo": {
     "created": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
     "creators": [
-      "Tool: neuronix-sbom-generator-1.0.3",
+      "Tool: neuronix-sbom-generator-${VER}",
       "Organization: NEURONIX OS Maintainers"
     ]
   },

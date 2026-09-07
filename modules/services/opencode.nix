@@ -81,12 +81,9 @@ in
           set -euo pipefail
           CURRENT_VER="$(${opencodePkg}/bin/opencode --version 2>/dev/null || echo "1.18.29")"
           echo "[OPENCODE-UPDATE] Current installed OpenCode version: $CURRENT_VER"
-          if ${pkgs.curl}/bin/curl -s --connect-timeout 5 https://api.github.com/repos/anomalyco/opencode/releases/latest >/tmp/opencode_latest.json 2>/dev/null; then
-            LATEST_TAG="$(${pkgs.jq}/bin/jq -r '.tag_name // empty' /tmp/opencode_latest.json 2>/dev/null || true)"
-            rm -f /tmp/opencode_latest.json
-            if [ -n "$LATEST_TAG" ]; then
-              echo "[OPENCODE-UPDATE] Latest upstream OpenCode release: $LATEST_TAG"
-            fi
+          LATEST_TAG="$(${pkgs.curl}/bin/curl -s --connect-timeout 5 https://api.github.com/repos/anomalyco/opencode/releases/latest 2>/dev/null | ${pkgs.jq}/bin/jq -r '.tag_name // empty' 2>/dev/null || true)"
+          if [ -n "$LATEST_TAG" ]; then
+            echo "[OPENCODE-UPDATE] Latest upstream OpenCode release: $LATEST_TAG"
           fi
         '';
         StandardOutput = "journal";

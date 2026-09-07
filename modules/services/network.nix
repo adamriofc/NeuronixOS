@@ -40,16 +40,23 @@
       TARGET_CA_FILE="$CA_DIR/neuronix-ca-$CERT_HASH.crt"
       SYSTEM_SSL_FILE="/etc/ssl/certs/neuronix-ca-$CERT_HASH.crt"
 
+      SUDO=""
+      if [ "$(id -u)" -ne 0 ]; then
+        if command -v sudo >/dev/null 2>&1; then
+          SUDO="sudo"
+        fi
+      fi
+
       echo "Enrolling certificate (SHA-256: ''${CERT_HASH:0:16}...) into trust store..."
-      sudo mkdir -p "$CA_DIR"
-      sudo cp "$CERT_PATH" "$TARGET_CA_FILE"
-      sudo chmod 644 "$TARGET_CA_FILE"
+      $SUDO mkdir -p "$CA_DIR"
+      $SUDO cp "$CERT_PATH" "$TARGET_CA_FILE"
+      $SUDO chmod 644 "$TARGET_CA_FILE"
 
       TRUST_STATUS="INSTALLED_NOT_TRUSTED"
       if [ -d "/etc/ssl/certs" ]; then
-        sudo cp "$TARGET_CA_FILE" "$SYSTEM_SSL_FILE"
+        $SUDO cp "$TARGET_CA_FILE" "$SYSTEM_SSL_FILE"
         if command -v update-ca-certificates >/dev/null 2>&1; then
-          if sudo update-ca-certificates; then
+          if $SUDO update-ca-certificates; then
             TRUST_STATUS="TRUSTED"
           else
             echo "Error: update-ca-certificates failed." >&2

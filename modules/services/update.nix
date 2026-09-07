@@ -87,12 +87,21 @@ in
               if [ -d "/run/user/$user_id" ]; then
                 DBUS_ADDR="unix:path=/run/user/$user_id/bus"
                 if [ -S "/run/user/$user_id/bus" ]; then
-                  sudo -u "#$user_id" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" \
-                    ${pkgs.libnotify}/bin/notify-send \
-                    -i system-software-update \
-                    -u normal \
-                    "NEURONIX OS Update" \
-                    "New system updates available. Open NEURONIX Center or run 'neuronix upgrade' to apply." || true
+                  if command -v runuser >/dev/null 2>&1; then
+                    runuser -u "#$user_id" -- env DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" \
+                      ${pkgs.libnotify}/bin/notify-send \
+                      -i system-software-update \
+                      -u normal \
+                      "NEURONIX OS Update" \
+                      "New system updates available. Open NEURONIX Center or run 'neuronix upgrade' to apply." || true
+                  elif command -v sudo >/dev/null 2>&1; then
+                    sudo -u "#$user_id" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" \
+                      ${pkgs.libnotify}/bin/notify-send \
+                      -i system-software-update \
+                      -u normal \
+                      "NEURONIX OS Update" \
+                      "New system updates available. Open NEURONIX Center or run 'neuronix upgrade' to apply." || true
+                  fi
                 fi
               fi
             done

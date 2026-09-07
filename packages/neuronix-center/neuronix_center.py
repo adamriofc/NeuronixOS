@@ -55,6 +55,67 @@ def get_neuronix_cmd():
         return ["bash", repo_bin]
     return ["neuronix"]
 
+def launch_in_terminal(cmd_args):
+    """
+    Launches an interactive terminal window across multiple desktop environments
+    (KDE Plasma, GNOME, Hyprland, XFCE, etc.) without hardcoding Debian's x-terminal-emulator.
+    Keeps the shell interactive after command execution so users can inspect output.
+    """
+    import shutil
+    import shlex
+
+    if isinstance(cmd_args, list):
+        cmd_str = " ".join(shlex.quote(str(a)) for a in cmd_args)
+    else:
+        cmd_str = str(cmd_args)
+
+    term_candidates = []
+    env_term = os.environ.get("TERMINAL")
+    if env_term:
+        term_candidates.append(env_term)
+
+    term_candidates.extend([
+        "konsole",
+        "gnome-terminal",
+        "ptyxis",
+        "kgx",
+        "kitty",
+        "alacritty",
+        "foot",
+        "wezterm",
+        "xfce4-terminal",
+        "xterm",
+        "x-terminal-emulator"
+    ])
+
+    found_term = None
+    for candidate in term_candidates:
+        if shutil.which(candidate):
+            found_term = candidate
+            break
+
+    if not found_term:
+        # Fallback: run directly detached if no terminal emulator is available
+        if isinstance(cmd_args, list):
+            subprocess.Popen(cmd_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.Popen(["bash", "-c", cmd_str], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return
+
+    # Handle desktop-specific terminal invocation flags
+    if found_term in ["gnome-terminal", "ptyxis"]:
+        full_cmd = [found_term, "--", "bash", "-c", f"{cmd_str}; exec bash"]
+    elif found_term == "konsole":
+        full_cmd = [found_term, "-e", "bash", "-c", f"{cmd_str}; exec bash"]
+    elif found_term in ["kitty", "alacritty", "foot"]:
+        full_cmd = [found_term, "bash", "-c", f"{cmd_str}; exec bash"]
+    elif found_term == "wezterm":
+        full_cmd = [found_term, "start", "--", "bash", "-c", f"{cmd_str}; exec bash"]
+    else:
+        full_cmd = [found_term, "-e", f"bash -c '{cmd_str}; exec bash'"]
+
+    subprocess.Popen(full_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
 def get_system_telemetry():
     """Probes runtime system telemetry truthfully without hardcoded mock values."""
     if HAS_CORE:
@@ -305,11 +366,13 @@ def run_gui_mode():
         dev_box = ttk.Frame(frame_prof)
         dev_box.pack(pady=5, padx=10, fill="x")
 
+        nrx_bin = get_neuronix_cmd()
+
         def launch_stack(stack_name):
-            subprocess.Popen(["x-terminal-emulator", "-e", f"neuronix dev {stack_name}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            launch_in_terminal(nrx_bin + ["dev", stack_name])
 
         def launch_opencode():
-            subprocess.Popen(["x-terminal-emulator", "-e", "opencode"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            launch_in_terminal(["opencode"])
 
         ttk.Button(dev_box, text="OpenCode AI", command=launch_opencode).pack(side="left", padx=4)
         ttk.Button(dev_box, text="Python (uv)", command=lambda: launch_stack("python")).pack(side="left", padx=4)
@@ -324,7 +387,7 @@ def run_gui_mode():
         def on_upgrade():
             if messagebox.askyesno("Confirm System Upgrade", "Prepare and stage system upgrade for next reboot (zero session disruption)?"):
                 start_t = time.monotonic()
-                res = subprocess.run(["neuronix", "upgrade", "--staged"], check=False)
+                res = subprocess.run(nrx_bin + ["upgrade", "--staged"], check=False)
                 elapsed = time.monotonic() - start_t
                 if res.returncode == 0:
                     messagebox.showinfo("Upgrade Staged", f"System upgrade staged successfully in {elapsed:.2f} seconds.\nNew generation will activate on next reboot.")
@@ -343,7 +406,7 @@ def run_gui_mode():
 
         def on_diet():
             start_t = time.monotonic()
-            res = subprocess.run(["neuronix", "diet"], check=False)
+            res = subprocess.run(nrx_bin + ["diet"], check=False)
             elapsed = time.monotonic() - start_t
             if res.returncode == 0:
                 messagebox.showinfo("Diet Complete", f"Storage reclaimed successfully in {elapsed:.2f} seconds.")
@@ -351,10 +414,10 @@ def run_gui_mode():
                 messagebox.showerror("Diet Failed", f"Diet operation exited with code {res.returncode}.")
 
         def on_doctor():
-            subprocess.Popen(["x-terminal-emulator", "-e", "neuronix doctor"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            launch_in_terminal(nrx_bin + ["doctor"])
 
         def on_quickstart():
-            subprocess.Popen(["x-terminal-emulator", "-e", "neuronix quickstart list"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            launch_in_terminal(nrx_bin + ["quickstart", "list"])
 
         btn_box = ttk.Frame(frame_act)
         btn_box.pack(pady=5, padx=10, fill="x")

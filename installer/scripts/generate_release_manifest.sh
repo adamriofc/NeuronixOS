@@ -18,18 +18,20 @@ VERSION_NIX="${PROJECT_ROOT}/version.nix"
 
 mkdir -p "${DIST_DIR}"
 
-TAG="${1:-v1.0.3}"
-COMMIT="${NEURONIX_COMMIT:-$(git -C "${PROJECT_ROOT}" rev-parse HEAD 2>/dev/null || (test -f "${DIST_DIR}/release.json" && jq -r '.commit // empty' "${DIST_DIR}/release.json" 2>/dev/null) || echo "0000000000000000000000000000000000000000")}"
-
 VER="1.0.3"
+REL_TAG="v1.0.3"
 STATE_VER="24.11"
 NIXPKGS_COMMIT="3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2"
 
 if [[ -f "$VERSION_NIX" ]]; then
     VER=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+    REL_TAG=$(grep -E 'releaseTag\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
     STATE_VER=$(grep -E 'stateVersion\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
     NIXPKGS_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
 fi
+
+TAG="${1:-${REL_TAG:-v1.0.3}}"
+COMMIT="${NEURONIX_COMMIT:-$(git -C "${PROJECT_ROOT}" rev-parse HEAD 2>/dev/null || (test -f "${DIST_DIR}/release.json" && jq -r '.commit // empty' "${DIST_DIR}/release.json" 2>/dev/null) || echo "0000000000000000000000000000000000000000")}"
 
 SBOM_FILE="${DIST_DIR}/neuronix-os-${TAG}-sbom.spdx.json"
 SBOM_SHA=""

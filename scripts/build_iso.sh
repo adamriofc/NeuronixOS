@@ -36,6 +36,12 @@ if ! command -v nix >/dev/null 2>&1; then
     exit 1
 fi
 
+# Auto-detect persistent nix-daemon socket for multi-user safety
+if [[ -z "${NIX_REMOTE:-}" && -S "/nix/var/nix/daemon-socket/socket" ]]; then
+    export NIX_REMOTE="daemon"
+    log_info "Detected Nix daemon socket; enabled NIX_REMOTE=daemon"
+fi
+
 # Detect architecture
 HOST_ARCH="$(uname -m)"
 case "$HOST_ARCH" in
