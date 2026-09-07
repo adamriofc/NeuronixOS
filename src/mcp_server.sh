@@ -750,15 +750,41 @@ CATALOG_EOF
             ;;
 
         neuronix_sentinel)
-            local py_bin core_path
-            py_bin="$(resolve_python)"
-            core_path="$(resolve_core_path)"
+            local action
+            action=$(echo "$params" | jq -r '.action // "status"')
             local active_gen="Unknown"
             [[ -L /nix/var/nix/profiles/system ]] && active_gen=$(basename "$(readlink /nix/var/nix/profiles/system)" | sed -E 's/^system-?//; s/-?link$//')
+
+            if [[ "$action" == "confirm" ]]; then
+                mkdir -p /var/lib/neuronix 2>/dev/null || true
+                if [[ -w "/var/lib/neuronix" ]] || [[ "$EUID" -eq 0 ]]; then
+                    echo "$active_gen" > /var/lib/neuronix/last-known-good 2>/dev/null || true
+                    rm -f /run/neuronix/booting-generation 2>/dev/null || true
+                fi
+                systemctl stop neuronix-boot-sentinel-watchdog.timer 2>/dev/null || true
+                local payload
+                payload=$(jq -n -c \
+                    --arg active "$active_gen" \
+                    '{
+                        status: "success",
+                        action: "confirmed",
+                        confirmed_generation: $active,
+                        watchdog_timer: "disarmed"
+                    }')
+                local content
+                content=$(jq -n -c --arg text "$payload" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+                return 0
+            fi
+
             local last_good="Unknown"
             [[ -f "/var/lib/neuronix/last-known-good" ]] && last_good=$(cat /var/lib/neuronix/last-known-good | tr -d '[:space:]')
             local booting_gen=""
             [[ -f "/run/neuronix/booting-generation" ]] && booting_gen=$(cat /run/neuronix/booting-generation | tr -d '[:space:]')
+            local watchdog_active="inactive"
+            if systemctl is-active neuronix-boot-sentinel-watchdog.timer >/dev/null 2>&1; then
+                watchdog_active="active"
+            fi
             local crash_log=""
             [[ -f "/var/log/neuronix/boot-fallback.log" ]] && crash_log=$(tail -n 10 /var/log/neuronix/boot-fallback.log)
 
@@ -767,6 +793,7 @@ CATALOG_EOF
                 --arg active "$active_gen" \
                 --arg last_good "$last_good" \
                 --arg booting "$booting_gen" \
+                --arg watchdog "$watchdog_active" \
                 --arg log "$crash_log" \
                 '{
                     status: "success",
@@ -774,6 +801,7 @@ CATALOG_EOF
                     last_known_good_generation: $last_good,
                     in_assessment: (if $booting != "" then true else false end),
                     assessment_boot_generation: $booting,
+                    watchdog_timer_active: (if $watchdog == "active" then true else false end),
                     fallback_history: $log
                 }')
             local content
@@ -804,9 +832,10 @@ print(json.dumps(compute_generation_diff(ga, gb)))
             ;;
 
         neuronix_distill)
-            local pkgs_json dry_run
+            local pkgs_json dry_run force_param
             pkgs_json=$(echo "$params" | jq -c '.packages // []')
             dry_run=$(echo "$params" | jq -r '.dry_run // false')
+            force_param=$(echo "$params" | jq -r '.force // false')
             local py_bin core_path
             py_bin="$(resolve_python)"
             core_path="$(resolve_core_path)"
@@ -817,8 +846,9 @@ import sys, json
 from neuronix_core.distill import distill_packages
 pkgs = json.loads(sys.argv[1])
 dr = sys.argv[2] == 'true'
-print(json.dumps(distill_packages(pkgs, dry_run=dr)))
-" "$pkgs_json" "$dry_run" 2>/dev/null || echo '{"status":"error","message":"Distill execution failed"}')
+fc = sys.argv[3] == 'true'
+print(json.dumps(distill_packages(pkgs, dry_run=dr, force=fc)))
+" "$pkgs_json" "$dry_run" "$force_param" 2>/dev/null || echo '{"status":"error","message":"Distill execution failed"}')
 
             local content
             content=$(jq -n -c --arg text "$distill_out" '{"content":[{"type":"text","text":$text}]}')

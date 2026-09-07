@@ -52,11 +52,23 @@ in
             echo "$CURRENT_GEN" > /run/neuronix/booting-generation
             echo "[SENTINEL] Booting generation #$CURRENT_GEN under active assessment window (${cfg.assessmentTimeout})."
           fi
+          # Arm the active watchdog timer
+          systemctl start neuronix-boot-sentinel-watchdog.timer 2>/dev/null || true
         '';
       };
     };
 
-    # Phase 2: Post-graphical confirmation (disarms sentinel and records last-known-good)
+    # Active assessment watchdog timer (triggers fallback if not confirmed in time)
+    systemd.timers.neuronix-boot-sentinel-watchdog = {
+      description = "NEURONIX Boot-Sentinel Assessment Watchdog Timer";
+      wantedBy = [ "basic.target" ];
+      timerConfig = {
+        OnActiveSec = cfg.assessmentTimeout;
+        Unit = "neuronix-boot-fallback.service";
+      };
+    };
+
+    # Phase 2: Post-graphical confirmation (disarms watchdog and records last-known-good)
     systemd.services.neuronix-boot-confirm = {
       description = "NEURONIX Healthy Boot Assessment Confirmation";
       wantedBy = [ "graphical.target" ];
@@ -67,11 +79,13 @@ in
         ExecStart = pkgs.writeShellScript "neuronix-sentinel-confirm" ''
           set -euo pipefail
           mkdir -p /var/lib/neuronix /var/log/neuronix
+          # Disarm the watchdog timer
+          systemctl stop neuronix-boot-sentinel-watchdog.timer 2>/dev/null || true
           if [ -L /nix/var/nix/profiles/system ]; then
             CURRENT_GEN=$(readlink /nix/var/nix/profiles/system | sed -n 's/.*system-\([0-9]*\)-link/\1/p')
             if [ -n "$CURRENT_GEN" ]; then
               echo "$CURRENT_GEN" > /var/lib/neuronix/last-known-good
-              echo "[SENTINEL] Generation #$CURRENT_GEN successfully reached graphical.target. Marked as last-known-good."
+              echo "[SENTINEL] Generation #$CURRENT_GEN successfully confirmed. Marked as last-known-good."
               rm -f /run/neuronix/booting-generation || true
             fi
           fi
@@ -79,29 +93,68 @@ in
       };
     };
 
-    # Phase 3: Emergency Fallback Rollback Handler
+    # Phase 3: Emergency Fallback Rollback Handler (Converges on Rollback Core & Journal)
     systemd.services.neuronix-boot-fallback = {
       description = "NEURONIX Emergency Boot Fallback & Self-Healing Rollback";
       serviceConfig = {
         Type = "oneshot";
         ExecStart = pkgs.writeShellScript "neuronix-sentinel-fallback" ''
           set -euo pipefail
-          mkdir -p /var/log/neuronix
+          mkdir -p /var/log/neuronix /run/neuronix
           LOG_FILE="/var/log/neuronix/boot-fallback.log"
-          echo "[$(date -u)] [SENTINEL-FALLBACK] Emergency boot failure detected!" >> "$LOG_FILE"
+          echo "[$(date -u)] [SENTINEL-FALLBACK] Emergency boot failure or assessment timeout detected!" >> "$LOG_FILE"
 
+          # Disarm timer to prevent re-trigger loop
+          systemctl stop neuronix-boot-sentinel-watchdog.timer 2>/dev/null || true
+
+          LAST_GOOD=""
           if [ -f /var/lib/neuronix/last-known-good ]; then
             LAST_GOOD=$(cat /var/lib/neuronix/last-known-good | tr -d '[:space:]')
-            TARGET_LINK="/nix/var/nix/profiles/system-''${LAST_GOOD}-link"
-            if [ -e "$TARGET_LINK" ]; then
-              echo "[SENTINEL-FALLBACK] Reverting active profile link to #''${LAST_GOOD} ($TARGET_LINK)" >> "$LOG_FILE"
-              ln -sfn "$TARGET_LINK" /nix/var/nix/profiles/system
-              echo "[SENTINEL-FALLBACK] Rollback executed. Requesting system reboot." >> "$LOG_FILE"
+          fi
+
+          echo "[SENTINEL-FALLBACK] Invoking transactional rollback core towards last-known-good: #$LAST_GOOD" >> "$LOG_FILE"
+
+          # Execute rollback via unified Python core with OperationLock, TransactionJournal, and postcondition assurance
+          PYTHON_BIN="${pkgs.python3}/bin/python3"
+          if [ -x "$PYTHON_BIN" ]; then
+            $PYTHON_BIN -c "
+          import sys
+          sys.path.insert(0, '/run/current-system/sw/lib/python3/site-packages')
+          sys.path.insert(0, '/etc/nixos/packages/neuronix-core')
+          try:
+              from neuronix_core.rollback import execute_rollback
+              from neuronix_core.journal import TransactionJournal
+              journal = TransactionJournal()
+              tx_id = journal.begin_transaction('emergency_sentinel_rollback', {'target': '$LAST_GOOD'})
+              res = execute_rollback(target_generation='$LAST_GOOD' if '$LAST_GOOD' else None)
+              if res.get('status') == 'success':
+                  journal.commit_transaction(tx_id, {'outcome': 'restored', 'details': res})
+                  print('[SENTINEL-FALLBACK] Transaction committed successfully.')
+                  sys.exit(0)
+              else:
+                  journal.abort_transaction(tx_id, res.get('message', 'Rollback failed'))
+                  print(f'[SENTINEL-FALLBACK] Rollback error: {res.get(\"message\")}')
+                  sys.exit(1)
+          except Exception as e:
+              print(f'[SENTINEL-FALLBACK] Core exception: {e}')
+              sys.exit(1)
+          " >> "$LOG_FILE" 2>&1 || true
+          fi
+
+          # Verify postcondition before rebooting
+          RESTORED_GEN=$(readlink /nix/var/nix/profiles/system | sed -n 's/.*system-\([0-9]*\)-link/\1/p' || echo "")
+          if [ -n "$RESTORED_GEN" ] && [ "$RESTORED_GEN" = "$LAST_GOOD" ]; then
+            echo "[SENTINEL-FALLBACK] Verified restored generation #$RESTORED_GEN matches last-known-good. Requesting clean reboot." >> "$LOG_FILE"
+            systemctl reboot
+          else
+            if [ -n "$LAST_GOOD" ] && [ -e "/nix/var/nix/profiles/system-$LAST_GOOD-link" ]; then
+              ln -sfn "/nix/var/nix/profiles/system-$LAST_GOOD-link" /nix/var/nix/profiles/system
+              echo "[SENTINEL-FALLBACK] Restored link fallback verified. Rebooting." >> "$LOG_FILE"
               systemctl reboot
-              exit 0
+            else
+              echo "[SENTINEL-FALLBACK] Critical: No valid rollback target found. Preserving state." >> "$LOG_FILE"
             fi
           fi
-          echo "[SENTINEL-FALLBACK] Warning: last-known-good profile not found. Preserving current link." >> "$LOG_FILE"
         '';
       };
     };

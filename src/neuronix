@@ -1613,6 +1613,35 @@ cmd_sentinel() {
     done
     sub="${sub:-status}"
 
+    local active_gen
+    active_gen="$(get_current_generation)"
+
+    if [[ "$sub" == "confirm" ]]; then
+        mkdir -p /var/lib/neuronix 2>/dev/null || sudo -n mkdir -p /var/lib/neuronix 2>/dev/null || true
+        if [[ -w "/var/lib/neuronix" ]] || [[ "$EUID" -eq 0 ]]; then
+            echo "$active_gen" > /var/lib/neuronix/last-known-good 2>/dev/null || true
+            rm -f /run/neuronix/booting-generation 2>/dev/null || true
+        else
+            echo "$active_gen" | sudo -n tee /var/lib/neuronix/last-known-good >/dev/null 2>&1 || true
+            sudo -n rm -f /run/neuronix/booting-generation 2>/dev/null || true
+        fi
+        systemctl stop neuronix-boot-sentinel-watchdog.timer 2>/dev/null || sudo -n systemctl stop neuronix-boot-sentinel-watchdog.timer 2>/dev/null || true
+
+        if [[ "$json_output" -eq 1 ]]; then
+            jq -n -c \
+                --arg active "$active_gen" \
+                '{
+                    status: "success",
+                    action: "confirmed",
+                    confirmed_generation: $active,
+                    watchdog_timer: "disarmed"
+                }'
+            return 0
+        fi
+        log_success "Boot-Sentinel confirmed generation #${active_gen} as last-known-good profile. Watchdog disarmed."
+        return 0
+    fi
+
     local last_good="Unknown"
     if [[ -f "/var/lib/neuronix/last-known-good" ]]; then
         last_good=$(cat /var/lib/neuronix/last-known-good | tr -d '[:space:]')
@@ -1623,8 +1652,10 @@ cmd_sentinel() {
         booting_gen=$(cat /run/neuronix/booting-generation | tr -d '[:space:]')
     fi
 
-    local active_gen
-    active_gen="$(get_current_generation)"
+    local watchdog_active="inactive"
+    if systemctl is-active neuronix-boot-sentinel-watchdog.timer >/dev/null 2>&1; then
+        watchdog_active="active"
+    fi
 
     local crash_log=""
     if [[ -f "/var/log/neuronix/boot-fallback.log" ]]; then
@@ -1636,6 +1667,7 @@ cmd_sentinel() {
             --arg active "$active_gen" \
             --arg last_good "$last_good" \
             --arg booting "$booting_gen" \
+            --arg watchdog "$watchdog_active" \
             --arg log "$crash_log" \
             '{
                 status: "success",
@@ -1643,6 +1675,7 @@ cmd_sentinel() {
                 last_known_good_generation: $last_good,
                 in_assessment: (if $booting != "" then true else false end),
                 assessment_boot_generation: $booting,
+                watchdog_timer_active: (if $watchdog == "active" then true else false end),
                 fallback_history: $log
             }'
         return 0
@@ -1658,6 +1691,11 @@ cmd_sentinel() {
         echo -e "  ├─ Assessment Window       : ${YELLOW}ACTIVE${RESET} (Currently assessing Gen #${booting_gen})"
     else
         echo -e "  ├─ Assessment Window       : ${GREEN}CONFIRMED & STABLE${RESET} (Normal system runtime)"
+    fi
+    if [[ "$watchdog_active" == "active" ]]; then
+        echo -e "  ├─ Watchdog Timer          : ${YELLOW}ARMED & COUNTING${RESET} (Emergency fallback on timeout)"
+    else
+        echo -e "  ├─ Watchdog Timer          : ${GREEN}DISARMED${RESET} (System confirmed stable)"
     fi
 
     if [[ -f "/var/log/neuronix/boot-fallback.log" ]]; then
@@ -1728,8 +1766,9 @@ if int(sys.argv[3]) == 1:
     sys.exit(0)
 
 print('\033[1m================================================================\033[0m')
-print(f'  \033[1mNEURONIX GENERATIONAL FORENSIC DIFF\033[0m')
+print(f'  \033[1mNEURONIX 3-TIER GENERATIONAL FORENSIC DIFF\033[0m')
 print('\033[1m================================================================\033[0m')
+print('\033[1m[Tier 1: Generation & Kernel Metadata]\033[0m')
 print(f'  Base Target A    : {diff[\"target_a\"][\"name\"]}')
 print(f'  Compare Target B : {diff[\"target_b\"][\"name\"]}')
 if diff[\"kernel_changed\"]:
@@ -1737,25 +1776,43 @@ if diff[\"kernel_changed\"]:
 else:
     print(f'  ● Kernel Version  : {diff[\"target_b\"][\"kernel\"]} (Unchanged)')
 print('----------------------------------------------------------------')
+t2 = diff.get('tier2_authoritative_closures', {})
+c_add = t2.get('closures_added', [])
+c_rem = t2.get('closures_removed', [])
+c_upg = t2.get('closures_upgraded', [])
+print(f'\033[1m[Tier 2: Authoritative Nix Store Closures]\033[0m (Total changes: {t2.get(\"total_changes\", 0)})')
+print(f'  Closures Added   : +{len(c_add)}')
+if c_add:
+    for c in c_add[:5]:
+        print(f'    \033[38;5;82m+ {c.get(\"name\")} {c.get(\"version\", \"\")} ({c.get(\"size_delta\", \"\")})\033[0m')
+print(f'  Closures Removed : -{len(c_rem)}')
+if c_rem:
+    for c in c_rem[:5]:
+        print(f'    \033[38;5;196m- {c.get(\"name\")} {c.get(\"version\", \"\")} ({c.get(\"size_delta\", \"\")})\033[0m')
+print(f'  Closures Upgraded: ~{len(c_upg)}')
+if c_upg:
+    for c in c_upg[:5]:
+        print(f'    \033[38;5;51m~ {c.get(\"name\")} {c.get(\"from_version\", \"\")} -> {c.get(\"to_version\", \"\")} ({c.get(\"size_delta\", \"\")})\033[0m')
+print('----------------------------------------------------------------')
+print('\033[1m[Tier 3: Convenience Executables & Services]\033[0m')
 added = diff.get('packages_added', [])
 removed = diff.get('packages_removed', [])
-print(f'  Packages Added   : +{len(added)}')
+print(f'  User Executables Added   : +{len(added)}')
 if added:
-    sample = \", \".join(added[:15]) + ('...' if len(added) > 15 else '')
+    sample = \", \".join(added[:10]) + ('...' if len(added) > 10 else '')
     print(f'    \033[38;5;82m+ {sample}\033[0m')
-print(f'  Packages Removed : -{len(removed)}')
+print(f'  User Executables Removed : -{len(removed)}')
 if removed:
-    sample = \", \".join(removed[:15]) + ('...' if len(removed) > 15 else '')
+    sample = \", \".join(removed[:10]) + ('...' if len(removed) > 10 else '')
     print(f'    \033[38;5;196m- {sample}\033[0m')
-print('----------------------------------------------------------------')
 svc_added = diff.get('services_added', [])
 svc_removed = diff.get('services_removed', [])
 print(f'  Systemd Services Added   : +{len(svc_added)}')
 if svc_added:
-    print(f'    \033[38;5;82m+ {\", \".join(svc_added[:8])}\033[0m')
+    print(f'    \033[38;5;82m+ {\", \".join(svc_added[:6])}\033[0m')
 print(f'  Systemd Services Removed : -{len(svc_removed)}')
 if svc_removed:
-    print(f'    \033[38;5;196m- {\", \".join(svc_removed[:8])}\033[0m')
+    print(f'    \033[38;5;196m- {\", \".join(svc_removed[:6])}\033[0m')
 print('\033[1m================================================================\033[0m')
 " "$gen_a" "$gen_b" "$json_output"
 }
@@ -1766,12 +1823,17 @@ print('\033[1m================================================================\0
 cmd_distill() {
     local dry_run=0
     local json_output=0
+    local force=0
     local pkgs=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --dry-run)
                 dry_run=1
+                shift
+                ;;
+            --force)
+                force=1
                 shift
                 ;;
             --json)
@@ -1785,6 +1847,7 @@ cmd_distill() {
                 echo -e "  Validates derivation closures and checks syntax atomically.\n"
                 echo -e "${BOLD}OPTIONS:${RESET}"
                 echo -e "  ${GREEN}--dry-run${RESET} Verify and preview changes without modifying system files"
+                echo -e "  ${GREEN}--force${RESET}   Override human-managed file safety boundary"
                 echo -e "  ${GREEN}--json${RESET}    Output in structured JSON format"
                 echo -e "  ${GREEN}-h, --help${RESET}Show this help\n"
                 return 0
@@ -1817,9 +1880,10 @@ from neuronix_core.distill import distill_packages
 
 dry_run = sys.argv[1] == '1'
 json_out = sys.argv[2] == '1'
-pkgs = sys.argv[3:]
+force = sys.argv[3] == '1'
+pkgs = sys.argv[4:]
 
-res = distill_packages(pkgs, dry_run=dry_run)
+res = distill_packages(pkgs, dry_run=dry_run, force=force)
 
 if json_out:
     print(json.dumps(res, indent=2))
@@ -1839,7 +1903,7 @@ elif res.get('status') == 'noop':
 else:
     print('\033[38;5;196m✖\033[0m ' + res.get('message', 'Distillation error'))
     sys.exit(1)
-" "$dry_run" "$json_output" "${pkgs[@]}"
+" "$dry_run" "$json_output" "$force" "${pkgs[@]}"
 }
 
 # ------------------------------------------------------------------------------
@@ -2024,13 +2088,16 @@ res = apply_tuning_profile(profile)
 if json_out:
     print(json.dumps(res, indent=2))
 else:
-    if res.get('status') == 'success':
-        print('\033[38;5;82m✔\033[0m ' + f'Workload profile set to: \033[1m{res[\"profile\"].upper()}\033[0m')
+    if res.get('status') in ('success', 'APPLIED', 'PARTIAL') or res.get('success'):
+        st_label = res.get('status', 'APPLIED')
+        print('\033[38;5;82m✔\033[0m ' + f'Workload profile set to: \033[1m{res[\"profile\"].upper()}\033[0m ({st_label})')
         print(f'  {res[\"description\"]}')
         for act in res.get('applied_actions', []):
             print(f'  \033[38;5;82m●\033[0m {act}')
+        for uns in res.get('unsupported', []):
+            print(f'  \033[38;5;220m○\033[0m {uns[\"param\"]}: {uns[\"reason\"]}')
     else:
-        print('\033[38;5;196m✖\033[0m ' + res.get('message', 'Tuning error'))
+        print('\033[38;5;196m✖\033[0m ' + res.get('message', f'Tuning error: {res.get(\"status\")}'))
         sys.exit(1)
 " "$profile" "$show_status" "$json_output"
 }
@@ -2087,16 +2154,22 @@ if json_out:
 print('\033[1m================================================================\033[0m')
 print('  \033[1mNEURONIX P2P LOCAL BINARY MESH (mDNS)\033[0m')
 print('\033[1m================================================================\033[0m')
-print(f'  Mesh Status    : {\"\033[38;5;82mACTIVE\033[0m\" if st[\"status\"] == \"active\" else \"\033[38;5;220mSTANDBY\033[0m\"}')
-print(f'  Local Node     : {st[\"local_node\"][\"hostname\"]} ({st[\"local_node\"][\"local_ip\"]})')
-print(f'  Cache Port     : TCP {st[\"local_node\"][\"mesh_port\"]}')
-print(f'  mDNS Broadcaster: {\"Enabled\" if st[\"mdns_daemon_active\"] else \"Inactive\"}')
+mesh_st = '\033[38;5;82mACTIVE\033[0m' if st['status'] == 'active' else '\033[38;5;220mSTANDBY\033[0m'
+cache_st = '\033[38;5;82mActive (nix-serve listening)\033[0m' if st.get('cache_serving') else '\033[38;5;220mStandby\033[0m'
+mdns_st = '\033[38;5;82mEnabled\033[0m' if st['mdns_daemon_active'] else '\033[38;5;196mInactive\033[0m'
+print(f'  Mesh Status     : {mesh_st}')
+print(f'  Local Node      : {st[\"local_node\"][\"hostname\"]} ({st[\"local_node\"][\"local_ip\"]})')
+print(f'  Cache Port      : TCP {st[\"local_node\"][\"mesh_port\"]}')
+print(f'  Cache Serving   : {cache_st}')
+print(f'  mDNS Broadcaster: {mdns_st}')
 print('----------------------------------------------------------------')
 peers = st.get('peers', [])
-print(f'  Discovered LAN Peers: {len(peers)}')
+v_count = st.get('verified_peer_count', 0)
+print(f'  Discovered LAN Peers: {len(peers)} ({v_count} verified)')
 if peers:
     for p in peers:
-        print(f'  \033[38;5;82m●\033[0m {p[\"name\"]} @ {p[\"ip\"]}:{p[\"port\"]}')
+        ver_badge = '\033[38;5;82m[VERIFIED]\033[0m' if p.get('cache_verified') else '\033[38;5;220m[UNVERIFIED]\033[0m'
+        print(f'  ● {p[\"name\"]} @ {p[\"ip\"]}:{p[\"port\"]} {ver_badge}')
 else:
     print('    \033[2m(No nearby NEURONIX nodes broadcasting on local subnet)\033[0m')
 print('\033[1m================================================================\033[0m')

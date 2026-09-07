@@ -25,6 +25,13 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Serve local Nix binary cache over HTTP for LAN peer synchronization
+    services.nix-serve = {
+      enable = true;
+      port = cfg.port;
+      bindAddress = "0.0.0.0";
+    };
+
     # Ensure mDNS / Avahi is active for zero-config mesh discovery
     services.avahi = {
       enable = true;

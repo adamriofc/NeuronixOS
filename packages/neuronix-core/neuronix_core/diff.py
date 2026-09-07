@@ -6,6 +6,7 @@ between any two historical NixOS system generations.
 
 import os
 import sys
+import re
 import json
 import subprocess
 import glob
@@ -86,8 +87,53 @@ def extract_kernel_version(system_path):
         return os.path.basename(os.path.realpath(kernel_link))
     return "Unknown"
 
+def parse_diff_closures_output(raw_text):
+    """Parses nix store diff-closures output into authoritative closure forensic records."""
+    closures_added = []
+    closures_removed = []
+    closures_upgraded = []
+    sample_lines = []
+
+    if not raw_text:
+        return {
+            "closures_added": closures_added,
+            "closures_removed": closures_removed,
+            "closures_upgraded": closures_upgraded,
+            "sample_lines": sample_lines,
+            "total_changes": 0
+        }
+
+    for line in raw_text.splitlines():
+        clean = line.strip()
+        if not clean:
+            continue
+        if len(sample_lines) < 50:
+            sample_lines.append(clean)
+
+        # Match format: name: <from> → <to>, <delta>
+        m = re.match(r"^([^:]+):\s*([^,→]+?)\s*→\s*([^,]+?)(?:,\s*([+\-][0-9\.]+\s*[KMGT]?i?B))?$", clean)
+        if m:
+            name, from_v, to_v, delta = m.group(1).strip(), m.group(2).strip(), m.group(3).strip(), (m.group(4) or "").strip()
+            if from_v in ("ε", "None", ""):
+                closures_added.append({"name": name, "version": to_v, "size_delta": delta})
+            elif to_v in ("ε", "None", ""):
+                closures_removed.append({"name": name, "version": from_v, "size_delta": delta})
+            else:
+                closures_upgraded.append({"name": name, "from_version": from_v, "to_version": to_v, "size_delta": delta})
+        else:
+            if "→" in clean:
+                closures_upgraded.append({"raw": clean})
+
+    return {
+        "closures_added": closures_added,
+        "closures_removed": closures_removed,
+        "closures_upgraded": closures_upgraded,
+        "sample_lines": sample_lines,
+        "total_changes": len(closures_added) + len(closures_removed) + len(closures_upgraded)
+    }
+
 def compute_generation_diff(gen_a_arg=None, gen_b_arg=None):
-    """Computes comprehensive diff between generation A and B."""
+    """Computes comprehensive 3-tier diff between generation A and B."""
     path_b = resolve_generation_path(gen_b_arg or "current")
     
     # If gen_a not supplied, default to previous generation
@@ -119,7 +165,7 @@ def compute_generation_diff(gen_a_arg=None, gen_b_arg=None):
     services_added = sorted(list(services_b - services_a))
     services_removed = sorted(list(services_a - services_b))
 
-    closure_diff = []
+    raw_diff_output = ""
     if path_a and path_b and os.path.exists(path_a) and os.path.exists(path_b):
         try:
             res = subprocess.run(
@@ -129,34 +175,55 @@ def compute_generation_diff(gen_a_arg=None, gen_b_arg=None):
                 universal_newlines=True,
                 check=False
             )
-            if res.stdout:
-                for line in res.stdout.splitlines()[:50]:
-                    closure_diff.append(line.strip())
+            raw_diff_output = res.stdout or ""
         except Exception:
             pass
 
-    return {
-        "status": "success",
-        "target_a": {
+    parsed_closures = parse_diff_closures_output(raw_diff_output)
+
+    # Structured 3-Tier Architecture
+    tier1_metadata = {
+        "generation_a": {
             "name": name_a,
             "path": path_a,
             "kernel": kernel_a,
             "package_count": len(pkgs_a),
             "service_count": len(services_a)
         },
-        "target_b": {
+        "generation_b": {
             "name": name_b,
             "path": path_b,
             "kernel": kernel_b,
             "package_count": len(pkgs_b),
             "service_count": len(services_b)
         },
-        "kernel_changed": kernel_a != kernel_b if path_a else False,
+        "kernel_changed": kernel_a != kernel_b if path_a else False
+    }
+
+    tier2_authoritative_closures = parsed_closures
+
+    tier3_convenience_deltas = {
+        "executables_added": pkgs_added,
+        "executables_removed": pkgs_removed,
+        "services_added": services_added,
+        "services_removed": services_removed
+    }
+
+    return {
+        "status": "success",
+        # Top-level backward compatibility keys
+        "target_a": tier1_metadata["generation_a"],
+        "target_b": tier1_metadata["generation_b"],
+        "kernel_changed": tier1_metadata["kernel_changed"],
         "packages_added": pkgs_added,
         "packages_removed": pkgs_removed,
         "services_added": services_added,
         "services_removed": services_removed,
-        "closure_diff_sample": closure_diff
+        "closure_diff_sample": parsed_closures["sample_lines"],
+        # 3-Tier Forensics
+        "tier1_metadata": tier1_metadata,
+        "tier2_authoritative_closures": tier2_authoritative_closures,
+        "tier3_convenience_deltas": tier3_convenience_deltas
     }
 
 # Alias for compatibility

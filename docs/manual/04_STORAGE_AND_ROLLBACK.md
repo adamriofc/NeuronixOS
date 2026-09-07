@@ -63,9 +63,9 @@ NEURONIX schedules recurring storage maintenance services via systemd timers:
 
 The NEURONIX Boot-Sentinel (`modules/core/sentinel.nix`) protects against unbootable system states:
 
-* **Early-Boot Armed Assessment:** Arms on `basic.target` and logs `/run/neuronix/booting-generation`.
-* **Graphical Confirmation:** Confirms healthy desktop reach on `graphical.target` and records `/var/lib/neuronix/last-known-good`.
-* **Watchdog Auto-Rollback:** If display manager or compositor crash-loops before confirmation, `neuronix-boot-fallback.service` automatically points `/nix/var/nix/profiles/system` back to the verified last-known-good generation and reboots.
+* **Early-Boot Armed Assessment:** Arms on `basic.target`, logs `/run/neuronix/booting-generation`, and arms `neuronix-boot-sentinel-watchdog.timer`.
+* **Graphical Confirmation:** Confirms healthy desktop reach on `graphical.target`, disarms the watchdog timer, and records `/var/lib/neuronix/last-known-good`.
+* **Transactional Emergency Fallback:** If display manager or compositor crash-loops before confirmation or watchdog expires, `neuronix-boot-fallback.service` invokes `neuronix_core.rollback` with `TransactionJournal` auditing, asserts postconditions, and executes clean self-healing reboot.
 
 ---
 
