@@ -1068,6 +1068,7 @@ Formal design choices, invariants, and open governance specifications:
 - **[ADR-007](docs/adr/ADR-007-opencode-ai-and-mcp-integration.md):** OpenCode AI Copilot Daemon and Model Context Protocol Integration
 - **[ADR-008](docs/adr/ADR-008-multi-tier-kernel-and-hardware-matrix.md):** Declarative Multi-Tier Kernel Selection and Hardware Hardening Matrix
 - **[ADR-009](docs/adr/ADR-009-continuous-industrial-assurance-taxonomy.md):** Continuous Industrial Assurance Taxonomy and Truth Policy
+- **[ADR-009B](docs/adr/ADR-009B-advanced-container-and-sandbox-architecture.md):** Next-Generation Ephemeral Container and Autonomous Hypervisor Architecture
 - **[ADR-010](docs/adr/ADR-010-provable-state-and-causal-lineage.md):** Provable State Engine & Causal Lineage Architecture
 - **[ADR-011](docs/adr/ADR-011-hyperion-adaptive-execution-plane.md):** Hyperion Provable Adaptive Execution Architecture (PAEA)
 - **[NIP-0001](docs/rfcs/0001-north-star-and-rfc-process.md):** The North Star Thesis and Neuronix Improvement Proposal (RFC) Governance Standard

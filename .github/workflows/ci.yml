@@ -137,7 +137,7 @@ jobs:
         run: |
           bash tests/test_reproducible_iso.sh
 
-      - name: Verify Single Source of Truth Test Manifest (1229 Assertions)
+      - name: Verify Single Source of Truth Test Manifest (1254 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json

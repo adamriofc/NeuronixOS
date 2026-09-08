@@ -67,4 +67,15 @@ To ensure systematic software engineering, development of the NEURONIX platform 
   4. **NEURONIX Center (`neuronix-center`):** Graphical control center and rollback hub.
   5. **Developer Toolchains (`neuronix dev`):** Hermetic stacks for Python, Rust, Node.js, AI/ML, Go, and Web3.
   6. **Distro Onboarding & Polishing Suite:** First-boot Welcome hub, Doctor diagnostics with privacy scrubbing, Curated Flathub Quickstart hub, and Declarative Kernel Manager.
-- **Exit Gate 4:** 1,204 automated test assertions passing with 100% success rate across master, distro, and standalone harnesses.
+- **Exit Gate 4:** Standalone ISO image boots to live desktop and automated test harnesses pass with 100% success rate.
+
+---
+
+### PHASE 5: Provable State & Adaptive Execution Architecture (v1.0.4)
+- **Key Capabilities:**
+  1. **Provable State Engine (`neuronix state`):** RFC 8785 Canonical JSON and 5-leaf Merkle StateRoot attesting posture (TPM 2.0 PCR 7/11), substrate (/nix/store closure), provenance (`SO_PEERCRED`), policy (eBPF LSM), and evidence.
+  2. **Project Hyperion: Provable Adaptive Execution Architecture (PAEA - `neuronix run` / `neuronix hyperion`):** 4-tier adaptive execution plane (Tier 0 Fast-Path, Tier 1 RAM Ghost, Tier 2 eBPF Enclave, Tier 3 Micro-VM) with Merkle Domain Proof binding.
+  3. **Deterministic Safety Gatekeeper:** Zero unverified live kernel mutations, rejecting hazardous mounts (`/etc/shadow`, `/root`, `/proc/kcore`) and enforcing memory safety thresholds.
+  4. **Micro-Rust Systems Daemon Broker (`neuronix-daemon`):** Native hardware capabilities probing and sub-2ms StateRoot computation via `/run/neuronix/ast.sock`.
+  5. **Model Context Protocol (MCP) AI Tooling:** Autonomous JSON-RPC 2.0 tools for state audit, verification, and adaptive workload negotiation.
+- **Exit Gate 5:** 1,254 automated test assertions passing with 100% success rate across 32 QA master suites, 19 distro suites, and 14 standalone verification gates.

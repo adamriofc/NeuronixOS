@@ -1,4 +1,4 @@
-# ADR-010: Next-Generation Ephemeral Container and Autonomous Hypervisor Architecture
+# ADR-009B: Next-Generation Ephemeral Container and Autonomous Hypervisor Architecture
 
 ## Status
 **Accepted** (Approved for NEURONIX OS Standalone Distribution)

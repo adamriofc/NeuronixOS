@@ -54,7 +54,7 @@ bash tests/test_neuronix_core.sh
 # Run the end-to-end release lifecycle gate (34 tests)
 bash tests/test_release_lifecycle.sh
 
-# Generate and verify canonical test manifest (1,229 tests total)
+# Generate and verify canonical test manifest (1,254 tests total)
 python3 tools/generate_test_manifest.py
 ```
 
