@@ -241,30 +241,57 @@ assert_output_contains "echo '$MCP_SB_RES'" "alpine-virt" "MCP neuronix_sandbox 
 # ==============================================================================
 # Part 9: Semantic & Behavioral Closures (Tests 42-51)
 # ==============================================================================
-# Test 42: Safe tar extraction hard-fails on filter violation and leaves zero files
+# Test 42: Safe tar extraction verifies benign archive correctness and hard-fails on filter violation
 TAR_FILTER_FAIL_TEST=$("$PYTHON_BIN" -c "
 import io, tarfile, tempfile, os, sys
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
 from neuronix_core.container import safe_extract_tar
 
-buf = io.BytesIO()
-with tarfile.open(fileobj=buf, mode='w') as tar:
+# 1. Benign archive extraction happy-path verification
+benign_buf = io.BytesIO()
+expected_payload = b'{\"server\": \"neuronix\", \"port\": 8080, \"engine\": \"container\"}'
+with tarfile.open(fileobj=benign_buf, mode='w') as tar:
+    ti = tarfile.TarInfo(name='service/config.json')
+    ti.size = len(expected_payload)
+    ti.mode = 0o4755 # setuid bit that must be cleared
+    tar.addfile(ti, io.BytesIO(expected_payload))
+benign_buf.seek(0)
+
+with tempfile.TemporaryDirectory() as td_benign:
+    with tarfile.open(fileobj=benign_buf, mode='r') as tar:
+        safe_extract_tar(tar, td_benign)
+    extracted_target = os.path.join(td_benign, 'service/config.json')
+    if not os.path.exists(extracted_target):
+        print('BENIGN_EXTRACTION_FAILED')
+        sys.exit(0)
+    with open(extracted_target, 'rb') as f:
+        if f.read() != expected_payload:
+            print('CONTENT_CORRUPTED')
+            sys.exit(0)
+    st_mode = os.stat(extracted_target).st_mode
+    if st_mode & 0o4000:
+        print('SETUID_NOT_CLEARED')
+        sys.exit(0)
+
+# 2. Malicious archive traversal hard-failure verification
+mal_buf = io.BytesIO()
+with tarfile.open(fileobj=mal_buf, mode='w') as tar:
     data = b'traversal payload'
     ti = tarfile.TarInfo(name='../../escape.txt')
     ti.size = len(data)
     tar.addfile(ti, io.BytesIO(data))
-buf.seek(0)
+mal_buf.seek(0)
 
-with tempfile.TemporaryDirectory() as td:
-    with tarfile.open(fileobj=buf, mode='r') as tar:
+with tempfile.TemporaryDirectory() as td_mal:
+    with tarfile.open(fileobj=mal_buf, mode='r') as tar:
         try:
-            safe_extract_tar(tar, td)
+            safe_extract_tar(tar, td_mal)
             print('UNFILTERED_ESCAPE')
         except ValueError:
-            leaked = [f for f in os.listdir(td)]
-            print('HARD_FAILURE_SAFE' if len(leaked) == 0 else 'LEAKED')
+            leaked = [f for f in os.listdir(td_mal)]
+            print('BENIGN_OK_AND_HARD_FAILURE_SAFE' if len(leaked) == 0 else 'LEAKED')
 ")
-assert_eq "$TAR_FILTER_FAIL_TEST" "HARD_FAILURE_SAFE" "safe_extract_tar enforces hard failure with zero extracted files on traversal"
+assert_eq "$TAR_FILTER_FAIL_TEST" "BENIGN_OK_AND_HARD_FAILURE_SAFE" "safe_extract_tar verifies benign extraction correctness and hard failure on traversal"
 
 # Test 43: Strict OCI Image Layout Specification & Content-Addressable Blob verification
 TMP_OCI_VERIFY_DIR=$(mktemp -d "/tmp/neuronix_oci_spec_XXXXXX")

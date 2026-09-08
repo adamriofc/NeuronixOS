@@ -107,7 +107,9 @@ def safe_extract_tar(tar, destination_dir):
     Safely extracts tarfile members, protecting against Tar Slip (directory traversal),
     absolute path injection, device node creation, and suid/sgid privilege escalations.
     """
+    os.makedirs(destination_dir, exist_ok=True)
     dest_abs = os.path.realpath(os.path.abspath(destination_dir))
+    validated_members = []
     for member in tar.getmembers():
         # Reject absolute paths
         if member.name.startswith("/") or member.name.startswith("\\"):
