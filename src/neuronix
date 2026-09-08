@@ -1937,6 +1937,7 @@ cmd_container_build() {
     local tag="latest"
     local repo="neuronix-app"
     local entrypoint=""
+    local build_mode="auto"
     local dry_run=0
     local json_output=0
 
@@ -1958,6 +1959,14 @@ cmd_container_build() {
                 entrypoint="$2"
                 shift 2
                 ;;
+            --nix)
+                build_mode="nix"
+                shift
+                ;;
+            --source)
+                build_mode="source"
+                shift
+                ;;
             --dry-run)
                 dry_run=1
                 shift
@@ -1976,6 +1985,8 @@ cmd_container_build() {
                 echo -e "  ${GREEN}--tag, -t <tag>${RESET}        Image tag (default: latest)"
                 echo -e "  ${GREEN}--repo, -r <repo>${RESET}      Image repository name (default: neuronix-app)"
                 echo -e "  ${GREEN}--entrypoint, -e <cmd>${RESET} Custom container entrypoint"
+                echo -e "  ${GREEN}--nix${RESET}                  Enforce strict Nix closure compilation (fails if invalid)"
+                echo -e "  ${GREEN}--source${RESET}               Compile source files without Nix derivation evaluation"
                 echo -e "  ${GREEN}--dry-run${RESET}              Verify build target without compiling"
                 echo -e "  ${GREEN}--json${RESET}                 Output result in JSON format\n"
                 return 0
@@ -1999,10 +2010,10 @@ cmd_container_build() {
 
     if [[ "$dry_run" -eq 1 ]]; then
         if [[ "$json_output" -eq 1 ]]; then
-            jq -n --arg t "$target" --arg o "$output_tar" --arg r "$repo" --arg tg "$tag" \
-                '{status: "dry_run_success", mode: "build", target: $t, output_tar: $o, repo: $r, tag: $tg}'
+            jq -n --arg t "$target" --arg o "$output_tar" --arg r "$repo" --arg tg "$tag" --arg m "$build_mode" \
+                '{status: "dry_run_success", mode: "build", build_mode: $m, target: $t, output_tar: $o, repo: $r, tag: $tg}'
         else
-            log_success "Container build dry-run verified for: $target -> $output_tar ($repo:$tag)"
+            log_success "Container build dry-run verified for: $target -> $output_tar ($repo:$tag, mode: $build_mode)"
         fi
         return 0
     fi
@@ -2021,8 +2032,9 @@ tag = sys.argv[3]
 repo = sys.argv[4]
 entry = [sys.argv[5]] if len(sys.argv) > 5 and sys.argv[5] else None
 json_out = sys.argv[6] == '1'
+b_mode = sys.argv[7] if len(sys.argv) > 7 else 'auto'
 
-ok, msg = build_container_oci(target, out_tar, tag=tag, repo=repo, entrypoint=entry)
+ok, msg = build_container_oci(target, out_tar, tag=tag, repo=repo, entrypoint=entry, mode=b_mode)
 if json_out:
     print(json.dumps({'status': 'success' if ok else 'error', 'output_tar': out_tar, 'message': msg}))
 else:
@@ -2031,7 +2043,7 @@ else:
     else:
         print('\033[38;5;196m✖\033[0m ' + msg)
 sys.exit(0 if ok else 1)
-" "$target" "$output_tar" "$tag" "$repo" "$entrypoint" "$json_output"
+" "$target" "$output_tar" "$tag" "$repo" "$entrypoint" "$json_output" "$build_mode"
     return $?
 }
 

@@ -125,15 +125,16 @@ in
               from neuronix_core.rollback import execute_rollback
               from neuronix_core.journal import TransactionJournal
               journal = TransactionJournal()
-              tx_id = journal.begin_transaction('emergency_sentinel_rollback', {'target': '$LAST_GOOD'})
-              res = execute_rollback(target_generation='$LAST_GOOD' if '$LAST_GOOD' else None)
-              if res.get('status') == 'success':
-                  journal.commit_transaction(tx_id, {'outcome': 'restored', 'details': res})
+              target_gen = int('$LAST_GOOD') if '$LAST_GOOD'.isdigit() else None
+              tx_id = journal.start_transaction('emergency_sentinel_rollback', {'target': target_gen})
+              success, return_code, output = execute_rollback(target_generation=target_gen)
+              if success:
+                  journal.commit_transaction(tx_id, {'outcome': 'restored', 'return_code': return_code, 'output': output})
                   print('[SENTINEL-FALLBACK] Transaction committed successfully.')
                   sys.exit(0)
               else:
-                  journal.abort_transaction(tx_id, res.get('message', 'Rollback failed'))
-                  print(f'[SENTINEL-FALLBACK] Rollback error: {res.get(\"message\")}')
+                  journal.abort_transaction(tx_id, f"Rollback failed (code {return_code}): {output}")
+                  print(f'[SENTINEL-FALLBACK] Rollback error (code {return_code}): {output}')
                   sys.exit(1)
           except Exception as e:
               print(f'[SENTINEL-FALLBACK] Core exception: {e}')

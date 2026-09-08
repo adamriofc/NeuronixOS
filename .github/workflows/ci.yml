@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (1119 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (1129 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -61,7 +61,7 @@ jobs:
         run: |
           bash tests/test_distro_suite.sh
 
-      - name: Execute Master Test Harness (754 Tests)
+      - name: Execute Master Test Harness (764 Tests)
         run: |
           bash tests/run_all_tests.sh
 
@@ -130,7 +130,7 @@ jobs:
         run: |
           bash tests/test_reproducible_iso.sh
 
-      - name: Verify Single Source of Truth Test Manifest (1119 Assertions)
+      - name: Verify Single Source of Truth Test Manifest (1129 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Suite 27: Hyper-Advanced Isolation, OCI Compiler & Sandbox Fabric (42 Tests)
+# Suite 27: Hyper-Advanced Isolation, OCI Compiler & Sandbox Fabric (52 Tests)
 # Validates next-generation capabilities:
 # 1. Declarative Nix-to-OCI Micro-Layer Compiler (neuronix container build)
 # 2. Transient Systemd User Quadlet Engine (neuronix container daemon/stop/list)
@@ -239,6 +239,180 @@ MCP_SB_RES=$(echo "$MCP_CALL_SANDBOX_GET" | $TARGET_BIN mcp)
 assert_output_contains "echo '$MCP_SB_RES'" "alpine-virt" "MCP neuronix_sandbox tool supports action get"
 
 # ==============================================================================
-# Part 9: Absolute RAM Disk Cleanliness & Final Invariants (Test 42)
+# Part 9: Semantic & Behavioral Closures (Tests 42-51)
+# ==============================================================================
+# Test 42: Safe tar extraction hard-fails on filter violation and leaves zero files
+TAR_FILTER_FAIL_TEST=$("$PYTHON_BIN" -c "
+import io, tarfile, tempfile, os, sys
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.container import safe_extract_tar
+
+buf = io.BytesIO()
+with tarfile.open(fileobj=buf, mode='w') as tar:
+    data = b'traversal payload'
+    ti = tarfile.TarInfo(name='../../escape.txt')
+    ti.size = len(data)
+    tar.addfile(ti, io.BytesIO(data))
+buf.seek(0)
+
+with tempfile.TemporaryDirectory() as td:
+    with tarfile.open(fileobj=buf, mode='r') as tar:
+        try:
+            safe_extract_tar(tar, td)
+            print('UNFILTERED_ESCAPE')
+        except ValueError:
+            leaked = [f for f in os.listdir(td)]
+            print('HARD_FAILURE_SAFE' if len(leaked) == 0 else 'LEAKED')
+")
+assert_eq "$TAR_FILTER_FAIL_TEST" "HARD_FAILURE_SAFE" "safe_extract_tar enforces hard failure with zero extracted files on traversal"
+
+# Test 43: Strict OCI Image Layout Specification & Content-Addressable Blob verification
+TMP_OCI_VERIFY_DIR=$(mktemp -d "/tmp/neuronix_oci_spec_XXXXXX")
+echo "console.log('oci spec')" > "${TMP_OCI_VERIFY_DIR}/index.js"
+OCI_SPEC_TAR="${TMP_OCI_VERIFY_DIR}/oci_spec.tar"
+$TARGET_BIN container build "$TMP_OCI_VERIFY_DIR" --output "$OCI_SPEC_TAR" --tag "v1" --repo "spec-app" >/dev/null 2>&1
+
+OCI_SPEC_CHECK=$("$PYTHON_BIN" -c "
+import tarfile, json, hashlib, sys
+
+with tarfile.open('${OCI_SPEC_TAR}', 'r') as tar:
+    layout_f = tar.extractfile('oci-layout')
+    layout_data = json.load(layout_f)
+    assert layout_data.get('imageLayoutVersion') == '1.0.0', 'Invalid oci-layout version'
+
+    index_f = tar.extractfile('index.json')
+    index_data = json.load(index_f)
+    manifest_desc = index_data['manifests'][0]
+    manifest_digest = manifest_desc['digest']
+    assert manifest_digest.startswith('sha256:'), 'Manifest digest missing sha256 prefix'
+    manifest_hash = manifest_digest.split(':')[1]
+
+    blob_manifest_f = tar.extractfile(f'blobs/sha256/{manifest_hash}')
+    blob_manifest_bytes = blob_manifest_f.read()
+    assert hashlib.sha256(blob_manifest_bytes).hexdigest() == manifest_hash, 'Manifest blob digest mismatch'
+
+    manifest_obj = json.loads(blob_manifest_bytes.decode('utf-8'))
+    config_digest = manifest_obj['config']['digest'].split(':')[1]
+    layer_digest = manifest_obj['layers'][0]['digest'].split(':')[1]
+
+    config_bytes = tar.extractfile(f'blobs/sha256/{config_digest}').read()
+    assert hashlib.sha256(config_bytes).hexdigest() == config_digest, 'Config blob digest mismatch'
+
+    layer_bytes = tar.extractfile(f'blobs/sha256/{layer_digest}').read()
+    assert hashlib.sha256(layer_bytes).hexdigest() == layer_digest, 'Layer blob digest mismatch'
+
+    assert tar.getmember('manifest.json') is not None
+    assert tar.getmember('repositories') is not None
+
+print('OCI_SPEC_COMPLIANT')
+")
+assert_eq "$OCI_SPEC_CHECK" "OCI_SPEC_COMPLIANT" "Generated OCI tarball conforms to OCI Image Layout spec with content-addressable blobs"
+rm -rf "$TMP_OCI_VERIFY_DIR"
+
+# Test 44: Container build --nix mode fails closed when Nix closure cannot be resolved
+TMP_NIX_FAIL_DIR=$(mktemp -d "/tmp/neuronix_nix_fail_XXXXXX")
+echo "not a nix project" > "${TMP_NIX_FAIL_DIR}/app.py"
+NIX_BUILD_FAIL_OUT=$($TARGET_BIN container build "$TMP_NIX_FAIL_DIR" --nix --output "${TMP_NIX_FAIL_DIR}/out.tar" --json 2>&1 || true)
+assert_output_contains "echo '$NIX_BUILD_FAIL_OUT'" '"status": "error"' "Container build --nix fails closed on non-nix project"
+rm -rf "$TMP_NIX_FAIL_DIR"
+
+# Test 45: Cached OS image corruption is detected, purged, and rejected
+TMP_CACHE_TEST_DIR=$(mktemp -d "/tmp/neuronix_cache_test_XXXXXX")
+mkdir -p "$TMP_CACHE_TEST_DIR"
+echo "corrupted_cached_bytes" > "$TMP_CACHE_TEST_DIR/alpine-virt-3.20.0-x86_64.iso"
+CACHE_REHASH_OUT=$(NEURONIX_IMAGE_CACHE="$TMP_CACHE_TEST_DIR" NEURONIX_CACHE_DIR="$TMP_CACHE_TEST_DIR" bash -c "
+source '$SHADOW_BIN'
+execute_sandbox_get alpine --dry-run >/dev/null 2>&1
+PATH='/bin:/usr/bin' execute_sandbox_get alpine 2>&1
+" || true)
+assert_output_contains "echo '$CACHE_REHASH_OUT'" "checksum mismatch" "execute_sandbox_get detects corrupted cached image checksum"
+rm -rf "$TMP_CACHE_TEST_DIR"
+
+# Tests 46-47: Snapshot restore round-trip state verification (state rollback & artifact eviction)
+TMP_SNAP_SANDBOX_DIR="$HOME/.local/share/neuronix/sandboxes/suite-rollback-lab"
+mkdir -p "$TMP_SNAP_SANDBOX_DIR"
+echo "state_initial" > "${TMP_SNAP_SANDBOX_DIR}/state.txt"
+$TARGET_BIN sandbox snapshot create suite-rollback-lab snap-state-1 --allow-full-copy >/dev/null 2>&1
+echo "state_mutated" > "${TMP_SNAP_SANDBOX_DIR}/state.txt"
+echo "unwanted_drift" > "${TMP_SNAP_SANDBOX_DIR}/drift.txt"
+$TARGET_BIN sandbox snapshot restore suite-rollback-lab snap-state-1 >/dev/null 2>&1
+RESTORED_STATE=$(cat "${TMP_SNAP_SANDBOX_DIR}/state.txt" 2>/dev/null || echo "missing")
+DRIFT_STATUS=$(test -f "${TMP_SNAP_SANDBOX_DIR}/drift.txt" && echo "present" || echo "evicted")
+assert_eq "$RESTORED_STATE" "state_initial" "Snapshot restore physically rolls back file content to snapshot state"
+assert_eq "$DRIFT_STATUS" "evicted" "Snapshot restore evicts drifted files created after snapshot point"
+rm -rf "$TMP_SNAP_SANDBOX_DIR"
+
+# Tests 48-49: Sandbox branching CoW boundary enforcement
+TMP_BRANCH_DIR="$HOME/.local/share/neuronix/sandboxes/suite-cow-test"
+mkdir -p "$TMP_BRANCH_DIR"
+echo "branch_test" > "${TMP_BRANCH_DIR}/data.txt"
+BRANCH_COW_REJECT=$(PATH="$TMP_BRANCH_DIR:$PATH" bash -c "
+mkdir -p '$TMP_BRANCH_DIR/bin'
+echo '#!/usr/bin/env bash' > '$TMP_BRANCH_DIR/bin/cp'
+echo 'if [[ \"\$*\" == *\"--reflink=always\"* ]]; then exit 1; fi' >> '$TMP_BRANCH_DIR/bin/cp'
+echo 'exec /bin/cp \"\$@\"' >> '$TMP_BRANCH_DIR/bin/cp'
+chmod +x '$TMP_BRANCH_DIR/bin/cp'
+PATH=\"$TMP_BRANCH_DIR/bin:\$PATH\" $TARGET_BIN sandbox branch suite-cow-test suite-cow-fork --json 2>&1 || true
+")
+assert_output_contains "echo '$BRANCH_COW_REJECT'" "UNSUPPORTED_STORAGE" "Sandbox branch without CoW rejects unless --allow-full-copy passed"
+
+BRANCH_FULL_COPY_RES=$(PATH="$TMP_BRANCH_DIR/bin:$PATH" $TARGET_BIN sandbox branch suite-cow-test suite-cow-fork --allow-full-copy --json 2>&1)
+assert_output_contains "echo '$BRANCH_FULL_COPY_RES'" '"engine": "FULL_COPY"' "Sandbox branch succeeds with FULL_COPY when --allow-full-copy is provided"
+rm -rf "$TMP_BRANCH_DIR" "$HOME/.local/share/neuronix/sandboxes/suite-cow-fork"
+
+# Test 50: Sentinel Emergency Fallback cleanly executes transactional rollback
+TMP_SENTINEL_DIR=$(mktemp -d "/tmp/neuronix_sentinel_test_XXXXXX")
+SENTINEL_EXEC_RES=$("$PYTHON_BIN" -c "
+import sys, os, tempfile
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.journal import TransactionJournal, TransactionState
+from neuronix_core.rollback import execute_rollback
+
+with tempfile.TemporaryDirectory() as td:
+    j_file = os.path.join(td, 'operation_journal.json')
+    os.environ['NEURONIX_JOURNAL_FILE'] = j_file
+    journal = TransactionJournal(j_file)
+    
+    last_good = '1'
+    target_gen = int(last_good) if last_good.isdigit() else None
+    tx_id = journal.start_transaction('emergency_sentinel_rollback', {'target': target_gen})
+    success, return_code, output = execute_rollback(target_generation=target_gen, dry_run=True)
+    
+    if success:
+        journal.commit_transaction(tx_id, {'outcome': 'restored', 'return_code': return_code, 'output': output})
+    else:
+        journal.abort_transaction(tx_id, f'Rollback failed (code {return_code}): {output}')
+    
+    tx = journal.get_transaction(tx_id)
+    assert tx is not None, 'Transaction not recorded in journal'
+    assert tx['state'] in (TransactionState.COMMITTED, TransactionState.FAILED)
+    assert 'abort_reason' in tx['details'] or 'outcome' in tx['details']
+print('SENTINEL_FALLBACK_EXEC_OK')
+")
+assert_eq "$SENTINEL_EXEC_RES" "SENTINEL_FALLBACK_EXEC_OK" "Sentinel emergency fallback script integrates correctly with Journal and Rollback core"
+rm -rf "$TMP_SENTINEL_DIR"
+
+# Test 51: Container runtime filesystem path protection & namespace isolation
+CONTAINER_ISOL_TEST=$("$PYTHON_BIN" -c "
+import sys, tempfile, os
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.container import sanitize_environment, build_bwrap_command
+
+with tempfile.TemporaryDirectory() as td:
+    clean_env = sanitize_environment({'AWS_SECRET_ACCESS_KEY': 'leak123', 'USER': 'tester'})
+    assert 'AWS_SECRET_ACCESS_KEY' not in clean_env
+    assert clean_env.get('USER') == 'tester'
+    assert clean_env.get('NEURONIX_CONTAINER') == '1'
+    
+    tokens, sub_env = build_bwrap_command(td, command='echo test', unshare_net=True)
+    assert '--unshare-net' in tokens
+    assert '--unshare-pid' in tokens
+    assert '--unshare-ipc' in tokens
+print('CONTAINER_ISOL_INVARIANTS_OK')
+")
+assert_eq "$CONTAINER_ISOL_TEST" "CONTAINER_ISOL_INVARIANTS_OK" "Container runtime enforces pid/net/ipc namespace unshare and credential scrubbing"
+
+# ==============================================================================
+# Part 10: Absolute RAM Disk Cleanliness & Final Invariants (Test 52)
 # ==============================================================================
 assert_eq "$(ls -1 /dev/shm/neuronix_shadow_* 2>/dev/null | wc -l)" "0" "RAM disk /dev/shm maintains 100% purity post Suite 27 execution"

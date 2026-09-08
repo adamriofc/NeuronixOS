@@ -49,7 +49,7 @@ SCRATCH_DIR=""
 IS_WINDOWS=false
 VIRTIO_WIN_ISO=""
 CUSTOM_AUTOUNATTEND=""
-CACHE_DIR="${NEURONIX_IMAGE_CACHE:-$HOME/.cache/neuronix/images}"
+CACHE_DIR="${NEURONIX_IMAGE_CACHE:-${NEURONIX_CACHE_DIR:-$HOME/.cache/neuronix/images}}"
 
 show_try_help() {
     echo -e "${BOLD}NEURONIX Shadow Micro-VM Sandbox (neuronix sandbox / try)${RESET}\n"
@@ -310,9 +310,28 @@ execute_sandbox_get() {
     fi
 
     if [[ -f "$dest_path" && "$force" -ne 1 ]]; then
-        log_success "OS image '${target_key}' already cached at: ${dest_path}"
-        [[ "$json_output" -eq 1 ]] && jq -n --arg p "$dest_path" --arg s "cached" '{status: "success", image_path: $p, cache_status: $s}'
-        return 0
+        if [[ "$sel_sha" =~ ^[a-fA-F0-9]{64}$ ]]; then
+            log_step "Verifying cached image cryptographic SHA-256 digest..."
+            local cached_sha
+            cached_sha=$(sha256sum "$dest_path" 2>/dev/null | awk '{print $1}')
+            if [[ "$cached_sha" != "$sel_sha" ]]; then
+                rm -f "$dest_path"
+                log_warn "Cached image checksum mismatch for '${target_key}'!"
+                log_warn "  Expected: ${sel_sha}"
+                log_warn "  Actual:   ${cached_sha}"
+                log_info "Corrupted cache purged; initiating fresh download..."
+            else
+                log_success "OS image '${target_key}' verified from cache (SHA-256 match): ${dest_path}"
+                [[ "$json_output" -eq 1 ]] && jq -n --arg p "$dest_path" --arg s "cached_verified" --arg h "$cached_sha" \
+                    '{status: "success", image_path: $p, cache_status: $s, sha256: $h}'
+                return 0
+            fi
+        else
+            log_warn "Cached OS image '${target_key}' has unpinned digest (${sel_sha}). Reusing cache: ${dest_path}"
+            [[ "$json_output" -eq 1 ]] && jq -n --arg p "$dest_path" --arg s "cached_unverified" --arg u "$sel_sha" \
+                '{status: "success", image_path: $p, cache_status: $s, verification_status: $u}'
+            return 0
+        fi
     fi
 
     log_step "Fetching OS image '${target_key}' from: $sel_url..."
@@ -352,6 +371,7 @@ execute_sandbox_snapshot() {
     local action=""
     local sb_name=""
     local snap_name=""
+    local allow_full_copy=0
     local dry_run=0
     local json_output=0
 
@@ -365,13 +385,21 @@ execute_sandbox_snapshot() {
                 json_output=1
                 shift
                 ;;
+            --allow-full-copy)
+                allow_full_copy=1
+                shift
+                ;;
             -h|--help)
                 echo -e "${BOLD}USAGE:${RESET}"
-                echo -e "  ${CYAN}neuronix sandbox snapshot create${RESET} <sandbox> <snap-name>"
-                echo -e "  ${CYAN}neuronix sandbox snapshot restore${RESET} <sandbox> <snap-name>"
-                echo -e "  ${CYAN}neuronix sandbox snapshot list${RESET} <sandbox>\n"
+                echo -e "  ${CYAN}neuronix sandbox snapshot create${RESET} <sandbox> <snap-name> [OPTIONS]"
+                echo -e "  ${CYAN}neuronix sandbox snapshot restore${RESET} <sandbox> <snap-name> [OPTIONS]"
+                echo -e "  ${CYAN}neuronix sandbox snapshot list${RESET} <sandbox> [OPTIONS]\n"
                 echo -e "  Btrfs Subvolume & CoW Time-Travel Snapshot Engine."
                 echo -e "  Instant (< 1ms), atomic, 0-byte initial storage overhead.\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--allow-full-copy${RESET} Permit physical full data duplication if CoW is unsupported"
+                echo -e "  ${GREEN}--dry-run${RESET}          Verify operation without executing"
+                echo -e "  ${GREEN}--json${RESET}             Output result in JSON format\n"
                 return 0
                 ;;
             create|restore|list)
@@ -400,8 +428,8 @@ execute_sandbox_snapshot() {
 
     if [[ "$dry_run" -eq 1 ]]; then
         if [[ "$json_output" -eq 1 ]]; then
-            jq -n --arg a "$action" --arg s "$sb_name" --arg sn "${snap_name:-all}" --arg d "$sb_dir" \
-                '{status: "dry_run_success", mode: "sandbox_snapshot", action: $a, sandbox: $s, snapshot: $sn, path: $d}'
+            jq -n --arg a "$action" --arg s "$sb_name" --arg sn "${snap_name:-all}" --arg d "$sb_dir" --argjson fc "$allow_full_copy" \
+                '{status: "dry_run_success", mode: "sandbox_snapshot", action: $a, sandbox: $s, snapshot: $sn, path: $d, allow_full_copy: ($fc == 1)}'
         else
             log_success "Sandbox snapshot dry-run verified: ${action} on '${sb_name}' (${snap_name:-all})"
         fi
@@ -436,9 +464,19 @@ execute_sandbox_snapshot() {
             elif cp --reflink=always -a "$sb_dir" "${snap_dir}/${snap_name}" 2>/dev/null; then
                 engine="REFLINK_CLONE"
                 log_success "Reflink CoW snapshot created: ${snap_name}"
+            elif [[ "$allow_full_copy" -eq 1 ]]; then
+                mkdir -p "${snap_dir}/${snap_name}"
+                for item in "$sb_dir"/*; do
+                    [[ ! -e "$item" ]] && continue
+                    [[ "$(basename "$item")" == "snapshots" ]] && continue
+                    cp -a "$item" "${snap_dir}/${snap_name}/"
+                done
+                engine="FULL_COPY"
+                log_warn "CoW unsupported; snapshot created via full copy (--allow-full-copy): ${snap_name}"
             else
                 log_error "Underlying storage does not support atomic snapshots (requires Btrfs subvolume, qcow2 disk, or reflink CoW)."
-                [[ "$json_output" -eq 1 ]] && jq -n --arg e "UNSUPPORTED_STORAGE" '{status: "error", code: $e, message: "Storage does not support snapshots"}'
+                log_error "Pass --allow-full-copy to explicitly permit physical data duplication."
+                [[ "$json_output" -eq 1 ]] && jq -n --arg e "UNSUPPORTED_STORAGE" '{status: "error", code: $e, message: "Storage does not support snapshots. Pass --allow-full-copy to permit physical duplication."}'
                 return 1
             fi
             [[ "$json_output" -eq 1 ]] && jq -n --arg a "create" --arg s "$snap_name" --arg eng "$engine" '{status: "success", action: $a, snapshot: $s, engine: $eng}'
@@ -450,11 +488,8 @@ execute_sandbox_snapshot() {
                 return 1
             fi
             local engine=""
-            if command -v btrfs >/dev/null 2>&1 && [[ -d "${snap_dir}/${snap_name}" ]]; then
-                log_info "Restoring Btrfs snapshot ${snap_name}..."
-                engine="BTRFS_COW"
-                log_success "Btrfs snapshot restored: ${snap_name}"
-            elif [[ -f "$disk_file" ]] && command -v qemu-img >/dev/null 2>&1; then
+            # 1. qcow2 internal snapshot restore
+            if [[ -f "$disk_file" ]] && command -v qemu-img >/dev/null 2>&1 && qemu-img snapshot -l "$disk_file" 2>/dev/null | grep -qw "$snap_name"; then
                 if qemu-img snapshot -a "$snap_name" "$disk_file" 2>/dev/null; then
                     engine="QCOW2_INTERNAL"
                     log_success "qcow2 CoW snapshot restored: ${snap_name}"
@@ -462,9 +497,32 @@ execute_sandbox_snapshot() {
                     log_error "Failed to restore qcow2 snapshot ${snap_name}"
                     return 1
                 fi
+            # 2. Directory / Btrfs snapshot physical restoration
             elif [[ -d "${snap_dir}/${snap_name}" ]]; then
-                engine="REFLINK_CLONE"
-                log_success "Snapshot restored: ${snap_name}"
+                local tmp_snaps
+                tmp_snaps=$(mktemp -d "${p_base}/.snap_tmp_XXXXXX" 2>/dev/null || mktemp -d /tmp/neuronix_snaps.XXXXXX)
+                cp -a "$snap_dir" "$tmp_snaps/"
+
+                # Clean active files in sandbox directory except snapshots registry
+                find "$sb_dir" -mindepth 1 -maxdepth 1 ! -name snapshots -exec rm -rf {} +
+
+                # Restore files from snapshot
+                for item in "${tmp_snaps}/snapshots/${snap_name}"/*; do
+                    [[ ! -e "$item" ]] && continue
+                    local bname
+                    bname="$(basename "$item")"
+                    [[ "$bname" == "snapshots" ]] && continue
+                    cp --reflink=always -a "$item" "$sb_dir/" 2>/dev/null || cp -a "$item" "$sb_dir/"
+                done
+                rm -rf "$tmp_snaps"
+
+                if command -v btrfs >/dev/null 2>&1 && btrfs subvolume show "$sb_dir" >/dev/null 2>&1; then
+                    engine="BTRFS_COW"
+                    log_success "Btrfs snapshot restored: ${snap_name}"
+                else
+                    engine="REFLINK_CLONE"
+                    log_success "Snapshot restored: ${snap_name}"
+                fi
             else
                 log_error "Snapshot '${snap_name}' not found for sandbox '${sb_name}'."
                 return 1
@@ -513,6 +571,7 @@ execute_sandbox_snapshot() {
 execute_sandbox_branch() {
     local src_name=""
     local dest_name=""
+    local allow_full_copy=0
     local dry_run=0
     local json_output=0
 
@@ -526,10 +585,18 @@ execute_sandbox_branch() {
                 json_output=1
                 shift
                 ;;
+            --allow-full-copy)
+                allow_full_copy=1
+                shift
+                ;;
             -h|--help)
                 echo -e "${BOLD}USAGE:${RESET}"
                 echo -e "  ${CYAN}neuronix sandbox branch${RESET} <source-sandbox> <new-sandbox> [OPTIONS]\n"
                 echo -e "  Instant CoW clone/branch of persistent sandbox (0-byte initial storage overhead).\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--allow-full-copy${RESET} Permit physical full data duplication if CoW is unsupported"
+                echo -e "  ${GREEN}--dry-run${RESET}          Verify branch operation without executing"
+                echo -e "  ${GREEN}--json${RESET}             Output result in JSON format\n"
                 return 0
                 ;;
             *)
@@ -554,8 +621,8 @@ execute_sandbox_branch() {
 
     if [[ "$dry_run" -eq 1 ]]; then
         if [[ "$json_output" -eq 1 ]]; then
-            jq -n --arg s "$src_name" --arg d "$dest_name" --arg p "$dest_dir" \
-                '{status: "dry_run_success", mode: "sandbox_branch", source: $s, destination: $d, path: $p}'
+            jq -n --arg s "$src_name" --arg d "$dest_name" --arg p "$dest_dir" --argjson fc "$allow_full_copy" \
+                '{status: "dry_run_success", mode: "sandbox_branch", source: $s, destination: $d, path: $p, allow_full_copy: ($fc == 1)}'
         else
             log_success "Sandbox branch dry-run verified: ${src_name} -> ${dest_name} (0-byte CoW clone)"
         fi
@@ -588,15 +655,21 @@ execute_sandbox_branch() {
     elif cp --reflink=always -a "${src_dir}" "${dest_dir}" 2>/dev/null; then
         engine="REFLINK_CLONE"
         log_success "Reflink CoW sandbox branch created: ${src_name} -> ${dest_name}"
-    else
+    elif [[ "$allow_full_copy" -eq 1 ]]; then
         mkdir -p "$dest_dir"
         if cp -a "${src_dir}/." "$dest_dir/" 2>/dev/null; then
             engine="FULL_COPY"
-            log_success "Sandbox branch created via deep copy: ${src_name} -> ${dest_name}"
+            log_warn "CoW unsupported; sandbox branch created via full copy (--allow-full-copy): ${src_name} -> ${dest_name}"
         else
             log_error "Failed to branch sandbox '${src_name}' to '${dest_name}'"
             return 1
         fi
+    else
+        log_error "UNSUPPORTED_STORAGE: Underlying filesystem does not support atomic Copy-on-Write (CoW) branching (requires Btrfs subvolumes, qcow2 overlays, or reflink CoW)."
+        log_error "Pass --allow-full-copy to explicitly permit physical data duplication."
+        [[ "$json_output" -eq 1 ]] && jq -n --arg e "UNSUPPORTED_STORAGE" \
+            '{status: "error", code: $e, message: "Storage does not support CoW branching. Pass --allow-full-copy to permit physical duplication."}'
+        return 1
     fi
 
     [[ "$json_output" -eq 1 ]] && jq -n --arg s "$src_name" --arg d "$dest_name" --arg eng "$engine" '{status: "success", source: $s, destination: $d, engine: $eng}'

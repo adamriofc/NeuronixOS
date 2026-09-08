@@ -137,15 +137,17 @@ def safe_extract_tar(tar, destination_dir):
 
         # Clear setuid and setgid bits
         member.mode = member.mode & ~(0o4000 | 0o2000)
+        validated_members.append(member)
 
-    # Perform extraction with standard filter if available
+    # Perform extraction with standard filter if available; fail hard on any filter violation
     if hasattr(tarfile, "data_filter"):
         try:
-            tar.extractall(destination_dir, filter="data")
+            tar.extractall(destination_dir, members=validated_members, filter="data")
             return
-        except Exception:
-            pass
-    tar.extractall(destination_dir)
+        except Exception as err:
+            raise ValueError(f"Tar extraction rejected by data filter: {err}") from err
+
+    tar.extractall(destination_dir, members=validated_members)
 
 def pull_and_extract_oci_image(image_ref, destination_dir, allow_synthetic=False):
     """
@@ -564,14 +566,18 @@ def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None, 
         "message": "Ephemeral multi-service stack orchestrated with Micro-DNS and vaporized cleanly in RAM"
     }
 
-def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", entrypoint=None):
+def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", entrypoint=None, mode="auto"):
     """
     Declarative Nix-to-OCI Micro-Layer Compiler.
-    Compiles target source, Nix closure, or derivation into a standard OCI image tarball.
-    Generates OCI Image Layout (oci-layout, index.json) and Docker archive format (manifest.json, repositories, config.json, layer.tar).
+    Compiles target source, Nix closure, or derivation into a standard OCI Image Layout tarball.
+    Generates OCI Image Layout (oci-layout, index.json, blobs/sha256/*) and
+    Docker archive format (manifest.json, repositories, config.json, layer.tar).
     """
     if not os.path.exists(target):
         return False, f"Target path does not exist: {target}"
+
+    if mode not in {"auto", "nix", "source"}:
+        return False, f"Invalid build mode '{mode}': must be 'auto', 'nix', or 'source'"
 
     src_dir = target if os.path.isdir(target) else os.path.dirname(os.path.abspath(target))
     
@@ -580,21 +586,32 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
              os.path.isfile(os.path.join(src_dir, "default.nix")) or \
              target.startswith("/nix/store/")
 
+    if mode == "nix" and not is_nix:
+        return False, f"Target '{target}' is not a Nix project (flake.nix or default.nix missing) but mode='nix' was requested"
+
     nix_store_paths = []
-    if is_nix and shutil.which("nix"):
-        try:
-            eval_target = target if target.startswith("/nix/store/") else src_dir
-            res = subprocess.run(
-                ["nix", "path-info", "-r", eval_target],
-                capture_output=True, text=True, timeout=15, check=False
-            )
-            if res.returncode == 0:
-                nix_store_paths = [p.strip() for p in res.stdout.strip().splitlines() if p.strip().startswith("/nix/store/")]
-        except Exception:
-            pass
+    if mode == "nix" or (mode == "auto" and is_nix):
+        if not shutil.which("nix"):
+            if mode == "nix":
+                return False, "Nix binary 'nix' not found in PATH; cannot resolve Nix closure"
+        else:
+            try:
+                eval_target = target if target.startswith("/nix/store/") else src_dir
+                res = subprocess.run(
+                    ["nix", "path-info", "-r", eval_target],
+                    capture_output=True, text=True, timeout=15, check=False
+                )
+                if res.returncode == 0:
+                    nix_store_paths = [p.strip() for p in res.stdout.strip().splitlines() if p.strip().startswith("/nix/store/")]
+                elif mode == "nix":
+                    err_msg = res.stderr.strip() or f"exit code {res.returncode}"
+                    return False, f"Nix closure evaluation failed for '{eval_target}': {err_msg}"
+            except Exception as err:
+                if mode == "nix":
+                    return False, f"Nix closure evaluation error: {err}"
 
     if not entrypoint:
-        if is_nix and nix_store_paths:
+        if nix_store_paths:
             entrypoint = ["/bin/sh"]
         elif os.path.isfile(os.path.join(src_dir, "flake.nix")):
             entrypoint = ["/bin/sh"]
@@ -616,11 +633,12 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
         hasher = hashlib.sha256()
 
         with tarfile.open(layer_tar, "w") as tar:
-            for item in sorted(os.listdir(src_dir)):
-                if item in {".git", ".direnv", "dist", ".cache", "__pycache__"}:
-                    continue
-                p = os.path.join(src_dir, item)
-                tar.add(p, arcname=os.path.join("app", item) if not item.startswith("bin") else item)
+            if mode != "nix" or not nix_store_paths:
+                for item in sorted(os.listdir(src_dir)):
+                    if item in {".git", ".direnv", "dist", ".cache", "__pycache__"}:
+                        continue
+                    p = os.path.join(src_dir, item)
+                    tar.add(p, arcname=os.path.join("app", item) if not item.startswith("bin") else item)
 
             for sp in nix_store_paths:
                 if os.path.exists(sp):
@@ -630,7 +648,9 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
             while chunk := f.read(65536):
                 hasher.update(chunk)
         layer_sha = hasher.hexdigest()
+        layer_size = os.path.getsize(layer_tar)
 
+        # 1. OCI Image Config Blob
         config_data = {
             "architecture": "amd64",
             "os": "linux",
@@ -649,28 +669,46 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
         }
         config_bytes = json.dumps(config_data, indent=2).encode("utf-8")
         config_sha = hashlib.sha256(config_bytes).hexdigest()
-        config_file = os.path.join(td, f"{config_sha}.json")
-        with open(config_file, "wb") as f:
+
+        # 2. OCI Image Manifest Blob
+        manifest_obj = {
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": f"sha256:{config_sha}",
+                "size": len(config_bytes)
+            },
+            "layers": [
+                {
+                    "mediaType": "application/vnd.oci.image.layer.v1.tar",
+                    "digest": f"sha256:{layer_sha}",
+                    "size": layer_size
+                }
+            ],
+            "annotations": {
+                "org.opencontainers.image.ref.name": f"{repo}:{tag}"
+            }
+        }
+        manifest_bytes = json.dumps(manifest_obj, indent=2).encode("utf-8")
+        manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
+
+        # 3. Create OCI Content-Addressable Blob Storage
+        blobs_dir = os.path.join(td, "blobs", "sha256")
+        os.makedirs(blobs_dir, exist_ok=True)
+
+        blob_config = os.path.join(blobs_dir, config_sha)
+        with open(blob_config, "wb") as f:
             f.write(config_bytes)
 
-        manifest_data = [{
-            "Config": f"{config_sha}.json",
-            "RepoTags": [f"{repo}:{tag}"],
-            "Layers": ["layer.tar"]
-        }]
-        manifest_bytes = json.dumps(manifest_data, indent=2).encode("utf-8")
-        manifest_file = os.path.join(td, "manifest.json")
-        with open(manifest_file, "wb") as f:
+        blob_layer = os.path.join(blobs_dir, layer_sha)
+        shutil.copyfile(layer_tar, blob_layer)
+
+        blob_manifest = os.path.join(blobs_dir, manifest_sha)
+        with open(blob_manifest, "wb") as f:
             f.write(manifest_bytes)
 
-        # Map repo tag to config JSON digest (standard modern Docker format)
-        repositories_data = {repo: {tag: config_sha}}
-        repo_bytes = json.dumps(repositories_data, indent=2).encode("utf-8")
-        repo_file = os.path.join(td, "repositories")
-        with open(repo_file, "wb") as f:
-            f.write(repo_bytes)
-
-        # OCI Layout compatibility
+        # 4. Standard OCI Layout Descriptor Files
         oci_layout_file = os.path.join(td, "oci-layout")
         with open(oci_layout_file, "w") as f:
             json.dump({"imageLayoutVersion": "1.0.0"}, f)
@@ -680,8 +718,8 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
             "manifests": [
                 {
                     "mediaType": "application/vnd.oci.image.manifest.v1+json",
-                    "digest": f"sha256:{config_sha}",
-                    "size": len(config_bytes),
+                    "digest": f"sha256:{manifest_sha}",
+                    "size": len(manifest_bytes),
                     "annotations": {
                         "org.opencontainers.image.ref.name": f"{repo}:{tag}"
                     }
@@ -692,11 +730,36 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
         with open(index_file, "w") as f:
             json.dump(index_data, f, indent=2)
 
+        # 5. Docker Archive Format Compatibility Files (for docker load / podman load)
+        docker_manifest_data = [{
+            "Config": f"{config_sha}.json",
+            "RepoTags": [f"{repo}:{tag}"],
+            "Layers": ["layer.tar"]
+        }]
+        docker_manifest_file = os.path.join(td, "manifest.json")
+        with open(docker_manifest_file, "wb") as f:
+            f.write(json.dumps(docker_manifest_data, indent=2).encode("utf-8"))
+
+        repositories_data = {repo: {tag: config_sha}}
+        repo_file = os.path.join(td, "repositories")
+        with open(repo_file, "wb") as f:
+            f.write(json.dumps(repositories_data, indent=2).encode("utf-8"))
+
+        config_file = os.path.join(td, f"{config_sha}.json")
+        with open(config_file, "wb") as f:
+            f.write(config_bytes)
+
+        # 6. Assemble Full Dual-Format Archive
         with tarfile.open(output_tar, "w") as out:
-            out.add(manifest_file, arcname="manifest.json")
-            out.add(repo_file, arcname="repositories")
+            # OCI Image Layout structure
             out.add(oci_layout_file, arcname="oci-layout")
             out.add(index_file, arcname="index.json")
+            out.add(blob_config, arcname=f"blobs/sha256/{config_sha}")
+            out.add(blob_layer, arcname=f"blobs/sha256/{layer_sha}")
+            out.add(blob_manifest, arcname=f"blobs/sha256/{manifest_sha}")
+            # Docker legacy archive structure
+            out.add(docker_manifest_file, arcname="manifest.json")
+            out.add(repo_file, arcname="repositories")
             out.add(config_file, arcname=f"{config_sha}.json")
             out.add(layer_tar, arcname="layer.tar")
 
@@ -856,6 +919,9 @@ def export_container_oci(source_dir, output_tar, tag="latest", repo="neuronix-ap
                 hasher.update(chunk)
         layer_sha = hasher.hexdigest()
 
+        layer_size = os.path.getsize(layer_tar)
+
+        # 1. OCI Image Config
         config_data = {
             "architecture": "amd64",
             "os": "linux",
@@ -870,38 +936,100 @@ def export_container_oci(source_dir, output_tar, tag="latest", repo="neuronix-ap
         }
         config_bytes = json.dumps(config_data, indent=2).encode("utf-8")
         config_sha = hashlib.sha256(config_bytes).hexdigest()
-        config_file = os.path.join(td, f"{config_sha}.json")
-        with open(config_file, "wb") as f:
+
+        # 2. OCI Image Manifest
+        manifest_obj = {
+            "schemaVersion": 2,
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "config": {
+                "mediaType": "application/vnd.oci.image.config.v1+json",
+                "digest": f"sha256:{config_sha}",
+                "size": len(config_bytes)
+            },
+            "layers": [
+                {
+                    "mediaType": "application/vnd.oci.image.layer.v1.tar",
+                    "digest": f"sha256:{layer_sha}",
+                    "size": layer_size
+                }
+            ],
+            "annotations": {
+                "org.opencontainers.image.ref.name": f"{repo}:{tag}"
+            }
+        }
+        manifest_bytes = json.dumps(manifest_obj, indent=2).encode("utf-8")
+        manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
+
+        # 3. Content-Addressable Blobs
+        blobs_dir = os.path.join(td, "blobs", "sha256")
+        os.makedirs(blobs_dir, exist_ok=True)
+
+        blob_config = os.path.join(blobs_dir, config_sha)
+        with open(blob_config, "wb") as f:
             f.write(config_bytes)
 
-        manifest_data = [{
+        blob_layer = os.path.join(blobs_dir, layer_sha)
+        shutil.copyfile(layer_tar, blob_layer)
+
+        blob_manifest = os.path.join(blobs_dir, manifest_sha)
+        with open(blob_manifest, "wb") as f:
+            f.write(manifest_bytes)
+
+        # 4. Standard OCI Layout Descriptor Files
+        oci_layout_file = os.path.join(td, "oci-layout")
+        with open(oci_layout_file, "w") as f:
+            json.dump({"imageLayoutVersion": "1.0.0"}, f)
+
+        index_data = {
+            "schemaVersion": 2,
+            "manifests": [
+                {
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                    "digest": f"sha256:{manifest_sha}",
+                    "size": len(manifest_bytes),
+                    "annotations": {
+                        "org.opencontainers.image.ref.name": f"{repo}:{tag}"
+                    }
+                }
+            ]
+        }
+        index_file = os.path.join(td, "index.json")
+        with open(index_file, "w") as f:
+            json.dump(index_data, f, indent=2)
+
+        # 5. Docker Archive Compatibility Files
+        docker_manifest_data = [{
             "Config": f"{config_sha}.json",
             "RepoTags": [f"{repo}:{tag}"],
             "Layers": ["layer.tar"]
         }]
-        manifest_bytes = json.dumps(manifest_data, indent=2).encode("utf-8")
-        manifest_file = os.path.join(td, "manifest.json")
-        with open(manifest_file, "wb") as f:
-            f.write(manifest_bytes)
+        docker_manifest_file = os.path.join(td, "manifest.json")
+        with open(docker_manifest_file, "wb") as f:
+            f.write(json.dumps(docker_manifest_data, indent=2).encode("utf-8"))
 
         repositories_data = {
             repo: {
                 tag: config_sha
             }
         }
-        repo_bytes = json.dumps(repositories_data, indent=2).encode("utf-8")
         repo_file = os.path.join(td, "repositories")
         with open(repo_file, "wb") as f:
-            f.write(repo_bytes)
+            f.write(json.dumps(repositories_data, indent=2).encode("utf-8"))
 
-        oci_layout_file = os.path.join(td, "oci-layout")
-        with open(oci_layout_file, "w") as f:
-            json.dump({"imageLayoutVersion": "1.0.0"}, f)
+        config_file = os.path.join(td, f"{config_sha}.json")
+        with open(config_file, "wb") as f:
+            f.write(config_bytes)
 
         with tarfile.open(output_tar, "w") as out:
-            out.add(manifest_file, arcname="manifest.json")
-            out.add(repo_file, arcname="repositories")
+            # OCI structure
             out.add(oci_layout_file, arcname="oci-layout")
+            out.add(index_file, arcname="index.json")
+            out.add(blob_config, arcname=f"blobs/sha256/{config_sha}")
+            out.add(blob_layer, arcname=f"blobs/sha256/{layer_sha}")
+            out.add(blob_manifest, arcname=f"blobs/sha256/{manifest_sha}")
+            # Docker legacy structure
+            out.add(docker_manifest_file, arcname="manifest.json")
+            out.add(repo_file, arcname="repositories")
             out.add(config_file, arcname=f"{config_sha}.json")
             out.add(layer_tar, arcname="layer.tar")
 
