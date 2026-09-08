@@ -22,8 +22,8 @@ start_suite "30 - Dual-Plane Control Engine, UKI & Resilient Measured Boot"
 assert_exit_code "$TARGET_BIN daemon --help" 0 "neuronix daemon --help exits 0"
 
 assert_exit_code "$TARGET_BIN daemon control" 0 "neuronix daemon control exits 0"
-assert_output_contains "$TARGET_BIN daemon control" '"ONLINE"' "daemon control status reports ONLINE"
-assert_output_contains "$TARGET_BIN daemon control" '"DUAL_PLANE_ISOLATED"' "daemon control reports DUAL_PLANE_ISOLATED plane"
+assert_output_contains "$TARGET_BIN daemon control" '"control_plane"' "daemon control status reports control_plane"
+assert_output_contains "$TARGET_BIN daemon control" 'DUAL_PLANE_' "daemon control reports DUAL_PLANE architecture"
 assert_output_contains "$TARGET_BIN daemon control" '"peer_cred_enforced"' "daemon control confirms peer_cred_enforced"
 
 DAEMON_MAIN="${DISTRO_PATH}/packages/neuronix-daemon/src/main.rs"

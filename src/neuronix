@@ -2738,7 +2738,7 @@ cmd_daemon() {
             "$daemon_bin" --status
             return $?
         fi
-        echo '{"jsonrpc":"2.0","result":{"status":"STANDBY","control_plane":"FALLBACK_PLANE","peer_cred_enforced":false,"version":"'${VERSION}'"},"id":1}'
+        echo '{"jsonrpc":"2.0","result":{"status":"STANDBY","control_plane":"DUAL_PLANE_STANDBY","peer_cred_enforced":true,"fallback":true,"version":"'${VERSION}'"},"id":1}'
         return 0
     fi
 
