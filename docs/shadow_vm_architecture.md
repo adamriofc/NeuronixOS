@@ -101,6 +101,39 @@ Spawns the Micro-VM with a virtual Spice/GTK display for interactive testing of 
 neuronix sandbox --gui
 ```
 
+### 4.4 Autonomous OS Fabric (`get`)
+Provides automated catalog retrieval, SHA-256 validation, and bootstrapping for external Linux distributions and Windows:
+
+```bash
+neuronix sandbox get alpine
+neuronix sandbox get ubuntu-24.04
+neuronix sandbox get arch
+neuronix sandbox get debian-12
+neuronix sandbox get windows-11
+```
+
+### 4.5 Windows 11 Autopilot Fabric
+Automates zero-touch Windows 11 deployment with full hardware virtualization:
+- **In-Memory TPM 2.0:** Emulates a dedicated TPM 2.0 chip via `swtpm socket` in volatile memory (`/dev/shm`).
+- **Zero-Touch Answer File:** Generates `autounattend.xml` configuring language, default admin credentials, bypassing network checks (`OOBE\BYPASSNRO`), and applying registry bypasses (`BypassTPMCheck`, `BypassSecureBootCheck`, `BypassRAMCheck`, `BypassCPUCheck`).
+- **VirtIO-Win Acceleration:** Mounts VirtIO paravirtualized storage drivers automatically.
+
+### 4.6 Sub-Millisecond Btrfs CoW Snapshots & Branching
+Enables instant, 0-byte initial overhead snapshotting and multi-branch VM experimentation:
+
+```bash
+# Instant snapshot creation and restore
+neuronix sandbox snapshot create test-box checkpoint-1
+neuronix sandbox snapshot restore test-box checkpoint-1
+neuronix sandbox snapshot list test-box
+
+# Instant zero-byte CoW VM branching
+neuronix sandbox branch base-vm feature-experiment
+```
+
+### 4.7 SPICE Dynamic Viewport & Seamless Clipboard Bus
+Integrates the QEMU SPICE `vdagent` protocol channel (`-chardev qemu-vdagent,id=ch1,clipboard=on,mouse=on`), allowing the guest display to dynamically adapt to host window resizing without distortion, along with bidirectional host-to-guest copy-paste.
+
 ---
 
 ## 5. Security & Isolation Guarantees

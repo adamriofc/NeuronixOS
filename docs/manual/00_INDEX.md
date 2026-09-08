@@ -23,7 +23,7 @@ Because this manual is packaged directly into the NixOS system derivation, it au
 | `02_CONFIGURATION_REFERENCE.md` | Declarative Configuration | Complete `neuronix.*` options, declarative package management, and distro transition guide. |
 | `03_CLI_REFERENCE.md` | Unified CLI Manual | Comprehensive syntax, options, and exit codes for all 24 `neuronix` commands. |
 | `04_STORAGE_AND_ROLLBACK.md` | Storage, Sentinel & Rollback | Btrfs topology, Boot-Sentinel auto-rollback, generational diff, GC, and TRIM. |
-| `05_SHADOW_VM_AND_SANDBOX.md` | OS Sandbox & Containers | In-memory Micro-VMs (/dev/shm), Bubblewrap dev containers, and zero blast radius. |
+| `05_SHADOW_VM_AND_SANDBOX.md` | OS Sandbox & Containers | Micro-VMs (/dev/shm), OS Fabric, Win11 Autopilot, Btrfs snapshots, and OCI containers. |
 | `06_DEVELOPER_STACKS.md` | Hermetic Dev Stacks | Isolated toolchains (Python, Rust, Node, AI, Go, Web3) and JSON manifest synthesis. |
 | `07_MCP_PROTOCOL_AND_AI_GATEWAY.md` | Model Context Protocol | JSON-RPC 2.0 stdio server, tool definitions, flock concurrency, and client setup. |
 | `08_HARDWARE_AND_27_PILLARS.md` | Hardware & 27 Pillars | 8 Reference Platforms, 27 configuration pillars, NVIDIA PRIME, and ZRAM PSI shield. |
