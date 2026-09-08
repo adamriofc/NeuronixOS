@@ -2,7 +2,7 @@
 
 **Component ID:** `NRX-SPEC-003`  
 **Subsystem:** Transient In-Memory QEMU Micro-Hypervisor Harness  
-**Substrate Version:** 0.4.0-beta  
+**Substrate Version:** 1.0.3  
 
 ---
 
