@@ -74,6 +74,18 @@ resolve_core_path() {
     fi
 }
 
+resolve_daemon_bin() {
+    if command -v neuronix-daemon >/dev/null 2>&1; then
+        command -v neuronix-daemon
+    elif [[ -x "$(dirname "$(readlink -f "$0")")/../packages/neuronix-daemon/target/release/neuronix-daemon" ]]; then
+        echo "$(dirname "$(readlink -f "$0")")/../packages/neuronix-daemon/target/release/neuronix-daemon"
+    elif [[ -x "/run/current-system/sw/bin/neuronix-daemon" ]]; then
+        echo "/run/current-system/sw/bin/neuronix-daemon"
+    else
+        echo ""
+    fi
+}
+
 # Concurrency lock helpers
 acquire_mcp_lock() {
     local lock_dir="/run"
@@ -510,6 +522,54 @@ handle_tools_list() {
       "inputSchema": {
         "type": "object",
         "properties": {}
+      }
+    },
+    {
+      "name": "neuronix_hyperion_status",
+      "description": "Inspect Provable Adaptive Execution Architecture (Hyperion) isolation tiers, KVM/eBPF capabilities, and posture.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "neuronix_hyperion_negotiate",
+      "description": "Negotiate canonical Hyperion Domain Specification (HDS v1.0.0) contract for a workload based on intent and security requirements.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workload_name": {
+            "type": "string",
+            "description": "Name or command of the workload to execute"
+          },
+          "intent": {
+            "type": "string",
+            "description": "Natural language intent hint for adaptive tier resolution"
+          },
+          "tier": {
+            "type": "integer",
+            "description": "Explicit isolation tier override (0=FastPath, 1=RAM Ghost, 2=eBPF Enclave, 3=MicroVM)"
+          },
+          "offline": {
+            "type": "boolean",
+            "description": "Enforce strict OFFLINE_AIRGAP network isolation"
+          }
+        },
+        "required": ["workload_name"]
+      }
+    },
+    {
+      "name": "neuronix_hyperion_proof",
+      "description": "Synthesize or retrieve a cryptographic Merkle DomainProof for an executed domain, bound to host StateRoot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domain_id": {
+            "type": "string",
+            "description": "Domain identifier (e.g. DOM-YYYY-MM-DD-XXXX)"
+          }
+        },
+        "required": ["domain_id"]
       }
     }
   ]
@@ -1332,6 +1392,93 @@ print(json.dumps(verify_current_state(), indent=2))
                 send_response "$req_id" "$content"
             else
                 send_error "$req_id" -32000 "Python runtime unavailable for Provable State Engine."
+            fi
+            ;;
+
+        neuronix_hyperion_status)
+            local py_bin core_path daemon_bin
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+            daemon_bin="$(resolve_daemon_bin)"
+            local res=""
+            if [[ -n "$daemon_bin" && -x "$daemon_bin" ]]; then
+                res="$("$daemon_bin" --hyperion status 2>&1)"
+            elif [[ -n "$py_bin" && -n "$core_path" ]]; then
+                res=$("$py_bin" -c "
+import sys, json
+sys.path.insert(0, '${core_path}')
+from neuronix_core.hyperion import HyperionExecutionEngine
+engine = HyperionExecutionEngine()
+print(json.dumps(engine.get_status(), indent=2))
+" 2>&1)
+            fi
+            if [[ -n "$res" ]]; then
+                local content
+                content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                send_error "$req_id" -32000 "Hyperion execution engine unavailable."
+            fi
+            ;;
+
+        neuronix_hyperion_negotiate)
+            local workload intent tier_override offline_flag
+            workload=$(echo "$params" | jq -r '.arguments.workload_name // empty')
+            intent=$(echo "$params" | jq -r '.arguments.intent // empty')
+            tier_override=$(echo "$params" | jq -r '.arguments.tier // empty')
+            offline_flag=$(echo "$params" | jq -r '.arguments.offline // false')
+
+            if [[ -z "$workload" ]]; then
+                send_error "$req_id" -32602 "Missing required argument: workload_name"
+                return
+            fi
+
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local res
+                res=$("$py_bin" -c "
+import sys, json
+sys.path.insert(0, '${core_path}')
+from neuronix_core.hyperion import negotiate_domain
+t_val = int('${tier_override}') if '${tier_override}'.isdigit() else None
+off_val = True if '${offline_flag}' == 'true' else False
+spec = negotiate_domain(workload_name='''${workload}''', intent='''${intent}''', requested_tier=t_val, offline=off_val)
+print(json.dumps(spec, indent=2))
+" 2>&1)
+                local content
+                content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                send_error "$req_id" -32000 "Python runtime unavailable for Hyperion negotiation."
+            fi
+            ;;
+
+        neuronix_hyperion_proof)
+            local domain_id
+            domain_id=$(echo "$params" | jq -r '.arguments.domain_id // empty')
+            if [[ -z "$domain_id" ]]; then
+                send_error "$req_id" -32602 "Missing required argument: domain_id"
+                return
+            fi
+
+            local res=""
+            if [[ -f "/tmp/neuronix-hyperion-proofs/${domain_id}.json" ]]; then
+                res=$(cat "/tmp/neuronix-hyperion-proofs/${domain_id}.json")
+            else
+                local daemon_bin="$(resolve_daemon_bin)"
+                if [[ -n "$daemon_bin" && -x "$daemon_bin" ]]; then
+                    res="$("$daemon_bin" --hyperion proof "${domain_id}" 2>&1)"
+                fi
+            fi
+
+            if [[ -n "$res" ]]; then
+                local content
+                content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                send_error "$req_id" -32000 "Proof for domain '${domain_id}' not found."
             fi
             ;;
 

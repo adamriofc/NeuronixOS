@@ -68,7 +68,7 @@ All leaf structures are normalized using RFC 8785 Canonical JSON Serialization (
 4. **Leaf 4: Policy ($L_{\text{policy}}$):**  
    Encapsulates the declarative security contract hash (eBPF LSM module options, protected path allowlists, and Lanzaboote PCR binding rules).
 5. **Leaf 5: Evidence ($L_{\text{evidence}}$):**  
-   Encapsulates the execution results of the continuous industrial assurance taxonomy (1,229 assertions across 31 suites) and journal chain cryptographic continuity.
+   Encapsulates the execution results of the continuous industrial assurance taxonomy (1,254 assertions across 32 suites) and journal chain cryptographic continuity.
 
 ---
 

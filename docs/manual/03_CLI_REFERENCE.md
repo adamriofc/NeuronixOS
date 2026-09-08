@@ -221,4 +221,34 @@ Controls the Provable State Engine, computes the 5-leaf Merkle StateRoot, valida
   * `--limit <n>`: Restricts historical journal depth (default: 10).
 * **Exit Codes:** `0` on verified state / valid query, `1` on verification failure or invalid state
 
+### 2.30 `neuronix run [flags] <command... | packages...>`
+Adaptive Workload Execution Engine (Project Hyperion) and ephemeral nix-shell runner. Dynamically maps workloads to the minimum sufficient isolation tier based on natural language intent or explicit flags.
+* **4-Tier Isolation Ladder:**
+  * **Tier 0 (Fast Path):** Process sandbox with restricted seccomp filter for trusted workloads (< 10 us launch).
+  * **Tier 1 (RAM Ghost):** Disposable volatile RAM OverlayFS (`/dev/shm`) with complete host filesystem shielding and zero SSD wear.
+  * **Tier 2 (eBPF Enclave):** Hardened bubblewrap namespace container constrained by declarative eBPF LSM syscall policies.
+  * **Tier 3 (Micro-VM):** In-memory KVM virtual machine hypervisor boundary for untrusted binaries and kernel extensions.
+* **Flags:**
+  * `--fast-path`: Force execution in Tier 0.
+  * `--ephemeral`: Force execution in Tier 1 volatile RAM overlay.
+  * `--enclave`: Force execution in Tier 2 eBPF LSM sandbox.
+  * `--isolated`: Force execution in Tier 3 Micro-VM hypervisor.
+  * `--intent <text>`: Adaptive minimum-sufficient tier negotiation via intent string.
+  * `--proof`: Synthesize cryptographic Merkle DomainProof upon workload completion.
+  * `--dry-run`: Negotiate and display canonical HDS v1.0.0 without executing.
+  * `--json`: Format output in structured JSON.
+* **Package Subshell Fallback:** If invoked with package names and no isolation flags (e.g. `neuronix run cowsay jq`), launches an ephemeral Nix-shell seamlessly preserving full backward compatibility.
+
+### 2.31 `neuronix hyperion <action> [options]`
+Inspects and orchestrates the Provable Adaptive Execution Architecture (PAEA / Project Hyperion).
+* **Cryptographic Attestation:** Binds every execution receipt mathematically to the host's 5-leaf Merkle StateRoot via SHA-256 Merkle Domain Proofs (`DomainProof = SHA-256(StateRoot || HDS_hash || Policy_hash || Output_hash)`).
+* **Subcommands:**
+  * `status [--json]`: Displays active Hyperion envelope, KVM/eBPF capabilities, and tier readiness.
+  * `negotiate <workload> [--intent <text>] [--tier <0-3>] [--json]`: Synthesizes and asserts canonical Hyperion Domain Specification (HDS v1.0.0) through the deterministic safety gatekeeper.
+  * `proof <domain_id>`: Retrieves or displays cryptographic Merkle DomainProof for an executed domain.
+  * `verify <domain_id|file>`: Mathematically verifies domain proof integrity against StateRoot and declared policies.
+  * `list`: Enumerates executed domain receipts and proof roots.
+* **Exit Codes:** `0` on verified execution / valid proof, `1` on invariant violation or verification mismatch.
+
+
 

@@ -8,7 +8,7 @@
   <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.4-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
-  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1229%2F1229_Passed_(100%25)-success.svg" alt="Testing"></a>
+  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1254%2F1254_Passed_(100%25)-success.svg" alt="Testing"></a>
   <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
   <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
@@ -76,9 +76,10 @@
   - [22. Instant Time-Travel Workspace Branching (neuronix branch)](#22-instant-time-travel-workspace-branching-neuronix-branch)
   - [23. Declarative eBPF LSM Security Policy Gate (neuronix ebpf)](#23-declarative-ebpf-lsm-security-policy-gate-neuronix-ebpf)
   - [24. Provable State Engine & Cryptographic Causal Lineage (neuronix state)](#24-provable-state-engine--cryptographic-causal-lineage-neuronix-state)
+  - [25. Provable Adaptive Execution Architecture (Project Hyperion)](#25-provable-adaptive-execution-architecture-project-hyperion)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (1,229 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (1,254 Assertions)](#verification--test-harness)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -185,7 +186,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 | **FHS Dynamic Binary Compatibility** | Pre-configured `nix-ld` for VS Code, CUDA, and ELFs | Requires manual `nix-ld` or `steam-run` wrapping | Handled via Toolbox / Distrobox containers | Handled via Distrobox containers | Native POSIX/FHS directory hierarchy |
 | **AI Copilot & Telemetry Daemon** | Native OpenCode daemon + MCP JSON-RPC 2.0 server | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) |
 | **Storage Topology & Compression** | 5 Btrfs subvolumes (`@`, `@home`, `@nix`, `@snapshots`, `@swap`) + ZSTD:3 | User-defined partitioning (defaults to monolithic) | Btrfs root with subvolumes; no transparent compression | Btrfs root with Snapper read-only subvolumes | Monolithic Btrfs or EXT4 without subvolume convention |
-| **Automated Assurance Gate** | 1,229 verified assertions across 31 QA suites, distro harness, and 14 standalone gates (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
+| **Automated Assurance Gate** | 1,254 verified assertions across 32 QA suites, distro harness, and 14 standalone gates (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
 | **Release Provenance** | Pinned Flake commit + RFC SHA-256 + SPDX 2.3 SBOM | Hydra output provenance | Koji build logs / RPM signatures | OBS build provenance | Arch build system logs |
 
 ---
@@ -195,7 +196,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 #### 1. NEURONIX OS vs. Vanilla NixOS
 Vanilla NixOS provides an exceptional functional package management paradigm, but operates fundamentally as an infrastructure toolkit rather than a cohesive, out-of-the-box desktop distribution. A user installing vanilla NixOS must manually architect their Btrfs subvolume layout, configure swap parameters, script hardware driver integrations (such as NVIDIA PRIME offloading), research dynamic linker workarounds for proprietary software (`nix-ld`), and resolve complex multi-desktop configurations.
 
-NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 1,229-assertion test taxonomy (cataloged in `data/test_manifest.json`). Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
+NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 1,254-assertion test taxonomy (cataloged in `data/test_manifest.json`). Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
 
 #### 2. NEURONIX OS vs. Fedora Silverblue / Atomic Desktops
 Fedora Silverblue enforces immutability by composing system states as read-only OSTree commits. While effective at preventing host corruption, Silverblue introduces significant operational overhead:
@@ -221,8 +222,8 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
 
 | Proof Class | Rigor Level & Scope | Verification Grounding | Subsystems & Features |
 | :--- | :--- | :--- | :--- |
-| **P0: Mathematical Determinism** | Functional derivations, bit-identical store paths, pinned inputs. | Verified via Nix derivation graph, `flake.lock` pinned commit, and RFC SHA-256 digests. | Pure Nix substrate, pinned Nixpkgs closures, RFC 8785 Merkle StateRoot, reproducible ISO builds, release manifest hashes. |
-| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 1,229 automated test assertions across 31 QA suites, 19 distro component suites, and 14 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC, Provable State. |
+| **P0: Mathematical Determinism** | Functional derivations, bit-identical store paths, pinned inputs. | Verified via Nix derivation graph, `flake.lock` pinned commit, and RFC SHA-256 digests. | Pure Nix substrate, pinned Nixpkgs closures, RFC 8785 Merkle StateRoot, Merkle Domain Proofs (MDP), reproducible ISO builds, release manifest hashes. |
+| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 1,254 automated test assertions across 32 QA suites, 19 distro component suites, and 14 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC, Provable State & Hyperion Engine. |
 | **P2: Qualified Reference Hardware** | Empirical hardware validation on representative bare-metal systems. | Validated across 8 reference platforms (ThinkPad, Framework, AMD/Intel workstations, XPS, Zephyrus, Apple Silicon). | Intel/AMD microcode, Mesa RADV, Intel Arc Xe, NVIDIA PRIME offload, S3/s2idle power management, PipeWire HD audio. |
 | **P3: Declarative Module Support** | Composable NixOS configuration modules and subsystem policies. | 27 hardware configuration pillars managed in `modules/hardware/` and `data/hardware_qualification.json`. | ZRAM ZSTD swap, systemd-oomd memory monitor, Btrfs subvolumes (@, @home, @nix, @log, @snapshots), auto-TRIM. |
 | **P4: Experimental / Community** | Optional hardware features, custom Wayland compositor rules, community packages. | Documented with operational caveats and manual verification steps in operational runbooks. | Lanzaboote UEFI Secure Boot signing chain, TPM2 LUKS auto-unlocking, custom Hyprland animations. |
@@ -247,11 +248,12 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
   │                                                                                 │
 [ LAYER 3: DEVELOPER ENGINE ]                                   [ LAYER 4: RELIABILITY & PROVABLE ENGINE ]
   ├─ neuronix dev python (uv, ruff, pyright, postgresql)          ├─ Provable State Engine (5-Leaf Merkle StateRoot)
-  ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ Micro-Rust Systems Daemon & High-Concurrency AST
-  ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Model Context Protocol (MCP) Server (JSON-RPC 2.0)
-  ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ In-Memory OS Sandbox & Disposable Ghost Persona
-  ├─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  ├─ Declarative eBPF LSM Gate & Reflink Branching
-  └─ neuronix container  (Micro-DNS, OCI Build, Quadlet Daemons)  └─ 1,229 Automated Test Assertions (31 QA Suites)
+  ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ Project Hyperion (Adaptive Execution Architecture)
+  ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Micro-Rust Systems Daemon & High-Concurrency AST
+  ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Model Context Protocol (MCP) Server (JSON-RPC 2.0)
+  ├─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  ├─ In-Memory OS Sandbox & Disposable Ghost Persona
+  └─ neuronix container  (Micro-DNS, OCI Build, Quadlet Daemons)  ├─ Declarative eBPF LSM Gate & Reflink Branching
+                                                                  └─ 1,254 Automated Test Assertions (32 QA Suites)
 ```
 
 ---
@@ -389,7 +391,7 @@ USAGE:
 | `battery` | `[80 \| 100 \| status]` | Reads or modifies the laptop battery charging threshold limit. | `neuronix battery 80` |
 | `diet` | None | Runs garbage collection, deduplicates `/nix/store` hardlinks, and issues filesystem TRIM. | `neuronix diet` |
 | `dev` | `<stack>` | Starts an isolated development shell (`python`, `rust`, `node`, `ai`, `go`, `web3`). | `neuronix dev rust` |
-| `run` | `<packages...>` | Launches an ephemeral subshell with the specified packages, cleanly discarded upon exit. | `neuronix run ffmpeg jq` |
+| `run` | `[flags] <command... \| packages...>` | Adaptive Workload Execution Engine (Tiers 0-3) and ephemeral nix-shell. | `neuronix run --intent "build" cargo build` |
 | `sandbox` | `[target\|iso] [options]` | In-memory OS Micro-VM sandbox with ISO booting, Btrfs CoW, and 3D acceleration. | `neuronix sandbox --smoke-test` |
 | `try` | `[target\|iso] [options]` | (Alias) Backward-compatible alias for `neuronix sandbox`. | `neuronix try --smoke-test` |
 | `verify` | `<package>` | Tests whether a derivation evaluates cleanly against the nixpkgs closure via dry-build. | `neuronix verify ripgrep` |
@@ -413,6 +415,7 @@ USAGE:
 | `branch` | `[create \| list \| revert]` | Instantaneous Btrfs CoW / Reflink project workspace branching for risk-free experimentation. | `neuronix branch create . experiment` |
 | `ebpf` | `[status \| policy <pkg>]` | Declarative eBPF LSM capability status and security policy contract generator. | `neuronix ebpf status` |
 | `state` | `[show \| verify \| explain \| diff \| history \| recover \| prove]` | Provable State Engine: 5-leaf Merkle StateRoot calculation, cryptographic lineage, and verified recovery. | `neuronix state verify` |
+| `hyperion` | `[status \| negotiate \| proof \| verify \| list]` | Provable Adaptive Execution Architecture: HDS synthesis, domain lifecycle, and Merkle Domain Proofs. | `neuronix hyperion status` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
 | `help` | None (`-h`, `--help`)   | Displays available commands and syntax summaries. | `neuronix help` |
 
@@ -847,6 +850,40 @@ neuronix state recover [STATE_ROOT]
 neuronix state prove --output proof.json
 ```
 
+### 25. Provable Adaptive Execution Architecture (Project Hyperion - neuronix run / neuronix hyperion)
+NEURONIX establishes Project Hyperion ([NIP-0003](docs/rfcs/0003-hyperion-adaptive-execution-architecture.md), [ADR-011](docs/adr/ADR-011-hyperion-adaptive-execution-plane.md)) as an adaptive execution plane wrapping proven Linux and NixOS primitives into a mathematically verifiable isolation ladder:
+- **4-Tier Adaptive Isolation Ladder:** Eliminates developer overhead by automatically selecting the minimum sufficient execution boundary based on workload intent:
+  1. `Tier 0 (Direct Process Fast-Path):` Direct CPU/GPU silicon execution with restricted seccomp filtering for trusted binaries (< 10 us launch).
+  2. `Tier 1 (Ephemeral RAM Ghost):` Volatile tmpfs OverlayFS in `/dev/shm` via bubblewrap namespaces, shielding `$HOME` credentials with zero disk wear and instant RAM vaporization upon process exit.
+  3. `Tier 2 (Hardened eBPF Enclave):` Ephemeral container constrained by declarative eBPF LSM syscall enforcement and cgroups v2 resource ceilings (< 25 ms launch).
+  4. `Tier 3 (In-Memory Micro-VM):` Hermetic KVM hardware-isolated virtual machine boundary with volatile storage for untrusted workloads (< 150 ms launch).
+- **Hyperion Domain Specification (HDS v1.0.0):** Canonical JSON contract declaring CPU cores, memory limits, storage mounts, network airgap policies, and forbidden path boundaries.
+- **Deterministic Safety Gatekeeper:** Strictly rejects execution of domains targeting sensitive paths (`/etc/shadow`, `/root`, SSH/GPG keys) or invalid memory limits prior to allocation.
+- **Merkle Domain Proof (MDP):** Binds workload execution output mathematically to the host's 5-leaf Merkle StateRoot and active eBPF security envelope (`DomainProof = SHA-256(StateRoot || HDS_hash || Policy_hash || Output_hash)`).
+
+```bash
+# Execute workload with automatic intent-based tier negotiation
+neuronix run --intent "untrusted python script" python3 untrusted.py
+
+# Execute command in Tier 1 volatile RAM overlay with cryptographic domain proof
+neuronix run --ephemeral --proof /bin/uname -a
+
+# Negotiate and inspect canonical HDS domain spec without executing
+neuronix run --dry-run --intent "ai agent task" python3 -V
+
+# Display Hyperion Execution Plane telemetry and tier capabilities
+neuronix hyperion status
+
+# Negotiate domain contract for a workload
+neuronix hyperion negotiate compiler-job --tier 1
+
+# Verify cryptographic Merkle DomainProof mathematically against StateRoot
+neuronix hyperion verify [DOMAIN_ID]
+
+# Enumerate executed domain receipts and proof roots
+neuronix hyperion list
+```
+
 ---
 
 ## Building & Installation
@@ -912,15 +949,15 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Industrial Test Battery (1,229 Assertions)
+## Verification, Lifecycle Gate & Industrial Test Battery (1,254 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,229 automated assertions across 16 test harnesses (31 master suites, 19 distro suites, and 14 standalone gates):
+System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,254 automated assertions across 16 test harnesses (32 master suites, 19 distro suites, and 14 standalone gates):
 
 ```text
 ═══════════════════════════════════════════════════════════════════
                     TEST HARNESS REPORT SUMMARY                    
 ═══════════════════════════════════════════════════════════════════
-  Master Test Harness (tests/run_all_tests.sh)     : 864 / 864 PASS
+  Master Test Harness (tests/run_all_tests.sh)     : 889 / 889 PASS
   Distro Test Harness (tests/test_distro_suite.sh) : 209 / 209 PASS
   Single Source of Truth Gate (source_of_truth)    :  13 /  13 PASS
   Multi-Architecture Matrix (multiarch_matrix)     :  13 /  13 PASS
@@ -936,7 +973,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Historical Regression Corpus (regression_corpus) :   7 /   7 PASS
   Reproducibility Gate (test_reproducible_iso)     :   6 /   6 PASS
   Performance Benchmarks (test_benchmarks)         :   4 /   4 PASS
-  Total Executed Assertions                        : 1,229 Assertions
+  Total Executed Assertions                        : 1,254 Assertions
   Failed Verification                              : 0 Failures
   Execution Duration                               : ~147 seconds
   Confidence Score                                 : 100%
@@ -955,7 +992,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
 
 ### Verification Battery Execution:
 ```bash
-# Run master industrial test harness (864 tests across 31 suites)
+# Run master industrial test harness (889 tests across 32 suites)
 bash tests/run_all_tests.sh
 
 # Run distribution standalone suite (209 tests across 19 suites)
@@ -1031,8 +1068,11 @@ Formal design choices, invariants, and open governance specifications:
 - **[ADR-007](docs/adr/ADR-007-opencode-ai-and-mcp-integration.md):** OpenCode AI Copilot Daemon and Model Context Protocol Integration
 - **[ADR-008](docs/adr/ADR-008-multi-tier-kernel-and-hardware-matrix.md):** Declarative Multi-Tier Kernel Selection and Hardware Hardening Matrix
 - **[ADR-009](docs/adr/ADR-009-continuous-industrial-assurance-taxonomy.md):** Continuous Industrial Assurance Taxonomy and Truth Policy
-- **[ADR-010](docs/adr/ADR-010-advanced-container-and-sandbox-architecture.md):** Advanced Container and Sandbox Architecture (Bubblewrap Namespaces & Memory Scrubbing)
+- **[ADR-010](docs/adr/ADR-010-provable-state-and-causal-lineage.md):** Provable State Engine & Causal Lineage Architecture
+- **[ADR-011](docs/adr/ADR-011-hyperion-adaptive-execution-plane.md):** Hyperion Provable Adaptive Execution Architecture (PAEA)
 - **[NIP-0001](docs/rfcs/0001-north-star-and-rfc-process.md):** The North Star Thesis and Neuronix Improvement Proposal (RFC) Governance Standard
+- **[NIP-0002](docs/rfcs/0002-provable-state-engine.md):** Provable State Engine & 5-Leaf Merkle Tree Attestation
+- **[NIP-0003](docs/rfcs/0003-hyperion-adaptive-execution-architecture.md):** Hyperion Adaptive Execution Architecture & Domain Proof Specification
 
 ---
 

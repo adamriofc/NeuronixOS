@@ -218,7 +218,7 @@ pub fn handle_jsonrpc(request_str: &str) -> String {
     match method.as_str() {
         "initialize" => {
             format!(
-                r#"{{"jsonrpc":"2.0","result":{{"protocolVersion":"2024-11-05","capabilities":{{"ast":true,"ghost":true,"ebpf":true,"branch":true,"state":true}},"serverInfo":{{"name":"neuronix-daemon","version":"{}"}}}},"id":{}}}"#,
+                r#"{{"jsonrpc":"2.0","result":{{"protocolVersion":"2024-11-05","capabilities":{{"ast":true,"ghost":true,"ebpf":true,"branch":true,"state":true,"hyperion":true}},"serverInfo":{{"name":"neuronix-daemon","version":"{}"}}}},"id":{}}}"#,
                 CANONICAL_VERSION, id_val
             )
         }
@@ -241,6 +241,38 @@ pub fn handle_jsonrpc(request_str: &str) -> String {
             format!(
                 r#"{{"jsonrpc":"2.0","result":{},"id":{}}}"#,
                 verify_json, id_val
+            )
+        }
+        "hyperion/status" => {
+            let caps = crate::hyperion::HyperionBroker::probe_capabilities();
+            format!(
+                r#"{{"jsonrpc":"2.0","result":{},"id":{}}}"#,
+                caps, id_val
+            )
+        }
+        "hyperion/negotiate" => {
+            let workload = extract_json_string_field(req, "workload_name").unwrap_or_else(|| "unnamed_workload".to_string());
+            let intent = extract_json_string_field(req, "intent_text").unwrap_or_else(|| "Standard execution".to_string());
+            let tier = extract_json_string_field(req, "requested_tier").unwrap_or_else(|| "AUTO".to_string());
+            let offline = req.contains("\"offline\":true");
+            let mem_mb = extract_json_field(req, "memory_mb")
+                .and_then(|m| m.parse::<u64>().ok())
+                .unwrap_or(2048);
+            let hds = crate::hyperion::HyperionBroker::negotiate_domain(&workload, &intent, &tier, offline, mem_mb);
+            format!(
+                r#"{{"jsonrpc":"2.0","result":{},"id":{}}}"#,
+                hds, id_val
+            )
+        }
+        "hyperion/proof" => {
+            let state_root = extract_json_string_field(req, "state_root").unwrap_or_default();
+            let hds_json = extract_json_string_field(req, "hds_spec").unwrap_or_default();
+            let policy_hash = extract_json_string_field(req, "policy_hash").unwrap_or_default();
+            let output_digest = extract_json_string_field(req, "output_digest").unwrap_or_default();
+            let proof = crate::hyperion::HyperionBroker::generate_proof(&state_root, &hds_json, &policy_hash, &output_digest);
+            format!(
+                r#"{{"jsonrpc":"2.0","result":{},"id":{}}}"#,
+                proof, id_val
             )
         }
         "system/ping" => {

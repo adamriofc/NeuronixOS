@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/hyperion/hds-v1.json",
+  "title": "HyperionDomainSpecification",
+  "description": "Declarative schema defining an adaptive execution domain in NEURONIX OS Project Hyperion.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "domain_id",
+    "workload_name",
+    "isolation_tier",
+    "resource_envelope",
+    "security_contracts"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0.0"]
+    },
+    "domain_id": {
+      "type": "string",
+      "pattern": "^DOM-[0-9]{4}-[0-9]{2}-[0-9]{2}-[A-F0-9]{4,16}$"
+    },
+    "workload_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "intent_source": {
+      "type": "object",
+      "properties": {
+        "actor_uid": { "type": "integer" },
+        "actor_role": { "type": "string" },
+        "intent_text": { "type": "string" },
+        "prompt_digest": { "type": "string" }
+      }
+    },
+    "isolation_tier": {
+      "type": "string",
+      "enum": [
+        "TIER_0_FAST_PATH",
+        "TIER_1_RAM_GHOST",
+        "TIER_2_EBPF_ENCLAVE",
+        "TIER_3_MICRO_VM"
+      ]
+    },
+    "resource_envelope": {
+      "type": "object",
+      "required": ["cpu", "memory", "storage", "network"],
+      "properties": {
+        "cpu": {
+          "type": "object",
+          "properties": {
+            "cores_allocated": {
+              "type": "array",
+              "items": { "type": "integer" }
+            },
+            "scheduling_policy": { "type": "string" },
+            "nice_level": { "type": "integer" }
+          }
+        },
+        "memory": {
+          "type": "object",
+          "required": ["limit_mb"],
+          "properties": {
+            "limit_mb": { "type": "integer", "minimum": 64 },
+            "hugepages": { "type": "string", "enum": ["none", "2MB", "1GB"] },
+            "swap_policy": { "type": "string" }
+          }
+        },
+        "accelerator": {
+          "type": "object",
+          "properties": {
+            "device": { "type": "string", "enum": ["none", "cuda", "rocm", "vulkan"] },
+            "visible_devices": { "type": "array", "items": { "type": "string" } },
+            "vram_ceiling_mb": { "type": "integer" }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "required": ["mount_type"],
+          "properties": {
+            "mount_type": { "type": "string", "enum": ["HOST_PASSTHROUGH", "MEMFD_VOLATILE_RAM", "COW_REFLINK_OVERLAY"] },
+            "workspace_bind": { "type": "string" },
+            "auto_vaporize_on_exit": { "type": "boolean" }
+          }
+        },
+        "network": {
+          "type": "object",
+          "required": ["policy"],
+          "properties": {
+            "policy": { "type": "string", "enum": ["HOST_SHARED", "ISOLATED_NAMESPACE", "OFFLINE_AIRGAP", "SIMULATED_LOOPBACK"] },
+            "allow_inbound": { "type": "boolean" },
+            "allow_outbound": { "type": "boolean" },
+            "allowed_hosts": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "security_contracts": {
+      "type": "object",
+      "required": ["disallowed_paths", "credential_scrubbing"],
+      "properties": {
+        "ebpf_lsm_ruleset": { "type": "string" },
+        "credential_scrubbing": { "type": "boolean" },
+        "disallowed_paths": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "permitted_syscalls": { "type": "string" }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "properties": {
+        "max_duration_seconds": { "type": "integer", "minimum": 1 },
+        "on_anomaly": { "type": "string", "enum": ["FAIL_CLOSED", "TERMINATE_AND_VAPORIZE", "ALERT_AND_HOLD"] }
+      }
+    }
+  }
+}

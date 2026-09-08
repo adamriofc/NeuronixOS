@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Industrial QA & Resilience Master Test Runner (864 Tests across 31 Suites)
-# Executes 31 deep-dive suites:
+# NEURONIX Industrial QA & Resilience Master Test Runner (889 Tests across 32 Suites)
+# Executes 32 deep-dive suites:
 # 01 - Syntax & Static Analysis
 # 02 - CLI Argument Parsing & Fuzzing
 # 03 - Unit Tests for Internal Functions
@@ -33,6 +33,7 @@
 # 29 - Ephemeral Persona, Workspace Branching & eBPF LSM Gate
 # 30 - Dual-Plane Control Engine, UKI & Resilient Measured Boot
 # 31 - Provable State Engine & Causal Lineage Architecture
+# 32 - Provable Adaptive Execution Architecture (Project Hyperion)
 # ==============================================================================
 
 set -uo pipefail
@@ -48,10 +49,10 @@ START_TIME=$(date +%s%N)
 
 echo -e "\n${C_BOLD}${C_CYAN}╔═══════════════════════════════════════════════════════════════════╗${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}║     NEURONIX COMPREHENSIVE INDUSTRIAL QA & RESILIENCE HARNESS     ║${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (864 Tests)   ║${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (889 Tests)   ║${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}╚═══════════════════════════════════════════════════════════════════╝${C_RESET}"
 
-# Execute all 30 suites sequentially
+# Execute all 32 suites sequentially
 source "$TEST_DIR/suites/01_syntax_and_static_analysis.sh"
 source "$TEST_DIR/suites/02_cli_argument_and_fuzzing.sh"
 source "$TEST_DIR/suites/03_unit_internal_functions.sh"
@@ -83,6 +84,7 @@ source "$TEST_DIR/suites/28_micro_rust_daemon_and_ast.sh"
 source "$TEST_DIR/suites/29_ephemeral_persona_and_branching.sh"
 source "$TEST_DIR/suites/30_dual_plane_and_pcr_validation.sh"
 source "$TEST_DIR/suites/31_provable_state_engine.sh"
+source "$TEST_DIR/suites/32_hyperion_execution_engine.sh"
 
 END_TIME=$(date +%s%N)
 DURATION_MS=$(( (END_TIME - START_TIME) / 1000000 ))

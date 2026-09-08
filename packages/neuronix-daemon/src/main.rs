@@ -11,6 +11,7 @@ mod ebpf;
 mod branch;
 mod crypto;
 pub mod state;
+pub mod hyperion;
 
 use std::env;
 use std::fs;
@@ -49,6 +50,15 @@ fn main() {
         return;
     }
 
+    // Direct JSON-RPC evaluation (One-shot mode)
+    if let Some(pos) = args.iter().position(|a| a == "--eval" || a == "-e") {
+        if pos + 1 < args.len() {
+            let resp = handle_jsonrpc(&args[pos + 1]);
+            println!("{}", resp);
+            return;
+        }
+    }
+
     // Direct ping (One-shot mode)
     if args.contains(&"--ping".to_string()) {
         let resp = handle_jsonrpc(r#"{"jsonrpc":"2.0","method":"system/ping","id":1}"#);
@@ -60,6 +70,32 @@ fn main() {
     if args.contains(&"--state".to_string()) {
         let state = state::StateEngine::probe_state();
         println!("{}", state);
+        return;
+    }
+
+    // Direct Hyperion Execution Plane broker (One-shot mode)
+    if let Some(pos) = args.iter().position(|a| a == "--hyperion") {
+        if pos + 1 < args.len() {
+            let sub = &args[pos + 1];
+            if sub == "negotiate" {
+                let workload = if pos + 2 < args.len() { &args[pos + 2] } else { "workload" };
+                let hds = hyperion::HyperionBroker::negotiate_domain(workload, "direct-execution", "tier1", false, 2048);
+                println!("{}", hds);
+                return;
+            } else if sub == "proof" {
+                let did = if pos + 2 < args.len() { &args[pos + 2] } else { "DOM-ACTIVE" };
+                let proof = hyperion::HyperionBroker::generate_proof(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                    did,
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                    "0000000000000000000000000000000000000000000000000000000000000000"
+                );
+                println!("{}", proof);
+                return;
+            }
+        }
+        let caps = hyperion::HyperionBroker::probe_capabilities();
+        println!("{}", caps);
         return;
     }
 
@@ -157,6 +193,7 @@ fn print_usage() {
     println!("  --socket <path>           Specify custom UNIX domain socket path");
     println!("  --ast                     Emit JSON-formatted System State AST and exit");
     println!("  --state                   Emit JSON-formatted Provable State Root and exit");
+    println!("  --hyperion                Emit Hyperion execution plane capabilities and exit");
     println!("  --ping                    Verify AST engine responsiveness and exit");
     println!("  --ghost-run <cmd>         Execute command in ephemeral RAM overlay");
     println!("  --policy <pkg>            Generate declarative eBPF LSM policy contract");

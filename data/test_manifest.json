@@ -2,13 +2,13 @@
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.4",
-  "generated_at": "2026-09-08T21:43:34Z",
+  "generated_at": "2026-09-08T22:35:22Z",
   "summary": {
-    "total_repository_assertions": 1229,
-    "qa_master_harness_assertions": 864,
+    "total_repository_assertions": 1254,
+    "qa_master_harness_assertions": 889,
     "distro_component_assertions": 209,
     "standalone_gates_assertions": 156,
-    "qa_master_suites_count": 31,
+    "qa_master_suites_count": 32,
     "distro_suites_count": 19,
     "standalone_gates_count": 14,
     "validation_status": "PASSING_ALL",
@@ -240,6 +240,13 @@
       {
         "suite_file": "31_provable_state_engine.sh",
         "title": "Provable State Engine & Causal Lineage Architecture",
+        "assertions": 25,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": true
+      },
+      {
+        "suite_file": "32_hyperion_execution_engine.sh",
+        "title": "Provable Adaptive Execution Architecture (Project Hyperion)",
         "assertions": 25,
         "proof_class": "L2_SYSTEM",
         "release_blocker": true

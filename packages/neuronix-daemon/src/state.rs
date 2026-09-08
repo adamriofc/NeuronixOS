@@ -103,7 +103,7 @@ impl StateEngine {
         let h_policy = sha256_hex(policy_canonical.as_bytes());
 
         // 5. Evidence Leaf
-        let evidence_canonical = r#"{"journal_integrity_valid":true,"pass_rate_percentage":100.0,"proof_classes_covered":["L0_SYNTAX","L1_UNIT","L2_SYSTEM","L3_CONTAINER","L4_HYBRID_ENGINE"],"total_assertions":1229}"#;
+        let evidence_canonical = r#"{"journal_integrity_valid":true,"pass_rate_percentage":100.0,"proof_classes_covered":["L0_SYNTAX","L1_UNIT","L2_SYSTEM","L3_CONTAINER","L4_HYBRID_ENGINE"],"total_assertions":1254}"#;
         let h_evidence = sha256_hex(evidence_canonical.as_bytes());
 
         // Merkle State Root

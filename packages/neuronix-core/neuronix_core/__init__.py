@@ -38,6 +38,12 @@ from .container import (
 from .tune import apply_tuning_profile, get_current_tuning_status, PROFILES as TUNING_PROFILES
 from .mesh import get_mesh_status, discover_local_peers
 from .state import ProvableStateEngine, get_current_state, verify_current_state
+from .hyperion import (
+    HyperionExecutionEngine,
+    DeterministicVerifier,
+    IsolationTier,
+    negotiate_domain,
+)
 
 __all__ = [
     "__version__",
@@ -91,4 +97,8 @@ __all__ = [
     "discover_local_peers",
     "query_state_show",
     "query_state_verify",
+    "HyperionExecutionEngine",
+    "DeterministicVerifier",
+    "IsolationTier",
+    "negotiate_domain",
 ]

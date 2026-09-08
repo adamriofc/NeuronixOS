@@ -194,7 +194,7 @@ class ProvableStateEngine:
         """
         Gathers Leaf 5: Verification & Invariant Health (L_evidence).
         """
-        total_assertions = 1229
+        total_assertions = 1254
         manifest_path = os.path.join(self.root_dir, "data/test_manifest.json") if self.root_dir else "data/test_manifest.json"
         if os.path.exists(manifest_path):
             try:

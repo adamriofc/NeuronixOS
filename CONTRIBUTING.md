@@ -37,12 +37,12 @@ This provisions the development toolchain, including QEMU, Calamares testing dep
 
 ## Testing & Quality Gates
 
-NEURONIX maintains an automated test taxonomy comprising 1,229 assertions across 31 QA master suites, 19 distro component suites, and 14 standalone verification gates (cataloged in `data/test_manifest.json`). All tests must pass with a 100% success rate before pull requests can be merged.
+NEURONIX maintains an automated test taxonomy comprising 1,254 assertions across 32 QA master suites, 19 distro component suites, and 14 standalone verification gates (cataloged in `data/test_manifest.json`). All tests must pass with a 100% success rate before pull requests can be merged.
 
 Run the test suite locally:
 
 ```bash
-# Run the master test runner (864 tests across 31 suites)
+# Run the master test runner (889 tests across 32 suites)
 bash tests/run_all_tests.sh
 
 # Run the distribution standalone harness (209 tests across 19 suites)
