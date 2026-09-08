@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (1129 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (1179 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -56,12 +56,15 @@ jobs:
           nix-instantiate --parse modules/core/manual.nix
           nix-instantiate --parse modules/core/sentinel.nix
           nix-instantiate --parse modules/platform.nix
+          nix-instantiate --parse modules/services/daemon.nix
+          nix-instantiate --parse modules/security/ebpf-lsm.nix
+          nix-instantiate --parse packages/neuronix-daemon/default.nix
 
       - name: Execute Distro Verification Suite (209 Tests)
         run: |
           bash tests/test_distro_suite.sh
 
-      - name: Execute Master Test Harness (764 Tests)
+      - name: Execute Master Test Harness (814 Tests)
         run: |
           bash tests/run_all_tests.sh
 
@@ -130,7 +133,7 @@ jobs:
         run: |
           bash tests/test_reproducible_iso.sh
 
-      - name: Verify Single Source of Truth Test Manifest (1129 Assertions)
+      - name: Verify Single Source of Truth Test Manifest (1179 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json
