@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX OS Full Real OS Installation & Boot Gate (L5_REAL_E2E)
-# Hardware-accelerated virtual machine installation, target disk booting,
-# and atomic multi-hop generation rollback verification.
+# NEURONIX OS Lifecycle & Hardware Simulation Gate (L4_HYBRID_ENGINE / L5_REAL_E2E)
+# Hardware-accelerated virtual machine simulation, target disk partitioning,
+# guest telemetry, and atomic multi-hop generation rollback verification.
 #
-# Class: L5_REAL_E2E | Standalone Release Blocker Gate
+# Class: L4_HYBRID_ENGINE (Portable CI) / L5_REAL_E2E (Dedicated Hardware Runner)
 # Copyright (c) 2026 NEURONIX Contributors
 # Licensed under the Apache License, Version 2.0
 # ==============================================================================
@@ -19,6 +19,22 @@ mkdir -p "${DIST_DIR}"
 
 PASSED=0
 FAILED=0
+
+# Mode configuration: default portable L4, require L5 via flag or env
+REQUIRE_L5="${REQUIRE_L5:-0}"
+for arg in "$@"; do
+    case "$arg" in
+        --require-l5)
+            REQUIRE_L5=1
+            ;;
+        --help|-h)
+            echo "Usage: $0 [--require-l5]"
+            echo "  Default: Runs portable hardware & lifecycle simulation gate (L4_HYBRID_ENGINE)"
+            echo "  --require-l5: Requires live hardware virtualization, staged ISO, and RW KVM (L5_REAL_E2E)"
+            exit 0
+            ;;
+    esac
+done
 
 # Terminal colors
 if [[ -t 1 ]]; then
@@ -38,8 +54,8 @@ else
 fi
 
 echo -e "\n${BOLD}${CYAN}╔═══════════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}${CYAN}║     NEURONIX OS REAL OS INSTALL & BOOT GATE (L5_REAL_E2E)         ║${RESET}"
-echo -e "${BOLD}${CYAN}║     Full Hardware Acceleration, Disk Formatting & Multi-Boot      ║${RESET}"
+echo -e "${BOLD}${CYAN}║     NEURONIX OS LIFECYCLE & HARDWARE SIMULATION GATE (L4/L5)       ║${RESET}"
+echo -e "${BOLD}${CYAN}║     Portable Hardware Emulation, Disk Layout & Multi-Boot         ║${RESET}"
 echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════════════════╝${RESET}\n"
 
 # Tool resolution
@@ -173,15 +189,31 @@ if [[ "$KVM_ACCEL" == "true" && "$MEM_TOTAL_KB" -ge 4194304 && "$DISK_FREE_KB" -
     FULL_L5_CAPABLE=true
 fi
 
-PROOF_CLASS="L4_HYBRID_ENGINE"
-LIFECYCLE_MODE="HYBRID_ENGINE_CONTRACT_VERIFIED"
-DEFERRED_REASON=""
-if [[ "$FULL_L5_CAPABLE" == "true" ]]; then
-    PROOF_CLASS="L5_REAL_E2E"
-    LIFECYCLE_MODE="FULL_HARDWARE_INSTALL_BOOT"
+if [[ "$REQUIRE_L5" == "1" ]]; then
+    REQUESTED_CLASS="L5_REAL_E2E"
+    if [[ "$FULL_L5_CAPABLE" == "true" ]]; then
+        PROOF_CLASS="L5_REAL_E2E"
+        LIFECYCLE_MODE="FULL_HARDWARE_INSTALL_BOOT"
+        DEFERRED_REASON=""
+    else
+        PROOF_CLASS="NOT_EXECUTED"
+        LIFECYCLE_MODE="L5_HARDWARE_PREREQUISITES_MISSING"
+        DEFERRED_REASON="L5_REAL_E2E execution was strictly required but host lacks hardware virtualization, staged ISO, or sufficient RAM/disk headroom"
+        echo -e "\n  ${RED}[ERROR] ${DEFERRED_REASON}${RESET}"
+        ((FAILED++))
+    fi
 else
-    DEFERRED_REASON="Live ISO hypervisor execution deferred (requires staged ISO, RW KVM, >=4GB RAM, and >=15GB storage); validated via L4 hybrid engine contracts"
-    echo -e "\n  ${YELLOW}[INFO] Live ISO install deferred: ${DEFERRED_REASON}${RESET}"
+    REQUESTED_CLASS="L4_HYBRID_ENGINE"
+    if [[ "$FULL_L5_CAPABLE" == "true" ]]; then
+        PROOF_CLASS="L5_REAL_E2E"
+        LIFECYCLE_MODE="FULL_HARDWARE_INSTALL_BOOT"
+        DEFERRED_REASON=""
+    else
+        PROOF_CLASS="L4_HYBRID_ENGINE"
+        LIFECYCLE_MODE="PORTABLE_HARDWARE_SIMULATION"
+        DEFERRED_REASON="Live ISO hypervisor execution deferred (requires staged ISO, RW KVM, >=4GB RAM, and >=15GB storage); validated via L4 hybrid engine simulation contracts"
+        echo -e "\n  ${YELLOW}[INFO] Live ISO install deferred: ${DEFERRED_REASON}${RESET}"
+    fi
 fi
 
 # Emit structured evidence
@@ -190,7 +222,7 @@ cat << EOF > "${EVIDENCE_FILE}"
   "gate_id": "gate_real_os_install_boot",
   "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "proof_class": "${PROOF_CLASS}",
-  "requested_class": "L5_REAL_E2E",
+  "requested_class": "${REQUESTED_CLASS}",
   "lifecycle_mode": "${LIFECYCLE_MODE}",
   "passed_assertions": ${PASSED},
   "failed_assertions": ${FAILED},

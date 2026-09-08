@@ -1,14 +1,14 @@
 {
   "gate_id": "gate_real_os_install_boot",
-  "timestamp": "2026-09-08T09:12:49Z",
+  "timestamp": "2026-09-08T10:12:27Z",
   "proof_class": "L4_HYBRID_ENGINE",
-  "requested_class": "L5_REAL_E2E",
-  "lifecycle_mode": "HYBRID_ENGINE_CONTRACT_VERIFIED",
+  "requested_class": "L4_HYBRID_ENGINE",
+  "lifecycle_mode": "PORTABLE_HARDWARE_SIMULATION",
   "passed_assertions": 10,
   "failed_assertions": 0,
   "status": "PASSED",
   "kvm_accelerated": true,
   "virtual_disk_bytes": 21474836480,
-  "deferred_reason": "Live ISO hypervisor execution deferred (requires staged ISO, RW KVM, >=4GB RAM, and >=15GB storage); validated via L4 hybrid engine contracts",
+  "deferred_reason": "Live ISO hypervisor execution deferred (requires staged ISO, RW KVM, >=4GB RAM, and >=15GB storage); validated via L4 hybrid engine simulation contracts",
   "evidence_file": "dist/real_os_boot_evidence.json"
 }

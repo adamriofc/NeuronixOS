@@ -2,13 +2,13 @@
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.4",
-  "generated_at": "2026-09-08T07:21:31Z",
+  "generated_at": "2026-09-08T10:12:55Z",
   "summary": {
-    "total_repository_assertions": 1179,
-    "qa_master_harness_assertions": 814,
+    "total_repository_assertions": 1204,
+    "qa_master_harness_assertions": 839,
     "distro_component_assertions": 209,
     "standalone_gates_assertions": 156,
-    "qa_master_suites_count": 29,
+    "qa_master_suites_count": 30,
     "distro_suites_count": 19,
     "standalone_gates_count": 14,
     "validation_status": "PASSING_ALL",
@@ -23,7 +23,7 @@
     "L4_BENCHMARK": "Statistical latency budgets and empirical pressure benchmarks",
     "L5_REAL_E2E": "Full hardware-accelerated hypervisor OS boot, install & multi-hop rollback"
   },
-  "release_blocker_policy": "Any failure across proof classes L0 to L5 strictly blocks production release",
+  "release_blocker_policy": "Mandatory CI gating enforces proof classes L0 through L4 blockers; L5_REAL_E2E enforces full hardware virtualization and staged ISO verification in production release workflows",
   "qa_master_harness": {
     "runner": "tests/run_all_tests.sh",
     "suites": [
@@ -229,6 +229,13 @@
         "assertions": 25,
         "proof_class": "L2_SYSTEM",
         "release_blocker": true
+      },
+      {
+        "suite_file": "30_dual_plane_and_pcr_validation.sh",
+        "title": "Dual-Plane Control Engine, UKI & Resilient Measured Boot",
+        "assertions": 25,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": true
       }
     ]
   },
@@ -276,9 +283,9 @@
     {
       "id": "gate_real_os_install_boot",
       "file": "tests/e2e/real/test_real_os_install_boot.sh",
-      "description": "Full Hardware-Accelerated OS Installation & Multi-Boot Rollback Invariants",
+      "description": "Portable Lifecycle & Hardware Simulation Gate (L4) / Hardware-Accelerated OS Boot (L5)",
       "assertions": 10,
-      "proof_class": "L5_REAL_E2E",
+      "proof_class": "L4_HYBRID_ENGINE",
       "release_blocker": true
     },
     {

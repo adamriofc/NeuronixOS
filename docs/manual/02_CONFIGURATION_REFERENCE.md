@@ -79,12 +79,12 @@ Controls the autonomous micro-Rust daemon and unified live system AST UNIX domai
 
 ### 2.7 Declarative eBPF LSM Gate (`neuronix.security.ebpfLsm`)
 
-Configures declarative Linux Security Module (LSM) syscall containment for developer toolchains and containers.
+Configures declarative Linux Security Module (LSM) security policy contracts for developer toolchains and containers.
 
 | Option Path | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `neuronix.security.ebpfLsm.enable` | boolean | `true` | Appends `bpf` to kernel `lsm=` parameters for granular syscall containment. |
-| `neuronix.security.ebpfLsm.mode` | enum: `["enforcing", "audit"]` | `"enforcing"` | Operating mode (enforcing: hard drop; audit: log warning). |
+| `neuronix.security.ebpfLsm.enable` | boolean | `true` | Appends `bpf` to kernel `lsm=` parameters for declarative security policy verification. |
+| `neuronix.security.ebpfLsm.mode` | enum: `["enforcing", "audit"]` | `"enforcing"` | Operating mode (enforcing: authoritative security contract for audit verification; audit: advisory contract). |
 | `neuronix.security.ebpfLsm.defaultProtectedPaths` | list of string | `["/etc/shadow", "/etc/ssh", "/root"]` | Sensitive paths shielded from unprivileged toolchains. |
 
 ---

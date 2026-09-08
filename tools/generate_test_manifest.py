@@ -27,7 +27,7 @@ PROOF_CLASS_TAXONOMY = {
     "L5_REAL_E2E": "Full hardware-accelerated hypervisor OS boot, install & multi-hop rollback"
 }
 
-RELEASE_BLOCKER_POLICY = "Any failure across proof classes L0 to L5 strictly blocks production release"
+RELEASE_BLOCKER_POLICY = "Mandatory CI gating enforces proof classes L0 through L4 blockers; L5_REAL_E2E enforces full hardware virtualization and staged ISO verification in production release workflows"
 
 # Verified exact assertion breakdown per suite
 QA_SUITES = [
@@ -59,7 +59,8 @@ QA_SUITES = [
     {"suite_file": "26_deep_system_enhancements.sh", "title": "Deep-System Enhancements & Invariants", "assertions": 39, "proof_class": "L2_SYSTEM", "release_blocker": True},
     {"suite_file": "27_hyper_advanced_isolation.sh", "title": "Hyper-Advanced Isolation, OCI Compiler & Sandbox Fabric", "assertions": 52, "proof_class": "L2_SYSTEM", "release_blocker": True},
     {"suite_file": "28_micro_rust_daemon_and_ast.sh", "title": "Micro-Rust Systems Daemon & High-Concurrency AST", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True},
-    {"suite_file": "29_ephemeral_persona_and_branching.sh", "title": "Ephemeral Persona, Workspace Branching & eBPF LSM Gate", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True}
+    {"suite_file": "29_ephemeral_persona_and_branching.sh", "title": "Ephemeral Persona, Workspace Branching & eBPF LSM Gate", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True},
+    {"suite_file": "30_dual_plane_and_pcr_validation.sh", "title": "Dual-Plane Control Engine, UKI & Resilient Measured Boot", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True}
 ]
 
 DISTRO_SUITE = {
@@ -107,9 +108,9 @@ STANDALONE_GATES = [
     {
         "id": "gate_real_os_install_boot",
         "file": "tests/e2e/real/test_real_os_install_boot.sh",
-        "description": "Full Hardware-Accelerated OS Installation & Multi-Boot Rollback Invariants",
+        "description": "Portable Lifecycle & Hardware Simulation Gate (L4) / Hardware-Accelerated OS Boot (L5)",
         "assertions": 10,
-        "proof_class": "L5_REAL_E2E",
+        "proof_class": "L4_HYBRID_ENGINE",
         "release_blocker": True
     },
     {

@@ -8,13 +8,13 @@ in
     enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Enable declarative eBPF Linux Security Module (LSM) syscall containment for untrusted stacks.";
+      description = "Enable declarative eBPF Linux Security Module (LSM) kernel capability configuration and security policy contracts.";
     };
 
     mode = lib.mkOption {
       type = lib.types.enum [ "enforcing" "audit" ];
       default = "enforcing";
-      description = "Operating mode for eBPF LSM policy engine (enforcing: hard drop; audit: log warning).";
+      description = "Operating mode for eBPF LSM policy engine (enforcing: authoritative security contract for audit verification; audit: advisory contract).";
     };
 
     defaultProtectedPaths = lib.mkOption {

@@ -198,8 +198,8 @@ Provides instant copy-on-write project workspace branching using Btrfs subvolume
   * `revert <path> <name>`: Restores workspace state from a named branch snapshot.
 
 ### 2.28 `neuronix ebpf [status|policy <pkg>]`
-Inspects and manages declarative eBPF Linux Security Module (LSM) syscall containment and security policies.
-* **Kernel Syscall Gate:** Enforces declarative eBPF Linux Security Module (LSM) security contracts to restrict unauthorized file and syscall modifications on developer containers and untrusted workloads.
+Inspects and manages declarative eBPF Linux Security Module (LSM) security policy contracts.
+* **Kernel LSM Security Contract:** Generates and verifies declarative eBPF Linux Security Module (LSM) security policy contracts to audit and isolate developer containers and workloads.
 * **Subcommands:**
   * `status`: Inspects active eBPF LSM status and kernel security enforcement mode (`ENFORCING` or `AUDIT_MODE`).
   * `policy <pkg>`: Generates declarative eBPF confinement policy for the specified package or derivation.

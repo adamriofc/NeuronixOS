@@ -8,11 +8,12 @@
 # 4. Smart PCR binding invariants (PCR 7 + PCR 11; PCR 0/2/4 excluded)
 # 5. Dual-slot LUKS2 fallback passphrase preservation (zero lockout risk)
 # 6. Policy-as-Code NIP-0001 specification and North Star alignment
-# 7. Flake module registration and release provenance attestation
+# 7. Flake module registration, release provenance, and runner/manifest parity
 # ==============================================================================
 
 TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/bin/neuronix"
 DISTRO_PATH="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+PYTHON_BIN="$(command -v python3 2>/dev/null || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo "python3")"
 
 start_suite "30 - Dual-Plane Control Engine, UKI & Resilient Measured Boot"
 
@@ -62,13 +63,14 @@ assert_output_contains "cat '$NIP_0001'" "Balanced Tolerable Trade-Off" "NIP-000
 assert_output_contains "cat '${DISTRO_PATH}/README.md'" "NIP-0001" "README.md references NIP-0001 RFC governance standard"
 
 # ==============================================================================
-# Part 4: Codebase Typography & Supply-Chain Provenance (Tests 22-25)
+# Part 4: Typography, Supply-Chain Provenance & Manifest Parity (Tests 22-25)
 # ==============================================================================
-EM_DASH_NIP=$(grep -rn $'\xe2\x80\x94' "$NIP_0001" 2>/dev/null | wc -l)
-assert_eq "$EM_DASH_NIP" "0" "NIP-0001 conforms to zero em-dash typography invariant"
-
-EM_DASH_LANZABOOTE=$(grep -rn $'\xe2\x80\x94' "$LANZABOOTE_NIX" 2>/dev/null | wc -l)
-assert_eq "$EM_DASH_LANZABOOTE" "0" "lanzaboote.nix conforms to zero em-dash typography invariant"
+EM_DASH_COUNT=$(grep -rn $'\xe2\x80\x94' "$NIP_0001" "$LANZABOOTE_NIX" 2>/dev/null | wc -l)
+assert_eq "$EM_DASH_COUNT" "0" "NIP-0001 and lanzaboote.nix conform to zero em-dash typography invariant"
 
 assert_output_contains "cat '${DISTRO_PATH}/flake.nix'" "lanzaboote = import ./modules/security/lanzaboote.nix;" "flake.nix registers lanzaboote under nixosModules"
 assert_output_contains "cat '${DISTRO_PATH}/.github/workflows/release-iso.yml'" "attest-build-provenance" "release-iso.yml enforces SLSA Level 3 keyless provenance attestation"
+
+RUNNER_SUITES=$(grep -c 'source "\$TEST_DIR/suites/' "${DISTRO_PATH}/tests/run_all_tests.sh")
+MANIFEST_SUITES=$("$PYTHON_BIN" -c "import json; d=json.load(open('${DISTRO_PATH}/data/test_manifest.json')); print(d['summary']['qa_master_suites_count'])" 2>/dev/null || echo "0")
+assert_eq "${RUNNER_SUITES}:${MANIFEST_SUITES}" "30:30" "Runner suite count (30) exactly matches canonical test manifest suites (30)"
