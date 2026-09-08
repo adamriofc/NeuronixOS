@@ -55,6 +55,8 @@
         sentinel = import ./modules/core/sentinel.nix;
         tuning = import ./modules/hardware/tuning.nix;
         mesh = import ./modules/services/mesh.nix;
+        daemon = import ./modules/services/daemon.nix;
+        ebpfLsm = import ./modules/security/ebpf-lsm.nix;
       };
 
       # Target installed system configuration (Default Desktop x86_64)
@@ -100,6 +102,7 @@
         {
           neuronix-center = pkgs.callPackage ./packages/neuronix-center { };
           neuronix-cli = pkgs.callPackage ./packages/neuronix-cli { };
+          neuronix-daemon = pkgs.callPackage ./packages/neuronix-daemon { };
           opencode = pkgs.callPackage ./packages/opencode { };
         } // (nixpkgs.lib.optionalAttrs (system == primarySystem) {
           iso = self.nixosConfigurations."neuronix-iso".config.system.build.isoImage;

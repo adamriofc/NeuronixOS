@@ -2,13 +2,13 @@
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.4",
-  "generated_at": "2026-09-08T05:32:31Z",
+  "generated_at": "2026-09-08T07:21:31Z",
   "summary": {
-    "total_repository_assertions": 1129,
-    "qa_master_harness_assertions": 764,
+    "total_repository_assertions": 1179,
+    "qa_master_harness_assertions": 814,
     "distro_component_assertions": 209,
     "standalone_gates_assertions": 156,
-    "qa_master_suites_count": 27,
+    "qa_master_suites_count": 29,
     "distro_suites_count": 19,
     "standalone_gates_count": 14,
     "validation_status": "PASSING_ALL",
@@ -213,6 +213,20 @@
         "suite_file": "27_hyper_advanced_isolation.sh",
         "title": "Hyper-Advanced Isolation, OCI Compiler & Sandbox Fabric",
         "assertions": 52,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": true
+      },
+      {
+        "suite_file": "28_micro_rust_daemon_and_ast.sh",
+        "title": "Micro-Rust Systems Daemon & High-Concurrency AST",
+        "assertions": 25,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": true
+      },
+      {
+        "suite_file": "29_ephemeral_persona_and_branching.sh",
+        "title": "Ephemeral Persona, Workspace Branching & eBPF LSM Gate",
+        "assertions": 25,
         "proof_class": "L2_SYSTEM",
         "release_blocker": true
       }

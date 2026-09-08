@@ -9,7 +9,7 @@ __version__ = "1.0.4"
 from .telemetry import get_system_telemetry, get_cpu_info, get_ram_info
 from .generation import list_generations, get_active_generation, parse_generation_number
 from .rollback import execute_rollback, simulate_rollback
-from .storage import probe_storage_hygiene, calculate_store_size
+from .storage import probe_storage_hygiene, calculate_store_size, create_workspace_branch, list_workspace_branches, revert_workspace_branch
 from .update import check_upstream_update, get_pinned_commit, apply_system_update
 from .lock import OperationLock, ConcurrentOperationError
 from .journal import TransactionJournal, TransactionState, CorruptedJournalError
@@ -18,6 +18,7 @@ from .ca import enroll_certificate
 from .doctor import get_sanitized_diagnostics, print_doctor_json
 from .diff import compute_generation_diff
 from .distill import distill_packages, verify_package_in_nixpkgs
+from .daemon_client import is_daemon_active, query_system_ast
 from .container import (
     setup_ram_workspace,
     run_container_session,

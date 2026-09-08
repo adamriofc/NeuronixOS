@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Industrial QA & Resilience Master Test Runner (764 Tests across 27 Suites)
-# Executes 27 deep-dive suites:
+# NEURONIX Industrial QA & Resilience Master Test Runner (814 Tests across 29 Suites)
+# Executes 29 deep-dive suites:
 # 01 - Syntax & Static Analysis
 # 02 - CLI Argument Parsing & Fuzzing
 # 03 - Unit Tests for Internal Functions
@@ -29,6 +29,8 @@
 # 25 - Negative Paths & Failure Mode Verification
 # 26 - Deep-System Enhancements & Invariants
 # 27 - Hyper-Advanced Isolation & Sandbox Fabric
+# 28 - Micro-Rust Systems Daemon & High-Concurrency AST
+# 29 - Ephemeral Persona, Workspace Branching & eBPF LSM Gate
 # ==============================================================================
 
 set -uo pipefail
@@ -44,10 +46,10 @@ START_TIME=$(date +%s%N)
 
 echo -e "\n${C_BOLD}${C_CYAN}╔═══════════════════════════════════════════════════════════════════╗${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}║     NEURONIX COMPREHENSIVE INDUSTRIAL QA & RESILIENCE HARNESS     ║${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (764 Tests)   ║${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}║     Automated Mission-Critical Systems Verification (814 Tests)   ║${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}╚═══════════════════════════════════════════════════════════════════╝${C_RESET}"
 
-# Execute all 27 suites sequentially
+# Execute all 29 suites sequentially
 source "$TEST_DIR/suites/01_syntax_and_static_analysis.sh"
 source "$TEST_DIR/suites/02_cli_argument_and_fuzzing.sh"
 source "$TEST_DIR/suites/03_unit_internal_functions.sh"
@@ -75,6 +77,8 @@ source "$TEST_DIR/suites/24_system_manual_and_ai_reference.sh"
 source "$TEST_DIR/suites/25_negative_path_and_failure_modes.sh"
 source "$TEST_DIR/suites/26_deep_system_enhancements.sh"
 source "$TEST_DIR/suites/27_hyper_advanced_isolation.sh"
+source "$TEST_DIR/suites/28_micro_rust_daemon_and_ast.sh"
+source "$TEST_DIR/suites/29_ephemeral_persona_and_branching.sh"
 
 END_TIME=$(date +%s%N)
 DURATION_MS=$(( (END_TIME - START_TIME) / 1000000 ))

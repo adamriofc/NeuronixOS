@@ -450,6 +450,51 @@ handle_tools_list() {
           }
         }
       }
+    },
+    {
+      "name": "neuronix_ast_query",
+      "description": "Query the unified high-concurrency AST (Abstract System Tree) representing OS kernel, hardware, storage topology, and security posture in JSON.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "neuronix_workspace_branch",
+      "description": "Manage instant atomic Btrfs/Reflink time-travel project workspace branches.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["create", "list", "revert"],
+            "description": "Branching action to execute."
+          },
+          "path": {
+            "type": "string",
+            "description": "Target workspace repository directory."
+          },
+          "name": {
+            "type": "string",
+            "description": "Branch checkpoint name."
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "neuronix_ghost_exec",
+      "description": "Execute zero-trace, disposable commands in volatile RAM overlay with guaranteed RAM wipe on exit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Command string to execute in volatile RAM environment."
+          }
+        },
+        "required": ["command"]
+      }
     }
   ]
 }
@@ -1164,6 +1209,75 @@ print(json.dumps(get_mesh_status()))
             send_response "$req_id" "$content"
             ;;
 
+        neuronix_ast_query)
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            local ast_res
+            ast_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import json
+from neuronix_core.daemon_client import query_system_ast
+print(json.dumps(query_system_ast()))
+" 2>/dev/null || echo '{"status":"error","message":"AST query failed"}')
+
+            local content
+            content=$(jq -n -c --arg text "$ast_res" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
+        neuronix_workspace_branch)
+            local action path_arg branch_name
+            action=$(echo "$params" | jq -r '.arguments.action // .action // "list"')
+            path_arg=$(echo "$params" | jq -r '.arguments.path // .path // "."')
+            branch_name=$(echo "$params" | jq -r '.arguments.name // .name // "experiment"')
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            local branch_res
+            branch_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.storage import create_workspace_branch, list_workspace_branches, revert_workspace_branch
+
+action = sys.argv[1]
+p = sys.argv[2]
+name = sys.argv[3]
+
+try:
+    if action == 'create':
+        print(json.dumps(create_workspace_branch(p, name)))
+    elif action == 'revert':
+        print(json.dumps(revert_workspace_branch(p, name)))
+    else:
+        print(json.dumps({'workspace': p, 'branches': list_workspace_branches(p)}))
+except Exception as e:
+    print(json.dumps({'status': 'ERROR', 'error': str(e)}))
+" "$action" "$path_arg" "$branch_name" 2>/dev/null || echo '{"status":"error","message":"Workspace branch failed"}')
+
+            local content
+            content=$(jq -n -c --arg text "$branch_res" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
+
+        neuronix_ghost_exec)
+            local cmd_run
+            cmd_run=$(echo "$params" | jq -r '.arguments.command // .command // "echo GHOST_OK"')
+            local script_dir
+            script_dir="$(dirname "$(readlink -f "$0")")"
+            local neuronix_cli="${script_dir}/neuronix"
+
+            local ghost_out ghost_code=0
+            ghost_out=$("$neuronix_cli" ghost --run "$cmd_run" 2>&1) || ghost_code=$?
+            local ghost_res
+            ghost_res=$(jq -n -c \
+                --arg output "$ghost_out" \
+                --argjson code "$ghost_code" \
+                '{status: (if $code == 0 then "success" else "failed" end), exit_code: $code, output: $output}')
+            local content
+            content=$(jq -n -c --arg text "$ghost_res" '{"content":[{"type":"text","text":$text}]}')
+            send_response "$req_id" "$content"
+            ;;
 
         *)
             send_error "$req_id" -32602 "Tool '${tool_name}' is not recognized by NEURONIX MCP server"
