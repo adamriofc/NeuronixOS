@@ -29,6 +29,7 @@ jobs:
       - name: Setup Hypervisor Tools & Local Environment
         run: |
           sudo apt-get update -qy && sudo apt-get install -qy qemu-utils qemu-system-x86 bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
           mkdir -p ~/.local/bin
           ln -sf "$PWD/bin/neuronix" ~/.local/bin/neuronix
           echo "$PWD/bin" >> $GITHUB_PATH

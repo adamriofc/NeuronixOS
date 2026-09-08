@@ -142,8 +142,10 @@ impl GhostSession {
                 let code = output.status.code().unwrap_or(1);
                 let stdout = String::from_utf8_lossy(&output.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                self.wipe_and_teardown();
-                return (code, stdout, stderr);
+                if code == 0 || (!stderr.contains("setting up uid map") && !stderr.contains("Permission denied") && !stderr.contains("No such file or directory")) {
+                    self.wipe_and_teardown();
+                    return (code, stdout, stderr);
+                }
             }
         }
 
