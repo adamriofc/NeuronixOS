@@ -2,7 +2,7 @@
   "distribution": "NEURONIX OS",
   "version": "1.0.4",
   "release_tag": "v1.0.4",
-  "commit": "1740b15d1a2a6ac2604f8be721250d21673d1fa5",
+  "commit": "de813822b932dd24915a734f3a2d1f5d0e12b783",
   "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
   "nixpkgs_url": "github:NixOS/nixpkgs/3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
   "state_version": "24.11",
