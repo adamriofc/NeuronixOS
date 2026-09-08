@@ -2,7 +2,7 @@
 
 **Component ID:** `NRX-SPEC-004`  
 **Subsystem:** Ephemeral RAM Container Runtime, Micro-DNS Mesh, and OCI Engine  
-**Substrate Version:** 1.0.3  
+**Substrate Version:** 1.0.4  
 
 ---
 

@@ -1,6 +1,6 @@
 # NEURONIX Master Blueprint: Master Index & Executive Overview
 
-> **Version:** 1.0.3-RELEASE  
+> **Version:** 1.0.4-RELEASE  
 > **Status:** RATIFIED & LOCKED  
 > **Standard:** Enterprise Systems Architecture & Open-Source Production Grade  
 > **Target Path:** `docs/specifications`  

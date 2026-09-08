@@ -2,7 +2,7 @@
 
 **Protocol Standard:** Model Context Protocol (Protocol Version `2024-11-05`)  
 **Transport Binding:** JSON-RPC 2.0 over `stdio`  
-**Substrate Version:** 1.0.3  
+**Substrate Version:** 1.0.4  
 
 ---
 
@@ -64,7 +64,7 @@ Negotiates client-server protocol version and capabilities.
     },
     "serverInfo": {
       "name": "neuronix-mcp",
-      "version": "1.0.3"
+      "version": "1.0.4"
     }
   }
 }

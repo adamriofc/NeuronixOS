@@ -38,7 +38,7 @@ Example JSON schema:
   "schema_version": "1.0.0",
   "health_status": "HEALTHY",
   "system": {
-    "os": "NEURONIX OS 1.0.3 (NixOS Substrate)",
+    "os": "NEURONIX OS 1.0.4 (NixOS Substrate)",
     "kernel": "6.18.48",
     "generation": "5",
     "total_generations": 3

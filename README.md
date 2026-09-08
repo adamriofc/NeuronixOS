@@ -4,8 +4,8 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
-  <a href="https://github.com/adamriofc/NeuronixOS/releases/tag/v1.0.3"><img src="https://img.shields.io/badge/Release-v1.0.3_(Hardened_Production)-success.svg" alt="Release"></a>
-  <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.3-blueviolet.svg" alt="Version"></a>
+  <a href="https://github.com/adamriofc/NeuronixOS/releases/tag/v1.0.4"><img src="https://img.shields.io/badge/Release-v1.0.4_(Hardened_Production)-success.svg" alt="Release"></a>
+  <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.4-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
   <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1129%2F1129_Passed_(100%25)-success.svg" alt="Testing"></a>
@@ -86,7 +86,7 @@ NEURONIX OS is an independent, declarative Linux distribution platform based on 
 ### Release Engineering & Version Truth
 - **Single Source of Truth (`version.nix`):** All components (CLI, GUI Center, MCP Daemon, Calamares installer engine, release manifests, package derivations) read canonical versioning from `version.nix`.
 - **Release `v1.0.0` (Frozen GA):** Immutable initial General Availability release tag.
-- **Release `v1.0.3` (Hardened Production Baseline on `main`):** Actively maintained release incorporating comprehensive architectural hardening, truthful error propagation, injection proof verification, privacy-preserving doctor diagnostics, end-to-end lifecycle verification gates, runtime telemetry, multi arch flake outputs, and MCP JSON-RPC protocol compliance.
+- **Release `v1.0.4` (Hardened Production Baseline on `main`):** Actively maintained release incorporating comprehensive architectural hardening, truthful error propagation, injection proof verification, privacy-preserving doctor diagnostics, end-to-end lifecycle verification gates, runtime telemetry, multi arch flake outputs, and MCP JSON-RPC protocol compliance.
 - **Development Channel Baseline:** Tracks `nixos-unstable` for modern Linux kernels, Wayland compositors, and rapid developer tooling.
 - **Production Stable Baseline:** Targets `nixos-26.05` for conservative enterprise stability and verified patch streams.
 - **State Version (`system.stateVersion = "24.11"`):** The immutable NixOS state migration baseline preserving data directory layouts and system state compatibility across upgrades.
@@ -167,7 +167,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 
 ### Comparative Feature & Architecture Matrix
 
-| Architectural Dimension | NEURONIX OS (v1.0.3) | Vanilla NixOS (24.11/Unstable) | Fedora Silverblue (Atomic) | openSUSE MicroOS / Aeon | EndeavourOS / Arch Linux |
+| Architectural Dimension | NEURONIX OS (v1.0.4) | Vanilla NixOS (24.11/Unstable) | Fedora Silverblue (Atomic) | openSUSE MicroOS / Aeon | EndeavourOS / Arch Linux |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **System Paradigm** | Pure-functional declarative substrate | Functional declarative toolkit | Image-based OSTree composition | Transactional Btrfs snapshots | Imperative mutable Unix filesystem |
 | **Configuration Model** | Single declarative Flake (`flake.nix`) | Declarative Nix expressions or channels | Imperative package layering (`rpm-ostree`) | Imperative packages via `transactional-update` | Imperative commands (`pacman`, Arch build system) |
@@ -758,9 +758,9 @@ cd NeuronixOS
 # Option 2: Direct Flake build
 nix build .#packages.x86_64-linux.iso --out-link result-iso
 ```
-The resulting bootable image is located at `dist/neuronix-os-1.0.3-x86_64.iso` (or `result-iso/iso/neuronix-os-*.iso`). Flash to installation media:
+The resulting bootable image is located at `dist/neuronix-os-1.0.4-x86_64.iso` (or `result-iso/iso/neuronix-os-*.iso`). Flash to installation media:
 ```bash
-sudo dd if=dist/neuronix-os-1.0.3-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=dist/neuronix-os-1.0.4-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 ### High Performance Binary Caching
@@ -840,7 +840,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
   ✔ NEURONIX RELEASE GATE PASSED: CONTRACT AND RUNTIME LIFECYCLE VERIFIED
 ```
 
-> **Industrial Qualification Evidence:** Formal qualification report and empirical test logs are documented in [docs/releases/v1.0.3-qualification-report.md](docs/releases/v1.0.3-qualification-report.md). Rather than claiming unbounded mathematical safety proofs, NEURONIX verifies explicit contract assertions and behavioral state machines within defined test scopes:
+> **Industrial Qualification Evidence:** Formal qualification report and empirical test logs are documented in [docs/releases/v1.0.4-qualification-report.md](docs/releases/v1.0.4-qualification-report.md). Rather than claiming unbounded mathematical safety proofs, NEURONIX verifies explicit contract assertions and behavioral state machines within defined test scopes:
 > - **L0 (Static Contracts):** AST syntax parsing, declarative markdown specifications, and lint invariants.
 > - **L1 (Deterministic Unit):** Isolated argument validation, property-based fuzzing, and variable sanitization.
 > - **L2 (System State Machines):** Concurrency locking, journal recovery, service daemons, and micro-VM simulation.

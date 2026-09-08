@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Shadow Micro-VM Sandbox Engine (v1.0.3)
+# NEURONIX Shadow Micro-VM Sandbox Engine (v1.0.4)
 # Orchestrates ephemeral, in-memory (RAM-disk) QEMU virtual machine sandboxes.
 # Supports Universal ISO Booting, Btrfs CoW Persistence, and VirtIO-GPU 3D Acceleration.
 #

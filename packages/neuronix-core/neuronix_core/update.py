@@ -76,8 +76,8 @@ def get_local_release_metadata(repo_root=None) -> Dict[str, Any]:
         repo_root = get_repo_root()
 
     meta = {
-        "version": "1.0.3",
-        "release_tag": "v1.0.3",
+        "version": "1.0.4",
+        "release_tag": "v1.0.4",
         "state_version": "24.11",
         "channel": "nixos-26.05",
         "nixpkgs_commit": None,
@@ -220,7 +220,7 @@ def check_upstream_update(repo_root=None, timeout: float = 3.0) -> Dict[str, Any
             "local_commit": None,
             "pinned_nixpkgs_commit": None,
             "channel": meta.get("channel", "nixos-26.05"),
-            "release_tag": meta.get("release_tag", "v1.0.3")
+            "release_tag": meta.get("release_tag", "v1.0.4")
         }
 
     remote_commit, probe_error = get_upstream_release_commit(repo_root, timeout=timeout)
@@ -232,7 +232,7 @@ def check_upstream_update(repo_root=None, timeout: float = 3.0) -> Dict[str, Any
             "local_commit": local_commit,
             "pinned_nixpkgs_commit": pinned_nixpkgs,
             "channel": meta.get("channel", "nixos-26.05"),
-            "release_tag": meta.get("release_tag", "v1.0.3")
+            "release_tag": meta.get("release_tag", "v1.0.4")
         }
 
     # Strict domain comparison: NEURONIX OS local commit vs NEURONIX OS remote commit
@@ -251,7 +251,7 @@ def check_upstream_update(repo_root=None, timeout: float = 3.0) -> Dict[str, Any
         "upstream_commit": remote_commit,
         "pinned_nixpkgs_commit": pinned_nixpkgs,
         "channel": meta.get("channel", "nixos-26.05"),
-        "release_tag": meta.get("release_tag", "v1.0.3")
+        "release_tag": meta.get("release_tag", "v1.0.4")
     }
 
 def apply_system_update(

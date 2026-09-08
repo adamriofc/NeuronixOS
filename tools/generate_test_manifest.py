@@ -205,10 +205,22 @@ def generate_manifest():
         except Exception:
             pass
 
+    version_str = "1.0.4"
+    version_nix = os.path.join(PROJECT_ROOT, "version.nix")
+    if os.path.exists(version_nix):
+        try:
+            with open(version_nix, "r", encoding="utf-8") as vf:
+                for line in vf:
+                    if "version =" in line:
+                        version_str = line.split('"')[1]
+                        break
+        except Exception:
+            pass
+
     manifest = {
         "schema_version": "2.1.0",
         "distribution": "NEURONIX OS",
-        "version": "1.0.3",
+        "version": version_str,
         "generated_at": gen_time,
         "summary": {
             "total_repository_assertions": grand_total,

@@ -18,8 +18,8 @@ VERSION_NIX="${PROJECT_ROOT}/version.nix"
 
 mkdir -p "${DIST_DIR}"
 
-VER="1.0.3"
-REL_TAG="v1.0.3"
+VER="1.0.4"
+REL_TAG="v1.0.4"
 STATE_VER="24.11"
 NIXPKGS_COMMIT="3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2"
 
@@ -30,7 +30,7 @@ if [[ -f "$VERSION_NIX" ]]; then
     NIXPKGS_COMMIT=$(grep -E 'nixpkgsCommit\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
 fi
 
-TAG="${1:-${REL_TAG:-v1.0.3}}"
+TAG="${1:-${REL_TAG:-v1.0.4}}"
 COMMIT="${NEURONIX_COMMIT:-$(git -C "${PROJECT_ROOT}" rev-parse HEAD 2>/dev/null || (test -f "${DIST_DIR}/release.json" && jq -r '.commit // empty' "${DIST_DIR}/release.json" 2>/dev/null) || echo "0000000000000000000000000000000000000000")}"
 
 SBOM_FILE="${DIST_DIR}/neuronix-os-${TAG}-sbom.spdx.json"

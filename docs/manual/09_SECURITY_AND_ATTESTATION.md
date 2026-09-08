@@ -32,7 +32,7 @@ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/nvme0n1p2
 Every official release of NEURONIX OS conforms to modern enterprise supply chain standards:
 
 1. **Deterministic SPDX 2.3 SBOM:**  
-   The build pipeline generates an official Software Bill of Materials in SPDX 2.3 JSON specification (`dist/neuronix-os-v1.0.3-sbom.spdx.json`), inventorying every upstream package, license, and derivation hash.
+   The build pipeline generates an official Software Bill of Materials in SPDX 2.3 JSON specification (`dist/neuronix-os-v1.0.4-sbom.spdx.json`), inventorying every upstream package, license, and derivation hash.
 2. **SLSA Build Provenance Attestation:**  
    GitHub Actions utilizes OpenID Connect (OIDC) tokens with `id-token: write` and `attestations: write` permissions to cryptographically attest build provenance via GitHub Artifact Attestations (`actions/attest-build-provenance@v2`).
 3. **Cryptographic Release Signatures:**  

@@ -2,7 +2,7 @@
 
 python3Packages.buildPythonPackage {
   pname = "neuronix-core";
-  version = "1.0.3";
+  version = "1.0.4";
 
   src = ./.;
 

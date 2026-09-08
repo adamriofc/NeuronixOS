@@ -15,7 +15,7 @@ if [[ -z "${NIX_REMOTE:-}" && -S "/nix/var/nix/daemon-socket/socket" ]]; then
     export NIX_REMOTE="daemon"
 fi
 
-VERSION="1.0.3"
+VERSION="1.0.4"
 VERSION_NIX="$(dirname "$(readlink -f "$0")")/../version.nix"
 if [[ ! -f "$VERSION_NIX" && -f "$(dirname "$(readlink -f "$0")")/../share/neuronix/version.nix" ]]; then
     VERSION_NIX="$(dirname "$(readlink -f "$0")")/../share/neuronix/version.nix"
@@ -998,7 +998,7 @@ print_doctor_json(share_mode=bool(${share_mode}))
     # Data collection & Sanitization
     local raw_user="${USER:-$(whoami 2>/dev/null || echo "user")}"
     local raw_host="$(hostname 2>/dev/null || uname -n)"
-    local os_pretty="NEURONIX OS 1.0.3 (NixOS Substrate)"
+    local os_pretty="NEURONIX OS ${VERSION} (NixOS Substrate)"
     local kernel_ver="$(uname -r 2>/dev/null || echo "Linux-unknown")"
     local arch_type="$(uname -m 2>/dev/null || echo "x86_64")"
     local uptime_str="$(uptime -p 2>/dev/null || uptime 2>/dev/null || echo "unknown")"

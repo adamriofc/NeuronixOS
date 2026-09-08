@@ -15,7 +15,7 @@ export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-syst
 
 # Version Metadata
 SERVER_NAME="neuronix-mcp"
-SERVER_VERSION="1.0.3"
+SERVER_VERSION="1.0.4"
 VERSION_NIX="$(dirname "$(readlink -f "$0")")/../version.nix"
 if [[ ! -f "$VERSION_NIX" && -f "$(dirname "$(readlink -f "$0")")/version.nix" ]]; then
     VERSION_NIX="$(dirname "$(readlink -f "$0")")/version.nix"
@@ -633,7 +633,7 @@ status = res.get('status', 'UNKNOWN')
 local_c = res.get('local_commit')
 up_c = res.get('upstream_commit')
 pinned = res.get('pinned_nixpkgs_commit')
-tag = res.get('release_tag', 'v1.0.3')
+tag = res.get('release_tag', 'v1.0.4')
 channel = res.get('channel', 'nixos-26.05')
 
 summary = f'NEURONIX OS Release Status: {status}\n'

@@ -7,7 +7,7 @@ set -uo pipefail
 
 TARGET_BIN="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/bin/neuronix"
 CORE_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CANONICAL_VERSION=$(grep -E 'version\s*=' "${CORE_TEST_DIR}/../version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.3")
+CANONICAL_VERSION=$(grep -E 'version\s*=' "${CORE_TEST_DIR}/../version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.4")
 
 if [[ -z "${NIX_REMOTE:-}" && -S "/nix/var/nix/daemon-socket/socket" ]]; then
     export NIX_REMOTE="daemon"

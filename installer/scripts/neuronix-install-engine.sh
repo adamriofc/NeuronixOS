@@ -151,8 +151,8 @@ VERSION_NIX="$(dirname "$(readlink -f "$0")")/../../version.nix"
 if [ ! -f "$VERSION_NIX" ] && [ -f "/etc/neuronix/version.nix" ]; then
   VERSION_NIX="/etc/neuronix/version.nix"
 fi
-NRX_VER="1.0.3"
-NRX_RELEASE_TAG="v1.0.3"
+NRX_VER="1.0.4"
+NRX_RELEASE_TAG="v1.0.4"
 NRX_STATE="24.11"
 NRX_CHANNEL_STABLE="nixos-26.05"
 NRX_CHANNEL_DEV="nixos-unstable"
@@ -161,7 +161,7 @@ NRX_COMMIT="3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2"
 
 if [[ -f "$VERSION_NIX" ]]; then
   NRX_VER=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
-  NRX_RELEASE_TAG=$(grep -E 'releaseTag\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "v1.0.3")
+  NRX_RELEASE_TAG=$(grep -E 'releaseTag\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "v1.0.4")
   NRX_STATE=$(grep -E 'stateVersion\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
   NRX_CHANNEL_DEV=$(grep -E 'channelDevelopment\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "nixos-unstable")
   NRX_CHANNEL_STABLE=$(grep -E 'channelStable\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "nixos-26.05")

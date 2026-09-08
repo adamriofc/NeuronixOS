@@ -284,7 +284,11 @@ def get_sanitized_diagnostics(share_mode: bool = False) -> Dict[str, Any]:
             pass
 
     # Dynamic OS pretty name
-    os_name = "NEURONIX OS 1.0.3 (NixOS Substrate)"
+    try:
+        from . import __version__ as core_ver
+    except Exception:
+        core_ver = "1.0.4"
+    os_name = f"NEURONIX OS {core_ver} (NixOS Substrate)"
     if os.path.exists("/etc/os-release"):
         try:
             with open("/etc/os-release", "r") as osf:

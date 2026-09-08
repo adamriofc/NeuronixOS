@@ -1,41 +1,13 @@
-#!/usr/bin/env bash
-# ==============================================================================
-# NEURONIX OS SPDX 2.3 Software Bill of Materials (SBOM) Generator
-# Generates canonical machine-readable SBOM for release artifacts.
-#
-# Copyright (c) 2026 NEURONIX Contributors
-# Licensed under the Apache License, Version 2.0
-# ==============================================================================
-
-set -uo pipefail
-
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-DIST_DIR="${PROJECT_ROOT}/dist"
-VERSION_NIX="${PROJECT_ROOT}/version.nix"
-
-VER="1.0.4"
-REL_TAG="v1.0.4"
-if [[ -f "$VERSION_NIX" ]]; then
-    VER=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
-    REL_TAG=$(grep -E 'releaseTag\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
-fi
-
-TAG="${1:-${REL_TAG:-v1.0.4}}"
-OUTPUT_FILE="${DIST_DIR}/neuronix-os-${TAG}-sbom.spdx.json"
-
-mkdir -p "${DIST_DIR}"
-
-cat << EOF > "${OUTPUT_FILE}"
 {
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "neuronix-os-${TAG}",
-  "documentNamespace": "https://github.com/adamriofc/NeuronixOS/releases/tag/${TAG}/sbom.spdx.json",
+  "name": "neuronix-os-v1.0.4",
+  "documentNamespace": "https://github.com/adamriofc/NeuronixOS/releases/tag/v1.0.4/sbom.spdx.json",
   "creationInfo": {
-    "created": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+    "created": "2026-09-08T06:20:09Z",
     "creators": [
-      "Tool: neuronix-sbom-generator-${VER}",
+      "Tool: neuronix-sbom-generator-1.0.4",
       "Organization: NEURONIX OS Maintainers"
     ]
   },
@@ -43,8 +15,8 @@ cat << EOF > "${OUTPUT_FILE}"
     {
       "SPDXID": "SPDXRef-Package-neuronix-substrate",
       "name": "neuronix-substrate",
-      "versionInfo": "${TAG}",
-      "downloadLocation": "git+https://github.com/adamriofc/NeuronixOS.git@${TAG}",
+      "versionInfo": "v1.0.4",
+      "downloadLocation": "git+https://github.com/adamriofc/NeuronixOS.git@v1.0.4",
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "Copyright (c) 2026 NEURONIX Contributors",
@@ -88,6 +60,3 @@ cat << EOF > "${OUTPUT_FILE}"
     }
   ]
 }
-EOF
-
-echo "Generated SPDX 2.3 SBOM at: ${OUTPUT_FILE}"

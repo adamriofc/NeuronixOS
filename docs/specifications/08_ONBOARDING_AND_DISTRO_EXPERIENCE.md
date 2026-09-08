@@ -2,7 +2,7 @@
 
 > **Document ID:** `NRX-SPEC-008`  
 > **Status:** Ratified & Active  
-> **Target Release:** NEURONIX OS v1.0.3+  
+> **Target Release:** NEURONIX OS v1.0.4+  
 > **Subcomponents:** `neuronix welcome`, `neuronix doctor`, `neuronix quickstart`, `neuronix kernel`, `artwork/`, `modules/hardware/boot.nix`, `packages/neuronix-center/`  
 > **Verification:** Suite 23 Test Contracts (1,129 Total Assertions / 100% Pass)
 
