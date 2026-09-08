@@ -133,7 +133,7 @@ in
                   print('[SENTINEL-FALLBACK] Transaction committed successfully.')
                   sys.exit(0)
               else:
-                  journal.abort_transaction(tx_id, f"Rollback failed (code {return_code}): {output}")
+                  journal.abort_transaction(tx_id, f'Rollback failed (code {return_code}): {output}')
                   print(f'[SENTINEL-FALLBACK] Rollback error (code {return_code}): {output}')
                   sys.exit(1)
           except Exception as e:

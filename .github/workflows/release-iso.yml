@@ -37,6 +37,7 @@ jobs:
 
       - name: Magic Nix Cache (Continuous Binary Caching)
         uses: DeterminateSystems/magic-nix-cache-action@v8
+        continue-on-error: true
 
       - name: Compile Official Live ISO Installer
         env:
