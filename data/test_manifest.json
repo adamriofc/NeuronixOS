@@ -2,13 +2,13 @@
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.3",
-  "generated_at": "2026-09-07T05:35:25Z",
+  "generated_at": "2026-09-08T03:50:18Z",
   "summary": {
-    "total_repository_assertions": 1077,
-    "qa_master_harness_assertions": 712,
+    "total_repository_assertions": 1111,
+    "qa_master_harness_assertions": 746,
     "distro_component_assertions": 209,
     "standalone_gates_assertions": 156,
-    "qa_master_suites_count": 26,
+    "qa_master_suites_count": 27,
     "distro_suites_count": 19,
     "standalone_gates_count": 14,
     "validation_status": "PASSING_ALL",
@@ -206,6 +206,13 @@
         "suite_file": "26_deep_system_enhancements.sh",
         "title": "Deep-System Enhancements & Invariants",
         "assertions": 39,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": true
+      },
+      {
+        "suite_file": "27_hyper_advanced_isolation.sh",
+        "title": "Hyper-Advanced Isolation, OCI Compiler & Sandbox Fabric",
+        "assertions": 34,
         "proof_class": "L2_SYSTEM",
         "release_blocker": true
       }

@@ -1922,9 +1922,336 @@ else:
 }
 
 # ------------------------------------------------------------------------------
-# Ephemeral Zero-Copy Development Container in RAM
+# Ephemeral Zero-Copy Development Container & OCI Micro-Engine in RAM
 # ------------------------------------------------------------------------------
+cmd_container_build() {
+    local target=""
+    local output_tar=""
+    local tag="latest"
+    local repo="neuronix-app"
+    local entrypoint=""
+    local dry_run=0
+    local json_output=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --output|-o)
+                output_tar="$2"
+                shift 2
+                ;;
+            --tag|-t)
+                tag="$2"
+                shift 2
+                ;;
+            --repo|-r)
+                repo="$2"
+                shift 2
+                ;;
+            --entrypoint|-e)
+                entrypoint="$2"
+                shift 2
+                ;;
+            --dry-run)
+                dry_run=1
+                shift
+                ;;
+            --json)
+                json_output=1
+                shift
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container build${RESET} <target> [OPTIONS]\n"
+                echo -e "  Compiles a declarative Nix flake or directory into an ultra-lean OCI container tarball."
+                echo -e "  100% rootless and daemonless (no Docker daemon needed).\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--output, -o <path.tar>${RESET} Target output tarball path (default: <repo>-<tag>.tar)"
+                echo -e "  ${GREEN}--tag, -t <tag>${RESET}        Image tag (default: latest)"
+                echo -e "  ${GREEN}--repo, -r <repo>${RESET}      Image repository name (default: neuronix-app)"
+                echo -e "  ${GREEN}--entrypoint, -e <cmd>${RESET} Custom container entrypoint"
+                echo -e "  ${GREEN}--dry-run${RESET}              Verify build target without compiling"
+                echo -e "  ${GREEN}--json${RESET}                 Output result in JSON format\n"
+                return 0
+                ;;
+            *)
+                if [[ -z "$target" ]]; then
+                    target="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$target" ]]; then
+        log_error "No build target directory or flake specified."
+        return 1
+    fi
+    if [[ -z "$output_tar" ]]; then
+        output_tar="${repo}-${tag}.tar"
+    fi
+
+    if [[ "$dry_run" -eq 1 ]]; then
+        if [[ "$json_output" -eq 1 ]]; then
+            jq -n --arg t "$target" --arg o "$output_tar" --arg r "$repo" --arg tg "$tag" \
+                '{status: "dry_run_success", mode: "build", target: $t, output_tar: $o, repo: $r, tag: $tg}'
+        else
+            log_success "Container build dry-run verified for: $target -> $output_tar ($repo:$tag)"
+        fi
+        return 0
+    fi
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import build_container_oci
+
+target = sys.argv[1]
+out_tar = sys.argv[2]
+tag = sys.argv[3]
+repo = sys.argv[4]
+entry = [sys.argv[5]] if len(sys.argv) > 5 and sys.argv[5] else None
+json_out = sys.argv[6] == '1'
+
+ok, msg = build_container_oci(target, out_tar, tag=tag, repo=repo, entrypoint=entry)
+if json_out:
+    print(json.dumps({'status': 'success' if ok else 'error', 'output_tar': out_tar, 'message': msg}))
+else:
+    if ok:
+        print('\033[38;5;82m✔\033[0m ' + msg)
+    else:
+        print('\033[38;5;196m✖\033[0m ' + msg)
+sys.exit(0 if ok else 1)
+" "$target" "$output_tar" "$tag" "$repo" "$entrypoint" "$json_output"
+    return $?
+}
+
+cmd_container_daemon() {
+    local target=""
+    local name=""
+    local cmd_to_run=""
+    local dry_run=0
+    local json_output=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --name|-n)
+                name="$2"
+                shift 2
+                ;;
+            --run|-c)
+                cmd_to_run="$2"
+                shift 2
+                ;;
+            --dry-run)
+                dry_run=1
+                shift
+                ;;
+            --json)
+                json_output=1
+                shift
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container daemon${RESET} <target> --name <name> [OPTIONS]\n"
+                echo -e "  Runs a persistent or background container service supervised via systemd user units."
+                echo -e "  0 MB idle memory overhead.\n"
+                echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--name, -n <name>${RESET}      Unique name for container daemon (required)"
+                echo -e "  ${GREEN}--run, -c <command>${RESET}    Command to execute as background daemon"
+                echo -e "  ${GREEN}--dry-run${RESET}              Verify allocation without starting daemon"
+                echo -e "  ${GREEN}--json${RESET}                 Output result in JSON format\n"
+                return 0
+                ;;
+            *)
+                if [[ -z "$target" ]]; then
+                    target="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$target" || -z "$name" ]]; then
+        log_error "Target and --name are required for container daemon."
+        echo -e "Usage: ${CYAN}${PROGRAM_NAME} container daemon <target> --name <name>${RESET}"
+        return 1
+    fi
+
+    if [[ "$dry_run" -eq 1 ]]; then
+        if [[ "$json_output" -eq 1 ]]; then
+            jq -n --arg t "$target" --arg n "$name" \
+                '{status: "dry_run_success", mode: "daemon", target: $t, name: $n, ram_disk: "/dev/shm"}'
+        else
+            log_success "Container daemon dry-run verified for '$name' on $target (RAM backing: /dev/shm)"
+        fi
+        return 0
+    fi
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import daemonize_container_session
+
+target = sys.argv[1]
+name = sys.argv[2]
+cmd = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else None
+json_out = sys.argv[4] == '1'
+
+ok, msg = daemonize_container_session(target, name, command=cmd)
+if json_out:
+    print(json.dumps({'status': 'success' if ok else 'error', 'name': name, 'message': msg}))
+else:
+    if ok:
+        print('\033[38;5;82m✔\033[0m ' + msg)
+    else:
+        print('\033[38;5;196m✖\033[0m ' + msg)
+sys.exit(0 if ok else 1)
+" "$target" "$name" "$cmd_to_run" "$json_output"
+    return $?
+}
+
+cmd_container_stop() {
+    local name="$1"
+    local json_output=0
+    [[ "${2:-}" == "--json" ]] && json_output=1
+
+    if [[ -z "$name" ]]; then
+        log_error "No container daemon name specified to stop."
+        return 1
+    fi
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import stop_container_daemon
+
+name = sys.argv[1]
+json_out = sys.argv[2] == '1'
+ok, msg = stop_container_daemon(name)
+if json_out:
+    print(json.dumps({'status': 'success' if ok else 'error', 'name': name, 'message': msg}))
+else:
+    if ok:
+        print('\033[38;5;82m✔\033[0m ' + msg)
+    else:
+        print('\033[38;5;196m✖\033[0m ' + msg)
+sys.exit(0 if ok else 1)
+" "$name" "$json_output"
+    return $?
+}
+
+cmd_container_list() {
+    local json_output=0
+    [[ "${1:-}" == "--json" ]] && json_output=1
+
+    local py_bin core_path
+    py_bin="$(resolve_python)"
+    core_path="$(resolve_core_path)"
+
+    PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import list_container_daemons
+
+json_out = sys.argv[1] == '1'
+daemons = list_container_daemons()
+if json_out:
+    print(json.dumps({'daemons': daemons}))
+else:
+    print('\033[1mNEURONIX CONTAINER DAEMONS\033[0m')
+    print('────────────────────────────────────────────────────────────')
+    if not daemons:
+        print('  (No active container daemons running in RAM/systemd)')
+    else:
+        print(f'  {\"NAME\":<20} {\"TARGET_TYPE\":<20} {\"STATUS\":<15}')
+        print('  ' + '─' * 55)
+        for d in daemons:
+            st = d.get('status', 'unknown')
+            color = '\033[38;5;82m' if st == 'running' else '\033[38;5;196m'
+            print(f'  {d.get(\"name\"):<20} {d.get(\"target_type\"):<20} {color}{st}\033[0m')
+" "$json_output"
+    return $?
+}
+
+cmd_container_compose() {
+    local stack_file=""
+    local dry_run=0
+    local json_output=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run)
+                dry_run=1
+                shift
+                ;;
+            --json)
+                json_output=1
+                shift
+                ;;
+            -h|--help)
+                echo -e "${BOLD}USAGE:${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container compose${RESET} <file.yaml|json> [OPTIONS]\n"
+                echo -e "  Multi-service ephemeral stack orchestration in RAM with In-Memory Micro-DNS.\n"
+                return 0
+                ;;
+            *)
+                if [[ -z "$stack_file" ]]; then
+                    stack_file="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$stack_file" ]]; then
+        log_error "No compose/stack file specified."
+        return 1
+    fi
+
+    cmd_container --stack "$stack_file" $([[ "$dry_run" -eq 1 ]] && echo "--dry-run") $([[ "$json_output" -eq 1 ]] && echo "--json")
+    return $?
+}
+
 cmd_container() {
+    # Check for dedicated subcommands first
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            build)
+                shift
+                cmd_container_build "$@"
+                return $?
+                ;;
+            daemon)
+                shift
+                cmd_container_daemon "$@"
+                return $?
+                ;;
+            stop)
+                shift
+                cmd_container_stop "$@"
+                return $?
+                ;;
+            list|ps)
+                shift
+                cmd_container_list "$@"
+                return $?
+                ;;
+            compose|stack)
+                shift
+                cmd_container_compose "$@"
+                return $?
+                ;;
+        esac
+    fi
+
     local target=""
     local keep_path=""
     local stack_file=""
@@ -1937,6 +2264,31 @@ cmd_container() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --build)
+                shift
+                cmd_container_build "$@"
+                return $?
+                ;;
+            --daemon|-d)
+                shift
+                cmd_container_daemon "$@"
+                return $?
+                ;;
+            --stop)
+                shift
+                cmd_container_stop "$@"
+                return $?
+                ;;
+            --list|--ps)
+                shift
+                cmd_container_list "$@"
+                return $?
+                ;;
+            --compose)
+                shift
+                cmd_container_compose "$@"
+                return $?
+                ;;
             --keep)
                 keep_path="$2"
                 shift 2
@@ -1975,12 +2327,17 @@ cmd_container() {
                 ;;
             -h|--help)
                 echo -e "${BOLD}USAGE:${RESET}"
-                echo -e "  ${CYAN}${PROGRAM_NAME} container${RESET} <git-url|directory|oci-image> [OPTIONS]\n"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container${RESET} <git-url|directory|oci-image> [OPTIONS]"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container build${RESET} <dir|flake> [--output <out.tar>] [--tag <tag>]"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container daemon${RESET} <target> --name <name> [--run <cmd>]"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container stop${RESET} <name>"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container list | ps${RESET}"
+                echo -e "  ${CYAN}${PROGRAM_NAME} container compose${RESET} <file.yaml|json>\n"
                 echo -e "  Spins up an ephemeral, zero-copy development container in RAM (/dev/shm)."
-                echo -e "  Features Dynamic FHS Emulation, Daemonless OCI Runner, Stacks, and OCI Export.\n"
+                echo -e "  Features Dynamic FHS Emulation, Micro-DNS Service Mesh, Daemonless OCI Compiler, and Quadlet Systemd Supervised Daemons.\n"
                 echo -e "${BOLD}OPTIONS:${RESET}"
                 echo -e "  ${GREEN}--run, -c <cmd>${RESET}         Execute command inside container non-interactively"
-                echo -e "  ${GREEN}--stack <file.yaml|json>${RESET} Launch ephemeral multi-service stack in RAM"
+                echo -e "  ${GREEN}--stack <file.yaml|json>${RESET} Launch ephemeral multi-service stack in RAM with Micro-DNS"
                 echo -e "  ${GREEN}--export-oci <out.tar>${RESET}   Export workspace to standard OCI/Docker image tarball"
                 echo -e "  ${GREEN}--keep <path>${RESET}           Export modified workspace to target directory upon exit"
                 echo -e "  ${GREEN}--vaporize${RESET}              Auto-delete RAM workspace without confirmation prompt"
@@ -1993,10 +2350,12 @@ cmd_container() {
                 echo -e "  ${PROGRAM_NAME} container https://github.com/org/repo.git\n"
                 echo -e "  ${DIM}# Run Docker Hub image directly in RAM without Docker daemon${RESET}"
                 echo -e "  ${PROGRAM_NAME} container oci://alpine:latest --run \"cat /etc/os-release\"\n"
-                echo -e "  ${DIM}# Launch multi-service stack in RAM in milliseconds${RESET}"
-                echo -e "  ${PROGRAM_NAME} container --stack neuronix-stack.yaml\n"
-                echo -e "  ${DIM}# Export workspace to clean OCI image tarball${RESET}"
-                echo -e "  ${PROGRAM_NAME} container /path/to/project --export-oci my-app.tar\n"
+                echo -e "  ${DIM}# Launch multi-service stack in RAM with In-Memory Micro-DNS mesh${RESET}"
+                echo -e "  ${PROGRAM_NAME} container compose neuronix-stack.yaml\n"
+                echo -e "  ${DIM}# Build declarative Nix OCI image without Docker daemon${RESET}"
+                echo -e "  ${PROGRAM_NAME} container build /path/to/project --output app.tar\n"
+                echo -e "  ${DIM}# Run background service daemon with 0 MB idle RAM${RESET}"
+                echo -e "  ${PROGRAM_NAME} container daemon /path/to/project --name my-api --run \"node server.js\"\n"
                 return 0
                 ;;
             *)

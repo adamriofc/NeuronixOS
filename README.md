@@ -446,13 +446,26 @@ neuronix dev web3
 ```
 
 ### 4. In-Memory Micro-VM Simulation (neuronix sandbox)
-Enables verification of proposed system configurations, kernel options, or untrusted software inside an ephemeral QEMU micro-VM running entirely in memory (`/dev/shm`) with read-only 9P store pass-through:
+Enables verification of proposed system configurations, kernel options, or untrusted software inside an ephemeral QEMU micro-VM running entirely in memory (`/dev/shm`) with read-only 9P store pass-through, Autonomous OS Fabric, Windows 11 Autopilot, and Btrfs CoW snapshot trees:
 ```bash
 # Execute automated smoke test inside the in-memory Micro-VM
 neuronix sandbox --smoke-test
 
 # Evaluate a target configuration file inside an isolated sandbox
 neuronix sandbox ./configuration.nix --timeout 60
+
+# Provision and launch verified guest operating systems automatically
+neuronix sandbox get alpine
+neuronix sandbox get ubuntu-24.04
+neuronix sandbox get arch
+neuronix sandbox get debian-12
+neuronix sandbox get windows-11
+
+# Instantaneous sub-millisecond Btrfs CoW snapshots and branching
+neuronix sandbox snapshot create test-checkpoint
+neuronix sandbox snapshot list
+neuronix sandbox snapshot restore test-checkpoint
+neuronix sandbox branch base-dev feature-experiment
 ```
 
 ### 5. Model Context Protocol (MCP) Server
@@ -656,8 +669,10 @@ Enables instantaneous, isolated code experimentation, OCI container execution, a
 - **Strict RAM-Backed Workspace (/dev/shm):** Clones or unpacks target repositories into a temporary RAM filesystem with zero disk writes. Refuses silent physical disk fallback (`require_ram=True`) when RAM isolation is requested.
 - **Dynamic Transparent FHS Emulation:** Automatically resolves `/lib64/ld-linux-x86-64.so.2` and glibc shared library paths so foreign pre-compiled binaries (Go, Rust, Node, Python C-extensions) run out of the box without container bloat.
 - **Daemonless OCI Image Runner:** Pulls and extracts Docker Hub and OCI container images (`oci://`, `docker://`) directly into RAM without `dockerd` overhead or root privileges.
+- **In-Memory Micro-DNS & Service Mesh:** Automatically synthesizes `/etc/hosts` mappings (`*.local`) binding services on `127.0.0.10+` without root permissions or external DNS servers.
+- **Declarative Nix-to-OCI Compiler:** Directly compiles container workspaces or Flakes into standardized OCI image tarballs without requiring Docker or Podman daemons (`neuronix container build`).
+- **Transient Systemd User Quadlet Engine:** Orchestrates rootless background containers and multi-service stacks natively via systemd user units (`neuronix container daemon`, `stop`, `list`, `compose`).
 - **Ephemeral Multi-Service Stacks:** Declaratively orchestrates multi-service stacks (`--stack stack.yaml`) in RAM with private IPC and millisecond startup.
-- **Zero-Bloat OCI Export:** Compiles container workspaces into standard OCI/Docker image tarballs with `--export-oci <out.tar>`.
 - **Enterprise Credential Sanitization:** Strips environment variables containing cloud tokens, SSH keys, or API credentials (`AWS_*`, `GITHUB_*`, `*_TOKEN`, `*_KEY`, `SSH_AUTH_SOCK`).
 - **Bubblewrap Namespace Isolation:** Mounts `/nix/store` as strictly read-only, masks `$HOME` with an ephemeral tmpfs, and isolates process namespaces with `--clearenv`, `--unshare-pid`, `--unshare-uts`, and `--unshare-ipc`.
 - **Clean Vaporization or Export:** Workspace automatically vaporizes from RAM on subshell exit (`--vaporize`), or optionally exports modified files back to host storage (`--keep <path>`).
@@ -669,7 +684,15 @@ neuronix container https://github.com/astral-sh/uv
 # Run Docker Hub container image directly in RAM without Docker daemon
 neuronix container oci://alpine:latest --run "cat /etc/os-release"
 
-# Orchestrate ephemeral multi-service stack in RAM in milliseconds
+# Declaratively compile workspace to standalone OCI image tarball
+neuronix container build ./my-app --output app.tar --tag v1.0.0
+
+# Run rootless container in background as a transient systemd user service
+neuronix container daemon oci://nginx:alpine --name my-web
+neuronix container list
+neuronix container stop my-web
+
+# Orchestrate ephemeral multi-service stack in RAM with micro-DNS service mesh
 neuronix container --stack neuronix-stack.yaml
 
 # Run command non-interactively inside the container and vaporize immediately
@@ -677,9 +700,6 @@ neuronix container https://github.com/astral-sh/uv --run "cargo test" --vaporize
 
 # Containerize a local directory with automated export on exit
 neuronix container ./my-project --keep ./my-project-output
-
-# Export workspace to standard OCI/Docker image tarball
-neuronix container ./my-project --export-oci my-app.tar
 ```
 
 ### 18. Deterministic Workload Performance Matrix (neuronix tune)

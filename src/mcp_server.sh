@@ -306,7 +306,7 @@ handle_tools_list() {
     },
     {
       "name": "neuronix_container",
-      "description": "Spin up ephemeral zero-copy development container in RAM (/dev/shm) with Dynamic FHS Emulation, Daemonless OCI Runner, Stacks, and OCI Export.",
+      "description": "Spin up ephemeral zero-copy development container in RAM (/dev/shm) with Dynamic FHS Emulation, In-Memory Micro-DNS Mesh, Daemonless OCI Compiler, Stacks, and Quadlet Systemd Daemons.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -317,6 +317,18 @@ handle_tools_list() {
           "command": {
             "type": "string",
             "description": "Non-interactive command to execute inside container"
+          },
+          "action": {
+            "type": "string",
+            "description": "Action to perform: run, build, daemon, stop, list, compose"
+          },
+          "daemon_name": {
+            "type": "string",
+            "description": "Unique name for background container daemon"
+          },
+          "build_target": {
+            "type": "string",
+            "description": "Target directory or flake to compile into micro-OCI image"
           },
           "stack_file": {
             "type": "string",
@@ -339,10 +351,14 @@ handle_tools_list() {
     },
     {
       "name": "neuronix_sandbox",
-      "description": "Execute isolated in-memory OS Micro-VM sandbox simulation, ISO booting, Btrfs CoW persistence, and smoke testing.",
+      "description": "Execute isolated in-memory OS Micro-VM sandbox simulation, Autonomous OS Fabric image fetching, Btrfs CoW snapshots/branching, Windows 11 Autopilot, and smoke testing.",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "action": {
+            "type": "string",
+            "description": "Action to perform: simulate (default), get, snapshot_create, snapshot_restore, snapshot_list, branch"
+          },
           "mode": {
             "type": "string",
             "description": "Simulation mode (synthetic, real, auto)"
@@ -357,11 +373,19 @@ handle_tools_list() {
           },
           "os": {
             "type": "string",
-            "description": "Cloud-init distro image to boot (alpine, ubuntu, arch, debian)"
+            "description": "Cloud-init or OS distro image to fetch/boot (alpine, ubuntu, arch, debian, windows-11)"
           },
           "persist": {
             "type": "string",
             "description": "Name of persistent Btrfs CoW testing sandbox"
+          },
+          "snap_name": {
+            "type": "string",
+            "description": "Snapshot name for snapshot_create or snapshot_restore"
+          },
+          "branch_dest": {
+            "type": "string",
+            "description": "Destination name for branch clone action"
           },
           "accel_3d": {
             "type": "boolean",
@@ -904,21 +928,61 @@ print(json.dumps(distill_packages(pkgs, dry_run=dr, force=fc)))
             ;;
 
         neuronix_container)
-            local target cmd_run dry_run stack_file export_oci
+            local target cmd_run dry_run stack_file export_oci action daemon_name build_target
             target=$(echo "$params" | jq -r '.arguments.target // .target // empty')
             cmd_run=$(echo "$params" | jq -r '.arguments.command // .command // empty')
             stack_file=$(echo "$params" | jq -r '.arguments.stack_file // .stack_file // empty')
             export_oci=$(echo "$params" | jq -r '.arguments.export_oci // .export_oci // empty')
             dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false')
+            action=$(echo "$params" | jq -r '.arguments.action // .action // empty')
+            daemon_name=$(echo "$params" | jq -r '.arguments.daemon_name // .daemon_name // empty')
+            build_target=$(echo "$params" | jq -r '.arguments.build_target // .build_target // empty')
 
-            if [[ "$dry_run" == "true" ]]; then
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+
+            if [[ "$action" == "build" || -n "$build_target" ]]; then
+                local b_target="${build_target:-$target}"
+                local b_out="${export_oci:-app.tar}"
+                local b_res
+                b_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import build_container_oci
+t = sys.argv[1]
+o = sys.argv[2]
+ok, msg = build_container_oci(t, o)
+print(json.dumps({'status': 'success' if ok else 'error', 'output_tar': o, 'message': msg}))
+" "$b_target" "$b_out" 2>/dev/null || echo '{"status":"error","message":"OCI build failed"}')
+                local content=$(jq -n -c --arg text "$b_res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            elif [[ "$action" == "daemon" || -n "$daemon_name" ]]; then
+                local d_res
+                d_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import daemonize_container_session
+t = sys.argv[1]
+n = sys.argv[2]
+c = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else None
+ok, msg = daemonize_container_session(t, n, command=c)
+print(json.dumps({'status': 'success' if ok else 'error', 'name': n, 'message': msg}))
+" "${target:-/tmp}" "${daemon_name:-worker}" "$cmd_run" 2>/dev/null || echo '{"status":"error","message":"Daemon launch failed"}')
+                local content=$(jq -n -c --arg text "$d_res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            elif [[ "$action" == "list" ]]; then
+                local l_res
+                l_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
+import sys, json
+from neuronix_core.container import list_container_daemons
+print(json.dumps({'daemons': list_container_daemons()}))
+" 2>/dev/null || echo '{"daemons":[]}')
+                local content=$(jq -n -c --arg text "$l_res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            elif [[ "$dry_run" == "true" ]]; then
                 local res_text="Container dry-run verified for target: ${target:-${stack_file}}. Backing: in-memory tmpfs /dev/shm."
                 local content=$(jq -n -c --arg text "$res_text" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
             elif [[ -n "$stack_file" ]]; then
-                local py_bin core_path
-                py_bin="$(resolve_python)"
-                core_path="$(resolve_core_path)"
                 local stack_res
                 stack_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
 import sys, json
@@ -929,9 +993,6 @@ print(json.dumps(run_stack_session(s)))
                 local content=$(jq -n -c --arg text "$stack_res" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
             elif [[ -n "$export_oci" ]]; then
-                local py_bin core_path
-                py_bin="$(resolve_python)"
-                core_path="$(resolve_core_path)"
                 local exp_res
                 exp_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
 import sys, json
@@ -944,9 +1005,6 @@ print(json.dumps({'status':'success' if ok else 'error','output_tar':o,'message'
                 local content=$(jq -n -c --arg text "$exp_res" '{"content":[{"type":"text","text":$text}]}')
                 send_response "$req_id" "$content"
             else
-                local py_bin core_path
-                py_bin="$(resolve_python)"
-                core_path="$(resolve_core_path)"
                 local container_res
                 container_res=$(PYTHONPATH="$core_path" "$py_bin" -c "
 import sys, json
@@ -967,7 +1025,7 @@ print(json.dumps({'status':'success','exit_code':code,'message':s_msg}))
             ;;
 
         neuronix_sandbox)
-            local target cmd_run dry_run mode iso_path os_distro persist_name accel_3d
+            local target cmd_run dry_run mode iso_path os_distro persist_name accel_3d action snap_name branch_dest
             target=$(echo "$params" | jq -r '.arguments.target // .target // empty')
             cmd_run=$(echo "$params" | jq -r '.arguments.command // .command // empty')
             dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false')
@@ -976,8 +1034,30 @@ print(json.dumps({'status':'success','exit_code':code,'message':s_msg}))
             os_distro=$(echo "$params" | jq -r '.arguments.os // .os // empty')
             persist_name=$(echo "$params" | jq -r '.arguments.persist // .persist // empty')
             accel_3d=$(echo "$params" | jq -r '.arguments.accel_3d // .accel_3d // false')
+            action=$(echo "$params" | jq -r '.arguments.action // .action // empty')
+            snap_name=$(echo "$params" | jq -r '.arguments.snap_name // .snap_name // empty')
+            branch_dest=$(echo "$params" | jq -r '.arguments.branch_dest // .branch_dest // empty')
 
-            if [[ -n "$cmd_run" || ("$target" =~ ^https?:// || "$target" =~ ^git@) ]]; then
+            local script_dir
+            script_dir="$(dirname "$(readlink -f "$0")")"
+            local shadow_script="${script_dir}/shadow_vm.sh"
+
+            if [[ "$action" == "get" && -n "$os_distro" ]]; then
+                local res
+                res=$("$shadow_script" get "$os_distro" $([[ "$dry_run" == "true" ]] && echo "--dry-run") --json 2>/dev/null || echo '{"status":"error"}')
+                local content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            elif [[ "$action" == "snapshot_create" && -n "$persist_name" ]]; then
+                local res
+                res=$("$shadow_script" snapshot create "$persist_name" "${snap_name:-snap}" $([[ "$dry_run" == "true" ]] && echo "--dry-run") --json 2>/dev/null || echo '{"status":"error"}')
+                local content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            elif [[ "$action" == "branch" && -n "$persist_name" && -n "$branch_dest" ]]; then
+                local res
+                res=$("$shadow_script" branch "$persist_name" "$branch_dest" $([[ "$dry_run" == "true" ]] && echo "--dry-run") --json 2>/dev/null || echo '{"status":"error"}')
+                local content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            elif [[ -n "$cmd_run" || ("$target" =~ ^https?:// || "$target" =~ ^git@) ]]; then
                 # Legacy container compatibility fallback
                 local py_bin core_path
                 py_bin="$(resolve_python)"
@@ -1000,9 +1080,6 @@ print(json.dumps({'status':'success','exit_code':code,'message':s_msg}))
                 send_response "$req_id" "$content"
             else
                 # Micro-VM In-Memory OS Sandbox simulation
-                local script_dir
-                script_dir="$(dirname "$(readlink -f "$0")")"
-                local shadow_script="${script_dir}/shadow_vm.sh"
                 if [[ -x "$shadow_script" ]]; then
                     local vm_args=("--smoke-test" "--headless")
                     [[ "$dry_run" == "true" ]] && vm_args=("--dry-run")

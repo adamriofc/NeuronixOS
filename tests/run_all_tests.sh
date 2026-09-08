@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# NEURONIX Industrial QA & Resilience Master Test Runner (712 Tests across 26 Suites)
-# Executes 26 deep-dive suites:
+# NEURONIX Industrial QA & Resilience Master Test Runner (746 Tests across 27 Suites)
+# Executes 27 deep-dive suites:
 # 01 - Syntax & Static Analysis
 # 02 - CLI Argument Parsing & Fuzzing
 # 03 - Unit Tests for Internal Functions
@@ -28,6 +28,7 @@
 # 24 - System Manual & Native AI Reference Verification
 # 25 - Negative Paths & Failure Mode Verification
 # 26 - Deep-System Enhancements & Invariants
+# 27 - Hyper-Advanced Isolation & Sandbox Fabric
 # ==============================================================================
 
 set -uo pipefail
@@ -73,6 +74,7 @@ source "$TEST_DIR/suites/23_endeavouros_parity_and_onboarding.sh"
 source "$TEST_DIR/suites/24_system_manual_and_ai_reference.sh"
 source "$TEST_DIR/suites/25_negative_path_and_failure_modes.sh"
 source "$TEST_DIR/suites/26_deep_system_enhancements.sh"
+source "$TEST_DIR/suites/27_hyper_advanced_isolation.sh"
 
 END_TIME=$(date +%s%N)
 DURATION_MS=$(( (END_TIME - START_TIME) / 1000000 ))

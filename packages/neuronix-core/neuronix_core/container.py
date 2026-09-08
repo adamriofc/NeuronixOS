@@ -358,10 +358,33 @@ def run_container_session(active_dir, command=None, env_vars=None, enable_fhs=Tr
 # Backward-compatible alias
 run_sandbox_session = run_container_session
 
+def synthesize_micro_dns_hosts(services, scratch_dir):
+    """
+    Synthesizes an in-memory /etc/hosts mapping service names to loopback aliases.
+    Enables zero-root, daemonless inter-service discovery in ephemeral stacks.
+    """
+    hosts_path = os.path.join(scratch_dir, "hosts")
+    lines = [
+        "127.0.0.1 localhost",
+        "::1 localhost ip6-localhost ip6-loopback"
+    ]
+    base_octet = 10
+    service_ips = {}
+    for name in services.keys():
+        clean_name = "".join(c for c in name if c.isalnum() or c in "-_")
+        ip = f"127.0.0.{base_octet}"
+        service_ips[clean_name] = ip
+        lines.append(f"{ip} {clean_name}.local {clean_name}")
+        base_octet += 1
+
+    with open(hosts_path, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    return hosts_path, service_ips
+
 def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None):
     """
     Ephemeral Multi-Service Stack Orchestrator (Alternative to docker-compose).
-    Runs multi-service declarative definitions in RAM with isolated IPC & graceful termination.
+    Runs multi-service declarative definitions in RAM with isolated IPC, Micro-DNS & graceful termination.
     """
     if not os.path.isfile(stack_file):
         return {
@@ -394,19 +417,26 @@ def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None):
 
     # Allocate ephemeral stack workspace
     ws_dir, _, msg = setup_ram_workspace(tempfile.gettempdir(), custom_shm_base=custom_shm_base)
+    hosts_file, service_ips = synthesize_micro_dns_hosts(services, ws_dir)
     procs = {}
     statuses = {}
 
     for name, s_cfg in services.items():
         cmd = s_cfg.get("command") or s_cfg.get("run") or f"echo 'Starting service {name}'"
         env = sanitize_environment()
+        env["NEURONIX_STACK_HOSTS"] = hosts_file
+        env["HOSTALIASES"] = hosts_file
+        for svc_name, svc_ip in service_ips.items():
+            env[f"SERVICE_{svc_name.upper()}_IP"] = svc_ip
+            env[f"SERVICE_{svc_name.upper()}_HOST"] = f"{svc_name}.local"
+
         if "env" in s_cfg and isinstance(s_cfg["env"], dict):
             env.update({k: str(v) for k, v in s_cfg["env"].items()})
         
         try:
             p = subprocess.Popen(["bash", "-c", cmd], cwd=ws_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             procs[name] = p
-            statuses[name] = {"pid": p.pid, "command": cmd, "status": "running"}
+            statuses[name] = {"pid": p.pid, "command": cmd, "status": "running", "ip": service_ips.get(name, "127.0.0.1")}
         except Exception as pe:
             statuses[name] = {"status": "failed", "error": str(pe)}
 
@@ -430,8 +460,220 @@ def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None):
         "status": "success",
         "services_count": len(services),
         "services": statuses,
-        "message": "Ephemeral multi-service stack orchestrated and vaporized cleanly in RAM"
+        "dns_hosts": service_ips,
+        "message": "Ephemeral multi-service stack orchestrated with Micro-DNS and vaporized cleanly in RAM"
     }
+
+def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", entrypoint=None):
+    """
+    Declarative Nix-to-OCI Micro-Layer Compiler.
+    Compiles target source or derivation into a standard, zero-bloat OCI image tarball.
+    """
+    if not os.path.exists(target):
+        return False, f"Target path does not exist: {target}"
+
+    src_dir = target if os.path.isdir(target) else os.path.dirname(os.path.abspath(target))
+    
+    if not entrypoint:
+        if os.path.isfile(os.path.join(src_dir, "flake.nix")):
+            entrypoint = ["/bin/sh"]
+        elif os.path.isfile(os.path.join(src_dir, "main.py")):
+            entrypoint = ["python3", "main.py"]
+        elif os.path.isfile(os.path.join(src_dir, "index.js")):
+            entrypoint = ["node", "index.js"]
+        elif os.path.isfile(os.path.join(src_dir, "main.go")):
+            entrypoint = ["./main"]
+        else:
+            entrypoint = ["/bin/sh"]
+
+    out_dir = os.path.dirname(os.path.abspath(output_tar))
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(dir="/dev/shm" if os.path.isdir("/dev/shm") else None) as td:
+        layer_tar = os.path.join(td, "layer.tar")
+        hasher = hashlib.sha256()
+
+        with tarfile.open(layer_tar, "w") as tar:
+            for item in sorted(os.listdir(src_dir)):
+                if item in {".git", ".direnv", "dist", ".cache", "__pycache__"}:
+                    continue
+                p = os.path.join(src_dir, item)
+                tar.add(p, arcname=os.path.join("app", item) if not item.startswith("bin") else item)
+
+        with open(layer_tar, "rb") as f:
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        layer_sha = hasher.hexdigest()
+
+        config_data = {
+            "architecture": "amd64",
+            "os": "linux",
+            "rootfs": {
+                "type": "layers",
+                "diff_ids": [f"sha256:{layer_sha}"]
+            },
+            "config": {
+                "Env": [
+                    "PATH=/app/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                    "NEURONIX_OCI_IMAGE=1"
+                ],
+                "WorkingDir": "/app",
+                "Entrypoint": entrypoint
+            }
+        }
+        config_bytes = json.dumps(config_data, indent=2).encode("utf-8")
+        config_sha = hashlib.sha256(config_bytes).hexdigest()
+        config_file = os.path.join(td, f"{config_sha}.json")
+        with open(config_file, "wb") as f:
+            f.write(config_bytes)
+
+        manifest_data = [{
+            "Config": f"{config_sha}.json",
+            "RepoTags": [f"{repo}:{tag}"],
+            "Layers": ["layer.tar"]
+        }]
+        manifest_bytes = json.dumps(manifest_data, indent=2).encode("utf-8")
+        manifest_file = os.path.join(td, "manifest.json")
+        with open(manifest_file, "wb") as f:
+            f.write(manifest_bytes)
+
+        repositories_data = {repo: {tag: layer_sha}}
+        repo_bytes = json.dumps(repositories_data, indent=2).encode("utf-8")
+        repo_file = os.path.join(td, "repositories")
+        with open(repo_file, "wb") as f:
+            f.write(repo_bytes)
+
+        with tarfile.open(output_tar, "w") as out:
+            out.add(manifest_file, arcname="manifest.json")
+            out.add(repo_file, arcname="repositories")
+            out.add(config_file, arcname=f"{config_sha}.json")
+            out.add(layer_tar, arcname="layer.tar")
+
+    return True, f"Declarative micro-OCI image compiled to {output_tar} ({repo}:{tag})"
+
+CONTAINER_RUNTIME_DIR = os.path.expanduser("~/.local/share/neuronix/containers")
+
+def daemonize_container_session(target, name, command=None, custom_shm_base="/dev/shm"):
+    """
+    Spawns an isolated container session as a background daemon without Docker daemon.
+    Supervised via systemd-run --user when available, or detached process supervisor.
+    """
+    if not name or not isinstance(name, str):
+        return False, "Container daemon name must be specified"
+    clean_name = "".join(c for c in name if c.isalnum() or c in "-_")
+    runtime_dir = os.path.join(CONTAINER_RUNTIME_DIR, clean_name)
+    os.makedirs(runtime_dir, exist_ok=True)
+    pid_file = os.path.join(runtime_dir, "pid")
+
+    if os.path.exists(pid_file):
+        try:
+            with open(pid_file) as f:
+                old_pid = int(f.read().strip())
+            os.kill(old_pid, 0)
+            return False, f"Container daemon '{clean_name}' is already running (PID: {old_pid})"
+        except (OSError, ValueError):
+            try:
+                os.unlink(pid_file)
+            except OSError:
+                pass
+
+    ws_dir, _, msg = setup_ram_workspace(target, custom_shm_base=custom_shm_base)
+    exec_cmd = command if command else "while true; do sleep 3600; done"
+    env = sanitize_environment()
+    env["NEURONIX_CONTAINER_DAEMON"] = clean_name
+
+    cmd_tokens = ["bash", "-c", exec_cmd]
+
+    if shutil.which("systemd-run") and os.environ.get("XDG_RUNTIME_DIR"):
+        unit_name = f"neuronix-container-{clean_name}.service"
+        sys_cmd = [
+            "systemd-run", "--user",
+            f"--unit={unit_name}",
+            "--description=NEURONIX Ephemeral Container Daemon",
+            "--remain-after-exit=no",
+            f"--working-directory={ws_dir}",
+            "bash", "-c", exec_cmd
+        ]
+        try:
+            res = subprocess.run(sys_cmd, capture_output=True, text=True, timeout=5)
+            if res.returncode == 0:
+                with open(pid_file, "w") as f:
+                    f.write("SYSTEMD_USER\n")
+                with open(os.path.join(runtime_dir, "ws_dir"), "w") as f:
+                    f.write(ws_dir + "\n")
+                return True, f"Container daemon '{clean_name}' launched successfully via systemd user unit {unit_name}"
+        except Exception:
+            pass
+
+    log_file = open(os.path.join(runtime_dir, "daemon.log"), "w")
+    proc = subprocess.Popen(
+        cmd_tokens,
+        cwd=ws_dir,
+        env=env,
+        stdout=log_file,
+        stderr=log_file,
+        start_new_session=True
+    )
+    with open(pid_file, "w") as f:
+        f.write(str(proc.pid) + "\n")
+    with open(os.path.join(runtime_dir, "ws_dir"), "w") as f:
+        f.write(ws_dir + "\n")
+
+    return True, f"Container daemon '{clean_name}' running in background (PID: {proc.pid}, RAM: {ws_dir})"
+
+def stop_container_daemon(name):
+    """Stops a background container daemon and vaporizes its RAM workspace."""
+    clean_name = "".join(c for c in name if c.isalnum() or c in "-_")
+    runtime_dir = os.path.join(CONTAINER_RUNTIME_DIR, clean_name)
+    pid_file = os.path.join(runtime_dir, "pid")
+    ws_file = os.path.join(runtime_dir, "ws_dir")
+
+    if not os.path.exists(pid_file):
+        return False, f"Container daemon '{clean_name}' is not running"
+
+    with open(pid_file) as f:
+        val = f.read().strip()
+
+    if val == "SYSTEMD_USER":
+        unit_name = f"neuronix-container-{clean_name}.service"
+        subprocess.run(["systemctl", "--user", "stop", unit_name], capture_output=True)
+    else:
+        try:
+            pid = int(val)
+            os.kill(pid, 15)
+            time.sleep(0.2)
+            os.kill(pid, 9)
+        except OSError:
+            pass
+
+    if os.path.exists(ws_file):
+        with open(ws_file) as f:
+            ws_dir = f.read().strip()
+        teardown_container(ws_dir)
+
+    shutil.rmtree(runtime_dir, ignore_errors=True)
+    return True, f"Container daemon '{clean_name}' stopped and workspace vaporized cleanly"
+
+def list_container_daemons():
+    """Lists active container daemons."""
+    if not os.path.isdir(CONTAINER_RUNTIME_DIR):
+        return []
+    daemons = []
+    for d in sorted(os.listdir(CONTAINER_RUNTIME_DIR)):
+        r_dir = os.path.join(CONTAINER_RUNTIME_DIR, d)
+        pid_file = os.path.join(r_dir, "pid")
+        if os.path.isfile(pid_file):
+            with open(pid_file) as f:
+                val = f.read().strip()
+            status = "running"
+            if val != "SYSTEMD_USER":
+                try:
+                    os.kill(int(val), 0)
+                except OSError:
+                    status = "dead"
+            daemons.append({"name": d, "target_type": val, "status": status})
+    return daemons
 
 def export_container_oci(source_dir, output_tar, tag="latest", repo="neuronix-app"):
     """

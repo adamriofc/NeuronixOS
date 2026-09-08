@@ -40,15 +40,23 @@ Provisions isolated, ephemeral development environments in RAM.
 * **Exit Codes:** `0` on clean exit, `1` on invalid stack
 
 ### 2.4 `neuronix sandbox [options] [configuration_path | iso_path]`
-Boots an in-memory OS Micro-VM sandbox in `/dev/shm` to test proposed Nix configurations or external ISOs with zero host disk mutation.
+Boots an in-memory OS Micro-VM sandbox in `/dev/shm` to test proposed Nix configurations, external ISOs, and cloud images with zero host disk mutation.
 * **Alias:** `neuronix try` is retained as a fully supported backward-compatible alias.
+* **Subcommands:**
+  * `get <distro>`: Autonomous OS Fabric: fetches verified OS images (alpine, ubuntu-24.04, arch, debian-12, windows-11).
+  * `snapshot <create|restore|list> <name> [snap]`: Btrfs subvolume and CoW snapshot management.
+  * `branch <src> <dest>`: Instant CoW clone/branch with 0-byte initial storage overhead.
 * **Options:**
   * `--smoke-test`: Fast verification of kernel boot, systemd targets, and 9P store mounts.
   * `--iso <path>`: Boots custom external OS ISO directly in hardware-accelerated Micro-VM.
-  * `--os <distro>`: Boots cloud-init minimal distro image (alpine, ubuntu, arch, debian).
+  * `--os <distro>`: Boots cloud-init minimal distro image (alpine, ubuntu, arch, debian, windows-11).
   * `--persist <name>`: Enables persistent Btrfs CoW testing sandbox across reboots.
+  * `--windows`: Enables Windows 11 Autopilot Fabric (TPM 2.0 swtpm, VirtIO-Win auto-injection, autounattend.xml).
+  * `--virtio-win <path>`: Specifies custom VirtIO-Win driver CD-ROM.
+  * `--autounattend <path>`: Specifies custom unattended Windows answer file.
   * `--3d-accel`: Enables VirtIO-GPU VirGL 3D hardware rendering for GUI sessions.
-  * `--dry-run`: Dry-evaluates QEMU parameters and RAM disk reservation.
+  * `--gui`: Launches graphical window with SPICE vdagent dynamic resizing and bidirectional clipboard.
+  * `--dry-run`: Dry-evaluates QEMU parameters, catalog targets, and RAM disk reservation.
   * `--mode <synthetic|real|auto>`: Execution engine mode.
   * `--promote [-y|--yes]`: Atomically applies configuration to host upon clean test pass.
 * **Exit Codes:** `0` on success, `1` on test failure, `2` if KVM unavailable in real mode
@@ -132,8 +140,15 @@ Reverse-compiles imperatively executed packages into declarative Flake configura
 ### 2.22 `neuronix container <git-url|dir|oci-image> [options]`
 Spins up an ephemeral, zero-copy development container in RAM (`/dev/shm`) isolated via Bubblewrap with zero SSD disk wear.
 * **Security & Isolation:** Strictly enforces writable tmpfs `/dev/shm` without silent disk fallbacks. Sanitizes credentials and wipes secrets (`AWS_*`, `GITHUB_*`, tokens, `SSH_AUTH_SOCK`).
+* **In-Memory Micro-DNS Mesh:** Automatic rootless service mesh synthesizing `127.0.0.0/8` IP aliases and `*.local` domains for multi-service stacks without Docker network or external DNS.
 * **Dynamic FHS Emulation:** Automatically resolves `/lib64/ld-linux-x86-64.so.2` and glibc shared libraries, allowing foreign Linux binaries to run without container bloat.
-* **Daemonless OCI Runner:** Directly pulls and extracts OCI/Docker Hub images (`oci://`, `docker://`) to RAM without running dockerd.
+* **Daemonless OCI Runner & Compiler:** Directly runs OCI/Docker Hub images in RAM without dockerd, and compiles declarative Nix workspaces into micro-layer OCI images.
+* **Subcommands:**
+  * `build <target> [--output <out.tar>] [--tag <tag>]`: Compiles declarative workspace to ultra-lean OCI tarball (15-35 MB).
+  * `daemon <target> --name <name> [--run <cmd>]`: Launches persistent background container supervised by systemd user units (0 MB idle RAM).
+  * `stop <name>`: Stops container daemon and cleanly vaporizes RAM workspace.
+  * `list | ps`: Displays active container daemons and statuses.
+  * `compose <file.yaml|json>`: Launches multi-service stack in RAM with In-Memory Micro-DNS.
 * **Options:**
   * `--run, -c <cmd>`: Executes command inside container non-interactively.
   * `--stack <file.yaml|json>`: Launches declarative multi-service stack in RAM with private IPC.

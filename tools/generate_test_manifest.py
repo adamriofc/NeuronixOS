@@ -56,7 +56,8 @@ QA_SUITES = [
     {"suite_file": "23_endeavouros_parity_and_onboarding.sh", "title": "EndeavourOS Parity, Onboarding & Distro Polish", "assertions": 30, "proof_class": "L2_SYSTEM", "release_blocker": True},
     {"suite_file": "24_system_manual_and_ai_reference.sh", "title": "System Manual & Native AI Reference Verification", "assertions": 44, "proof_class": "L0_STATIC", "release_blocker": True},
     {"suite_file": "25_negative_path_and_failure_modes.sh", "title": "Negative Paths & Failure Mode Verification", "assertions": 30, "proof_class": "L2_SYSTEM", "release_blocker": True},
-    {"suite_file": "26_deep_system_enhancements.sh", "title": "Deep-System Enhancements & Invariants", "assertions": 39, "proof_class": "L2_SYSTEM", "release_blocker": True}
+    {"suite_file": "26_deep_system_enhancements.sh", "title": "Deep-System Enhancements & Invariants", "assertions": 39, "proof_class": "L2_SYSTEM", "release_blocker": True},
+    {"suite_file": "27_hyper_advanced_isolation.sh", "title": "Hyper-Advanced Isolation, OCI Compiler & Sandbox Fabric", "assertions": 34, "proof_class": "L2_SYSTEM", "release_blocker": True}
 ]
 
 DISTRO_SUITE = {
