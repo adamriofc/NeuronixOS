@@ -2,6 +2,7 @@
 
 let
   versionData = import ../../version.nix;
+  neuronix-core = python3.pkgs.callPackage ../neuronix-core { };
 in
 python3.pkgs.buildPythonApplication rec {
   pname = "neuronix-center";
@@ -13,6 +14,8 @@ python3.pkgs.buildPythonApplication rec {
   nativeBuildInputs = [ copyDesktopItems ];
   propagatedBuildInputs = with python3.pkgs; [
     tkinter
+    pyyaml
+    neuronix-core
   ];
 
   installPhase = ''
@@ -37,6 +40,7 @@ python3.pkgs.buildPythonApplication rec {
     description = "NEURONIX Control Center & Time-Travel Guard";
     homepage = "https://github.com/adamriofc/NeuronixOS";
     license = licenses.asl20;
+    maintainers = [ ];
     platforms = platforms.linux;
   };
 }

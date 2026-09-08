@@ -1,17 +1,36 @@
-{ lib, python3Packages }:
+{ lib, buildPythonPackage, setuptools, pyyaml }:
 
-python3Packages.buildPythonPackage {
+let
+  versionData = import ../../version.nix;
+in
+buildPythonPackage {
   pname = "neuronix-core";
-  version = "1.0.4";
+  version = versionData.version;
+  pyproject = true;
 
   src = ./.;
 
-  propagatedBuildInputs = [ ];
+  build-system = [
+    setuptools
+  ];
+
+  dependencies = [
+    pyyaml
+  ];
+
+  propagatedBuildInputs = [
+    pyyaml
+  ];
+
+  pythonImportsCheck = [
+    "neuronix_core"
+  ];
 
   meta = with lib; {
-    description = "Canonical shared domain logic for NEURONIX OS";
+    description = "Canonical shared domain logic library for NEURONIX OS";
     homepage = "https://github.com/adamriofc/NeuronixOS";
     license = licenses.asl20;
     maintainers = [ ];
+    platforms = platforms.linux;
   };
 }

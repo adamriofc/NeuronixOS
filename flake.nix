@@ -100,6 +100,7 @@
           pkgs = pkgsFor system;
         in
         {
+          neuronix-core = pkgs.python3.pkgs.callPackage ./packages/neuronix-core { };
           neuronix-center = pkgs.callPackage ./packages/neuronix-center { };
           neuronix-cli = pkgs.callPackage ./packages/neuronix-cli { };
           neuronix-daemon = pkgs.callPackage ./packages/neuronix-daemon { };
