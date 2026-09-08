@@ -495,6 +495,22 @@ handle_tools_list() {
         },
         "required": ["command"]
       }
+    },
+    {
+      "name": "neuronix_state_show",
+      "description": "Inspect active Provable State Root, 5-leaf Merkle tree, generation, and hardware posture.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "neuronix_state_verify",
+      "description": "Execute deterministic cryptographic attestation of active state against hardware PCR measurements and declared system invariants.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
     }
   ]
 }
@@ -1277,6 +1293,46 @@ except Exception as e:
             local content
             content=$(jq -n -c --arg text "$ghost_res" '{"content":[{"type":"text","text":$text}]}')
             send_response "$req_id" "$content"
+            ;;
+
+        neuronix_state_show)
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local res
+                res=$("$py_bin" -c "
+import sys, json
+sys.path.insert(0, '${core_path}')
+from neuronix_core.state import get_current_state
+print(json.dumps(get_current_state(), indent=2))
+" 2>&1)
+                local content
+                content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                send_error "$req_id" -32000 "Python runtime unavailable for Provable State Engine."
+            fi
+            ;;
+
+        neuronix_state_verify)
+            local py_bin core_path
+            py_bin="$(resolve_python)"
+            core_path="$(resolve_core_path)"
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local res
+                res=$("$py_bin" -c "
+import sys, json
+sys.path.insert(0, '${core_path}')
+from neuronix_core.state import verify_current_state
+print(json.dumps(verify_current_state(), indent=2))
+" 2>&1)
+                local content
+                content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                send_error "$req_id" -32000 "Python runtime unavailable for Provable State Engine."
+            fi
             ;;
 
         *)

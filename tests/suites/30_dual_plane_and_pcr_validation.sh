@@ -73,4 +73,4 @@ assert_output_contains "cat '${DISTRO_PATH}/.github/workflows/release-iso.yml'" 
 
 RUNNER_SUITES=$(grep -c 'source "\$TEST_DIR/suites/' "${DISTRO_PATH}/tests/run_all_tests.sh")
 MANIFEST_SUITES=$("$PYTHON_BIN" -c "import json; d=json.load(open('${DISTRO_PATH}/data/test_manifest.json')); print(d['summary']['qa_master_suites_count'])" 2>/dev/null || echo "0")
-assert_eq "${RUNNER_SUITES}:${MANIFEST_SUITES}" "30:30" "Runner suite count (30) exactly matches canonical test manifest suites (30)"
+assert_eq "${RUNNER_SUITES}:${MANIFEST_SUITES}" "31:31" "Runner suite count (31) exactly matches canonical test manifest suites (31)"

@@ -204,4 +204,21 @@ Inspects and manages declarative eBPF Linux Security Module (LSM) security polic
   * `status`: Inspects active eBPF LSM status and kernel security enforcement mode (`ENFORCING` or `AUDIT_MODE`).
   * `policy <pkg>`: Generates declarative eBPF confinement policy for the specified package or derivation.
 
+### 2.29 `neuronix state <action> [options]`
+Controls the Provable State Engine, computes the 5-leaf Merkle StateRoot, validates cryptographic causal lineage, and orchestrates verified recovery.
+* **Mathematical Attestation:** Synthesizes an authoritative SHA-256 StateRoot across hardware posture (TPM 2.0 PCR 7/11), substrate (/nix/store closure), transaction provenance (`SO_PEERCRED`), security policy (eBPF LSM), and verification evidence.
+* **Subcommands:**
+  * `show [--json]`: Displays current StateRoot, leaf hashes, and trust posture.
+  * `verify [--json]`: Recomputes Merkle StateRoot against current system state and asserts invariant integrity.
+  * `explain [--json]`: Generates structured explanation of why the system is in its current state and which actor executed the latest transaction.
+  * `diff [STATE_A] [STATE_B] [--json]`: Identifies drift between two states or between recorded state and live execution environment.
+  * `history [--json] [--limit <n>]`: Emits cryptographically chained transaction journal entries with parent state linkage.
+  * `recover [STATE_ROOT]`: Validates target state integrity and invariants prior to generational rollback.
+  * `prove [--output <file>]`: Exports self-contained, offline-verifiable JSON state proof bundle.
+* **Options:**
+  * `--json`: Outputs machine-readable RFC 8785 canonical JSON.
+  * `--output <file>`: Exports cryptographic proof to target path.
+  * `--limit <n>`: Restricts historical journal depth (default: 10).
+* **Exit Codes:** `0` on verified state / valid query, `1` on verification failure or invalid state
+
 

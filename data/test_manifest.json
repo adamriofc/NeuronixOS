@@ -2,13 +2,13 @@
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.4",
-  "generated_at": "2026-09-08T10:12:55Z",
+  "generated_at": "2026-09-08T21:43:34Z",
   "summary": {
-    "total_repository_assertions": 1204,
-    "qa_master_harness_assertions": 839,
+    "total_repository_assertions": 1229,
+    "qa_master_harness_assertions": 864,
     "distro_component_assertions": 209,
     "standalone_gates_assertions": 156,
-    "qa_master_suites_count": 30,
+    "qa_master_suites_count": 31,
     "distro_suites_count": 19,
     "standalone_gates_count": 14,
     "validation_status": "PASSING_ALL",
@@ -233,6 +233,13 @@
       {
         "suite_file": "30_dual_plane_and_pcr_validation.sh",
         "title": "Dual-Plane Control Engine, UKI & Resilient Measured Boot",
+        "assertions": 25,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": true
+      },
+      {
+        "suite_file": "31_provable_state_engine.sh",
+        "title": "Provable State Engine & Causal Lineage Architecture",
         "assertions": 25,
         "proof_class": "L2_SYSTEM",
         "release_blocker": true

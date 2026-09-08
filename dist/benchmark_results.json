@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-08T10:17:43Z",
+  "generated_at": "2026-09-08T21:51:32Z",
   "status": "PASSED",
   "summary": {
     "total_benchmarks": 4,
@@ -30,13 +30,13 @@
       "subsystem": "memory",
       "metrics": {
         "mem_total_mb": 15382,
-        "mem_available_mb": 3314,
-        "mem_used_mb": 12068,
+        "mem_available_mb": 3257,
+        "mem_used_mb": 12124,
         "psi_pressure": {
-          "some_avg10": 0.2,
-          "some_avg60": 0.37,
-          "full_avg10": 0.2,
-          "full_avg60": 0.37
+          "some_avg10": 0.0,
+          "some_avg60": 0.28,
+          "full_avg10": 0.0,
+          "full_avg60": 0.27
         },
         "zram_expected_size_mb": 7691,
         "zram_est_compression_ratio": 2.45
@@ -51,9 +51,9 @@
     "storage": {
       "subsystem": "storage",
       "algorithm": "btrfs_zstd_3",
-      "dataset_bytes": 15161964,
-      "compressed_bytes": 5853729,
-      "savings_percentage": 61.39,
+      "dataset_bytes": 15272715,
+      "compressed_bytes": 5895625,
+      "savings_percentage": 61.4,
       "compression_ratio": 2.59,
       "budgets": {
         "min_savings_pct": 30.0,
@@ -65,12 +65,12 @@
       "subsystem": "rollback",
       "samples": 100,
       "metrics": {
-        "mean_ms": 0.01,
-        "min_ms": 0.009,
-        "max_ms": 0.054,
-        "p50_ms": 0.009,
-        "p95_ms": 0.01,
-        "p99_ms": 0.016,
+        "mean_ms": 0.015,
+        "min_ms": 0.014,
+        "max_ms": 0.047,
+        "p50_ms": 0.015,
+        "p95_ms": 0.016,
+        "p99_ms": 0.019,
         "budget_p99_ms": 2000.0
       },
       "status": "PASS"

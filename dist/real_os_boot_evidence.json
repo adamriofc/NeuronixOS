@@ -1,6 +1,6 @@
 {
   "gate_id": "gate_real_os_install_boot",
-  "timestamp": "2026-09-08T10:12:27Z",
+  "timestamp": "2026-09-08T21:52:07Z",
   "proof_class": "L4_HYBRID_ENGINE",
   "requested_class": "L4_HYBRID_ENGINE",
   "lifecycle_mode": "PORTABLE_HARDWARE_SIMULATION",

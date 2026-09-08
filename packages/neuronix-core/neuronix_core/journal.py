@@ -183,16 +183,27 @@ class TransactionJournal:
         """Initializes a new transaction in PENDING state under concurrency lock."""
         tx_id = f"tx_{int(time.time())}_{uuid.uuid4().hex[:8]}"
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        tx_details = details.copy() if details else {}
 
         with _ReentrantJournalLock(self.lock_path):
             journal = self._read_journal()
+            txs = journal.get("transactions", {})
+            last_chain = "0" * 64
+            if txs:
+                last_entry = sorted(txs.values(), key=lambda t: t.get("created_at", ""))[-1]
+                last_chain = last_entry.get("chain_hash", "0" * 64)
+
+            import hashlib
+            chain_hash = hashlib.sha256(f"{last_chain}:{tx_id}:{operation_type}:{now_iso}".encode("utf-8")).hexdigest()
+
             journal["transactions"][tx_id] = {
                 "id": tx_id,
                 "operation": operation_type,
                 "state": TransactionState.PENDING,
                 "created_at": now_iso,
                 "updated_at": now_iso,
-                "details": details or {}
+                "chain_hash": chain_hash,
+                "details": tx_details
             }
             self._write_journal(journal)
         return tx_id
@@ -230,6 +241,27 @@ class TransactionJournal:
         with _ReentrantJournalLock(self.lock_path):
             journal = self._read_journal()
             return journal["transactions"].get(tx_id)
+
+    def verify_chain_integrity(self) -> bool:
+        """Verifies cryptographic hash continuity across all sequential transactions in the journal."""
+        with _ReentrantJournalLock(self.lock_path):
+            journal = self._read_journal()
+            txs = journal.get("transactions", {})
+            if not txs:
+                return True
+
+            sorted_entries = sorted(txs.values(), key=lambda t: t.get("created_at", ""))
+            import hashlib
+            last_chain = "0" * 64
+            for entry in sorted_entries:
+                if "chain_hash" in entry:
+                    expected = hashlib.sha256(
+                        f"{last_chain}:{entry['id']}:{entry['operation']}:{entry['created_at']}".encode("utf-8")
+                    ).hexdigest()
+                    if entry["chain_hash"] != expected:
+                        return False
+                    last_chain = entry["chain_hash"]
+            return True
 
     def get_dangling_transactions(self) -> List[Dict[str, Any]]:
         """

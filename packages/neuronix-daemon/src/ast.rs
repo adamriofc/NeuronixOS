@@ -218,7 +218,7 @@ pub fn handle_jsonrpc(request_str: &str) -> String {
     match method.as_str() {
         "initialize" => {
             format!(
-                r#"{{"jsonrpc":"2.0","result":{{"protocolVersion":"2024-11-05","capabilities":{{"ast":true,"ghost":true,"ebpf":true,"branch":true}},"serverInfo":{{"name":"neuronix-daemon","version":"{}"}}}},"id":{}}}"#,
+                r#"{{"jsonrpc":"2.0","result":{{"protocolVersion":"2024-11-05","capabilities":{{"ast":true,"ghost":true,"ebpf":true,"branch":true,"state":true}},"serverInfo":{{"name":"neuronix-daemon","version":"{}"}}}},"id":{}}}"#,
                 CANONICAL_VERSION, id_val
             )
         }
@@ -227,6 +227,20 @@ pub fn handle_jsonrpc(request_str: &str) -> String {
             format!(
                 r#"{{"jsonrpc":"2.0","result":{},"id":{}}}"#,
                 ast.to_json(), id_val
+            )
+        }
+        "state/show" => {
+            let state_json = crate::state::StateEngine::probe_state();
+            format!(
+                r#"{{"jsonrpc":"2.0","result":{},"id":{}}}"#,
+                state_json, id_val
+            )
+        }
+        "state/verify" => {
+            let verify_json = crate::state::StateEngine::verify_state();
+            format!(
+                r#"{{"jsonrpc":"2.0","result":{},"id":{}}}"#,
+                verify_json, id_val
             )
         }
         "system/ping" => {

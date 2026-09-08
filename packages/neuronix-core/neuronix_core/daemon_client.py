@@ -73,3 +73,57 @@ def query_system_ast(timeout: float = 1.0) -> Dict[str, Any]:
         },
         "capabilities": ["ast_query", "ephemeral_ghost", "ebpf_lsm_guard", "workspace_branch", "dual_plane"]
     }
+
+def query_state_show(timeout: float = 1.0) -> Dict[str, Any]:
+    """Queries Provable State Root from micro-Rust daemon or falls back to pure Python engine."""
+    for sock_path in DEFAULT_SOCKET_PATHS:
+        if os.path.exists(sock_path):
+            try:
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                s.settimeout(timeout)
+                s.connect(sock_path)
+                s.sendall(b'{"jsonrpc":"2.0","method":"state/show","id":1}\n')
+                resp_bytes = b""
+                while True:
+                    chunk = s.recv(4096)
+                    if not chunk:
+                        break
+                    resp_bytes += chunk
+                    if b"\n" in chunk:
+                        break
+                s.close()
+                data = json.loads(resp_bytes.decode("utf-8"))
+                if "result" in data:
+                    return data["result"]
+            except Exception:
+                pass
+
+    from .state import get_current_state
+    return get_current_state()
+
+def query_state_verify(timeout: float = 1.0) -> Dict[str, Any]:
+    """Verifies Provable State Root via daemon or fallback engine."""
+    for sock_path in DEFAULT_SOCKET_PATHS:
+        if os.path.exists(sock_path):
+            try:
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                s.settimeout(timeout)
+                s.connect(sock_path)
+                s.sendall(b'{"jsonrpc":"2.0","method":"state/verify","id":1}\n')
+                resp_bytes = b""
+                while True:
+                    chunk = s.recv(4096)
+                    if not chunk:
+                        break
+                    resp_bytes += chunk
+                    if b"\n" in chunk:
+                        break
+                s.close()
+                data = json.loads(resp_bytes.decode("utf-8"))
+                if "result" in data:
+                    return data["result"]
+            except Exception:
+                pass
+
+    from .state import verify_current_state
+    return verify_current_state()

@@ -18,7 +18,7 @@ from .ca import enroll_certificate
 from .doctor import get_sanitized_diagnostics, print_doctor_json
 from .diff import compute_generation_diff
 from .distill import distill_packages, verify_package_in_nixpkgs
-from .daemon_client import is_daemon_active, query_system_ast
+from .daemon_client import is_daemon_active, query_system_ast, query_state_show, query_state_verify
 from .container import (
     setup_ram_workspace,
     run_container_session,
@@ -37,9 +37,13 @@ from .container import (
 )
 from .tune import apply_tuning_profile, get_current_tuning_status, PROFILES as TUNING_PROFILES
 from .mesh import get_mesh_status, discover_local_peers
+from .state import ProvableStateEngine, get_current_state, verify_current_state
 
 __all__ = [
     "__version__",
+    "ProvableStateEngine",
+    "get_current_state",
+    "verify_current_state",
     "get_system_telemetry",
     "get_cpu_info",
     "get_ram_info",
@@ -85,4 +89,6 @@ __all__ = [
     "TUNING_PROFILES",
     "get_mesh_status",
     "discover_local_peers",
+    "query_state_show",
+    "query_state_verify",
 ]

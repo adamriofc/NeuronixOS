@@ -9,6 +9,8 @@ mod ast;
 mod ephemeral;
 mod ebpf;
 mod branch;
+mod crypto;
+pub mod state;
 
 use std::env;
 use std::fs;
@@ -51,6 +53,13 @@ fn main() {
     if args.contains(&"--ping".to_string()) {
         let resp = handle_jsonrpc(r#"{"jsonrpc":"2.0","method":"system/ping","id":1}"#);
         println!("{}", resp);
+        return;
+    }
+
+    // Direct Provable State Root probe (One-shot mode)
+    if args.contains(&"--state".to_string()) {
+        let state = state::StateEngine::probe_state();
+        println!("{}", state);
         return;
     }
 
@@ -147,6 +156,7 @@ fn print_usage() {
     println!("  --daemon                  Run async UNIX domain socket listener");
     println!("  --socket <path>           Specify custom UNIX domain socket path");
     println!("  --ast                     Emit JSON-formatted System State AST and exit");
+    println!("  --state                   Emit JSON-formatted Provable State Root and exit");
     println!("  --ping                    Verify AST engine responsiveness and exit");
     println!("  --ghost-run <cmd>         Execute command in ephemeral RAM overlay");
     println!("  --policy <pkg>            Generate declarative eBPF LSM policy contract");
