@@ -421,7 +421,7 @@ rm -rf "$TMP_SENTINEL_DIR"
 
 # Test 51: Container runtime filesystem path protection & namespace isolation
 CONTAINER_ISOL_TEST=$("$PYTHON_BIN" -c "
-import sys, tempfile, os
+import sys, tempfile, os, shutil, unittest.mock as mock
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
 from neuronix_core.container import sanitize_environment, build_bwrap_command
 
@@ -431,10 +431,12 @@ with tempfile.TemporaryDirectory() as td:
     assert clean_env.get('USER') == 'tester'
     assert clean_env.get('NEURONIX_CONTAINER') == '1'
     
-    tokens, sub_env = build_bwrap_command(td, command='echo test', unshare_net=True)
-    assert '--unshare-net' in tokens
-    assert '--unshare-pid' in tokens
-    assert '--unshare-ipc' in tokens
+    bwrap_path = shutil.which('bwrap') or '/usr/bin/bwrap'
+    with mock.patch('shutil.which', return_value=bwrap_path):
+        tokens, sub_env = build_bwrap_command(td, command='echo test', unshare_net=True)
+        assert '--unshare-net' in tokens
+        assert '--unshare-pid' in tokens
+        assert '--unshare-ipc' in tokens
 print('CONTAINER_ISOL_INVARIANTS_OK')
 ")
 assert_eq "$CONTAINER_ISOL_TEST" "CONTAINER_ISOL_INVARIANTS_OK" "Container runtime enforces pid/net/ipc namespace unshare and credential scrubbing"
