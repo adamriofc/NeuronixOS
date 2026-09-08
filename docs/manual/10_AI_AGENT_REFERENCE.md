@@ -14,8 +14,8 @@ When assisting users or administering NEURONIX OS, autonomous AI models MUST obs
    Paths under `/nix/store`, `/run/current-system`, and `/usr` are strictly immutable. Do NOT execute `apt`, `yum`, `pacman`, or attempt to write directly into binary directories.
 2. **ALWAYS use declarative NixOS modules for persistent changes:**  
    To install applications permanently or reconfigure system services, modify `/etc/nixos/configuration.nix` using valid `neuronix.*` options, then execute `nixos-rebuild switch`.
-3. **USE `neuronix try` for risk-free experimentation:**  
-   Before recommending or applying radical system alterations, test the candidate Flake inside the in-memory Shadow Micro-VM (`neuronix try`).
+3. **USE `neuronix sandbox` for risk-free experimentation:**  
+   Before recommending or applying radical system alterations, test the candidate Flake inside the in-memory Shadow Micro-VM (`neuronix sandbox`, alias `neuronix try`).
 4. **RECOMMEND atomic rollback if errors occur:**  
    If a newly activated generation causes display or networking issues, invoke `neuronix undo` to restore the previous generation instantaneously.
 5. **RESPECT the user data boundary:**  

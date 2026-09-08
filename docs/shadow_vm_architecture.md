@@ -10,7 +10,7 @@
 
 Mutating configuration files on bare-metal systems creates unquantified availability risks. While NixOS provides generation-based rollback, a faulty kernel driver, display server regression, or broken systemd service can render the machine unbootable, forcing manual GRUB recovery.
 
-The **NEURONIX Shadow Micro-VM (`neuronix try`)** isolates evaluation by constructing a transient clone of the proposed system state entirely inside volatile memory (`/dev/shm`). The host store (`/nix/store`) is mapped into the virtual guest via a 9P transport mount, achieving instantaneous boot latency (under 3 seconds) with zero duplicate disk allocation.
+The **NEURONIX In-Memory OS Sandbox (`neuronix sandbox`, alias `neuronix try`)** isolates evaluation by constructing a transient clone of the proposed system state entirely inside volatile memory (`/dev/shm`). The host store (`/nix/store`) is mapped into the virtual guest via a 9P transport mount, achieving instantaneous boot latency (under 3 seconds) with zero duplicate disk allocation.
 
 ---
 
@@ -18,7 +18,7 @@ The **NEURONIX Shadow Micro-VM (`neuronix try`)** isolates evaluation by constru
 
 Traditional `nixos-rebuild build-vm` invocations write a persistent `.qcow2` overlay file directly to the invoking working directory. On developer workstations, this introduces filesystem clutter, disk I/O bottlenecks, and host storage inflation.
 
-`neuronix try` enforces an in-memory disk topology:
+`neuronix sandbox` enforces an in-memory disk topology:
 
 Scratch Path: `/dev/shm/neuronix_shadow_<pid>`
 
@@ -46,7 +46,7 @@ Upon VM termination, a POSIX exit trap (`EXIT INT TERM HUP`) unconditionally iss
 ```mermaid
 stateDiagram-v2
     [*] --> Idle
-    Idle --> ParseArguments: neuronix try [flags]
+    Idle --> ParseArguments: neuronix sandbox [flags]
     ParseArguments --> VerifyKVM: Probe /dev/kvm
     VerifyKVM --> AllocateRAM: Mount scratch in /dev/shm
     AllocateRAM --> BuildRunner: Evaluate derivation (9P closure)
@@ -82,14 +82,14 @@ stateDiagram-v2
 Boots the Micro-VM non-interactively in headless mode, verifies that the systemd target reaches operational equilibrium, and halts the guest:
 
 ```bash
-neuronix try --smoke-test
+neuronix sandbox --smoke-test
 ```
 
 ### 4.2 One-Click Host Promotion (`--promote`)
 Guarantees that a configuration is applied to the host operating system only after passing verification inside the Shadow Micro-VM:
 
 ```bash
-neuronix try --smoke-test --promote /etc/nixos/configuration.nix
+neuronix sandbox --smoke-test --promote /etc/nixos/configuration.nix
 ```
 
 If the smoke test encounters a kernel panic, failing unit, or dependency cycle, promotion is blocked immediately.
@@ -98,7 +98,7 @@ If the smoke test encounters a kernel panic, failing unit, or dependency cycle, 
 Spawns the Micro-VM with a virtual Spice/GTK display for interactive testing of desktop environments (Wayland/Hyprland/GNOME):
 
 ```bash
-neuronix try --gui
+neuronix sandbox --gui
 ```
 
 ---

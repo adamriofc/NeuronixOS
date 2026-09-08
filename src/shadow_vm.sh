@@ -69,13 +69,13 @@ show_try_help() {
     echo -e "  ${GREEN}-h, --help${RESET}             Show this usage manual\n"
     echo -e "${BOLD}EXAMPLES:${RESET}"
     echo -e "  ${DIM}# Test current system in transient RAM VM${RESET}"
-    echo -e "  neuronix try --smoke-test\n"
+    echo -e "  neuronix sandbox --smoke-test  (alias: neuronix try --smoke-test)\n"
     echo -e "  ${DIM}# Boot external ISO directly with KVM hardware acceleration${RESET}"
     echo -e "  neuronix sandbox --iso /path/to/custom.iso --gui --3d-accel\n"
     echo -e "  ${DIM}# Create or resume persistent Btrfs CoW testing sandbox${RESET}"
     echo -e "  neuronix sandbox --os alpine --persist test-lab\n"
     echo -e "  ${DIM}# Dry-run test custom configuration and promote if clean${RESET}"
-    echo -e "  neuronix try --smoke-test --promote --yes /etc/nixos/configuration.nix\n"
+    echo -e "  neuronix sandbox --smoke-test --promote --yes /etc/nixos/configuration.nix\n"
 }
 
 cleanup_shadow() {
@@ -178,8 +178,8 @@ parse_args() {
                 exit 0
                 ;;
             -*)
-                log_error "Unrecognized option '${1}' for try subcommand (tidak dikenali)."
-                echo -e "Run '${CYAN}neuronix try --help${RESET}' for valid options."
+                log_error "Unrecognized option '${1}' for sandbox subcommand (tidak dikenali)."
+                echo -e "Run '${CYAN}neuronix sandbox --help${RESET}' for valid options."
                 exit 1
                 ;;
             *)

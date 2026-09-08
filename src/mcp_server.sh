@@ -1188,7 +1188,7 @@ handle_resources_read() {
         neuronix://manual/configuration|neuronix://manual/config) target_file="$manual_dir/02_CONFIGURATION_REFERENCE.md" ;;
         neuronix://manual/cli) target_file="$manual_dir/03_CLI_REFERENCE.md" ;;
         neuronix://manual/storage) target_file="$manual_dir/04_STORAGE_AND_ROLLBACK.md" ;;
-        neuronix://manual/shadow-vm|neuronix://manual/shadow) target_file="$manual_dir/05_SHADOW_VM_AND_SANDBOX.md" ;;
+        neuronix://manual/shadow-vm|neuronix://manual/shadow|neuronix://manual/sandbox|neuronix://manual/container) target_file="$manual_dir/05_SHADOW_VM_AND_SANDBOX.md" ;;
         neuronix://manual/dev-stacks|neuronix://manual/dev) target_file="$manual_dir/06_DEVELOPER_STACKS.md" ;;
         neuronix://manual/mcp) target_file="$manual_dir/07_MCP_PROTOCOL_AND_AI_GATEWAY.md" ;;
         neuronix://manual/hardware) target_file="$manual_dir/08_HARDWARE_AND_27_PILLARS.md" ;;

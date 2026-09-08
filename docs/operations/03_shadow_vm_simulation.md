@@ -2,7 +2,7 @@
 
 ## 1. Safety Rationale
 
-Modifying core operating system configurations carries risks of unbootable setups or missing critical services. The NEURONIX Shadow Micro-VM engine (`neuronix try`) spins up an ephemeral, in-memory QEMU sandbox backed by `/dev/shm` to evaluate configurations before committing them to the host.
+Modifying core operating system configurations carries risks of unbootable setups or missing critical services. The NEURONIX In-Memory OS Sandbox engine (`neuronix sandbox`, alias `neuronix try`) spins up an ephemeral, in-memory QEMU sandbox backed by `/dev/shm` to evaluate configurations before committing them to the host.
 
 ## 2. Modes of Operation
 
@@ -17,14 +17,14 @@ The Shadow Micro-VM engine provides three execution modes:
 Boot the candidate system, verify guest readiness gates, and terminate automatically:
 
 ```bash
-neuronix try --smoke-test --headless
+neuronix sandbox --smoke-test --headless
 ```
 
 ### Candidate File Testing with Atomic Promotion
 Simulate a custom configuration file, verify health, and atomically promote to the host upon success:
 
 ```bash
-neuronix try --mode real --smoke-test --promote --yes /etc/nixos/configuration.nix
+neuronix sandbox --mode real --smoke-test --promote --yes /etc/nixos/configuration.nix
 ```
 
 > **Promotion Safety Invariant:** Host promotion via `--promote` is strictly blocked if the verification ran in synthetic simulation mode. Promotion requires verified execution in a real hardware/KVM micro-VM (`--mode real`).

@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-09-07T08:05:34Z",
-  "requested_mode": "synthetic",
+  "timestamp": "2026-09-08T03:15:47Z",
+  "requested_mode": "auto",
   "executed_mode": "synthetic",
   "kvm_available": true,
   "duration_ms": 150,

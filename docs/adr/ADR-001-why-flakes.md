@@ -13,7 +13,7 @@ In traditional (legacy channel-based) NixOS deployments, system state relies on 
 NEURONIX establishes **pure Nix Flakes (`flake.nix` & `flake.lock`)** as the mandatory standard across all system configurations, packaging specifications, and developer CLI workflows:
 - All Calamares installations produce a standalone `flake.nix` in `/etc/nixos/`.
 - Dependency pinning is cryptographically locked within `flake.lock`.
-- Enables modular, reproducible workflows such as `neuronix dev <stack>` and ephemeral micro-VM execution (`neuronix try`).
+- Enables modular, reproducible workflows such as `neuronix dev <stack>` and ephemeral micro-VM execution (`neuronix sandbox`).
 
 ## Consequences
 - **Positive:** Guaranteed bit-for-bit reproducibility across physical and virtual targets; atomic rollback points are deterministic; vulnerability audits of dependency closures are fully transparent.

@@ -29,7 +29,8 @@ This architecture decouples the AI reasoning engine from unconstrained root term
 | `neuronix_sentinel` | None | Returns boot assessment status, watchdog health, and rollback logs. |
 | `neuronix_diff` | `{"gen_a": "<str>", "gen_b": "<str>"}` | Forensically compares package closures and systemd units between generations. |
 | `neuronix_distill` | `{"packages": ["<str>"], "dry_run": <bool>}` | Reverse-compiles verified packages into declarative Flake configuration. |
-| `neuronix_sandbox` | `{"target": "<str>", "command": "<str>", "dry_run": <bool>}` | Runs isolated in-memory RAM development sandbox in `/dev/shm`. |
+| `neuronix_container` | `{"target": "<str>", "command": "<str>", "dry_run": <bool>}` | Runs ephemeral zero-copy development container in RAM (/dev/shm). |
+| `neuronix_sandbox` | `{"mode": "<str>", "iso_path": "<str>", "persist": "<str>", "dry_run": <bool>}` | Executes in-memory OS Micro-VM sandbox, ISO booting, and Btrfs CoW. |
 | `neuronix_tune` | `{"profile": "<str>"}` | Queries or applies deterministic workload tuning (gaming, battery, audio, balanced). |
 | `neuronix_mesh` | None | Queries local P2P binary cache mesh and discovered LAN neighbor nodes. |
 

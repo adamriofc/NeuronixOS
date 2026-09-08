@@ -117,13 +117,28 @@ truncate -s 10G "${TARGET_RAW}"
 step_check "RAW_ALLOC" "Allocated 10 GiB sparse raw virtual storage volume" test -f "${TARGET_RAW}"
 
 # Phase 3: Physical GPT Partitioning
-echo -e "\n${BOLD}Phase 3: Physical GPT Partition Table Layout (sgdisk)${RESET}"
-"$SGDISK_BIN" -Z "${TARGET_RAW}" >/dev/null 2>&1
-"$SGDISK_BIN" -n 1:2048:+128M -t 1:ef00 -c 1:ESP "${TARGET_RAW}" >/dev/null 2>&1
-"$SGDISK_BIN" -n 2:0:0 -t 2:8300 -c 2:ROOT "${TARGET_RAW}" >/dev/null 2>&1
-
-step_check "GPT_LAYOUT" "Verified GPT partition table contains ESP (EF00) and ROOT (8300)" \
-    bash -c "\"$SGDISK_BIN\" -p '${TARGET_RAW}' | grep -q 'EF00' && \"$SGDISK_BIN\" -p '${TARGET_RAW}' | grep -q '8300'"
+echo -e "\n${BOLD}Phase 3: Physical GPT Partition Table Layout (sgdisk / sfdisk)${RESET}"
+if command -v sgdisk >/dev/null 2>&1 || [[ -n "$SGDISK_BIN" && -x "$SGDISK_BIN" && "$SGDISK_BIN" != "sgdisk" ]]; then
+    "$SGDISK_BIN" -Z "${TARGET_RAW}" >/dev/null 2>&1 || true
+    "$SGDISK_BIN" -n 1:2048:+128M -t 1:ef00 -c 1:ESP "${TARGET_RAW}" >/dev/null 2>&1
+    "$SGDISK_BIN" -n 2:0:0 -t 2:8300 -c 2:ROOT "${TARGET_RAW}" >/dev/null 2>&1
+    step_check "GPT_LAYOUT" "Verified GPT partition table contains ESP (EF00) and ROOT (8300)" \
+        bash -c "\"$SGDISK_BIN\" -p '${TARGET_RAW}' | grep -q 'EF00' && \"$SGDISK_BIN\" -p '${TARGET_RAW}' | grep -q '8300'"
+elif command -v sfdisk >/dev/null 2>&1; then
+    sfdisk "${TARGET_RAW}" >/dev/null 2>&1 << 'SFDISK_EOF'
+label: gpt
+size=128M, type=U, name=ESP
+size=+, type=L, name=ROOT
+SFDISK_EOF
+    step_check "GPT_LAYOUT" "Verified GPT partition table contains ESP (EF00) and ROOT (8300)" \
+        bash -c "sfdisk -l '${TARGET_RAW}' | grep -E -i -q 'EFI System' && sfdisk -l '${TARGET_RAW}' | grep -E -i -q 'Linux'"
+elif command -v parted >/dev/null 2>&1; then
+    parted -s "${TARGET_RAW}" mklabel gpt mkpart ESP fat32 1MiB 129MiB set 1 esp on mkpart ROOT btrfs 129MiB 100% >/dev/null 2>&1
+    step_check "GPT_LAYOUT" "Verified GPT partition table contains ESP (EF00) and ROOT (8300)" \
+        bash -c "parted -s '${TARGET_RAW}' print | grep -q 'ESP' && parted -s '${TARGET_RAW}' print | grep -q 'ROOT'"
+else
+    step_check "GPT_LAYOUT" "Verified GPT partition table contains ESP (EF00) and ROOT (8300)" false
+fi
 
 # Phase 4: Direct Btrfs Formatting and Integrity Check
 echo -e "\n${BOLD}Phase 4: Direct Btrfs Filesystem Formatting and Integrity Verification${RESET}"

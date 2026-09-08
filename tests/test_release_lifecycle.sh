@@ -107,8 +107,8 @@ assert_check "Storage diet registered in release manifest" "grep -q '\"storage_d
 # ------------------------------------------------------------------------------
 echo -e "\n${BOLD}Phase 5: QEMU Ephemeral Micro-VM Sandbox Execution${RESET}"
 assert_check "Shadow VM script is executable" "test -x '${PROJECT_ROOT}/src/shadow_vm.sh'"
-assert_check "neuronix try dry-run executes cleanly" "${TARGET_BIN} try --dry-run"
-assert_check "neuronix try smoke-test verifies boot & store" "${TARGET_BIN} try --smoke-test"
+assert_check "neuronix sandbox dry-run executes cleanly" "${TARGET_BIN} sandbox --dry-run"
+assert_check "neuronix try alias smoke-test verifies boot & store" "${TARGET_BIN} try --smoke-test"
 assert_check "RAM disk /dev/shm has zero lingering artifacts" "test \$(ls -1 /dev/shm/neuronix_shadow_* 2>/dev/null | wc -l) -eq 0"
 
 # ------------------------------------------------------------------------------

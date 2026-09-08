@@ -34,7 +34,7 @@ The entire package hierarchy (`/nix/store`) is mounted read-only at the kernel l
 - Non-root CLI operations (`neuronix run`, `neuronix dev`) execute inside unprivileged Linux user namespaces without requiring raw root access.
 
 ### 3. Isolated Sandbox Execution
-The `neuronix try` simulation framework runs untrusted or candidate system configurations inside an ephemeral QEMU micro-VM in RAM (`/dev/shm`). Host storage access is strictly restricted to read-only 9P filesystem mounts of `/nix/store`.
+The `neuronix sandbox` simulation framework (alias: `neuronix try`) runs untrusted or candidate system configurations inside an ephemeral QEMU micro-VM in RAM (`/dev/shm`). Host storage access is strictly restricted to read-only 9P filesystem mounts of `/nix/store`.
 
 ### 4. Processor & Kernel Hardening
 - Automatic CPU microcode updates are enabled by default for Intel and AMD platforms to mitigate transient execution flaws (Spectre, Meltdown, Zenbleed).

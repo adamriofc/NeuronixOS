@@ -55,7 +55,7 @@
   - [1. Declarative Calamares Installation Engine](#1-declarative-calamares-installation-engine)
   - [2. System Control Center (neuronix-center)](#2-system-control-center-neuronix-center)
   - [3. Isolated Development Environments (neuronix dev)](#3-isolated-development-environments-neuronix-dev)
-  - [4. In-Memory Micro-VM Simulation (neuronix try)](#4-in-memory-micro-vm-simulation-neuronix-try)
+  - [4. In-Memory Micro-VM Simulation (neuronix sandbox)](#4-in-memory-micro-vm-simulation-neuronix-sandbox)
   - [5. Model Context Protocol (MCP) Server](#5-model-context-protocol-mcp-server)
   - [6. OpenCode AI System Copilot & Autonomous Updates](#6-opencode-ai-system-copilot--autonomous-updates)
   - [7. Autonomous Update Architecture & Desktop Notifier](#7-autonomous-update-architecture--desktop-notifier)
@@ -126,7 +126,7 @@ NEURONIX OS is purpose-built for technical professionals and organizations requi
   Practitioners requiring isolated, reproducible compute stacks. The `neuronix dev ai` substrate provides immediate access to PyTorch, CUDA runtime libraries, JupyterLab, and Ollama without polluting system libraries or conflicting with host NVIDIA display drivers.
 
 - **Security Analysts & Penetration Testers:**
-  Specialists requiring auditable environments with minimal attack surfaces. NEURONIX supports hardened kernel branches (`linuxPackages_hardened`), cryptographically sealed package closures, ephemeral in-memory micro-VM evaluation (`neuronix try`), and isolated execution sandboxes (`neuronix run --sandbox`).
+  Specialists requiring auditable environments with minimal attack surfaces. NEURONIX supports hardened kernel branches (`linuxPackages_hardened`), cryptographically sealed package closures, ephemeral in-memory micro-VM evaluation (`neuronix sandbox`), and isolated execution sandboxes (`neuronix run --sandbox`).
 
 - **Full-Stack & Cloud-Native Developers:**
   Engineers working across polyglot stacks (Rust, Go, Python, TypeScript, Node.js). NEURONIX eliminates global package version conflicts through instant project level development shells (`neuronix dev <stack>`), while `nix-ld` enables direct execution of standard pre-compiled dynamic ELF binaries.
@@ -242,7 +242,7 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
   │                                                                                 │
 [ LAYER 3: DEVELOPER ENGINE ]                                   [ LAYER 4: RELIABILITY & AI SUBSTRATE ]
   ├─ neuronix dev python (uv, ruff, pyright, postgresql)          ├─ Model Context Protocol (MCP) Server (JSON-RPC 2.0)
-  ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ In-Memory Shadow Micro-VM Simulator (neuronix try)
+  ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ In-Memory OS Sandbox (neuronix sandbox)
   ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Declarative Derivation Verification (neuronix verify)
   ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Storage Pruner & VirtIO TRIM (neuronix diet)
   └─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 1,077 Automated Test Assertions (100% Pass)
@@ -445,11 +445,11 @@ neuronix dev go
 neuronix dev web3
 ```
 
-### 4. In Memory Micro VM Simulation (neuronix try)
+### 4. In-Memory Micro-VM Simulation (neuronix sandbox)
 Enables verification of proposed system configurations, kernel options, or untrusted software inside an ephemeral QEMU micro-VM running entirely in memory (`/dev/shm`) with read-only 9P store pass-through:
 ```bash
 # Execute automated smoke test inside the in-memory Micro-VM
-neuronix try --smoke-test
+neuronix sandbox --smoke-test
 
 # Evaluate a target configuration file inside an isolated sandbox
 neuronix sandbox ./configuration.nix --timeout 60

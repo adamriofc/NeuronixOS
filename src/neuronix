@@ -1520,7 +1520,7 @@ cmd_manual() {
         storage|btrfs|rollback)
             target_file="$manual_dir/04_STORAGE_AND_ROLLBACK.md"
             ;;
-        shadow|vm|sandbox|microvm)
+        shadow|vm|sandbox|microvm|container)
             target_file="$manual_dir/05_SHADOW_VM_AND_SANDBOX.md"
             ;;
         dev|stacks|developer)
@@ -1548,7 +1548,7 @@ cmd_manual() {
             echo -e "  ${GREEN}index${RESET}        Master Table of Contents and System Manual Map"
             echo -e "  ${GREEN}arch${RESET}         Platform Architecture, 4-Layer Model, and Nix Substrate"
             echo -e "  ${GREEN}config${RESET}       Declarative Option Reference and Schema Contracts"
-            echo -e "  ${GREEN}cli${RESET}          Complete Command-Line Interface Manual (18 Commands)"
+            echo -e "  ${GREEN}cli${RESET}          Complete Command-Line Interface Manual (24 Subcommands)"
             echo -e "  ${GREEN}storage${RESET}      Btrfs 5-Subvolume Topology, Compression, and Rollback"
             echo -e "  ${GREEN}shadow${RESET}       Shadow Micro-VM Sandbox and Smoke Testing Engine"
             echo -e "  ${GREEN}dev${RESET}          Hermetic Developer Environments and Manifests"
