@@ -236,8 +236,7 @@ cat <<FLAKE_EOF > "$CONFIG_DIR/flake.nix"
       system = "$NIX_ARCH";
       modules = [
         ./hardware-configuration.nix
-        ./modules/services/opencode.nix
-        ./modules/services/update.nix
+        ./modules/platform.nix
         ./configuration.nix
       ];
     };

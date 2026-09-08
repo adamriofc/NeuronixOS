@@ -102,10 +102,56 @@ def resolve_fhs_paths():
         fhs["env"]["NIX_LD_LIBRARY_PATH"] = ":".join(fhs["lib_dirs"])
     return fhs
 
-def pull_and_extract_oci_image(image_ref, destination_dir):
+def safe_extract_tar(tar, destination_dir):
+    """
+    Safely extracts tarfile members, protecting against Tar Slip (directory traversal),
+    absolute path injection, device node creation, and suid/sgid privilege escalations.
+    """
+    dest_abs = os.path.realpath(os.path.abspath(destination_dir))
+    for member in tar.getmembers():
+        # Reject absolute paths
+        if member.name.startswith("/") or member.name.startswith("\\"):
+            raise ValueError(f"Insecure tar member (absolute path): {member.name}")
+
+        # Resolve target destination path
+        target_path = os.path.realpath(os.path.abspath(os.path.join(destination_dir, member.name)))
+        if not (target_path == dest_abs or target_path.startswith(dest_abs + os.sep)):
+            raise ValueError(f"Insecure tar member (path traversal attempt): {member.name}")
+
+        # Check symlinks/hardlinks
+        if member.issym() or member.islnk():
+            if os.path.isabs(member.linkname):
+                clean_link = member.linkname.lstrip("/")
+                resolved_link = os.path.realpath(os.path.abspath(os.path.join(destination_dir, clean_link)))
+                if not (resolved_link == dest_abs or resolved_link.startswith(dest_abs + os.sep)):
+                    raise ValueError(f"Insecure tar symlink escaping rootfs: {member.name} -> {member.linkname}")
+            else:
+                member_dir = os.path.dirname(target_path)
+                resolved_link = os.path.realpath(os.path.abspath(os.path.join(member_dir, member.linkname)))
+                if not (resolved_link == dest_abs or resolved_link.startswith(dest_abs + os.sep)):
+                    raise ValueError(f"Insecure tar relative symlink escaping rootfs: {member.name} -> {member.linkname}")
+
+        # Reject character/block special devices and FIFOs
+        if member.ischr() or member.isblk() or member.isfifo():
+            raise ValueError(f"Insecure tar member (device special file or FIFO): {member.name}")
+
+        # Clear setuid and setgid bits
+        member.mode = member.mode & ~(0o4000 | 0o2000)
+
+    # Perform extraction with standard filter if available
+    if hasattr(tarfile, "data_filter"):
+        try:
+            tar.extractall(destination_dir, filter="data")
+            return
+        except Exception:
+            pass
+    tar.extractall(destination_dir)
+
+def pull_and_extract_oci_image(image_ref, destination_dir, allow_synthetic=False):
     """
     Daemonless OCI / Docker Hub layer extractor.
     Downloads and unpacks image layers directly into destination_dir/rootfs in RAM tmpfs.
+    Enforces strict failure handling with zero synthetic fallback unless allow_synthetic=True.
     """
     clean_ref = image_ref
     if clean_ref.startswith("docker://"):
@@ -166,6 +212,9 @@ def pull_and_extract_oci_image(image_ref, destination_dir):
                     man_data = json.loads(s_resp.read().decode("utf-8"))
 
         layers = man_data.get("layers", [])
+        if not layers:
+            raise ValueError(f"No layers found in manifest for {repo}:{tag}")
+
         for layer in layers:
             l_digest = layer.get("digest")
             if not l_digest:
@@ -181,23 +230,28 @@ def pull_and_extract_oci_image(image_ref, destination_dir):
                 layer_tmp.close()
                 try:
                     with tarfile.open(layer_tmp.name, "r:*") as tf:
-                        tf.extractall(rootfs_dir)
+                        safe_extract_tar(tf, rootfs_dir)
                     metadata["layers_extracted"] += 1
                 finally:
                     if os.path.exists(layer_tmp.name):
                         os.unlink(layer_tmp.name)
+
+        return rootfs_dir, metadata, "OCI rootfs successfully extracted in RAM"
     except Exception as e:
-        # Fallback to synthesizing minimal functional rootfs for offline or test environments
-        for d in ["bin", "etc", "usr", "lib", "tmp", "home", "root"]:
-            os.makedirs(os.path.join(rootfs_dir, d), exist_ok=True)
-        with open(os.path.join(rootfs_dir, "etc", "os-release"), "w") as f:
-            f.write(f"NAME=\"NEURONIX OCI ({clean_ref})\"\nID=neuronix-oci\nPRETTY_NAME=\"NEURONIX Daemonless OCI Container\"\n")
-        metadata["offline_synthetic"] = True
-        metadata["notice"] = f"Initialized ephemeral container rootfs (network resolution notice: {e})"
+        if allow_synthetic:
+            # Fallback to synthesizing minimal functional rootfs for hermetic offline test environments
+            for d in ["bin", "etc", "usr", "lib", "tmp", "home", "root"]:
+                os.makedirs(os.path.join(rootfs_dir, d), exist_ok=True)
+            with open(os.path.join(rootfs_dir, "etc", "os-release"), "w") as f:
+                f.write(f"NAME=\"NEURONIX OCI ({clean_ref})\"\nID=neuronix-oci\nPRETTY_NAME=\"NEURONIX Daemonless OCI Container\"\n")
+            metadata["offline_synthetic"] = True
+            metadata["notice"] = f"Initialized ephemeral container rootfs (network resolution notice: {e})"
+            return rootfs_dir, metadata, "Offline synthetic rootfs prepared in RAM"
+        else:
+            shutil.rmtree(rootfs_dir, ignore_errors=True)
+            return None, metadata, f"Failed to pull OCI image '{image_ref}': {e}"
 
-    return rootfs_dir, metadata, "OCI rootfs successfully extracted in RAM"
-
-def setup_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True):
+def setup_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True, allow_synthetic=False):
     """Allocates ephemeral RAM workspace and clones/stages target repository or OCI image."""
     if require_ram:
         if not (os.path.isdir(custom_shm_base) and os.access(custom_shm_base, os.W_OK)):
@@ -214,7 +268,10 @@ def setup_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True):
     project_name = "workspace"
 
     if is_oci_url(target):
-        rootfs_dir, meta, msg = pull_and_extract_oci_image(target, workspace_dir)
+        rootfs_dir, meta, msg = pull_and_extract_oci_image(target, workspace_dir, allow_synthetic=allow_synthetic)
+        if not rootfs_dir:
+            shutil.rmtree(workspace_dir, ignore_errors=True)
+            return None, None, msg
         active_dir = rootfs_dir
     elif is_git_url(target):
         project_name = target.rstrip("/").split("/")[-1]
@@ -252,23 +309,27 @@ def setup_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True):
 
         try:
             shutil.copytree(target, active_dir, symlinks=True, ignore=_ignore_special, ignore_dangling_symlinks=True)
-        except Exception:
-            os.makedirs(active_dir, exist_ok=True)
+        except Exception as e:
+            shutil.rmtree(workspace_dir, ignore_errors=True)
+            return None, None, f"Failed to stage target directory in RAM workspace: {e}"
     else:
         active_dir = workspace_dir
 
     return workspace_dir, active_dir, "Workspace successfully prepared in RAM"
 
-def run_container_session(active_dir, command=None, env_vars=None, enable_fhs=True):
-    """Executes a command or launches an interactive shell inside the container with FHS emulation."""
-    if not active_dir or not os.path.isdir(active_dir):
-        return 1, "Invalid container directory"
-
+def build_bwrap_command(active_dir, command=None, enable_fhs=True, unshare_net=False, extra_binds=None, extra_env=None):
+    """
+    Constructs an isolated bubblewrap execution command or fallback subshell command.
+    Ensures private PID, UTS, IPC namespaces, dynamic FHS emulation, and optional network unsharing.
+    Returns (cmd_tokens, env_dict).
+    """
     has_bwrap = shutil.which("bwrap") is not None
     user = os.environ.get("USER", "neuronix")
 
-    # Detect if active_dir is an OCI rootfs (contains /bin or /etc)
-    is_oci_rootfs = os.path.isdir(os.path.join(active_dir, "bin")) and os.path.isdir(os.path.join(active_dir, "etc"))
+    # Detect if active_dir is an OCI rootfs (contains /bin or /usr/bin and /etc)
+    is_oci_rootfs = (os.path.isdir(os.path.join(active_dir, "bin")) or 
+                     os.path.isdir(os.path.join(active_dir, "usr", "bin"))) and \
+                    os.path.isdir(os.path.join(active_dir, "etc"))
 
     if has_bwrap:
         bwrap_cmd = [
@@ -278,9 +339,10 @@ def run_container_session(active_dir, command=None, env_vars=None, enable_fhs=Tr
             "--unshare-uts",
             "--unshare-ipc"
         ]
+        if unshare_net:
+            bwrap_cmd.append("--unshare-net")
 
         if is_oci_rootfs:
-            # Mount OCI rootfs as container root
             bwrap_cmd.extend([
                 "--bind", active_dir, "/",
                 "--dev", "/dev",
@@ -308,7 +370,6 @@ def run_container_session(active_dir, command=None, env_vars=None, enable_fhs=Tr
                 "--setenv", "LANG", os.environ.get("LANG", "C.UTF-8")
             ])
 
-            # Dynamic Transparent FHS Emulation: Bind standard dynamic linker and shared libraries
             if enable_fhs:
                 fhs = resolve_fhs_paths()
                 if os.path.isdir("/usr/lib"):
@@ -328,32 +389,54 @@ def run_container_session(active_dir, command=None, env_vars=None, enable_fhs=Tr
             "--setenv", "NEURONIX_SANDBOX", "1"
         ])
 
-        if os.path.exists("/etc/resolv.conf"):
+        if not unshare_net and os.path.exists("/etc/resolv.conf"):
             bwrap_cmd.extend(["--ro-bind", "/etc/resolv.conf", "/etc/resolv.conf"])
         if os.path.exists("/etc/ssl"):
             bwrap_cmd.extend(["--ro-bind", "/etc/ssl", "/etc/ssl"])
+
+        # Bind extra files/directories if provided
+        if extra_binds:
+            for host_src, container_dest, ro in extra_binds:
+                if os.path.exists(host_src):
+                    flag = "--ro-bind" if ro else "--bind"
+                    bwrap_cmd.extend([flag, host_src, container_dest])
+
+        # Apply extra env vars
+        if extra_env:
+            for k, v in extra_env.items():
+                bwrap_cmd.extend(["--setenv", str(k), str(v)])
 
         if command:
             bwrap_cmd.extend(["bash", "-c", command])
         else:
             bwrap_cmd.extend(["bash"])
 
-        res = subprocess.run(bwrap_cmd, check=False)
-        return res.returncode, "Container session closed"
+        return bwrap_cmd, None
     else:
-        # Unprivileged subshell fallback with sanitized credentials
         sub_env = sanitize_environment()
         sub_env["HOME"] = active_dir
         if enable_fhs:
             fhs = resolve_fhs_paths()
             sub_env.update(fhs.get("env", {}))
-        if env_vars:
-            sub_env.update(env_vars)
-        if command:
-            res = subprocess.run(["bash", "-c", command], cwd=active_dir, env=sub_env, check=False)
-        else:
-            res = subprocess.run(["bash"], cwd=active_dir, env=sub_env, check=False)
-        return res.returncode, "Subshell session closed"
+        if extra_env:
+            sub_env.update(extra_env)
+        tokens = ["bash", "-c", command] if command else ["bash"]
+        return tokens, sub_env
+
+def run_container_session(active_dir, command=None, env_vars=None, enable_fhs=True, unshare_net=False):
+    """Executes a command or launches an interactive shell inside the container with FHS emulation."""
+    if not active_dir or not os.path.isdir(active_dir):
+        return 1, "Invalid container directory"
+
+    cmd_tokens, sub_env = build_bwrap_command(
+        active_dir,
+        command=command,
+        enable_fhs=enable_fhs,
+        unshare_net=unshare_net,
+        extra_env=env_vars
+    )
+    res = subprocess.run(cmd_tokens, cwd=active_dir, env=sub_env, check=False)
+    return res.returncode, "Container session closed"
 
 # Backward-compatible alias
 run_sandbox_session = run_container_session
@@ -381,10 +464,10 @@ def synthesize_micro_dns_hosts(services, scratch_dir):
         f.write("\n".join(lines) + "\n")
     return hosts_path, service_ips
 
-def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None):
+def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None, allow_secret_env=False):
     """
     Ephemeral Multi-Service Stack Orchestrator (Alternative to docker-compose).
-    Runs multi-service declarative definitions in RAM with isolated IPC, Micro-DNS & graceful termination.
+    Runs multi-service declarative definitions in RAM with isolated Bubblewrap containers, Micro-DNS & graceful termination.
     """
     if not os.path.isfile(stack_file):
         return {
@@ -417,24 +500,41 @@ def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None):
 
     # Allocate ephemeral stack workspace
     ws_dir, _, msg = setup_ram_workspace(tempfile.gettempdir(), custom_shm_base=custom_shm_base)
+    if not ws_dir:
+        return {"status": "error", "message": f"Failed to allocate RAM workspace for stack: {msg}"}
+
     hosts_file, service_ips = synthesize_micro_dns_hosts(services, ws_dir)
     procs = {}
     statuses = {}
 
     for name, s_cfg in services.items():
         cmd = s_cfg.get("command") or s_cfg.get("run") or f"echo 'Starting service {name}'"
-        env = sanitize_environment()
-        env["NEURONIX_STACK_HOSTS"] = hosts_file
-        env["HOSTALIASES"] = hosts_file
+        svc_env = {
+            "NEURONIX_STACK_HOSTS": hosts_file,
+            "HOSTALIASES": hosts_file
+        }
         for svc_name, svc_ip in service_ips.items():
-            env[f"SERVICE_{svc_name.upper()}_IP"] = svc_ip
-            env[f"SERVICE_{svc_name.upper()}_HOST"] = f"{svc_name}.local"
+            svc_env[f"SERVICE_{svc_name.upper()}_IP"] = svc_ip
+            svc_env[f"SERVICE_{svc_name.upper()}_HOST"] = f"{svc_name}.local"
 
         if "env" in s_cfg and isinstance(s_cfg["env"], dict):
-            env.update({k: str(v) for k, v in s_cfg["env"].items()})
+            for k, v in s_cfg["env"].items():
+                k_upper = str(k).upper()
+                if not allow_secret_env:
+                    if any(pat in k_upper for pat in SENSITIVE_ENV_PATTERNS) or k in SENSITIVE_ENV_EXACT:
+                        continue
+                svc_env[str(k)] = str(v)
         
         try:
-            p = subprocess.Popen(["bash", "-c", cmd], cwd=ws_dir, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # Wrap service inside container bubblewrap isolation with Micro-DNS hosts file mounted
+            extra_binds = [(hosts_file, "/etc/hosts", True)]
+            cmd_tokens, sub_env = build_bwrap_command(
+                ws_dir,
+                command=cmd,
+                extra_binds=extra_binds,
+                extra_env=svc_env
+            )
+            p = subprocess.Popen(cmd_tokens, cwd=ws_dir, env=sub_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             procs[name] = p
             statuses[name] = {"pid": p.pid, "command": cmd, "status": "running", "ip": service_ips.get(name, "127.0.0.1")}
         except Exception as pe:
@@ -467,15 +567,36 @@ def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None):
 def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", entrypoint=None):
     """
     Declarative Nix-to-OCI Micro-Layer Compiler.
-    Compiles target source or derivation into a standard, zero-bloat OCI image tarball.
+    Compiles target source, Nix closure, or derivation into a standard OCI image tarball.
+    Generates OCI Image Layout (oci-layout, index.json) and Docker archive format (manifest.json, repositories, config.json, layer.tar).
     """
     if not os.path.exists(target):
         return False, f"Target path does not exist: {target}"
 
     src_dir = target if os.path.isdir(target) else os.path.dirname(os.path.abspath(target))
     
+    # Check if target is a Nix flake or derivation
+    is_nix = os.path.isfile(os.path.join(src_dir, "flake.nix")) or \
+             os.path.isfile(os.path.join(src_dir, "default.nix")) or \
+             target.startswith("/nix/store/")
+
+    nix_store_paths = []
+    if is_nix and shutil.which("nix"):
+        try:
+            eval_target = target if target.startswith("/nix/store/") else src_dir
+            res = subprocess.run(
+                ["nix", "path-info", "-r", eval_target],
+                capture_output=True, text=True, timeout=15, check=False
+            )
+            if res.returncode == 0:
+                nix_store_paths = [p.strip() for p in res.stdout.strip().splitlines() if p.strip().startswith("/nix/store/")]
+        except Exception:
+            pass
+
     if not entrypoint:
-        if os.path.isfile(os.path.join(src_dir, "flake.nix")):
+        if is_nix and nix_store_paths:
+            entrypoint = ["/bin/sh"]
+        elif os.path.isfile(os.path.join(src_dir, "flake.nix")):
             entrypoint = ["/bin/sh"]
         elif os.path.isfile(os.path.join(src_dir, "main.py")):
             entrypoint = ["python3", "main.py"]
@@ -500,6 +621,10 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
                     continue
                 p = os.path.join(src_dir, item)
                 tar.add(p, arcname=os.path.join("app", item) if not item.startswith("bin") else item)
+
+            for sp in nix_store_paths:
+                if os.path.exists(sp):
+                    tar.add(sp, arcname=sp.lstrip("/"))
 
         with open(layer_tar, "rb") as f:
             while chunk := f.read(65536):
@@ -538,15 +663,40 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
         with open(manifest_file, "wb") as f:
             f.write(manifest_bytes)
 
-        repositories_data = {repo: {tag: layer_sha}}
+        # Map repo tag to config JSON digest (standard modern Docker format)
+        repositories_data = {repo: {tag: config_sha}}
         repo_bytes = json.dumps(repositories_data, indent=2).encode("utf-8")
         repo_file = os.path.join(td, "repositories")
         with open(repo_file, "wb") as f:
             f.write(repo_bytes)
 
+        # OCI Layout compatibility
+        oci_layout_file = os.path.join(td, "oci-layout")
+        with open(oci_layout_file, "w") as f:
+            json.dump({"imageLayoutVersion": "1.0.0"}, f)
+
+        index_data = {
+            "schemaVersion": 2,
+            "manifests": [
+                {
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                    "digest": f"sha256:{config_sha}",
+                    "size": len(config_bytes),
+                    "annotations": {
+                        "org.opencontainers.image.ref.name": f"{repo}:{tag}"
+                    }
+                }
+            ]
+        }
+        index_file = os.path.join(td, "index.json")
+        with open(index_file, "w") as f:
+            json.dump(index_data, f, indent=2)
+
         with tarfile.open(output_tar, "w") as out:
             out.add(manifest_file, arcname="manifest.json")
             out.add(repo_file, arcname="repositories")
+            out.add(oci_layout_file, arcname="oci-layout")
+            out.add(index_file, arcname="index.json")
             out.add(config_file, arcname=f"{config_sha}.json")
             out.add(layer_tar, arcname="layer.tar")
 
@@ -554,10 +704,11 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
 
 CONTAINER_RUNTIME_DIR = os.path.expanduser("~/.local/share/neuronix/containers")
 
-def daemonize_container_session(target, name, command=None, custom_shm_base="/dev/shm"):
+def daemonize_container_session(target, name, command=None, custom_shm_base="/dev/shm", enable_fhs=True, unshare_net=False):
     """
     Spawns an isolated container session as a background daemon without Docker daemon.
     Supervised via systemd-run --user when available, or detached process supervisor.
+    Ensures background execution runs inside container bubblewrap isolation.
     """
     if not name or not isinstance(name, str):
         return False, "Container daemon name must be specified"
@@ -578,12 +729,18 @@ def daemonize_container_session(target, name, command=None, custom_shm_base="/de
             except OSError:
                 pass
 
-    ws_dir, _, msg = setup_ram_workspace(target, custom_shm_base=custom_shm_base)
-    exec_cmd = command if command else "while true; do sleep 3600; done"
-    env = sanitize_environment()
-    env["NEURONIX_CONTAINER_DAEMON"] = clean_name
+    ws_dir, act_dir, msg = setup_ram_workspace(target, custom_shm_base=custom_shm_base)
+    if not ws_dir:
+        return False, f"Failed to allocate workspace: {msg}"
 
-    cmd_tokens = ["bash", "-c", exec_cmd]
+    exec_cmd = command if command else "while true; do sleep 3600; done"
+    cmd_tokens, sub_env = build_bwrap_command(
+        act_dir,
+        command=exec_cmd,
+        enable_fhs=enable_fhs,
+        unshare_net=unshare_net,
+        extra_env={"NEURONIX_CONTAINER_DAEMON": clean_name}
+    )
 
     if shutil.which("systemd-run") and os.environ.get("XDG_RUNTIME_DIR"):
         unit_name = f"neuronix-container-{clean_name}.service"
@@ -592,9 +749,8 @@ def daemonize_container_session(target, name, command=None, custom_shm_base="/de
             f"--unit={unit_name}",
             "--description=NEURONIX Ephemeral Container Daemon",
             "--remain-after-exit=no",
-            f"--working-directory={ws_dir}",
-            "bash", "-c", exec_cmd
-        ]
+            f"--working-directory={act_dir}"
+        ] + cmd_tokens
         try:
             res = subprocess.run(sys_cmd, capture_output=True, text=True, timeout=5)
             if res.returncode == 0:
@@ -609,8 +765,8 @@ def daemonize_container_session(target, name, command=None, custom_shm_base="/de
     log_file = open(os.path.join(runtime_dir, "daemon.log"), "w")
     proc = subprocess.Popen(
         cmd_tokens,
-        cwd=ws_dir,
-        env=env,
+        cwd=act_dir,
+        env=sub_env,
         stdout=log_file,
         stderr=log_file,
         start_new_session=True
@@ -730,7 +886,7 @@ def export_container_oci(source_dir, output_tar, tag="latest", repo="neuronix-ap
 
         repositories_data = {
             repo: {
-                tag: layer_sha
+                tag: config_sha
             }
         }
         repo_bytes = json.dumps(repositories_data, indent=2).encode("utf-8")
@@ -738,9 +894,14 @@ def export_container_oci(source_dir, output_tar, tag="latest", repo="neuronix-ap
         with open(repo_file, "wb") as f:
             f.write(repo_bytes)
 
+        oci_layout_file = os.path.join(td, "oci-layout")
+        with open(oci_layout_file, "w") as f:
+            json.dump({"imageLayoutVersion": "1.0.0"}, f)
+
         with tarfile.open(output_tar, "w") as out:
             out.add(manifest_file, arcname="manifest.json")
             out.add(repo_file, arcname="repositories")
+            out.add(oci_layout_file, arcname="oci-layout")
             out.add(config_file, arcname=f"{config_sha}.json")
             out.add(layer_tar, arcname="layer.tar")
 

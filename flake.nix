@@ -30,6 +30,7 @@
 
       # Reusable declarative NEURONIX modules
       nixosModules = {
+        platform = import ./modules/platform.nix;
         core = import ./modules/core;
         hardware = import ./modules/hardware/boot.nix;
         secureboot = import ./modules/hardware/secureboot.nix;
@@ -60,23 +61,7 @@
       nixosConfigurations."neuronix-desktop" = nixpkgs.lib.nixosSystem {
         system = primarySystem;
         modules = [
-          ./modules/core
-          ./modules/hardware/boot.nix
-          ./modules/hardware/firmware.nix
-          ./modules/hardware/audio.nix
-          ./modules/hardware/power.nix
-          ./modules/hardware/cpu.nix
-          ./modules/services/memory-shield.nix
-          ./modules/services/storage.nix
-          ./modules/services/flatpak.nix
-          ./modules/services/network.nix
-          ./modules/services/desktop-tweaks.nix
-          ./modules/services/printing.nix
-          ./modules/services/security.nix
-          ./modules/services/opencode.nix
-          ./modules/services/update.nix
-          ./modules/hardware/tuning.nix
-          ./modules/services/mesh.nix
+          ./modules/platform.nix
           ./modules/desktop/gnome.nix
           ./hosts/desktop
         ];
@@ -86,23 +71,7 @@
       nixosConfigurations."neuronix-desktop-aarch64" = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
         modules = [
-          ./modules/core
-          ./modules/hardware/boot.nix
-          ./modules/hardware/firmware.nix
-          ./modules/hardware/audio.nix
-          ./modules/hardware/power.nix
-          ./modules/hardware/cpu.nix
-          ./modules/services/memory-shield.nix
-          ./modules/services/storage.nix
-          ./modules/services/flatpak.nix
-          ./modules/services/network.nix
-          ./modules/services/desktop-tweaks.nix
-          ./modules/services/printing.nix
-          ./modules/services/security.nix
-          ./modules/services/opencode.nix
-          ./modules/services/update.nix
-          ./modules/hardware/tuning.nix
-          ./modules/services/mesh.nix
+          ./modules/platform.nix
           ./modules/desktop/gnome.nix
           ./hosts/desktop
         ];

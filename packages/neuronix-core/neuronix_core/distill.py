@@ -10,6 +10,7 @@ import re
 import json
 import subprocess
 import shutil
+import tempfile
 
 USER_PACKAGES_MODULE_PATH = "/etc/nixos/modules/custom/user-packages.nix"
 FALLBACK_REPO_MODULE = os.path.join(
@@ -26,6 +27,22 @@ def verify_package_in_nixpkgs(package_name):
     if os.path.exists("/nix/var/nix/daemon-socket/socket") or "NIX_REMOTE" in env:
         env.setdefault("NIX_REMOTE", "daemon")
 
+    # 1. First probe against locked nixpkgs flake input if available
+    flake_locations = ["/etc/nixos", os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))]
+    for floc in flake_locations:
+        if os.path.isfile(os.path.join(floc, "flake.lock")) and shutil.which("nix"):
+            try:
+                eval_cmd = [
+                    "nix", "eval", "--extra-experimental-features", "nix-command flakes",
+                    f"{floc}#nixosConfigurations.neuronix-desktop.pkgs.{package_name}.name"
+                ]
+                res = subprocess.run(eval_cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=8, check=False)
+                if res.returncode == 0:
+                    return True, "Valid pure derivation in locked flake nixpkgs"
+            except Exception:
+                pass
+
+    # 2. Probe via nixpkgs channel / instantiate
     cmd = ["nix-instantiate", "<nixpkgs>", "-A", package_name]
     try:
         res = subprocess.run(
@@ -137,35 +154,41 @@ def distill_packages(packages, dry_run=False, force=False):
             "proposed_content": new_content
         }
 
-    # Write file with backup
-    backup_file = target_file + ".bak"
+    # Atomic file replacement: write to temp file in target dir -> parse -> fsync -> atomic replace
+    tmp_target = tempfile.NamedTemporaryFile(dir=target_dir, prefix=".user-packages-", suffix=".tmp", delete=False)
     try:
-        if os.path.exists(target_file):
-            shutil.copy2(target_file, backup_file)
-        with open(target_file, "w") as f:
-            f.write(new_content)
+        tmp_target.write(new_content.encode("utf-8"))
+        tmp_target.flush()
+        os.fsync(tmp_target.fileno())
+        tmp_target.close()
+
+        # Verify Nix syntax of modified file BEFORE replacing target!
+        syntax_cmd = ["nix-instantiate", "--parse", tmp_target.name]
+        syntax_res = subprocess.run(syntax_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        if syntax_res.returncode != 0:
+            if os.path.exists(tmp_target.name):
+                os.unlink(tmp_target.name)
+            return {
+                "status": "error",
+                "message": "Syntax validation failed on generated Nix configuration.",
+                "error_detail": syntax_res.stderr.decode("utf-8", errors="ignore")
+            }
+
+        os.replace(tmp_target.name, target_file)
     except PermissionError:
+        if os.path.exists(tmp_target.name):
+            os.unlink(tmp_target.name)
         return {
             "status": "error",
             "message": f"Permission denied writing to {target_file}. Elevate privileges with sudo."
         }
-
-    # Verify Nix syntax of modified file
-    syntax_cmd = ["nix-instantiate", "--parse", target_file]
-    syntax_res = subprocess.run(syntax_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    if syntax_res.returncode != 0:
-        # Revert immediately
-        if os.path.exists(backup_file):
-            shutil.copy2(backup_file, target_file)
-            os.remove(backup_file)
+    except Exception as e:
+        if os.path.exists(tmp_target.name):
+            os.unlink(tmp_target.name)
         return {
             "status": "error",
-            "message": "Syntax validation failed after file modification. Reverted to previous state.",
-            "error_detail": syntax_res.stderr.decode("utf-8", errors="ignore")
+            "message": f"Failed to distill packages into {target_file}: {e}"
         }
-
-    if os.path.exists(backup_file):
-        os.remove(backup_file)
 
     return {
         "status": "success",

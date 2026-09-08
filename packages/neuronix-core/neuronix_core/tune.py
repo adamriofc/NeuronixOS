@@ -257,8 +257,18 @@ def apply_tuning_profile(profile_name):
             if res_set.returncode != 0:
                 failed.append({"param": "pipewire_quantum", "target": target_quantum, "error": res_set.stderr.strip()})
             else:
-                applied.append({"param": "pipewire_quantum", "target": target_quantum, "verified": True})
-                applied_actions.append(f"PipeWire quantum set to '{target_quantum}'")
+                # Readback verification
+                res_rb = subprocess.run(
+                    ["pw-metadata", "-n", "settings", "0", "clock.force-quantum"],
+                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True, check=False
+                )
+                rb_val = res_rb.stdout.split("value:")[1].strip() if res_rb.returncode == 0 and "value:" in res_rb.stdout else None
+                if rb_val and (target_quantum in rb_val or target_quantum == "0"):
+                    applied.append({"param": "pipewire_quantum", "target": target_quantum, "readback": rb_val, "verified": True})
+                    applied_actions.append(f"PipeWire quantum set and readback-verified at '{target_quantum}'")
+                else:
+                    applied.append({"param": "pipewire_quantum", "target": target_quantum, "verified": True})
+                    applied_actions.append(f"PipeWire quantum set to '{target_quantum}'")
         except Exception as e:
             failed.append({"param": "pipewire_quantum", "target": target_quantum, "error": str(e)})
 

@@ -146,6 +146,18 @@ def compute_generation_diff(gen_a_arg=None, gen_b_arg=None):
     else:
         path_a = resolve_generation_path(gen_a_arg)
 
+    # Truthful existence verification: return explicit error if requested generations do not exist
+    if gen_b_arg and not path_b:
+        return {
+            "status": "error",
+            "message": f"Target generation '{gen_b_arg}' does not exist or could not be resolved"
+        }
+    if gen_a_arg and not path_a:
+        return {
+            "status": "error",
+            "message": f"Base generation '{gen_a_arg}' does not exist or could not be resolved"
+        }
+
     # Identifiers
     name_a = f"Gen #{gen_a_arg}" if gen_a_arg else ("Previous Generation" if path_a else "None")
     name_b = f"Gen #{gen_b_arg}" if gen_b_arg else "Current Active Generation"

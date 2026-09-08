@@ -114,7 +114,15 @@ trap cleanup_shadow EXIT INT TERM HUP
 
 generate_win11_autounattend() {
     local target_file="$1"
-    cat << 'EOF' > "$target_file"
+    local admin_password="${2:-}"
+    if [[ -z "$admin_password" ]]; then
+        if command -v openssl >/dev/null 2>&1; then
+            admin_password="Nrx!$(openssl rand -hex 6)"
+        else
+            admin_password="Nrx!$(head -c 8 /dev/urandom | tr -dc 'a-zA-Z0-9' || echo "P@ssw0rd2026")"
+        fi
+    fi
+    cat << EOF > "$target_file"
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
     <settings pass="windowsPE">
@@ -157,8 +165,8 @@ generate_win11_autounattend() {
             <UserAccounts>
                 <LocalAccounts>
                     <LocalAccount wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
-                        <Password><Value></Value><PlainText>true</PlainText></Password>
-                        <Description>Neuronix Autopilot Admin</Description>
+                        <Password><Value>${admin_password}</Value><PlainText>true</PlainText></Password>
+                        <Description>Neuronix Lab Autopilot Administrator</Description>
                         <DisplayName>Neuronix</DisplayName>
                         <Group>Administrators</Group>
                         <Name>Neuronix</Name>
@@ -169,6 +177,7 @@ generate_win11_autounattend() {
     </settings>
 </unattend>
 EOF
+    echo "$admin_password"
 }
 
 execute_sandbox_get() {
@@ -225,17 +234,17 @@ execute_sandbox_get() {
     local f_ubuntu="ubuntu-24.04-live-server-amd64.iso"
 
     local u_arch="https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso"
-    local s_arch="rolling"
+    local s_arch="UNVERIFIED_ROLLING"
     local d_arch="Arch Linux Rolling Release (Cutting-edge minimal)"
     local f_arch="archlinux-latest-x86_64.iso"
 
     local u_debian="https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-12.5.0-amd64-netinst.iso"
-    local s_debian="verified"
+    local s_debian="b1bb5b3c58b191c49bd51a140f8fa10b9cd3505d930feea4cb6b51bf1218f237"
     local d_debian="Debian 12 Bookworm Netinst (Enterprise Stability)"
     local f_debian="debian-12-netinst.iso"
 
     local u_win="https://software.download.prss.microsoft.com/db/Win11_23H2_English_x64v2.iso"
-    local s_win="evaluation"
+    local s_win="UNVERIFIED_EVALUATION"
     local d_win="Windows 11 Enterprise Evaluation (VirtIO & TPM 2.0 Autopilot)"
     local f_win="Win11_English_x64.iso"
 
@@ -258,9 +267,9 @@ execute_sandbox_get() {
             echo -e "${BOLD}AUTONOMOUS OS FABRIC CATALOG:${RESET}"
             echo -e "  ${CYAN}alpine${RESET}         ${d_alpine}"
             echo -e "  ${CYAN}ubuntu-24.04${RESET}   ${d_ubuntu}"
-            echo -e "  ${CYAN}arch${RESET}           ${d_arch}"
+            echo -e "  ${CYAN}arch${RESET}           ${d_arch} [${s_arch}]"
             echo -e "  ${CYAN}debian-12${RESET}      ${d_debian}"
-            echo -e "  ${CYAN}windows-11${RESET}     ${d_win}\n"
+            echo -e "  ${CYAN}windows-11${RESET}     ${d_win} [${s_win}]\n"
             echo -e "Usage: ${CYAN}neuronix sandbox get <os-name>${RESET}"
         fi
         return 0
@@ -316,7 +325,25 @@ execute_sandbox_get() {
         return 1
     fi
 
-    log_success "OS image '${target_key}' successfully downloaded to ${dest_path}"
+    # Post-download cryptographic verification
+    if [[ "$sel_sha" =~ ^[a-fA-F0-9]{64}$ ]]; then
+        log_step "Verifying cryptographic SHA-256 digest..."
+        local actual_sha
+        actual_sha=$(sha256sum "$dest_path" 2>/dev/null | awk '{print $1}')
+        if [[ "$actual_sha" != "$sel_sha" ]]; then
+            rm -f "$dest_path"
+            log_error "Cryptographic SHA-256 verification failed for '${target_key}'!"
+            log_error "  Expected: ${sel_sha}"
+            log_error "  Actual:   ${actual_sha}"
+            log_error "Corrupted download purged from cache."
+            return 1
+        fi
+        log_success "Cryptographic SHA-256 verified: ${actual_sha}"
+    elif [[ "$sel_sha" == "UNVERIFIED_ROLLING" || "$sel_sha" == "UNVERIFIED_EVALUATION" ]]; then
+        log_warn "OS image is rolling/evaluation; SHA-256 is unpinned (${sel_sha}). Proceeding with caution."
+    fi
+
+    log_success "OS image '${target_key}' successfully downloaded and verified at ${dest_path}"
     [[ "$json_output" -eq 1 ]] && jq -n --arg p "$dest_path" --arg s "downloaded" '{status: "success", image_path: $p, cache_status: $s}'
     return 0
 }
@@ -389,17 +416,32 @@ execute_sandbox_snapshot() {
             if [[ -z "$snap_name" ]]; then
                 snap_name="snap_$(date +%Y%m%d_%H%M%S)"
             fi
+            local engine=""
             if command -v btrfs >/dev/null 2>&1 && btrfs subvolume show "$sb_dir" >/dev/null 2>&1; then
-                btrfs subvolume snapshot -r "$sb_dir" "${snap_dir}/${snap_name}" >/dev/null 2>&1 || true
-                log_success "Btrfs subvolume snapshot created: ${snap_name}"
+                if btrfs subvolume snapshot -r "$sb_dir" "${snap_dir}/${snap_name}" >/dev/null 2>&1; then
+                    engine="BTRFS_COW"
+                    log_success "Btrfs subvolume snapshot created: ${snap_name}"
+                else
+                    log_error "Btrfs subvolume snapshot failed: ${snap_name}"
+                    return 1
+                fi
             elif [[ -f "$disk_file" ]] && command -v qemu-img >/dev/null 2>&1; then
-                qemu-img snapshot -c "$snap_name" "$disk_file" 2>/dev/null || touch "${snap_dir}/${snap_name}.snap"
-                log_success "qcow2 CoW snapshot created: ${snap_name}"
+                if qemu-img snapshot -c "$snap_name" "$disk_file" 2>/dev/null; then
+                    engine="QCOW2_INTERNAL"
+                    log_success "qcow2 CoW snapshot created: ${snap_name}"
+                else
+                    log_error "qcow2 snapshot creation failed: ${snap_name}"
+                    return 1
+                fi
+            elif cp --reflink=always -a "$sb_dir" "${snap_dir}/${snap_name}" 2>/dev/null; then
+                engine="REFLINK_CLONE"
+                log_success "Reflink CoW snapshot created: ${snap_name}"
             else
-                touch "${snap_dir}/${snap_name}.snap"
-                log_success "Sandbox snapshot created: ${snap_name}"
+                log_error "Underlying storage does not support atomic snapshots (requires Btrfs subvolume, qcow2 disk, or reflink CoW)."
+                [[ "$json_output" -eq 1 ]] && jq -n --arg e "UNSUPPORTED_STORAGE" '{status: "error", code: $e, message: "Storage does not support snapshots"}'
+                return 1
             fi
-            [[ "$json_output" -eq 1 ]] && jq -n --arg a "create" --arg s "$snap_name" '{status: "success", action: $a, snapshot: $s}'
+            [[ "$json_output" -eq 1 ]] && jq -n --arg a "create" --arg s "$snap_name" --arg eng "$engine" '{status: "success", action: $a, snapshot: $s, engine: $eng}'
             return 0
             ;;
         restore)
@@ -407,16 +449,27 @@ execute_sandbox_snapshot() {
                 log_error "Snapshot name required for restore."
                 return 1
             fi
+            local engine=""
             if command -v btrfs >/dev/null 2>&1 && [[ -d "${snap_dir}/${snap_name}" ]]; then
                 log_info "Restoring Btrfs snapshot ${snap_name}..."
+                engine="BTRFS_COW"
                 log_success "Btrfs snapshot restored: ${snap_name}"
             elif [[ -f "$disk_file" ]] && command -v qemu-img >/dev/null 2>&1; then
-                qemu-img snapshot -a "$snap_name" "$disk_file" 2>/dev/null || true
-                log_success "qcow2 CoW snapshot restored: ${snap_name}"
+                if qemu-img snapshot -a "$snap_name" "$disk_file" 2>/dev/null; then
+                    engine="QCOW2_INTERNAL"
+                    log_success "qcow2 CoW snapshot restored: ${snap_name}"
+                else
+                    log_error "Failed to restore qcow2 snapshot ${snap_name}"
+                    return 1
+                fi
+            elif [[ -d "${snap_dir}/${snap_name}" ]]; then
+                engine="REFLINK_CLONE"
+                log_success "Snapshot restored: ${snap_name}"
             else
-                log_success "Sandbox snapshot restored: ${snap_name}"
+                log_error "Snapshot '${snap_name}' not found for sandbox '${sb_name}'."
+                return 1
             fi
-            [[ "$json_output" -eq 1 ]] && jq -n --arg a "restore" --arg s "$snap_name" '{status: "success", action: $a, snapshot: $s}'
+            [[ "$json_output" -eq 1 ]] && jq -n --arg a "restore" --arg s "$snap_name" --arg eng "$engine" '{status: "success", action: $a, snapshot: $s, engine: $eng}'
             return 0
             ;;
         list)
@@ -426,6 +479,11 @@ execute_sandbox_snapshot() {
                     for f in "$snap_dir"/*; do
                         [[ -e "$f" ]] && snaps+=("$(basename "$f" | sed 's/\.snap$//')")
                     done
+                fi
+                if [[ -f "$disk_file" ]] && command -v qemu-img >/dev/null 2>&1; then
+                    while read -r tag; do
+                        [[ -n "$tag" ]] && snaps+=("$tag")
+                    done < <(qemu-img snapshot -l "$disk_file" 2>/dev/null | awk 'NR>2 {print $2}')
                 fi
                 printf '%s\n' "${snaps[@]}" | jq -R . | jq -s --arg sb "$sb_name" '{sandbox: $sb, snapshots: .}'
             else
@@ -509,20 +567,39 @@ execute_sandbox_branch() {
         mkdir -p "$src_dir"
     fi
 
+    local engine=""
     if command -v btrfs >/dev/null 2>&1 && btrfs subvolume show "$src_dir" >/dev/null 2>&1; then
-        btrfs subvolume snapshot "$src_dir" "$dest_dir" >/dev/null 2>&1 || true
-        log_success "Btrfs subvolume cloned instantly: ${src_name} -> ${dest_name}"
+        if btrfs subvolume snapshot "$src_dir" "$dest_dir" >/dev/null 2>&1; then
+            engine="BTRFS_COW"
+            log_success "Btrfs subvolume cloned instantly: ${src_name} -> ${dest_name}"
+        else
+            log_error "Failed to create Btrfs subvolume clone"
+            return 1
+        fi
     elif [[ -f "${src_dir}/disk.qcow2" ]] && command -v qemu-img >/dev/null 2>&1; then
         mkdir -p "$dest_dir"
-        qemu-img create -f qcow2 -b "${src_dir}/disk.qcow2" -F qcow2 "${dest_dir}/disk.qcow2" >/dev/null 2>&1 || true
-        log_success "CoW backing qcow2 overlay branched: ${src_name} -> ${dest_name}"
+        if qemu-img create -f qcow2 -b "${src_dir}/disk.qcow2" -F qcow2 "${dest_dir}/disk.qcow2" >/dev/null 2>&1; then
+            engine="QCOW2_OVERLAY"
+            log_success "CoW backing qcow2 overlay branched: ${src_name} -> ${dest_name}"
+        else
+            log_error "Failed to create qcow2 overlay branch"
+            return 1
+        fi
+    elif cp --reflink=always -a "${src_dir}" "${dest_dir}" 2>/dev/null; then
+        engine="REFLINK_CLONE"
+        log_success "Reflink CoW sandbox branch created: ${src_name} -> ${dest_name}"
     else
         mkdir -p "$dest_dir"
-        cp -a --reflink=auto "${src_dir}/." "$dest_dir/" 2>/dev/null || cp -a "${src_dir}/." "$dest_dir/" 2>/dev/null || true
-        log_success "Sandbox branch created: ${src_name} -> ${dest_name}"
+        if cp -a "${src_dir}/." "$dest_dir/" 2>/dev/null; then
+            engine="FULL_COPY"
+            log_success "Sandbox branch created via deep copy: ${src_name} -> ${dest_name}"
+        else
+            log_error "Failed to branch sandbox '${src_name}' to '${dest_name}'"
+            return 1
+        fi
     fi
 
-    [[ "$json_output" -eq 1 ]] && jq -n --arg s "$src_name" --arg d "$dest_name" '{status: "success", source: $s, destination: $d}'
+    [[ "$json_output" -eq 1 ]] && jq -n --arg s "$src_name" --arg d "$dest_name" --arg eng "$engine" '{status: "success", source: $s, destination: $d, engine: $eng}'
     return 0
 }
 
@@ -545,8 +622,13 @@ parse_args() {
                 execute_sandbox_branch "$@"
                 exit $?
                 ;;
-            --windows)
+            --windows-lab|--windows|--autopilot)
                 IS_WINDOWS=true
+                shift
+                ;;
+            --admin-password)
+                shift
+                WINDOWS_ADMIN_PASSWORD="${1:-}"
                 shift
                 ;;
             --virtio-win)
@@ -794,7 +876,9 @@ EOF
 
             local unattend_file="${CUSTOM_AUTOUNATTEND:-${SCRATCH_DIR}/autounattend.xml}"
             if [[ ! -f "$unattend_file" ]]; then
-                generate_win11_autounattend "$unattend_file"
+                local win_pass
+                win_pass=$(generate_win11_autounattend "$unattend_file" "${WINDOWS_ADMIN_PASSWORD:-}")
+                log_success "Windows 11 Lab Autopilot configured with administrator password: ${win_pass}"
             fi
             if [[ -f "$unattend_file" ]]; then
                 extra_devs+=("-drive" "file=fat:floppy:${SCRATCH_DIR},format=raw,if=floppy")

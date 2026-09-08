@@ -144,16 +144,10 @@ in
           # Verify postcondition before rebooting
           RESTORED_GEN=$(readlink /nix/var/nix/profiles/system | sed -n 's/.*system-\([0-9]*\)-link/\1/p' || echo "")
           if [ -n "$RESTORED_GEN" ] && [ "$RESTORED_GEN" = "$LAST_GOOD" ]; then
-            echo "[SENTINEL-FALLBACK] Verified restored generation #$RESTORED_GEN matches last-known-good. Requesting clean reboot." >> "$LOG_FILE"
+            echo "[SENTINEL-FALLBACK] Verified restored generation #$RESTORED_GEN matches last-known-good via transactional rollback. Requesting clean reboot." >> "$LOG_FILE"
             systemctl reboot
           else
-            if [ -n "$LAST_GOOD" ] && [ -e "/nix/var/nix/profiles/system-$LAST_GOOD-link" ]; then
-              ln -sfn "/nix/var/nix/profiles/system-$LAST_GOOD-link" /nix/var/nix/profiles/system
-              echo "[SENTINEL-FALLBACK] Restored link fallback verified. Rebooting." >> "$LOG_FILE"
-              systemctl reboot
-            else
-              echo "[SENTINEL-FALLBACK] Critical: No valid rollback target found. Preserving state." >> "$LOG_FILE"
-            fi
+            echo "[SENTINEL-FALLBACK] Critical: Transactional rollback verification failed (expected: #$LAST_GOOD, found: #$RESTORED_GEN). Preserving system state to prevent unjournaled drift." >> "$LOG_FILE"
           fi
         '';
       };

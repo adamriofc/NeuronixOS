@@ -33,12 +33,13 @@ def is_avahi_running():
             pass
     return False
 
-def is_cache_serving(port=5000):
+def is_cache_serving(port=None):
     """Checks if local binary cache service (nix-serve) is active and listening."""
+    active_port = int(port or os.environ.get("NEURONIX_MESH_PORT", 5000))
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(0.3)
-            if s.connect_ex(("127.0.0.1", port)) == 0:
+            if s.connect_ex(("127.0.0.1", active_port)) == 0:
                 return True
     except Exception:
         pass
@@ -53,20 +54,26 @@ def is_cache_serving(port=5000):
     return False
 
 def validate_peer_cache(substituter_url, timeout=1.5):
-    """Probes peer /nix-cache-info endpoint to verify binary cache protocol readiness."""
+    """
+    Probes peer /nix-cache-info endpoint.
+    Returns (reachable, cache_verified) distinguishing raw HTTP reachability from pure Nix cache verification.
+    """
     if not substituter_url:
-        return False
+        return False, False
     endpoint = f"{substituter_url.rstrip('/')}/nix-cache-info"
     try:
         req = urllib.request.Request(endpoint, headers={"User-Agent": "NEURONIX-Mesh/1.0"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
+            reachable = (resp.status in (200, 404))
             if resp.status == 200:
                 content = resp.read().decode("utf-8", errors="ignore")
                 if "StoreDir:" in content:
-                    return True
+                    return True, True
+            return reachable, False
+    except urllib.error.HTTPError:
+        return True, False
     except Exception:
-        pass
-    return False
+        return False, False
 
 def discover_local_peers(timeout_sec=2, validate=True):
     """Discovers nearby NEURONIX nodes broadcasting _nix-cache._tcp on the LAN and verifies them."""
@@ -86,24 +93,26 @@ def discover_local_peers(timeout_sec=2, validate=True):
                         port = parts[8]
                         if ip and ip != get_local_ip():
                             sub_url = f"http://{ip}:{port}"
-                            is_verified = validate_peer_cache(sub_url) if validate else False
+                            reachable, is_verified = validate_peer_cache(sub_url) if validate else (False, False)
                             peers.append({
                                 "name": name,
                                 "host": host,
                                 "ip": ip,
                                 "port": port,
                                 "substituter_url": sub_url,
+                                "reachable": reachable,
                                 "cache_verified": is_verified
                             })
         except Exception:
             pass
     return peers
 
-def get_mesh_status():
+def get_mesh_status(port=None):
     """Returns complete runtime mesh and peer discovery status."""
+    configured_port = int(port or os.environ.get("NEURONIX_MESH_PORT", 5000))
     local_ip = get_local_ip()
     avahi_active = is_avahi_running()
-    cache_active = is_cache_serving()
+    cache_active = is_cache_serving(configured_port)
     peers = discover_local_peers()
     verified_peers = [p for p in peers if p.get("cache_verified")]
 
@@ -113,8 +122,8 @@ def get_mesh_status():
         "local_node": {
             "hostname": socket.gethostname(),
             "local_ip": local_ip,
-            "mesh_port": 5000,
-            "substituter_url": f"http://{local_ip}:5000",
+            "mesh_port": configured_port,
+            "substituter_url": f"http://{local_ip}:{configured_port}",
             "serving": cache_active
         },
         "mdns_daemon_active": avahi_active,

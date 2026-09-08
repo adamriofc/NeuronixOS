@@ -99,7 +99,21 @@ send_response() {
     elif [[ -n "$raw_id" && "$raw_id" != "null" ]]; then
         safe_id=$(jq -n -c --arg id "$raw_id" '$id')
     fi
-    jq -n -c --argjson id "$safe_id" --argjson result "$result_json" \
+    # If this is a tool result (has content array) without explicit isError,
+    # inspect content text for error status and set isError: true accordingly.
+    local final_result="$result_json"
+    if echo "$result_json" | jq -e 'has("content") and (has("isError") | not)' >/dev/null 2>&1; then
+        local first_text
+        first_text=$(echo "$result_json" | jq -r '.content[0].text // empty' 2>/dev/null)
+        if [[ -n "$first_text" ]]; then
+            if echo "$first_text" | jq -e '(.status == "error" or .status == "failed") or (.success == false)' >/dev/null 2>&1 || \
+               [[ "$first_text" =~ ^(Error|Fatal|Failed|Execution\ failed|Syntax\ error) ]] || \
+               [[ "$first_text" =~ (FAILED|failed|error|Error) && "$first_text" =~ (exit\ code\ [1-9]|Exit\ code\ [1-9]|Exception|Traceback) ]]; then
+                final_result=$(echo "$result_json" | jq -c '. + {"isError": true}')
+            fi
+        fi
+    fi
+    jq -n -c --argjson id "$safe_id" --argjson result "$final_result" \
         '{"jsonrpc":"2.0","id":$id,"result":$result}'
 }
 
@@ -299,6 +313,10 @@ handle_tools_list() {
           "dry_run": {
             "type": "boolean",
             "description": "Verify packages and preview generated syntax without committing to disk"
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Force distillation even if target file lacks machine-managed boundary marker"
           }
         },
         "required": ["packages"]
@@ -470,7 +488,7 @@ handle_tools_call() {
 
         neuronix_diet)
             local dry_run
-            dry_run=$(echo "$params" | jq -r '.dry_run // false' 2>/dev/null || echo "false")
+            dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false' 2>/dev/null || echo "false")
             local py_bin core_path
             py_bin="$(resolve_python)"
             core_path="$(resolve_core_path)"
@@ -500,7 +518,7 @@ sys.exit(code)
 
         neuronix_verify)
             local pkg
-            pkg=$(echo "$params" | jq -r '.package // empty')
+            pkg=$(echo "$params" | jq -r '.arguments.package // .package // empty')
             [[ -z "$pkg" ]] && pkg="hello"
 
             if [[ ! "$pkg" =~ ^[A-Za-z0-9._+-]+$ ]]; then
@@ -523,7 +541,7 @@ sys.exit(code)
 
         neuronix_undo)
             local dry_run
-            dry_run=$(echo "$params" | jq -r '.dry_run // false' 2>/dev/null || echo "false")
+            dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false' 2>/dev/null || echo "false")
             local py_bin core_path
             py_bin="$(resolve_python)"
             core_path="$(resolve_core_path)"
@@ -645,9 +663,9 @@ print(summary)
 
         neuronix_upgrade)
             local mode
-            mode=$(echo "$params" | jq -r '.mode // "staged"')
+            mode=$(echo "$params" | jq -r '.arguments.mode // .mode // "staged"')
             local dry_run
-            dry_run=$(echo "$params" | jq -r '.dry_run // false' 2>/dev/null || echo "false")
+            dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false' 2>/dev/null || echo "false")
             local py_bin core_path
             py_bin="$(resolve_python)"
             core_path="$(resolve_core_path)"
@@ -823,7 +841,7 @@ CATALOG_EOF
 
         neuronix_sentinel)
             local action
-            action=$(echo "$params" | jq -r '.action // "status"')
+            action=$(echo "$params" | jq -r '.arguments.action // .action // "status"')
             local active_gen="Unknown"
             [[ -L /nix/var/nix/profiles/system ]] && active_gen=$(basename "$(readlink /nix/var/nix/profiles/system)" | sed -E 's/^system-?//; s/-?link$//')
 
@@ -883,8 +901,8 @@ CATALOG_EOF
 
         neuronix_diff)
             local gen_a gen_b
-            gen_a=$(echo "$params" | jq -r '.gen_a // empty')
-            gen_b=$(echo "$params" | jq -r '.gen_b // empty')
+            gen_a=$(echo "$params" | jq -r '.arguments.gen_a // .gen_a // empty')
+            gen_b=$(echo "$params" | jq -r '.arguments.gen_b // .gen_b // empty')
             local py_bin core_path
             py_bin="$(resolve_python)"
             core_path="$(resolve_core_path)"
@@ -905,9 +923,9 @@ print(json.dumps(compute_generation_diff(ga, gb)))
 
         neuronix_distill)
             local pkgs_json dry_run force_param
-            pkgs_json=$(echo "$params" | jq -c '.packages // []')
-            dry_run=$(echo "$params" | jq -r '.dry_run // false')
-            force_param=$(echo "$params" | jq -r '.force // false')
+            pkgs_json=$(echo "$params" | jq -c '.arguments.packages // .packages // []')
+            dry_run=$(echo "$params" | jq -r '.arguments.dry_run // .dry_run // false')
+            force_param=$(echo "$params" | jq -r '.arguments.force // .force // false')
             local py_bin core_path
             py_bin="$(resolve_python)"
             core_path="$(resolve_core_path)"
@@ -1108,7 +1126,7 @@ print(json.dumps({'status':'success','exit_code':code,'message':s_msg}))
 
         neuronix_tune)
             local profile
-            profile=$(echo "$params" | jq -r '.profile // empty')
+            profile=$(echo "$params" | jq -r '.arguments.profile // .profile // empty')
             local py_bin core_path
             py_bin="$(resolve_python)"
             core_path="$(resolve_core_path)"

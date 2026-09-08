@@ -1776,6 +1776,13 @@ gen_a = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] != '' else None
 gen_b = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] != '' else None
 diff = compute_generation_diff(gen_a, gen_b)
 
+if diff.get('status') == 'error':
+    if int(sys.argv[3]) == 1:
+        print(json.dumps(diff, indent=2))
+    else:
+        print(f'\033[38;5;196m✖ Error:\033[0m {diff.get(\"message\")}')
+    sys.exit(1)
+
 if int(sys.argv[3]) == 1:
     print(json.dumps(diff, indent=2))
     sys.exit(0)
@@ -2257,6 +2264,9 @@ cmd_container() {
     local stack_file=""
     local export_oci_tar=""
     local enable_fhs=1
+    local unshare_net=0
+    local allow_synthetic=0
+    local allow_secret_env=0
     local vaporize=0
     local dry_run=0
     local json_output=0
@@ -2309,6 +2319,18 @@ cmd_container() {
                 enable_fhs=0
                 shift
                 ;;
+            --unshare-net|--isolated-net)
+                unshare_net=1
+                shift
+                ;;
+            --offline-test)
+                allow_synthetic=1
+                shift
+                ;;
+            --allow-secret-env)
+                allow_secret_env=1
+                shift
+                ;;
             --vaporize)
                 vaporize=1
                 shift
@@ -2340,6 +2362,7 @@ cmd_container() {
                 echo -e "  ${GREEN}--stack <file.yaml|json>${RESET} Launch ephemeral multi-service stack in RAM with Micro-DNS"
                 echo -e "  ${GREEN}--export-oci <out.tar>${RESET}   Export workspace to standard OCI/Docker image tarball"
                 echo -e "  ${GREEN}--keep <path>${RESET}           Export modified workspace to target directory upon exit"
+                echo -e "  ${GREEN}--unshare-net${RESET}           Strict hermetic network isolation (loopback only)"
                 echo -e "  ${GREEN}--vaporize${RESET}              Auto-delete RAM workspace without confirmation prompt"
                 echo -e "  ${GREEN}--fhs / --no-fhs${RESET}        Enable/disable transparent dynamic FHS emulation (default: on)"
                 echo -e "  ${GREEN}--dry-run${RESET}               Verify RAM allocation without spawning container"
@@ -2388,7 +2411,8 @@ from neuronix_core.container import run_stack_session
 
 stack_file = sys.argv[1]
 json_out = sys.argv[2] == '1'
-res = run_stack_session(stack_file)
+allow_sec = sys.argv[3] == '1'
+res = run_stack_session(stack_file, allow_secret_env=allow_sec)
 if json_out:
     print(json.dumps(res))
 else:
@@ -2399,7 +2423,7 @@ else:
     else:
         print('\033[38;5;196m✖\033[0m ' + res.get('message', 'Stack error'))
 sys.exit(0 if res.get('status') == 'success' else 1)
-" "$stack_file" "$json_output"
+" "$stack_file" "$json_output" "$allow_secret_env"
         return $?
     fi
 
@@ -2458,8 +2482,11 @@ target = sys.argv[1]
 json_out = sys.argv[2] == '1'
 cmd_to_run = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] != '' else None
 keep_path = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] != '' else None
+enable_fhs = sys.argv[5] == '1'
+unshare_net = sys.argv[6] == '1'
+allow_synth = sys.argv[7] == '1'
 
-w_dir, act_dir, msg = setup_ram_workspace(target)
+w_dir, act_dir, msg = setup_ram_workspace(target, allow_synthetic=allow_synth)
 if not w_dir:
     print(json.dumps({'status': 'error', 'message': msg}) if json_out else f'\033[38;5;196m✖\033[0m {msg}')
     sys.exit(1)
@@ -2471,12 +2498,12 @@ if json_out and not cmd_to_run:
 
 print('\033[38;5;51m➔\033[0m Entering ephemeral RAM container: ' + act_dir)
 print('  \033[2mReal \$HOME is safely masked. Zero SSD disk footprint.\033[0m')
-code, s_msg = run_container_session(act_dir, command=cmd_to_run)
+code, s_msg = run_container_session(act_dir, command=cmd_to_run, enable_fhs=enable_fhs, unshare_net=unshare_net)
 
 teardown_container(w_dir, export_path=keep_path)
 print('\033[38;5;82m✔\033[0m Ephemeral RAM container cleanly vaporized (0 bytes residue).')
 sys.exit(code)
-" "$target" "$json_output" "$cmd_to_run" "$keep_path"
+" "$target" "$json_output" "$cmd_to_run" "$keep_path" "$enable_fhs" "$unshare_net" "$allow_synthetic"
 }
 
 # ------------------------------------------------------------------------------

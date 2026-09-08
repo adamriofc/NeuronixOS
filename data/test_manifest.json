@@ -2,10 +2,10 @@
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.3",
-  "generated_at": "2026-09-08T03:50:18Z",
+  "generated_at": "2026-09-08T05:07:30Z",
   "summary": {
-    "total_repository_assertions": 1111,
-    "qa_master_harness_assertions": 746,
+    "total_repository_assertions": 1119,
+    "qa_master_harness_assertions": 754,
     "distro_component_assertions": 209,
     "standalone_gates_assertions": 156,
     "qa_master_suites_count": 27,
@@ -212,7 +212,7 @@
       {
         "suite_file": "27_hyper_advanced_isolation.sh",
         "title": "Hyper-Advanced Isolation, OCI Compiler & Sandbox Fabric",
-        "assertions": 34,
+        "assertions": 42,
         "proof_class": "L2_SYSTEM",
         "release_blocker": true
       }
