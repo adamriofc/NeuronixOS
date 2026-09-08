@@ -33,6 +33,9 @@ This architecture decouples the AI reasoning engine from unconstrained root term
 | `neuronix_sandbox` | `{"mode": "<str>", "iso_path": "<str>", "persist": "<str>", "dry_run": <bool>}` | Executes in-memory OS Micro-VM sandbox, ISO booting, and Btrfs CoW. |
 | `neuronix_tune` | `{"profile": "<str>"}` | Queries or applies deterministic workload tuning (gaming, battery, audio, balanced). |
 | `neuronix_mesh` | None | Queries local P2P binary cache mesh and discovered LAN neighbor nodes. |
+| `neuronix_ast_query` | None | Queries unified live system AST state via micro-Rust daemon or native fallback. |
+| `neuronix_workspace_branch` | `{"action": "create\|list\|revert", "path": "<str>", "name": "<str>"}` | Manages instant atomic Btrfs/Reflink time-travel project workspace branches. |
+| `neuronix_ghost_exec` | `{"command": "<str>"}` | Executes zero-trace disposable commands in volatile RAM overlay with instant vaporization. |
 
 ---
 

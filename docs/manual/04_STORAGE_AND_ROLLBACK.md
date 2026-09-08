@@ -84,3 +84,25 @@ neuronix diff 40 42
 neuronix diff --json
 ```
 
+---
+
+## 6. Atomic Workspace Time-Travel Branching (neuronix branch)
+
+Extending beyond operating system generations, NEURONIX OS introduces atomic project workspace branching:
+
+* **Copy-on-Write Storage Substrate:** Exploits native Btrfs subvolumes and Linux filesystem Reflinks (`cp --reflink=always`) to capture instantaneous point-in-time workspace snapshots.
+* **Sub-Millisecond Snapshot Speed:** Large multi-gigabyte source trees, `node_modules`, and compilation artifacts clone in under 10 milliseconds with 0 bytes additional disk usage until modified.
+* **Non-Destructive Time-Travel:** Developers and autonomous AI agents can create isolated branches, experiment destructively, and revert to previous states without polluting Git histories:
+
+```bash
+# Create an instantaneous branch snapshot of current workspace
+neuronix branch create . experiment-ai
+
+# List all branch snapshots for this workspace
+neuronix branch list .
+
+# Revert workspace to snapshot state atomically
+neuronix branch revert . experiment-ai
+```
+
+

@@ -42,6 +42,9 @@ When connected via Model Context Protocol, prioritize calling these dedicated to
 | Run isolated container in RAM | `neuronix_container` | `{"target": "/tmp/repo", "dry_run": true}` |
 | Tune workload governor/audio | `neuronix_tune` | `{"profile": "gaming"}` |
 | Discover LAN P2P cache mesh | `neuronix_mesh` | `{}` |
+| Query live system AST state | `neuronix_ast_query` | `{}` |
+| Branch workspace snapshot | `neuronix_workspace_branch` | `{"path": ".", "action": "create", "name": "feat"}` |
+| Run zero-trace ephemeral RAM cmd | `neuronix_ghost_exec` | `{"command": "python3 test.py"}` |
 
 ---
 
@@ -52,6 +55,7 @@ When connected via Model Context Protocol, prioritize calling these dedicated to
 * `/etc/neuronix/release.json`: Machine-readable rilis manifest and build provenance.
 * `/etc/neuronix/manual/`: Offline system manual corpus (Markdown format).
 * `/run/current-system/sw/bin/neuronix`: Primary CLI orchestrator binary.
+* `/run/neuronix/ast.sock`: High-throughput UNIX domain socket for AST Schema 2.0.0 queries.
 * `/run/neuronix-operation.lock`: Exclusive flock mutex file for system mutations.
-* `/dev/shm`: RAM disk for ephemeral Shadow VM execution.
+* `/dev/shm`: RAM disk for ephemeral Shadow VM and Ghost overlay execution.
 * `/nix/var/nix/profiles/system`: Symlink tracking the currently active system generation.

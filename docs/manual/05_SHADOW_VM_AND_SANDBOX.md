@@ -134,3 +134,22 @@ While `neuronix sandbox` isolates entire operating system virtual machines via Q
   ```
 * **Zero-Bloat OCI Export:** Compiles container workspaces into standard OCI/Docker image tarballs with `--export-oci`.
 * **Bubblewrap Containerization:** Mounts `/nix/store` read-only, masks host `$HOME` credentials (`.ssh`, `.aws`, `.gnupg`) with an isolated tmpfs, and cleans up completely upon exit with 0 bytes leftover residue.
+
+---
+
+## 6. Ephemeral Ghost RAM Persona (neuronix ghost)
+
+For operations requiring absolute privacy, zero disk wear, or immediate non-destructive experimentation, NEURONIX OS provides the disposable Ghost persona:
+
+* **Volatile RAM Overlay:** Executes entirely inside `/dev/shm` without persistent disk state. Sensitive home directories, user configurations, and SSH/GPG keys are masked from untrusted executions.
+* **Instant Vaporization:** Upon exiting the session or command, the ephemeral memory overlay is unmounted and wiped clean, leaving 0 bytes of residual artifacts on physical storage.
+* **Micro-Rust Acceleration & Resilient Fallback:** Powered natively by the `neuronix-daemon` micro-Rust substrate with sub-millisecond setup latency, while guaranteeing seamless fallback via the standard system Python/Bash engine if unprivileged.
+
+```bash
+# Launch an interactive ephemeral ghost shell in volatile RAM
+neuronix ghost
+
+# Execute a single untrusted command or script with guaranteed memory wipe
+neuronix ghost --run "npm test"
+```
+

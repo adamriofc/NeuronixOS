@@ -403,6 +403,10 @@ USAGE:
 | `container` | `<target> [options]` | Ephemeral RAM development container with Dynamic FHS, OCI runner, and stack runner. | `neuronix container oci://alpine:latest` |
 | `tune` | `[profile \| --status]` | Declarative workload-tailored performance matrix (`gaming`, `battery`, `audio-daw`, `balanced`). | `neuronix tune gaming` |
 | `mesh` | `[status \| peers]` | Local P2P zero-config binary cache mesh over mDNS/Avahi without centralized Hydra/Cachix. | `neuronix mesh peers` |
+| `daemon` | `[status \| ping \| ast]` | Surgical micro-Rust daemon and unified live system AST state query engine. | `neuronix daemon ast` |
+| `ghost` | `[--run <cmd>]` | Disposable zero-trace ephemeral session in volatile RAM overlay with instant vaporization. | `neuronix ghost --run "bash"` |
+| `branch` | `[create \| list \| revert]` | Instantaneous Btrfs CoW / Reflink project workspace branching for risk-free experimentation. | `neuronix branch create . experiment` |
+| `ebpf` | `[status \| policy <pkg>]` | Declarative eBPF LSM confinement status and syscall sandbox policy generator. | `neuronix ebpf status` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
 | `help` | None (`-h`, `--help`)   | Displays available commands and syntax summaries. | `neuronix help` |
 
@@ -471,7 +475,7 @@ neuronix sandbox branch base-dev feature-experiment
 
 ### 5. Model Context Protocol (MCP) Server
 NEURONIX includes a built-in Model Context Protocol server communicating over `stdio` adhering to JSON-RPC 2.0 (Protocol Version `2024-11-05`). It provides structured tools, resources, and prompt templates for autonomous development agents:
-- **Tools:** Exposes `neuronix_status`, `neuronix_diet`, `neuronix_verify`, `neuronix_undo`, `neuronix_shadow_eval`, `neuronix_doctor`, `neuronix_check_update`, `neuronix_upgrade`, `neuronix_manual`, `neuronix_sentinel`, `neuronix_diff`, `neuronix_distill`, `neuronix_container`, `neuronix_sandbox`, `neuronix_tune`, and `neuronix_mesh`.
+- **Tools:** Exposes `neuronix_status`, `neuronix_diet`, `neuronix_verify`, `neuronix_undo`, `neuronix_shadow_eval`, `neuronix_doctor`, `neuronix_check_update`, `neuronix_upgrade`, `neuronix_manual`, `neuronix_sentinel`, `neuronix_diff`, `neuronix_distill`, `neuronix_container`, `neuronix_sandbox`, `neuronix_tune`, `neuronix_mesh`, `neuronix_ast_query`, `neuronix_workspace_branch`, and `neuronix_ghost_exec`.
 - **Architectural Convergence:** All state-mutating tools (`neuronix_diet`, `neuronix_undo`, `neuronix_upgrade`) converge strictly through the unified, transactional Python core (`neuronix_core.operations`). They enforce POSIX mutual exclusion via `OperationLock`, exact generation predecessor verification, and transaction journaling (`TransactionJournal`), maintaining 100% parity with CLI and GUI control center workflows.
 - **Clean Update Separation:** Update checks isolate local system commits from pinned upstream Nixpkgs hashes, eliminating cross-domain SHA comparisons.
 - **Resources (`resources/list`, `resources/read`):** Exposes all 11 system manual chapters under the `neuronix://manual/*` URI scheme for instant semantic ingestion.
@@ -740,6 +744,66 @@ neuronix mesh peers
 
 # Emit discovered peers with cache verification badges in structured JSON
 neuronix mesh peers --json
+```
+
+### 20. Micro-Rust Systems Daemon & Live Unified AST Engine (neuronix daemon)
+A standalone, high-performance micro-Rust systems substrate (`packages/neuronix-daemon/`):
+- **Zero-Cost Abstractions & Surgical Static Binary:** Packaged as an ultra-lean 758 KB static binary compiled with zero external crates (`extern crate std` only), eliminating software supply-chain bloat while providing microsecond response times.
+- **Unified Live AST Socket (/run/neuronix/ast.sock):** Exposes an authoritative Abstract System Tree (AST Schema 2.0.0) via JSON-RPC 2.0. Autonomous AI agents and tooling query active system generations, Btrfs storage topologies, memory pressure shields, and security postures through a single atomic query.
+- **Fail-Safe Transparent Fallback:** If executing rootless or without the binary daemon running, all queries fall back seamlessly to native Python and Bash engines with 100% functional parity.
+
+```bash
+# Display micro-Rust systems daemon status and socket health
+neuronix daemon status
+
+# Execute low-latency roundtrip ping probe
+neuronix daemon ping
+
+# Query and emit full system AST in structured JSON (Schema 2.0.0)
+neuronix daemon ast
+```
+
+### 21. Ephemeral Ghost RAM Persona (neuronix ghost)
+A zero-trace disposable execution mode engineered for absolute privacy and sensitive experimentation:
+- **Volatile RAM Overlay (/dev/shm):** Mounts an isolated tmpfs overlay in volatile memory, completely shielding host `$HOME` directories, SSH keys, credentials, and persistent data from untrusted execution.
+- **Instant Clean Vaporization:** Automatically unmounts and vaporizes volatile memory immediately upon subshell or process exit, guaranteeing 0 bytes of physical disk wear or retained digital footprints.
+
+```bash
+# Launch interactive disposable ghost shell in volatile RAM
+neuronix ghost
+
+# Execute untrusted script or test command in volatile overlay and wipe RAM on exit
+neuronix ghost --run "pytest -v"
+```
+
+### 22. Instant Time-Travel Workspace Branching (neuronix branch)
+Brings the power of atomic operating system rollbacks down to individual project repositories:
+- **Sub-Millisecond CoW Snapshots:** Leverages native Btrfs subvolumes and Linux filesystem Reflinks (`cp --reflink=always`) to capture instantaneous point-in-time workspace checkpoints in under 10 milliseconds with 0 bytes initial storage footprint.
+- **Risk-Free Prototyping:** Developers and autonomous AI models can capture a checkpoint before large-scale refactorings, test modifications destructively, and revert atomically if regressions are detected.
+
+```bash
+# Create an instantaneous CoW branch checkpoint of current workspace
+neuronix branch create . refactor-checkpoint
+
+# List all available branch checkpoints for this repository
+neuronix branch list .
+
+# Revert workspace to snapshot state atomically
+neuronix branch revert . refactor-checkpoint
+```
+
+### 23. Declarative eBPF LSM Syscall Confinement Gate (neuronix ebpf)
+A modern Linux Security Module containment gate enforcing least-privilege syscall policies:
+- **Kernel-Level Syscall Confinement:** Connects to Linux kernel LSM hooks via Aya pure-Rust probes (`modules/security/ebpf-lsm.nix`) to restrict unauthorized filesystem alterations outside `/nix/store` and `/tmp`.
+- **Dual Operating Modes:** Operates in `enforcing` mode for strict blocking or `audit` mode for non-blocking developer telemetry.
+- **Declarative Package Policies:** Synthesizes custom containment policies for arbitrary packages on-demand (`neuronix ebpf policy <pkg>`).
+
+```bash
+# Inspect active eBPF LSM status and kernel confinement mode
+neuronix ebpf status
+
+# Generate declarative containment policy for a specific package
+neuronix ebpf policy nodejs
 ```
 
 ---

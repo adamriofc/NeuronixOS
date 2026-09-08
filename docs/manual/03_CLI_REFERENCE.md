@@ -171,3 +171,37 @@ Discovers and queries local peer-to-peer binary cache nodes on the local LAN/Wi-
 * **Peer Validation:** Probes `/nix-cache-info` endpoints on discovered nodes to verify binary cache protocol readiness.
 * **Options:** `--json` outputs peer node list in JSON.
 
+### 2.25 `neuronix daemon [status|ping|ast] [--json]`
+Interacts with the autonomous micro-Rust systems daemon and unified live system AST engine (`/run/neuronix/ast.sock`).
+* **Substrate Engine:** Ultra-lean 758 KB static binary with zero external crates, sub-millisecond response latency, and guaranteed transparent Python/Bash fallback.
+* **AST Schema 2.0.0:** Emits machine-readable AST containing system generations, storage topology, memory metrics, daemon health, and security posture.
+* **Subcommands:**
+  * `status`: Displays daemon operating state, socket path, and architecture.
+  * `ping`: Performs low-latency JSON-RPC roundtrip healthcheck (`PONG`).
+  * `ast`: Queries and emits full system Abstract Syntax Tree in structured JSON.
+* **Options:** `--json` outputs status or AST directly in structured JSON.
+
+### 2.26 `neuronix ghost [--run <cmd>]`
+Executes an ephemeral, zero-trace user session in volatile RAM overlay (`/dev/shm`) with guaranteed vaporization on exit.
+* **Zero Disk Wear & Privacy:** Mounts an isolated tmpfs overlay in volatile memory. Real `$HOME` paths and sensitive persistence are completely shielded.
+* **RAM Vaporization:** Automatically unmounts and wipes the volatile RAM workspace buffer immediately upon process exit (0 bytes residue).
+* **Options:**
+  * `--run <cmd>`: Executes a specific non-interactive command inside the volatile RAM overlay and exits immediately.
+  * Default: Spawns an interactive shell (`/bin/bash`) within the ephemeral RAM overlay.
+
+### 2.27 `neuronix branch [create|list|revert] <path> [name]`
+Provides instant, atomic copy-on-write project workspace branching using Btrfs subvolumes or filesystem Reflinks (`cp --reflink=always`).
+* **Instantaneous Snapshots:** Clones entire multi-gigabyte project directories in under 10 milliseconds with 0 bytes initial storage footprint.
+* **Subcommands:**
+  * `create <path> [name]`: Creates a CoW branch snapshot of the specified workspace.
+  * `list <path>`: Lists existing branch snapshots associated with the workspace.
+  * `revert <path> <name>`: Restores workspace state from a named branch snapshot.
+
+### 2.28 `neuronix ebpf [status|policy <pkg>]`
+Inspects and manages declarative eBPF Linux Security Module (LSM) syscall containment and security policies.
+* **Kernel Syscall Gate:** Uses Aya pure-Rust eBPF kernel hooks to enforce syscall restrictions on ephemeral developer containers and untrusted workloads.
+* **Subcommands:**
+  * `status`: Inspects active eBPF LSM status and kernel security enforcement mode (`ENFORCING` or `AUDIT_MODE`).
+  * `policy <pkg>`: Generates declarative eBPF confinement policy for the specified package or derivation.
+
+

@@ -21,14 +21,14 @@ Because this manual is packaged directly into the NixOS system derivation, it au
 | :--- | :--- | :--- |
 | `01_ARCHITECTURE.md` | Platform Architecture | 4-layer model, Nix substrate, immutability, and P0-P4 proof class taxonomy. |
 | `02_CONFIGURATION_REFERENCE.md` | Declarative Configuration | Complete `neuronix.*` options, declarative package management, and distro transition guide. |
-| `03_CLI_REFERENCE.md` | Unified CLI Manual | Comprehensive syntax, options, and exit codes for all 24 `neuronix` commands. |
-| `04_STORAGE_AND_ROLLBACK.md` | Storage, Sentinel & Rollback | Btrfs topology, Boot-Sentinel auto-rollback, generational diff, GC, and TRIM. |
-| `05_SHADOW_VM_AND_SANDBOX.md` | OS Sandbox & Containers | Micro-VMs (/dev/shm), OS Fabric, Win11 Autopilot, Btrfs snapshots, and OCI containers. |
+| `03_CLI_REFERENCE.md` | Unified CLI Manual | Comprehensive syntax, options, and exit codes for all 28 `neuronix` commands. |
+| `04_STORAGE_AND_ROLLBACK.md` | Storage, Sentinel & Rollback | Btrfs topology, Boot-Sentinel auto-rollback, generational diff, GC, TRIM, and workspace branching. |
+| `05_SHADOW_VM_AND_SANDBOX.md` | OS Sandbox & Containers | Micro-VMs (/dev/shm), OS Fabric, Win11 Autopilot, Btrfs snapshots, OCI containers, and ghost persona. |
 | `06_DEVELOPER_STACKS.md` | Hermetic Dev Stacks | Isolated toolchains (Python, Rust, Node, AI, Go, Web3) and JSON manifest synthesis. |
-| `07_MCP_PROTOCOL_AND_AI_GATEWAY.md` | Model Context Protocol | JSON-RPC 2.0 stdio server, tool definitions, flock concurrency, and client setup. |
+| `07_MCP_PROTOCOL_AND_AI_GATEWAY.md` | Model Context Protocol | JSON-RPC 2.0 stdio server, tool definitions, flock concurrency, AST socket, and client setup. |
 | `08_HARDWARE_AND_27_PILLARS.md` | Hardware & 27 Pillars | 8 Reference Platforms, 27 configuration pillars, NVIDIA PRIME, and ZRAM PSI shield. |
-| `09_SECURITY_AND_ATTESTATION.md` | Security & Supply Chain | Privilege allowlists, regex filtering, Secure Boot, TPM2, and SPDX 2.3 SBOM. |
-| `10_AI_AGENT_REFERENCE.md` | AI Copilot System Directive | High-density semantic reference, operating rules, and guardrails for AI models. |
+| `09_SECURITY_AND_ATTESTATION.md` | Security & Supply Chain | Privilege allowlists, regex filtering, Secure Boot, TPM2, eBPF LSM gate, and SPDX 2.3 SBOM. |
+| `10_AI_AGENT_REFERENCE.md` | AI Copilot System Directive | High-density semantic reference, operating rules, AST socket, and guardrails for AI models. |
 
 ---
 

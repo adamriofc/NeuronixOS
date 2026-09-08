@@ -68,6 +68,25 @@ Manages built-in autonomous AI assistant and MCP integration.
 | `neuronix.services.opencode.autoUpdate` | boolean | `true` | Enables autonomous background updates for OpenCode copilot. |
 | `neuronix.services.opencode.desktopShortcut`| boolean | `true` | Creates launcher icon in application menus and desktop skeleton. |
 
+### 2.6 Micro-Rust Systems Daemon (`neuronix.services.daemon`)
+
+Controls the autonomous micro-Rust daemon and unified live system AST UNIX domain socket (`/run/neuronix/ast.sock`).
+
+| Option Path | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `neuronix.services.daemon.enable` | boolean | `true` | Enables micro-Rust daemon and systemd service `neuronix-daemon.service`. |
+| `neuronix.services.daemon.socketPath` | string | `"/run/neuronix/ast.sock"` | UNIX domain socket path for high-throughput AST queries. |
+
+### 2.7 Declarative eBPF LSM Gate (`neuronix.security.ebpfLsm`)
+
+Configures declarative Linux Security Module (LSM) syscall containment for developer toolchains and containers.
+
+| Option Path | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `neuronix.security.ebpfLsm.enable` | boolean | `true` | Appends `bpf` to kernel `lsm=` parameters for granular syscall containment. |
+| `neuronix.security.ebpfLsm.mode` | enum: `["enforcing", "audit"]` | `"enforcing"` | Operating mode (enforcing: hard drop; audit: log warning). |
+| `neuronix.security.ebpfLsm.defaultProtectedPaths` | list of string | `["/etc/shadow", "/etc/ssh", "/root"]` | Sensitive paths shielded from unprivileged toolchains. |
+
 ---
 
 ## 3. Applying Declarative Changes

@@ -28,11 +28,11 @@ NEURONIX OS is an industrial declarative Linux distribution engineered on top of
   │                                                                                 │
 [ LAYER 3: DEVELOPER ENGINE ]                                   [ LAYER 4: RELIABILITY & AI SUBSTRATE ]
   ├─ neuronix dev python (uv, ruff, pyright, postgresql)          ├─ Model Context Protocol (MCP) Server (JSON-RPC 2.0)
-  ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ In-Memory OS Sandbox (neuronix sandbox, OS Fabric)
-  ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Declarative Derivation Verification (neuronix verify)
-  ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Storage Pruner & VirtIO TRIM (neuronix diet)
-  ├─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  └─ 1,179 Automated Test Assertions (100% Pass)
-  └─ neuronix container  (Micro-DNS, OCI Build, Quadlet Daemons)
+  ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ Micro-Rust Daemon & Live AST Engine (ast.sock)
+  ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ In-Memory OS Sandbox (neuronix sandbox, OS Fabric)
+  ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Declarative eBPF LSM Syscall Gate (neuronix ebpf)
+  ├─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  ├─ Storage Pruner & VirtIO TRIM (neuronix diet)
+  └─ neuronix container  (Micro-DNS, OCI Build, Quadlet Daemons)  └─ 1,179 Automated Test Assertions (100% Pass)
 ```
 
 ---

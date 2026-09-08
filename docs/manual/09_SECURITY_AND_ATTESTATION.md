@@ -37,3 +37,14 @@ Every official release of NEURONIX OS conforms to modern enterprise supply chain
    GitHub Actions utilizes OpenID Connect (OIDC) tokens with `id-token: write` and `attestations: write` permissions to cryptographically attest build provenance via GitHub Artifact Attestations (`actions/attest-build-provenance@v2`).
 3. **Cryptographic Release Signatures:**  
    The SHA256 checksum database is signed with a dedicated Ed25519 cryptographic release key (`SHA256SUMS.sig`), verifiable via `release_sign.pub`.
+
+---
+
+## 4. Declarative eBPF LSM Syscall Confinement Gate
+
+To protect the host workstation against unprivileged developer toolchain exploits, NEURONIX OS embeds a declarative eBPF Linux Security Module (LSM) security gate (`modules/security/ebpf-lsm.nix`):
+
+* **Granular Syscall Filtering:** Hooks into the Linux kernel LSM framework (`lsm=lockdown,yama,bpf,apparmor,integrity`) to monitor and restrict sensitive file modifications outside `/nix/store` and `/tmp`.
+* **Zero-Privilege Auditing:** Provides transparent audit and enforcement modes (`neuronix ebpf status`), logging unauthorized syscall access attempts while preventing accidental developer workflow disruption.
+* **Declarative Policy Synthesis:** Automatically generates granular LSM containment policies for untrusted packages (`neuronix ebpf policy <pkg>`).
+
