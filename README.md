@@ -15,12 +15,12 @@
 </p>
 
 <p align="center">
-  <strong>NEURONIX OS: A Declarative, Developer-First Linux Desktop Built on NixOS</strong><br>
-  <em>Try system changes before they touch your workstation &bull; Reproducible developer environments in one command &bull; Safe atomic generation recovery</em>
+  <strong>NEURONIX OS: The Self-Healing, Declarative Workstation for Mission-Critical Engineering & Local AI Development</strong><br>
+  <em>Dual-Plane Micro-Engine &bull; Cryptographic Generational Immutability &bull; Ephemeral Blast-Radius Containment &bull; NIP RFC Governance</em>
 </p>
 
 <p align="center">
-  <strong>BUILD</strong> Reproducible Environments &bull; <strong>TRY</strong> Safe Micro-VM Experimentation &bull; <strong>RECOVER</strong> Fearless Atomic Generations
+  <strong>BUILD</strong> Mathematically Reproducible Flakes &bull; <strong>CONTAIN</strong> Ephemeral Workspaces &bull; <strong>RECOVER</strong> Autonomous Zero-Loss Generations
 </p>
 
 ---
@@ -978,9 +978,9 @@ Production operations and maintenance procedures are documented in `docs/operati
 
 ---
 
-## Architecture Decision Records (ADRs)
+## Architecture Decision Records (ADRs) & RFCs
 
-Formal design choices and rationales are maintained in `docs/adr/`:
+Formal design choices, invariants, and open governance specifications:
 - **[ADR-001](docs/adr/ADR-001-why-flakes.md):** Pure Nix Flakes as the Primary Interface
 - **[ADR-002](docs/adr/ADR-002-why-calamares-flake-generator.md):** Declarative Flake Generation within Calamares
 - **[ADR-003](docs/adr/ADR-003-immutable-store-vs-flatpak.md):** Dual-Layer Software Architecture (Immutable Nix Core vs Sandboxed Flatpak)
@@ -990,6 +990,8 @@ Formal design choices and rationales are maintained in `docs/adr/`:
 - **[ADR-007](docs/adr/ADR-007-opencode-ai-and-mcp-integration.md):** OpenCode AI Copilot Daemon and Model Context Protocol Integration
 - **[ADR-008](docs/adr/ADR-008-multi-tier-kernel-and-hardware-matrix.md):** Declarative Multi-Tier Kernel Selection and Hardware Hardening Matrix
 - **[ADR-009](docs/adr/ADR-009-continuous-industrial-assurance-taxonomy.md):** Continuous Industrial Assurance Taxonomy and Truth Policy
+- **[ADR-010](docs/adr/ADR-010-advanced-container-and-sandbox-architecture.md):** Advanced Container and Sandbox Architecture (Bubblewrap Namespaces & Memory Scrubbing)
+- **[NIP-0001](docs/rfcs/0001-north-star-and-rfc-process.md):** The North Star Thesis and Neuronix Improvement Proposal (RFC) Governance Standard
 
 ---
 

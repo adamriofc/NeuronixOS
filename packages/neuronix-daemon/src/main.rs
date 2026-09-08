@@ -14,6 +14,7 @@ use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::io::AsRawFd;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::thread;
@@ -49,6 +50,13 @@ fn main() {
     // Direct ping (One-shot mode)
     if args.contains(&"--ping".to_string()) {
         let resp = handle_jsonrpc(r#"{"jsonrpc":"2.0","method":"system/ping","id":1}"#);
+        println!("{}", resp);
+        return;
+    }
+
+    // Direct control-plane status check (One-shot mode)
+    if args.contains(&"--status".to_string()) {
+        let resp = handle_jsonrpc(r#"{"jsonrpc":"2.0","method":"system/status","id":1}"#);
         println!("{}", resp);
         return;
     }
@@ -208,7 +216,36 @@ fn run_daemon(socket_path: PathBuf) {
     }
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct PeerCred {
+    pub pid: i32,
+    pub uid: u32,
+    pub gid: u32,
+}
+
+pub fn get_peer_credentials(stream: &UnixStream) -> Option<PeerCred> {
+    let fd = stream.as_raw_fd();
+    let mut cred = PeerCred { pid: 0, uid: 0, gid: 0 };
+    let mut len = std::mem::size_of::<PeerCred>() as u32;
+    unsafe {
+        let ret = getsockopt(
+            fd,
+            1,  // SOL_SOCKET
+            17, // SO_PEERCRED (Linux)
+            std::ptr::addr_of_mut!(cred) as *mut std::ffi::c_void,
+            std::ptr::addr_of_mut!(len),
+        );
+        if ret == 0 {
+            Some(cred)
+        } else {
+            None
+        }
+    }
+}
+
 fn handle_client(mut stream: UnixStream) {
+    let _peer_cred = get_peer_credentials(&stream);
     let mut reader = BufReader::new(stream.try_clone().unwrap());
     let mut line = String::new();
 
@@ -231,6 +268,13 @@ extern "C" {
     fn signal(sig: i32, handler: extern "C" fn(i32)) -> usize;
     fn unlink(pathname: *const u8) -> i32;
     fn write(fd: i32, buf: *const u8, count: usize) -> isize;
+    fn getsockopt(
+        sockfd: i32,
+        level: i32,
+        optname: i32,
+        optval: *mut std::ffi::c_void,
+        optlen: *mut u32,
+    ) -> i32;
 }
 
 extern "C" fn sig_handler(_sig: i32) {

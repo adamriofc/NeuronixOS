@@ -31,6 +31,7 @@
 # 27 - Hyper-Advanced Isolation & Sandbox Fabric
 # 28 - Micro-Rust Systems Daemon & High-Concurrency AST
 # 29 - Ephemeral Persona, Workspace Branching & eBPF LSM Gate
+# 30 - Dual-Plane Control Engine, UKI & Resilient Measured Boot
 # ==============================================================================
 
 set -uo pipefail
@@ -79,6 +80,7 @@ source "$TEST_DIR/suites/26_deep_system_enhancements.sh"
 source "$TEST_DIR/suites/27_hyper_advanced_isolation.sh"
 source "$TEST_DIR/suites/28_micro_rust_daemon_and_ast.sh"
 source "$TEST_DIR/suites/29_ephemeral_persona_and_branching.sh"
+source "$TEST_DIR/suites/30_dual_plane_and_pcr_validation.sh"
 
 END_TIME=$(date +%s%N)
 DURATION_MS=$(( (END_TIME - START_TIME) / 1000000 ))

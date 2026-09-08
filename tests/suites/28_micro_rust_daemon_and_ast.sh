@@ -28,7 +28,7 @@ assert_output_contains "$TARGET_BIN daemon --help" "daemon" "neuronix daemon --h
 assert_exit_code "$TARGET_BIN daemon status" 0 "neuronix daemon status exits 0"
 assert_output_contains "$TARGET_BIN daemon status" "NEURONIX AUTONOMOUS MICRO-RUST SYSTEMS DAEMON" "daemon status displays banner"
 assert_output_contains "$TARGET_BIN daemon status" "Dual-Plane Ephemeral + eBPF LSM Guard" "daemon status displays architecture"
-DAEMON_BIN="$(command -v neuronix-daemon 2>/dev/null || echo "${PROJECT_ROOT}/packages/neuronix-daemon/target/release/neuronix-daemon")"
+DAEMON_BIN="$(command -v neuronix-daemon 2>/dev/null || echo "${PROJECT_ROOT:-${DISTRO_PATH}}/packages/neuronix-daemon/target/release/neuronix-daemon")"
 TEST_SIG_SOCK="/tmp/test_daemon_sig_$$.sock"
 rm -f "$TEST_SIG_SOCK"
 if [[ -x "$DAEMON_BIN" ]]; then

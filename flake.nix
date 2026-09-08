@@ -57,6 +57,7 @@
         mesh = import ./modules/services/mesh.nix;
         daemon = import ./modules/services/daemon.nix;
         ebpfLsm = import ./modules/security/ebpf-lsm.nix;
+        lanzaboote = import ./modules/security/lanzaboote.nix;
       };
 
       # Target installed system configuration (Default Desktop x86_64)

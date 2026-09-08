@@ -2719,7 +2719,7 @@ cmd_daemon() {
                 echo -e "  ${CYAN}-h, --help${RESET} Show this help"
                 return 0
                 ;;
-            status|ping|ast)
+            status|ping|ast|control)
                 sub="$1"
                 shift
                 ;;
@@ -2732,6 +2732,15 @@ cmd_daemon() {
     sub="${sub:-status}"
 
     local daemon_bin="$(resolve_daemon_bin)"
+
+    if [[ "$sub" == "control" ]]; then
+        if [[ -n "$daemon_bin" && -x "$daemon_bin" ]]; then
+            "$daemon_bin" --status
+            return $?
+        fi
+        echo '{"jsonrpc":"2.0","result":{"status":"STANDBY","control_plane":"FALLBACK_PLANE","peer_cred_enforced":false,"version":"'${VERSION}'"},"id":1}'
+        return 0
+    fi
 
     if [[ "$sub" == "ast" ]] || [[ "$json_output" -eq 1 && "$sub" == "status" ]]; then
         if [[ -n "$daemon_bin" && -x "$daemon_bin" ]]; then

@@ -11,7 +11,7 @@ on:
       release_tag:
         description: 'Release Tag to attach ISO artifacts to (e.g. v1.0.3)'
         required: true
-        default: 'v1.0.3'
+        default: 'v1.0.4'
 
 permissions:
   contents: write
@@ -51,7 +51,7 @@ jobs:
             echo "::error::Compiled ISO not found in result-iso/iso"
             exit 1
           fi
-          TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.3' }}"
+          TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.4' }}"
           TARGET_NAME="neuronix-os-${TAG}-x86_64.iso"
           cp "$ISO_FILE" "dist/${TARGET_NAME}"
           ISO_SIZE=$(stat -c%s "dist/${TARGET_NAME}")
@@ -74,11 +74,11 @@ jobs:
               "To reassemble the complete, bootable ISO image:" \
               "" \
               "[On Linux & macOS]:" \
-              "  cat neuronix-os-*-x86_64.iso.part_* > neuronix-os-v1.0.3-x86_64.iso" \
+              "  cat neuronix-os-*-x86_64.iso.part_* > neuronix-os-${TAG}-x86_64.iso" \
               "  sha256sum -c SHA256SUMS" \
               "" \
               "[On Windows (Command Prompt)]:" \
-              "  copy /b neuronix-os-*-x86_64.iso.part_aa + neuronix-os-*-x86_64.iso.part_ab neuronix-os-v1.0.3-x86_64.iso" \
+              "  copy /b neuronix-os-*-x86_64.iso.part_aa + neuronix-os-*-x86_64.iso.part_ab neuronix-os-${TAG}-x86_64.iso" \
               "" \
               "Verify the reconstructed ISO with:" \
               "  sha256sum -c SHA256SUMS" \
@@ -100,7 +100,7 @@ jobs:
       - name: Upload ISO Artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.3' }}
+          tag_name: ${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.4' }}
           files: |
             dist/*
         env:

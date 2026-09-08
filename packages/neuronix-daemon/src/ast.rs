@@ -239,6 +239,12 @@ pub fn handle_jsonrpc(request_str: &str) -> String {
                 CANONICAL_VERSION, epoch, id_val
             )
         }
+        "system/status" => {
+            format!(
+                r#"{{"jsonrpc":"2.0","result":{{"status":"ONLINE","control_plane":"DUAL_PLANE_ISOLATED","peer_cred_enforced":true,"version":"{}"}},"id":{}}}"#,
+                CANONICAL_VERSION, id_val
+            )
+        }
         _ => {
             format!(
                 r#"{{"jsonrpc":"2.0","error":{{"code":-32601,"message":"Method '{}' not found"}},"id":{}}}"#,
