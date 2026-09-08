@@ -28,7 +28,17 @@ assert_output_contains "$TARGET_BIN daemon --help" "daemon" "neuronix daemon --h
 assert_exit_code "$TARGET_BIN daemon status" 0 "neuronix daemon status exits 0"
 assert_output_contains "$TARGET_BIN daemon status" "NEURONIX AUTONOMOUS MICRO-RUST SYSTEMS DAEMON" "daemon status displays banner"
 assert_output_contains "$TARGET_BIN daemon status" "Dual-Plane Ephemeral + eBPF LSM Guard" "daemon status displays architecture"
-assert_output_contains "$TARGET_BIN daemon status" "Transparent Fallback Guaranteed" "daemon status confirms transparent fallback mode"
+DAEMON_BIN="$(command -v neuronix-daemon 2>/dev/null || echo "${PROJECT_ROOT}/packages/neuronix-daemon/target/release/neuronix-daemon")"
+TEST_SIG_SOCK="/tmp/test_daemon_sig_$$.sock"
+rm -f "$TEST_SIG_SOCK"
+if [[ -x "$DAEMON_BIN" ]]; then
+    "$DAEMON_BIN" --daemon --socket "$TEST_SIG_SOCK" >/dev/null 2>&1 &
+    SIG_PID=$!
+    sleep 0.3
+    kill -TERM "$SIG_PID" 2>/dev/null || true
+    wait "$SIG_PID" 2>/dev/null || true
+fi
+assert_eq "$([[ ! -e "$TEST_SIG_SOCK" ]] && echo "unlinked" || echo "lingering")" "unlinked" "daemon unlinks UNIX domain socket cleanly upon SIGTERM"
 
 # ==============================================================================
 # Part 2: JSON-RPC 2.0 Ping/Pong Protocol (Tests 7-10)

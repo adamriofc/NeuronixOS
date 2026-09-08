@@ -16,8 +16,6 @@ use std::io::{BufRead, BufReader, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use std::thread;
 
 use ast::{handle_jsonrpc, SystemAst, CANONICAL_VERSION};
@@ -67,6 +65,7 @@ fn main() {
             if !stderr.is_empty() {
                 eprint!("{}", stderr);
             }
+            println!("Ghost RAM Session vaporized. Zero bytes retained on disk.");
             std::process::exit(code);
         } else {
             eprintln!("Error: --ghost-run requires a command string");
@@ -144,7 +143,7 @@ fn print_usage() {
     println!("  --ghost-run <cmd>         Execute command in ephemeral RAM overlay");
     println!("  --policy <pkg>            Generate declarative eBPF LSM policy contract");
     println!("  --branch-create <s> <n>   Create Btrfs/Reflink workspace branch");
-    println!("  --branch-revert <s> <b>   Revert workspace to snapshot branch");
+    println!("  --branch-revert <s> <b>   Restore workspace from snapshot branch (CoW reflink)");
     println!("  --version, -v             Print version and exit");
     println!("  --help, -h                Print this help message");
 }
@@ -192,17 +191,8 @@ fn run_daemon(socket_path: PathBuf) {
 
     println!("[NEURONIX-DAEMON] Listening on UNIX domain socket: {}", socket_path.display());
 
-    let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
-
-    // Signal handler
-    let sp = socket_path.clone();
-    let _ = ctrlc_setup(move || {
-        println!("\n[NEURONIX-DAEMON] Shutdown signal received. Cleaning up socket...");
-        r.store(false, Ordering::SeqCst);
-        let _ = fs::remove_file(&sp);
-        std::process::exit(0);
-    });
+    // Register genuine POSIX signal handler for graceful shutdown and socket unlinking
+    register_signals(&socket_path);
 
     for stream in listener.incoming() {
         match stream {
@@ -234,7 +224,38 @@ fn handle_client(mut stream: UnixStream) {
     }
 }
 
-fn ctrlc_setup<F: Fn() + Send + 'static>(_handler: F) -> Result<(), ()> {
-    // Graceful standard library signal trap placeholder
-    Ok(())
+static mut GLOBAL_SOCKET_PATH: [u8; 4096] = [0; 4096];
+static mut GLOBAL_SOCKET_LEN: usize = 0;
+
+extern "C" {
+    fn signal(sig: i32, handler: extern "C" fn(i32)) -> usize;
+    fn unlink(pathname: *const u8) -> i32;
+    fn write(fd: i32, buf: *const u8, count: usize) -> isize;
 }
+
+extern "C" fn sig_handler(_sig: i32) {
+    unsafe {
+        if GLOBAL_SOCKET_LEN > 0 {
+            unlink(std::ptr::addr_of!(GLOBAL_SOCKET_PATH) as *const u8);
+        }
+        let msg = b"\n[NEURONIX-DAEMON] Shutdown signal received. Socket unlinked gracefully.\n";
+        let _ = write(2, msg.as_ptr(), msg.len());
+        std::process::exit(0);
+    }
+}
+
+fn register_signals(socket_path: &Path) {
+    let path_str = socket_path.to_string_lossy();
+    let bytes = path_str.as_bytes();
+    if bytes.len() < 4095 {
+        unsafe {
+            let dest = std::ptr::addr_of_mut!(GLOBAL_SOCKET_PATH) as *mut u8;
+            std::ptr::copy_nonoverlapping(bytes.as_ptr(), dest, bytes.len());
+            *dest.add(bytes.len()) = 0;
+            GLOBAL_SOCKET_LEN = bytes.len();
+            signal(2, sig_handler);  // SIGINT
+            signal(15, sig_handler); // SIGTERM
+        }
+    }
+}
+

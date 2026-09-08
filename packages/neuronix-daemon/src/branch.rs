@@ -72,7 +72,7 @@ impl BranchEngine {
             return Err(format!("Branch path does not exist: {}", branch.display()));
         }
 
-        // Atomic swap or reflink overwrite
+        // CoW reflink snapshot restore back to source
         let status = Command::new("cp")
             .arg("-a")
             .arg("--reflink=auto")
@@ -82,7 +82,7 @@ impl BranchEngine {
 
         match status {
             Ok(s) if s.success() => Ok(()),
-            _ => Err("Failed to revert workspace branch".to_string()),
+            _ => Err("Failed to restore workspace from snapshot branch".to_string()),
         }
     }
 }

@@ -190,7 +190,7 @@ Executes an ephemeral, zero-trace user session in volatile RAM overlay (`/dev/sh
   * Default: Spawns an interactive shell (`/bin/bash`) within the ephemeral RAM overlay.
 
 ### 2.27 `neuronix branch [create|list|revert] <path> [name]`
-Provides instant, atomic copy-on-write project workspace branching using Btrfs subvolumes or filesystem Reflinks (`cp --reflink=always`).
+Provides instant copy-on-write project workspace branching using Btrfs subvolumes or filesystem Reflinks (`cp --reflink=always`).
 * **Instantaneous Snapshots:** Clones entire multi-gigabyte project directories in under 10 milliseconds with 0 bytes initial storage footprint.
 * **Subcommands:**
   * `create <path> [name]`: Creates a CoW branch snapshot of the specified workspace.
@@ -199,7 +199,7 @@ Provides instant, atomic copy-on-write project workspace branching using Btrfs s
 
 ### 2.28 `neuronix ebpf [status|policy <pkg>]`
 Inspects and manages declarative eBPF Linux Security Module (LSM) syscall containment and security policies.
-* **Kernel Syscall Gate:** Uses Aya pure-Rust eBPF kernel hooks to enforce syscall restrictions on ephemeral developer containers and untrusted workloads.
+* **Kernel Syscall Gate:** Enforces declarative eBPF Linux Security Module (LSM) security contracts to restrict unauthorized file and syscall modifications on developer containers and untrusted workloads.
 * **Subcommands:**
   * `status`: Inspects active eBPF LSM status and kernel security enforcement mode (`ENFORCING` or `AUDIT_MODE`).
   * `policy <pkg>`: Generates declarative eBPF confinement policy for the specified package or derivation.

@@ -138,7 +138,7 @@ def list_workspace_branches(source_path: str):
     return sorted(branches)
 
 def revert_workspace_branch(source_path: str, branch_name: str):
-    """Reverts source workspace atomically to designated branch snapshot."""
+    """Restores source workspace from designated branch snapshot via CoW reflink."""
     source = os.path.abspath(source_path)
     branch_dir = _get_branch_dir(source, branch_name)
     if not os.path.exists(branch_dir):

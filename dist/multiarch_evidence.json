@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-09-08T06:23:51Z",
+  "timestamp": "2026-09-08T08:33:32Z",
   "architectures": {
     "x86_64-linux": {
       "tier": 1,
       "status": "FULL_STACK",
       "iso_supported": true,
       "packages_supported": true,
-      "iso_derivation": "/nix/store/ixrvhhwqafbw4wi3y8qgvr78xxsr7dij-neuronix-os.iso.drv"
+      "iso_derivation": "/nix/store/fc4bs6g0lmvy965snh2yxjfkbhgmplq0-neuronix-os.iso.drv"
     },
     "aarch64-linux": {
       "tier": 2,

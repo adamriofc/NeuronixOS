@@ -182,7 +182,7 @@ impl SystemAst {
 
     pub fn to_json(&self) -> String {
         format!(
-            r#"{{"schema_version":"{}","timestamp":{},"system":{{"os":"{}","kernel":"{}","arch":"{}","uptime_seconds":{},"substrate_version":"{}","state_version":"24.11"}},"memory":{{"total_kb":{},"available_kb":{},"zram_active":{},"psi_some_avg10":{:.2}}},"storage":{{"btrfs_root":{},"nix_store_ro":{}}},"generation":{{"active":{},"total":{},"last_known_good":{}}},"security":{{"ebpf_lsm_active":{},"dual_plane_ephemeral":true,"immutable_store":{},"trust_anchor":"Ed25519"}},"capabilities":["ast_query","ephemeral_ghost","ebpf_lsm_guard","workspace_branch","dual_plane"]}}"#,
+            r#"{{"schema_version": "{}","timestamp": {},"system": {{"os": "{}","kernel": "{}","arch": "{}","uptime_seconds": {},"substrate_version": "{}","state_version": "24.11"}},"memory": {{"total_kb": {},"available_kb": {},"zram_active": {},"psi_some_avg10": {:.2}}},"storage": {{"btrfs_root": {},"nix_store_ro": {}}},"generation": {{"active": {},"total": {},"last_known_good": {}}},"security": {{"ebpf_lsm_active": {},"dual_plane_ephemeral": true,"immutable_store": {},"trust_anchor": "Ed25519"}},"capabilities": ["ast_query","ephemeral_ghost","ebpf_lsm_guard","workspace_branch","dual_plane"]}}"#,
             self.schema_version,
             self.timestamp_epoch,
             self.os_pretty,

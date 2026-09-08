@@ -2883,7 +2883,7 @@ except Exception as e:
         *)
             echo -e "${BOLD}USAGE:${RESET}"
             echo -e "  ${PROGRAM_NAME} branch [create|list|revert] <path> [branch_name]\n"
-            echo -e "  Atomic Btrfs/Reflink time-travel project workspace branching.\n"
+            echo -e "  Point-in-time CoW snapshot and reflink workspace branching.\n"
             return 0
             ;;
     esac
@@ -2912,7 +2912,7 @@ cmd_ebpf() {
     fi
     echo -e "  eBPF LSM Status : ${ebpf_status}"
     echo -e "  Syscall Contain : Active for neuronix dev / containers"
-    echo -e "  Policy Driver   : Aya Pure-Rust Kernel Module"
+    echo -e "  Policy Driver   : Declarative eBPF LSM Policy Engine"
     echo -e "${BOLD}================================================================${RESET}\n"
 }
 

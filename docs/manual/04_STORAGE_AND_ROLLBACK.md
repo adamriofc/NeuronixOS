@@ -101,7 +101,7 @@ neuronix branch create . experiment-ai
 # List all branch snapshots for this workspace
 neuronix branch list .
 
-# Revert workspace to snapshot state atomically
+# Restore workspace from snapshot state via CoW reflink
 neuronix branch revert . experiment-ai
 ```
 

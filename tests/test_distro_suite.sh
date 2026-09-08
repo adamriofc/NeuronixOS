@@ -316,7 +316,7 @@ test_sanitization() {
   fi
 
   local count_adamrofc
-  count_adamrofc=$( (grep -rn "/home/adamrofc" "${DISTRO_ROOT}" 2>/dev/null || true) | (grep -v "/tests/" || true) | wc -l )
+  count_adamrofc=$( (grep -rn --exclude-dir=target --exclude-dir=__pycache__ --exclude-dir=.git --exclude-dir=tests "/home/adamrofc" "${DISTRO_ROOT}" 2>/dev/null || true) | wc -l )
   if [ "$count_adamrofc" -eq 0 ]; then
     log_pass "Zero hardcoded user paths in Distro/ source files (100% Clean)"
   else

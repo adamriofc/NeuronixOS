@@ -779,7 +779,7 @@ neuronix ghost --run "pytest -v"
 ### 22. Instant Time-Travel Workspace Branching (neuronix branch)
 Brings the power of atomic operating system rollbacks down to individual project repositories:
 - **Sub-Millisecond CoW Snapshots:** Leverages native Btrfs subvolumes and Linux filesystem Reflinks (`cp --reflink=always`) to capture instantaneous point-in-time workspace checkpoints in under 10 milliseconds with 0 bytes initial storage footprint.
-- **Risk-Free Prototyping:** Developers and autonomous AI models can capture a checkpoint before large-scale refactorings, test modifications destructively, and revert atomically if regressions are detected.
+- **Risk-Free Prototyping:** Developers and autonomous AI models can capture a checkpoint before large-scale refactorings, test modifications destructively, and restore workspace snapshots via CoW reflink if regressions are detected.
 
 ```bash
 # Create an instantaneous CoW branch checkpoint of current workspace
@@ -788,13 +788,13 @@ neuronix branch create . refactor-checkpoint
 # List all available branch checkpoints for this repository
 neuronix branch list .
 
-# Revert workspace to snapshot state atomically
+# Restore workspace from snapshot state via CoW reflink
 neuronix branch revert . refactor-checkpoint
 ```
 
 ### 23. Declarative eBPF LSM Syscall Confinement Gate (neuronix ebpf)
 A modern Linux Security Module containment gate enforcing least-privilege syscall policies:
-- **Kernel-Level Syscall Confinement:** Connects to Linux kernel LSM hooks via Aya pure-Rust probes (`modules/security/ebpf-lsm.nix`) to restrict unauthorized filesystem alterations outside `/nix/store` and `/tmp`.
+- **Kernel-Level Syscall Confinement:** Connects to Linux kernel LSM hooks via declarative security contracts (`modules/security/ebpf-lsm.nix`) to restrict unauthorized filesystem alterations outside `/nix/store` and `/tmp`.
 - **Dual Operating Modes:** Operates in `enforcing` mode for strict blocking or `audit` mode for non-blocking developer telemetry.
 - **Declarative Package Policies:** Synthesizes custom containment policies for arbitrary packages on-demand (`neuronix ebpf policy <pkg>`).
 
