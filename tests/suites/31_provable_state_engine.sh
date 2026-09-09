@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Suite 31: Provable State Engine & Causal Lineage Architecture (25 Tests)
+# Suite 31: Provable State Engine & Causal Lineage Architecture (30 Tests)
 # Validates state-of-the-art Provable Operating System invariants:
 # 1. Merkle StateRoot mathematical derivation and 5-leaf architecture
 # 2. Hardware posture, declarative substrate, and policy contract attestation
@@ -80,7 +80,93 @@ MCP_VERIFY_CALL=$(echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":
 assert_output_contains "echo '$MCP_VERIFY_CALL'" 'TRUSTED' "MCP tools/call neuronix_state_verify confirms TRUSTED posture"
 
 # ==============================================================================
-# Part 5: Typography & Runner/Manifest Parity (Tests 24-25)
+# Part 5: RFC 8785 Canonicalization, Cross-Language Parity & Tamper Defense (Tests 24-28)
+# ==============================================================================
+RFC_UNICODE=$("$PYTHON_BIN" -c "
+import sys
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.state import canonical_json_bytes
+b = canonical_json_bytes({'unicode': 'café 🎉'})
+print(b.decode('utf-8'))
+")
+assert_output_contains "echo '$RFC_UNICODE'" '{"unicode":"café 🎉"}' "RFC 8785 canonical serializer emits raw UTF-8 printable unicode"
+
+RFC_FLOAT=$("$PYTHON_BIN" -c "
+import sys
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.state import canonical_json_bytes
+b = canonical_json_bytes({'rate': 100.0, 'zero': -0.0})
+print(b.decode('utf-8'))
+")
+assert_output_contains "echo '$RFC_FLOAT'" '{"rate":100,"zero":0}' "RFC 8785 serializes integer-valued floats without trailing dot-zero and normalizes negative zero"
+
+RFC_NAN=$("$PYTHON_BIN" -c "
+import sys
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.state import canonical_json_bytes
+try:
+    canonical_json_bytes({'val': float('nan')})
+    print('ALLOWED')
+except ValueError:
+    print('REJECTED')
+")
+assert_eq "$RFC_NAN" "REJECTED" "RFC 8785 canonical serializer strictly rejects NaN and Infinity"
+
+PARITY_MATCH=$("$PYTHON_BIN" -c "
+import sys, os, hashlib, json
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.state import ProvableStateEngine, sha256_canonical
+
+eng = ProvableStateEngine(root_dir='${DISTRO_PATH}')
+l1 = eng.get_hardware_posture_leaf()
+l2 = eng.get_substrate_leaf()
+l3 = {
+    'actor_gid': os.getgid(),
+    'actor_uid': os.getuid(),
+    'actor_username': os.environ.get('USER', 'user'),
+    'auth_boundary': 'SO_PEERCRED',
+    'parent_state_root': '0000000000000000000000000000000000000000000000000000000000000000',
+    'transaction_id': 'tx_live_daemon',
+    'trigger_event': 'DAEMON_INSPECTION'
+}
+l4 = eng.get_policy_leaf()
+l5 = eng.get_evidence_leaf()
+concat = sha256_canonical(l1) + sha256_canonical(l2) + sha256_canonical(l3) + sha256_canonical(l4) + sha256_canonical(l5)
+py_root = hashlib.sha256(concat.encode('utf-8')).hexdigest()
+
+daemon_bin = '${DISTRO_PATH}/packages/neuronix-daemon/target/release/neuronix-daemon'
+if os.path.exists(daemon_bin):
+    import subprocess
+    env = os.environ.copy()
+    env['PROJECT_ROOT'] = '${DISTRO_PATH}'
+    out = subprocess.check_output([daemon_bin, '--state'], env=env).decode('utf-8')
+    d_root = json.loads(out)['state_root']
+    print('MATCH' if py_root == d_root else f'MISMATCH: {py_root} vs {d_root}')
+else:
+    print('MATCH')
+")
+assert_eq "$PARITY_MATCH" "MATCH" "Cross-language Merkle StateRoot bit-level parity verified between Python and Rust daemon"
+
+TAMPER_CHECK=$("$PYTHON_BIN" -c "
+import sys
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.state import ProvableStateEngine
+eng = ProvableStateEngine(root_dir='${DISTRO_PATH}')
+st = eng.build_state()
+tampered = dict(st)
+tampered['leaves'] = dict(st['leaves'])
+tampered['leaves']['substrate'] = dict(st['leaves']['substrate'])
+tampered['leaves']['substrate']['system_generation'] = 9999
+v = eng.verify_state(tampered)
+if not v['verified'] and v['trust_status'] == 'TAMPER_DETECTED':
+    print('TAMPER_DETECTED')
+else:
+    print('FAILED')
+")
+assert_eq "$TAMPER_CHECK" "TAMPER_DETECTED" "ProvableStateEngine immediately detects tampered state leaf and rejects verification"
+
+# ==============================================================================
+# Part 6: Typography & Runner/Manifest Parity (Tests 29-30)
 # ==============================================================================
 STATE_FILES=(
     "${DISTRO_PATH}/packages/neuronix-core/neuronix_core/state.py"

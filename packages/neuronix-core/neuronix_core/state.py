@@ -12,6 +12,7 @@ import sys
 import json
 import hashlib
 import time
+import math
 from typing import Dict, Any, List, Optional, Tuple
 
 NULL_SENTINEL_SHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
@@ -19,14 +20,73 @@ NULL_SENTINEL_SHA256 = "00000000000000000000000000000000000000000000000000000000
 def canonical_json_bytes(obj: Any) -> bytes:
     """
     Serializes a Python dict/object into canonical JSON bytes according to RFC 8785 (JCS).
-    Guarantees deterministic byte-for-byte serialization across all platforms.
+    Guarantees deterministic byte-for-byte serialization across all platforms:
+    - Object keys sorted by UTF-16 code units (RFC 8785 §3.2.3)
+    - No whitespace between separators (',' and ':')
+    - Printable Unicode characters emitted as raw UTF-8 bytes (NOT \\uXXXX escapes)
+    - ECMAScript 262 ToString number representation (-0 -> 0, float integers without .0, no NaN/Inf)
     """
-    return json.dumps(
-        obj,
-        sort_keys=True,
-        ensure_ascii=True,
-        separators=(',', ':')
-    ).encode('utf-8')
+    def _encode_str(s: str) -> str:
+        res = ['"']
+        for ch in s:
+            cp = ord(ch)
+            if ch == '"':
+                res.append('\\"')
+            elif ch == '\\':
+                res.append('\\\\')
+            elif ch == '\b':
+                res.append('\\b')
+            elif ch == '\f':
+                res.append('\\f')
+            elif ch == '\n':
+                res.append('\\n')
+            elif ch == '\r':
+                res.append('\\r')
+            elif ch == '\t':
+                res.append('\\t')
+            elif cp < 0x20:
+                res.append(f"\\u{cp:04x}")
+            else:
+                res.append(ch)
+        res.append('"')
+        return "".join(res)
+
+    def _encode_num(n: Any) -> str:
+        if isinstance(n, bool):
+            return "true" if n else "false"
+        if math.isnan(n) or math.isinf(n):
+            raise ValueError(f"RFC 8785 disallows NaN and Infinity: {n}")
+        if isinstance(n, float):
+            if n == 0.0:
+                return "0"
+            if n.is_integer():
+                return str(int(n))
+            s = repr(n)
+            return s.replace("e+", "e")
+        return str(n)
+
+    def _serialize(v: Any) -> str:
+        if v is None:
+            return "null"
+        if isinstance(v, bool):
+            return "true" if v else "false"
+        if isinstance(v, (int, float)):
+            return _encode_num(v)
+        if isinstance(v, str):
+            return _encode_str(v)
+        if isinstance(v, (list, tuple)):
+            return "[" + ",".join(_serialize(item) for item in v) + "]"
+        if isinstance(v, dict):
+            sorted_keys = sorted(v.keys(), key=lambda k: str(k).encode('utf-16-be'))
+            pairs = []
+            for k in sorted_keys:
+                if not isinstance(k, str):
+                    raise TypeError(f"RFC 8785 object keys must be strings, got {type(k)}")
+                pairs.append(_encode_str(k) + ":" + _serialize(v[k]))
+            return "{" + ",".join(pairs) + "}"
+        raise TypeError(f"Object of type {type(v)} is not JSON serializable under RFC 8785")
+
+    return _serialize(obj).encode('utf-8')
 
 def sha256_canonical(obj: Any) -> str:
     """Computes SHA-256 hex digest of canonically serialized JSON object."""
@@ -117,13 +177,20 @@ class ProvableStateEngine:
 
         # Flake lock hash if available
         flake_lock_hash = NULL_SENTINEL_SHA256
-        lock_path = os.path.join(self.root_dir, "flake.lock") if self.root_dir else "flake.lock"
-        if os.path.exists(lock_path):
-            try:
-                with open(lock_path, "rb") as f:
-                    flake_lock_hash = hashlib.sha256(f.read()).hexdigest()
-            except Exception:
-                pass
+        candidate_locks = [
+            os.path.join(self.root_dir, "flake.lock") if self.root_dir else "",
+            "flake.lock",
+            os.path.join(os.environ.get("PROJECT_ROOT", ""), "flake.lock") if os.environ.get("PROJECT_ROOT") else "",
+            "/etc/nixos/flake.lock"
+        ]
+        for lock_path in candidate_locks:
+            if lock_path and os.path.exists(lock_path):
+                try:
+                    with open(lock_path, "rb") as f:
+                        flake_lock_hash = hashlib.sha256(f.read()).hexdigest()
+                        break
+                except Exception:
+                    pass
 
         return {
             "system_generation": active_gen,
@@ -194,7 +261,7 @@ class ProvableStateEngine:
         """
         Gathers Leaf 5: Verification & Invariant Health (L_evidence).
         """
-        total_assertions = 1254
+        total_assertions = 1264
         manifest_path = os.path.join(self.root_dir, "data/test_manifest.json") if self.root_dir else "data/test_manifest.json"
         if os.path.exists(manifest_path):
             try:
@@ -234,13 +301,19 @@ class ProvableStateEngine:
         now_epoch = int(time.time())
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now_epoch))
 
+        # Dynamically evaluate system trust posture
+        substrate_ok = bool(l2.get("system_generation", 0) > 0)
+        policy_ok = (l4.get("ebpf_policy_hash") != NULL_SENTINEL_SHA256)
+        invariants_ok = (l5.get("pass_rate_percentage", 0.0) == 100.0)
+        trust_status = "TRUSTED" if (substrate_ok and policy_ok and invariants_ok) else "DEGRADED"
+
         return {
             "schema_version": "1.0.0",
             "state_id": f"STATE-{now_iso[:10]}-{state_root[:8].upper()}",
             "state_root": state_root,
             "timestamp": now_iso,
             "timestamp_epoch": now_epoch,
-            "trust_status": "TRUSTED",
+            "trust_status": trust_status,
             "leaves": {
                 "posture": l1,
                 "substrate": l2,
@@ -259,7 +332,8 @@ class ProvableStateEngine:
 
     def verify_state(self, state_to_verify: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Verifies whether live system posture and files match the committed StateRoot.
+        Verifies whether system posture and files match the committed StateRoot.
+        Distinguishes mathematical integrity from live host drift and tamper detection.
         """
         target = state_to_verify or self.build_state()
         claimed_root = target.get("state_root", "")
@@ -280,24 +354,38 @@ class ProvableStateEngine:
         recomputed_root = hashlib.sha256((h1 + h2 + h3 + h4 + h5).encode('utf-8')).hexdigest()
         is_root_match = (claimed_root == recomputed_root)
 
-        # Check live hardware/software invariants
-        current_live = self.build_state(parent_root=l3.get("parent_state_root"), event=l3.get("trigger_event", "VERIFY"))
-        live_root = current_live.get("state_root", "")
+        checks = {
+            "posture_attested": True,
+            "substrate_valid": bool(l2.get("system_generation", 0) > 0),
+            "policy_enforced": (l4.get("ebpf_lsm_mode") == "enforcing" and l4.get("ebpf_policy_hash") != NULL_SENTINEL_SHA256),
+            "provenance_verified": bool(l3.get("transaction_id")),
+            "invariants_satisfied": (l5.get("pass_rate_percentage", 0.0) == 100.0)
+        }
 
-        is_trusted = is_root_match and (claimed_root == live_root)
+        all_checks_pass = all(checks.values())
+
+        if not is_root_match:
+            trust_status = "TAMPER_DETECTED"
+            verified = False
+        elif not all_checks_pass:
+            trust_status = "DEGRADED"
+            verified = False
+        else:
+            current_live = self.build_state(parent_root=l3.get("parent_state_root"), event=l3.get("trigger_event", "VERIFY"))
+            live_root = current_live.get("state_root", "")
+            if state_to_verify is not None and claimed_root != live_root:
+                trust_status = "DRIFT_DETECTED"
+                verified = True
+            else:
+                trust_status = "TRUSTED"
+                verified = True
 
         return {
-            "verified": is_root_match,
-            "trust_status": "TRUSTED" if is_trusted else "DRIFT_DETECTED",
+            "verified": verified,
+            "trust_status": trust_status,
             "claimed_state_root": claimed_root,
             "recomputed_state_root": recomputed_root,
-            "checks": {
-                "posture_attested": True,
-                "substrate_valid": bool(l2.get("system_generation")),
-                "policy_enforced": (l4.get("ebpf_lsm_mode") == "enforcing"),
-                "provenance_verified": bool(l3.get("transaction_id")),
-                "invariants_satisfied": (l5.get("pass_rate_percentage", 0.0) == 100.0)
-            }
+            "checks": checks
         }
 
     def diff_states(self, state_a: Dict[str, Any], state_b: Dict[str, Any]) -> Dict[str, Any]:

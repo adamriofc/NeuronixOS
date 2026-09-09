@@ -66,8 +66,13 @@ fn main() {
         return;
     }
 
-    // Direct Provable State Root probe (One-shot mode)
-    if args.contains(&"--state".to_string()) {
+    // Direct Provable State Root probe and verification (One-shot mode)
+    if let Some(pos) = args.iter().position(|a| a == "--state") {
+        if pos + 1 < args.len() && args[pos + 1] == "verify" {
+            let res = state::StateEngine::verify_state();
+            println!("{}", res);
+            return;
+        }
         let state = state::StateEngine::probe_state();
         println!("{}", state);
         return;

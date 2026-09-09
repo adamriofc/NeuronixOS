@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Suite 32: Provable Adaptive Execution Architecture (PAEA / Project Hyperion) (25 Tests)
+# Suite 32: Provable Adaptive Execution Architecture (PAEA / Project Hyperion) (30 Tests)
 # Validates state-of-the-art Provable Adaptive Execution invariants:
 # 1. Hyperion Domain Specification (HDS v1.0.0) canonical structure
 # 2. Adaptive 4-tier isolation ladder (Tier 0 to Tier 3)
@@ -120,7 +120,49 @@ MCP_NEG_CALL=$(echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"ne
 assert_output_contains "echo '$MCP_NEG_CALL'" "TIER_3_MICRO_VM" "MCP tools/call neuronix_hyperion_negotiate returns negotiated HDS"
 
 # ==============================================================================
-# Part 6: Zero Em-Dash Typography & Test Invariants (Tests 24-25)
+# Part 6: Execution Truth, Fail-Closed Security & Proof Tamper Defense (Tests 24-28)
+# ==============================================================================
+T2_FAIL_CLOSED=$(NEURONIX_FORCE_FAIL_CLOSED=1 "$TARGET_BIN" run --enclave echo "tier2_should_fail" 2>&1 || true)
+assert_output_contains "echo '$T2_FAIL_CLOSED'" "Failing closed" "Tier 2 eBPF enclave fails closed when sandbox isolation is unavailable"
+
+T3_FAIL_CLOSED=$(NEURONIX_FORCE_FAIL_CLOSED=1 "$TARGET_BIN" run --isolated echo "tier3_should_fail" 2>&1 || true)
+assert_output_contains "echo '$T3_FAIL_CLOSED'" "Failing closed" "Tier 3 Micro-VM fails closed when virtualization boundary is unavailable"
+
+TAMPER_ROOT_RESULT=$("$PYTHON_BIN" -c "
+import sys
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.hyperion import HyperionExecutionEngine
+engine = HyperionExecutionEngine(root_dir='${DISTRO_PATH}')
+spec = engine.create_domain_spec('tamper-root-test')
+proof = engine.calculate_domain_proof(spec, exit_code=0)
+proof['domain_proof_root'] = '0' * 64
+valid, msg = engine.verify_domain_proof(proof)
+print('REJECTED' if not valid else 'ACCEPTED')
+")
+assert_eq "$TAMPER_ROOT_RESULT" "REJECTED" "verify_domain_proof strictly rejects forged or tampered Merkle proof root"
+
+EXIT_ANOMALY_RESULT=$("$PYTHON_BIN" -c "
+import sys
+sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
+from neuronix_core.hyperion import HyperionExecutionEngine
+engine = HyperionExecutionEngine(root_dir='${DISTRO_PATH}')
+spec = engine.create_domain_spec('anomaly-test')
+proof = engine.calculate_domain_proof(spec, exit_code=0)
+proof['exit_code'] = 137
+valid, msg = engine.verify_domain_proof(proof)
+print('REJECTED' if not valid else 'ACCEPTED')
+")
+assert_eq "$EXIT_ANOMALY_RESULT" "REJECTED" "verify_domain_proof strictly rejects proofs with non-zero exit code anomalies"
+
+INJECT_ATTEMPT=$("$PYTHON_BIN" -c "
+import subprocess
+out = subprocess.check_output(['${TARGET_BIN}', 'run', '--dry-run', '--intent', 'test\x27\x27\x27); import sys; sys.exit(42) #\"\"\"', 'echo', 'safe']).decode('utf-8')
+print('SAFE' if 'Deterministic Safety Gate Passed' in out else 'UNSAFE')
+")
+assert_eq "$INJECT_ATTEMPT" "SAFE" "neuronix run safely sanitizes python arguments resisting code injection fuzzing"
+
+# ==============================================================================
+# Part 7: Zero Em-Dash Typography & Test Invariants (Tests 29-30)
 # ==============================================================================
 HYPERION_FILES=(
     "${DISTRO_PATH}/packages/neuronix-core/neuronix_core/hyperion.py"

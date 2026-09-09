@@ -61,8 +61,8 @@ QA_SUITES = [
     {"suite_file": "28_micro_rust_daemon_and_ast.sh", "title": "Micro-Rust Systems Daemon & High-Concurrency AST", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True},
     {"suite_file": "29_ephemeral_persona_and_branching.sh", "title": "Ephemeral Persona, Workspace Branching & eBPF LSM Gate", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True},
     {"suite_file": "30_dual_plane_and_pcr_validation.sh", "title": "Dual-Plane Control Engine, UKI & Resilient Measured Boot", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True},
-    {"suite_file": "31_provable_state_engine.sh", "title": "Provable State Engine & Causal Lineage Architecture", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True},
-    {"suite_file": "32_hyperion_execution_engine.sh", "title": "Provable Adaptive Execution Architecture (Project Hyperion)", "assertions": 25, "proof_class": "L2_SYSTEM", "release_blocker": True}
+    {"suite_file": "31_provable_state_engine.sh", "title": "Provable State Engine & Causal Lineage Architecture", "assertions": 30, "proof_class": "L2_SYSTEM", "release_blocker": True},
+    {"suite_file": "32_hyperion_execution_engine.sh", "title": "Provable Adaptive Execution Architecture (Project Hyperion)", "assertions": 30, "proof_class": "L2_SYSTEM", "release_blocker": True}
 ]
 
 DISTRO_SUITE = {

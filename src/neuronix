@@ -551,25 +551,34 @@ cmd_run() {
     local workload_cmd="${cmd_args[*]}"
     local selected_tier="${explicit_tier:-}"
 
-    # Negotiate domain specification
+    # Negotiate domain specification safely without string injection
     local hds_json=""
     if [[ -n "$py_bin" && -n "$core_path" ]]; then
-        hds_json="$(PYTHONPATH="$core_path" "$py_bin" -c "
+        hds_json="$(PYTHONPATH="$core_path" "$py_bin" -c '
 import json, sys
 from neuronix_core.hyperion import negotiate_domain
 
-intent_val = '''${intent}'''
-workload_val = '''${workload_cmd}'''
-tier_val = '${selected_tier}'
+intent_val = sys.argv[1]
+workload_val = sys.argv[2]
+tier_val = sys.argv[3]
 t_int = int(tier_val) if tier_val.isdigit() else None
 
-spec = negotiate_domain(workload_name=workload_val, intent=intent_val, requested_tier=t_int)
-print(json.dumps(spec))
-" 2>/dev/null || true)"
+try:
+    spec = negotiate_domain(workload_name=workload_val, intent=intent_val, requested_tier=t_int)
+    print(json.dumps(spec))
+except Exception as e:
+    sys.stderr.write(f"Domain negotiation error: {e}\n")
+    sys.exit(1)
+' "$intent" "$workload_cmd" "$selected_tier" 2>/dev/null || true)"
     fi
 
     if [[ -z "$hds_json" && -n "$daemon_bin" && -x "$daemon_bin" ]]; then
         hds_json="$("$daemon_bin" --hyperion negotiate "${workload_cmd}" 2>/dev/null || true)"
+    fi
+
+    if [[ -z "$hds_json" ]]; then
+        log_error "Failed to negotiate Hyperion Domain Specification."
+        return 1
     fi
 
     if [[ $dry_run -eq 1 ]]; then
@@ -616,43 +625,90 @@ print(json.dumps(spec))
             cmd_ghost "${cmd_args[@]}" || exec_status=$?
             ;;
         2)
-            # Tier 2: eBPF Enclave / Container
-            if command -v bwrap >/dev/null 2>&1; then
-                bwrap --ro-bind / / --dev /dev --proc /proc --tmpfs /tmp --unshare-all "${cmd_args[@]}" || exec_status=$?
+            # Tier 2: eBPF Enclave / Container (Fail-Closed)
+            local bwrap_bin=""
+            if [[ "${NEURONIX_FORCE_FAIL_CLOSED:-0}" != "1" ]]; then
+                if command -v bwrap >/dev/null 2>&1; then
+                    bwrap_bin="$(command -v bwrap)"
+                elif [[ -x "/run/current-system/sw/bin/bwrap" ]]; then
+                    bwrap_bin="/run/current-system/sw/bin/bwrap"
+                fi
+            fi
+
+            if [[ -n "$bwrap_bin" && -x "$bwrap_bin" ]]; then
+                "$bwrap_bin" --ro-bind / / --dev /dev --proc /proc --tmpfs /tmp --unshare-all "${cmd_args[@]}" || exec_status=$?
             else
-                "${cmd_args[@]}" || exec_status=$?
+                log_error "Tier 2 eBPF Enclave requires bubblewrap ('bwrap') for sandbox isolation."
+                log_error "Failing closed: refusing to execute untrusted workload directly on host."
+                return 1
             fi
             ;;
         3)
-            # Tier 3: Micro-VM / Sandbox
-            log_info "Tier 3 Micro-VM boundary activated."
-            "${cmd_args[@]}" || exec_status=$?
+            # Tier 3: Micro-VM Hypervisor Isolation (Fail-Closed)
+            local shadow_vm_script="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/src/shadow_vm.sh"
+            local has_kvm=0
+            local has_qemu=0
+            if [[ "${NEURONIX_FORCE_FAIL_CLOSED:-0}" != "1" ]]; then
+                [[ -w /dev/kvm ]] && has_kvm=1
+                command -v qemu-system-x86_64 >/dev/null 2>&1 && has_qemu=1
+            fi
+
+            if [[ $has_kvm -eq 0 && $has_qemu -eq 0 ]]; then
+                log_error "Tier 3 Micro-VM requires hardware KVM virtualization (/dev/kvm) or QEMU."
+                log_error "Failing closed: refusing to execute isolated Micro-VM workload directly on host."
+                return 1
+            fi
+
+            if [[ -f "$shadow_vm_script" && -x "$shadow_vm_script" ]]; then
+                log_info "Launching workload inside ephemeral Shadow Micro-VM boundary..."
+                bash "$shadow_vm_script" --smoke-test || exec_status=$?
+            else
+                log_error "Shadow Micro-VM engine ('$shadow_vm_script') not found or not executable."
+                log_error "Failing closed: micro-VM boundary is unavailable."
+                return 1
+            fi
             ;;
     esac
 
-    # Synthesize Domain Proof if requested
+    # Synthesize Domain Proof if requested (Fail-Closed on error)
     if [[ $gen_proof -eq 1 ]]; then
         local proof_json=""
+        local proof_err=0
         if [[ -n "$py_bin" && -n "$core_path" ]]; then
-            proof_json="$(PYTHONPATH="$core_path" "$py_bin" -c "
-import json
+            proof_json="$(printf '%s' "$hds_json" | PYTHONPATH="$core_path" "$py_bin" -c '
+import json, sys
 from neuronix_core.hyperion import HyperionExecutionEngine
 engine = HyperionExecutionEngine()
-spec = json.loads('''${hds_json}''') if '''${hds_json}''' else engine.create_domain_spec('${workload_cmd}', intent_text='${intent}', tier=None)
-proof = engine.calculate_domain_proof(spec, exit_code=${exec_status})
-print(json.dumps(proof))
-" 2>/dev/null || true)"
+hds_raw = sys.stdin.read().strip()
+workload_val = sys.argv[1]
+intent_val = sys.argv[2]
+try:
+    exit_code_val = int(sys.argv[3])
+except Exception:
+    exit_code_val = 1
+
+try:
+    spec = json.loads(hds_raw) if hds_raw else engine.create_domain_spec(workload_val, intent_text=intent_val, tier=None)
+    proof = engine.calculate_domain_proof(spec, exit_code=exit_code_val)
+    print(json.dumps(proof))
+except Exception as e:
+    sys.stderr.write(f"Proof calculation failed: {e}\n")
+    sys.exit(1)
+' "$workload_cmd" "$intent" "$exec_status")" || proof_err=1
         fi
 
         if [[ -z "$proof_json" && -n "$daemon_bin" && -x "$daemon_bin" ]]; then
             proof_json="$("$daemon_bin" --hyperion proof "${domain_id}" 2>/dev/null || true)"
         fi
 
+        if [[ $proof_err -ne 0 || -z "$proof_json" ]]; then
+            log_error "Cryptographic Merkle DomainProof generation failed (failing closed)."
+            return 1
+        fi
+
         # Persist proof in /tmp/neuronix-hyperion-proofs/
         mkdir -p /tmp/neuronix-hyperion-proofs 2>/dev/null || true
-        if [[ -n "$proof_json" ]]; then
-            echo "$proof_json" > "/tmp/neuronix-hyperion-proofs/${domain_id}.json" 2>/dev/null || true
-        fi
+        echo "$proof_json" > "/tmp/neuronix-hyperion-proofs/${domain_id}.json" 2>/dev/null || true
 
         if [[ $json_output -eq 1 ]]; then
             echo "$proof_json"
@@ -3361,6 +3417,13 @@ print(json.dumps(engine.get_status(), indent=2))
                 fi
             fi
 
+            local has_bwrap=0
+            local has_kvm=0
+            local has_qemu=0
+            (command -v bwrap >/dev/null 2>&1 || [[ -x /run/current-system/sw/bin/bwrap ]]) && has_bwrap=1
+            [[ -w /dev/kvm ]] && has_kvm=1
+            command -v qemu-system-x86_64 >/dev/null 2>&1 && has_qemu=1
+
             print_banner
             echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════════════════════════════════╗${RESET}"
             echo -e "${BOLD}${CYAN}║       NEURONIX PROVABLE ADAPTIVE EXECUTION (HYPERION) PLANE       ║${RESET}"
@@ -3369,8 +3432,16 @@ print(json.dumps(engine.get_status(), indent=2))
             echo -e "  ${BOLD}Active Envelope   :${RESET} ${GREEN}ENFORCING${RESET} (4-Tier Isolation Ladder)"
             echo -e "  ${BOLD}Tier 0 (Fast Path):${RESET} ${GREEN}Available${RESET} (Process Sandbox, <10us dispatch)"
             echo -e "  ${BOLD}Tier 1 (RAM Ghost):${RESET} ${GREEN}Available${RESET} (Volatile OverlayFS in RAM)"
-            echo -e "  ${BOLD}Tier 2 (eBPF LSM) :${RESET} ${GREEN}Available${RESET} (bwrap + LSM Syscall Sandbox)"
-            echo -e "  ${BOLD}Tier 3 (Micro-VM) :${RESET} ${GREEN}Available${RESET} (KVM Hermetic Enclave)"
+            if [[ $has_bwrap -eq 1 ]]; then
+                echo -e "  ${BOLD}Tier 2 (eBPF LSM) :${RESET} ${GREEN}Available${RESET} (bwrap + LSM Syscall Sandbox)"
+            else
+                echo -e "  ${BOLD}Tier 2 (eBPF LSM) :${RESET} ${YELLOW}Unavailable on Host${RESET} (bwrap missing, fails closed)"
+            fi
+            if [[ $has_kvm -eq 1 && $has_qemu -eq 1 ]]; then
+                echo -e "  ${BOLD}Tier 3 (Micro-VM) :${RESET} ${GREEN}Available${RESET} (KVM Hermetic Enclave)"
+            else
+                echo -e "  ${BOLD}Tier 3 (Micro-VM) :${RESET} ${YELLOW}Unavailable on Host${RESET} (KVM/QEMU missing, fails closed)"
+            fi
             echo -e "  ${BOLD}Proof Engine      :${RESET} Merkle State-Coupled Domain Attestation"
             echo -e "  ${BOLD}Invariants Check  :${RESET} ${GREEN}100% Invariants Satisfied${RESET}\n"
             echo -e "  ${DIM}Run '${PROGRAM_NAME} hyperion negotiate <workload>' to probe domain spec.${RESET}\n"
@@ -3381,13 +3452,22 @@ print(json.dumps(engine.get_status(), indent=2))
                 return 1
             fi
             if [[ -n "$py_bin" && -n "$core_path" ]]; then
-                PYTHONPATH="$core_path" "$py_bin" -c "
-import json
+                PYTHONPATH="$core_path" "$py_bin" -c '
+import json, sys
 from neuronix_core.hyperion import negotiate_domain
-t_int = int('${tier}') if '${tier}'.isdigit() else None
-spec = negotiate_domain(workload_name='${target}', intent='${intent}', requested_tier=t_int)
-print(json.dumps(spec, indent=2))
-"
+
+workload_val = sys.argv[1]
+intent_val = sys.argv[2]
+tier_val = sys.argv[3]
+t_int = int(tier_val) if tier_val.isdigit() else None
+
+try:
+    spec = negotiate_domain(workload_name=workload_val, intent=intent_val, requested_tier=t_int)
+    print(json.dumps(spec, indent=2))
+except Exception as e:
+    sys.stderr.write(f"Negotiation failed: {e}\n")
+    sys.exit(1)
+' "$target" "$intent" "$tier"
             elif [[ -n "$daemon_bin" && -x "$daemon_bin" ]]; then
                 "$daemon_bin" --hyperion negotiate "${target}"
             fi
@@ -3422,20 +3502,26 @@ print(json.dumps(spec, indent=2))
                 proof_content="$(cat "$target")"
             fi
             if [[ -n "$py_bin" && -n "$core_path" && -n "$proof_content" ]]; then
-                PYTHONPATH="$core_path" "$py_bin" -c "
-import json
+                printf '%s' "$proof_content" | PYTHONPATH="$core_path" "$py_bin" -c '
+import json, sys
 from neuronix_core.hyperion import HyperionExecutionEngine
 engine = HyperionExecutionEngine()
-proof = json.loads('''${proof_content}''')
-valid, msg = engine.verify_domain_proof(proof)
-res = {'domain_id': proof.get('domain_id'), 'verified': valid, 'status': 'TRUSTED' if valid else 'INVALID', 'message': msg}
-print(json.dumps(res, indent=2))
-"
+raw_proof = sys.stdin.read().strip()
+try:
+    proof = json.loads(raw_proof)
+    valid, msg = engine.verify_domain_proof(proof)
+    res = {"domain_id": proof.get("domain_id"), "verified": valid, "status": "TRUSTED" if valid else "INVALID", "message": msg}
+    print(json.dumps(res, indent=2))
+    if not valid:
+        sys.exit(1)
+except Exception as e:
+    res = {"domain_id": "UNKNOWN", "verified": False, "status": "INVALID", "message": str(e)}
+    print(json.dumps(res, indent=2))
+    sys.exit(1)
+'
             else
-                echo -e "  [VERIFY:DOMAIN]     Domain HDS Hash Attestation ... ${GREEN}PASS${RESET}"
-                echo -e "  [VERIFY:POLICY]     LSM Security Envelope       ... ${GREEN}PASS${RESET}"
-                echo -e "  [VERIFY:STATEROOT]  Cryptographic Merkle Root   ... ${GREEN}PASS${RESET}"
-                echo -e "  ${GREEN}✔ DOMAIN PROOF VERIFIED: TRUSTED${RESET}"
+                log_error "Domain proof content for '${target}' could not be located."
+                return 1
             fi
             ;;
         list)
