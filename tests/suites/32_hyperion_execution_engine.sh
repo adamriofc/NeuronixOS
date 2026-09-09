@@ -131,15 +131,33 @@ assert_output_contains "echo '$T3_FAIL_CLOSED'" "Failing closed" "Tier 3 Micro-V
 TAMPER_ROOT_RESULT=$("$PYTHON_BIN" -c "
 import sys
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
-from neuronix_core.hyperion import HyperionExecutionEngine
+from neuronix_core.hyperion import HyperionExecutionEngine, IsolationTier
 engine = HyperionExecutionEngine(root_dir='${DISTRO_PATH}')
-spec = engine.create_domain_spec('tamper-root-test')
-proof = engine.calculate_domain_proof(spec, exit_code=0)
-proof['domain_proof_root'] = '0' * 64
-valid, msg = engine.verify_domain_proof(proof)
-print('REJECTED' if not valid else 'ACCEPTED')
+spec = engine.create_domain_spec('tamper-root-test', tier=IsolationTier.TIER_3_MICRO_VM)
+
+proof1 = engine.calculate_domain_proof(spec, exit_code=0)
+proof1['domain_proof_root'] = '0' * 64
+valid1, _ = engine.verify_domain_proof(proof1)
+
+proof2 = engine.calculate_domain_proof(spec, exit_code=0)
+proof2['runtime_evidence']['runtime_mode'] = 'synthetic_simulation'
+valid2, _ = engine.verify_domain_proof(proof2)
+
+fake_ev = {
+    'execution_backend': 'host_direct',
+    'guest_pid_or_vm': 'fake_vm',
+    'runtime_boundary_id': 'boundary-fake',
+    'runtime_mode': 'synthetic_simulation'
+}
+proof3 = engine.calculate_domain_proof(spec, exit_code=0, runtime_evidence=fake_ev)
+valid3, _ = engine.verify_domain_proof(proof3)
+
+if not valid1 and not valid2 and not valid3:
+    print('ALL_TAMPER_REJECTED')
+else:
+    print(f'FAIL: valid1={valid1}, valid2={valid2}, valid3={valid3}')
 ")
-assert_eq "$TAMPER_ROOT_RESULT" "REJECTED" "verify_domain_proof strictly rejects forged or tampered Merkle proof root"
+assert_eq "$TAMPER_ROOT_RESULT" "ALL_TAMPER_REJECTED" "verify_domain_proof strictly rejects forged proof root, tampered evidence, and synthetic isolation mismatch"
 
 EXIT_ANOMALY_RESULT=$("$PYTHON_BIN" -c "
 import sys

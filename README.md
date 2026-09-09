@@ -888,25 +888,17 @@ NEURONIX elevates declarative immutability into mathematical provability ([NIP-0
 
 ```mermaid
 flowchart TD
-    ROOT[("Merkle StateRoot<br>Authoritative System Digest")]:::rootNode
+    ROOT[("5-Leaf StateRoot<br>Cryptographic Commitment")]:::rootNode
     
-    H1(["Intermediate Branch Hash<br>Posture + Substrate"]):::branchNode
-    H2(["Intermediate Branch Hash<br>Provenance + Policy"]):::branchNode
-    
-    ROOT --> H1
-    ROOT --> H2
-    ROOT --> L5["Leaf 5: Evidence (L_evidence)<br>Continuous Assurance Taxonomy"]:::leafEvidence
-    
-    H1 --> L1["Leaf 1: Posture (L_posture)<br>TPM2 PCR Measurements & UKI"]:::leafPosture
-    H1 --> L2["Leaf 2: Substrate (L_substrate)<br>Nix Store Closure & Flake Lock"]:::leafSubstrate
-    
-    H2 --> L3["Leaf 3: Provenance (L_provenance)<br>Actor Identity & Causal Chain"]:::leafProvenance
-    H2 --> L4["Leaf 4: Policy (L_policy)<br>Declarative eBPF LSM Contract"]:::leafPolicy
+    ROOT --> L1["Leaf 1: Posture (L_posture)<br>TPM2 PCR Measurements & UKI"]:::leafPosture
+    ROOT --> L2["Leaf 2: Substrate (L_substrate)<br>Nix Store Closure & Flake Lock"]:::leafSubstrate
+    ROOT --> L3["Leaf 3: Provenance (L_provenance)<br>Actor Identity & Causal Chain"]:::leafProvenance
+    ROOT --> L4["Leaf 4: Policy (L_policy)<br>Declarative eBPF LSM Contract"]:::leafPolicy
+    ROOT --> L5["Leaf 5: Evidence (L_evidence)<br>Continuous Assurance & Integrity"]:::leafEvidence
 
     CHAIN[("Predecessor StateRoot<br>Historical State S_n-1")]:::chainNode -.->|"Cryptographic Lineage"| L3
 
     classDef rootNode fill:#3b1e54,stroke:#c084fc,stroke-width:3px,color:#f8fafc;
-    classDef branchNode fill:#1e1e38,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
     classDef leafPosture fill:#0f2744,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
     classDef leafSubstrate fill:#1e293b,stroke:#60a5fa,stroke-width:2px,color:#f8fafc;
     classDef leafProvenance fill:#042f2e,stroke:#2dd4bf,stroke-width:2px,color:#f8fafc;
@@ -916,7 +908,7 @@ flowchart TD
 ```
 
 ```bash
-# Display live 5-leaf Merkle StateRoot and component leaf hashes
+# Display live 5-leaf StateRoot commitment and component leaf hashes
 neuronix state show
 
 # Cryptographically verify the StateRoot and component invariants
@@ -928,7 +920,7 @@ neuronix state explain
 # Compare two system states or detect drift
 neuronix state diff [STATE_ROOT_A] [STATE_ROOT_B]
 
-# View cryptographic transaction history and Merkle chain
+# View cryptographic transaction history and state chain
 neuronix state history
 
 # Verify state integrity prior to atomic recovery
@@ -947,7 +939,7 @@ NEURONIX establishes Project Hyperion ([NIP-0003](docs/rfcs/0003-hyperion-adapti
   4. `Tier 3 (In-Memory Micro-VM):` Hermetic KVM hardware-isolated virtual machine boundary with volatile storage for untrusted workloads (< 150 ms launch).
 - **Hyperion Domain Specification (HDS v1.0.0):** Canonical JSON contract declaring CPU cores, memory limits, storage mounts, network airgap policies, and forbidden path boundaries.
 - **Deterministic Safety Gatekeeper:** Strictly rejects execution of domains targeting sensitive paths (`/etc/shadow`, `/root`, SSH/GPG keys) or invalid memory limits prior to allocation.
-- **Merkle Domain Proof (MDP):** Binds workload execution output mathematically to the host's 5-leaf Merkle StateRoot and active eBPF security envelope (`DomainProof = SHA-256(StateRoot || HDS_hash || Policy_hash || Output_hash)`).
+- **Cryptographic Domain Proof (CDP):** Binds workload execution output mathematically to the host's 5-leaf StateRoot commitment, runtime evidence, and active eBPF security envelope (`DomainProof = SHA-256(StateRoot || HDS_hash || Policy_hash || Output_hash || Runtime_Evidence_hash)`).
 
 ```mermaid
 flowchart TD
@@ -966,13 +958,13 @@ flowchart TD
     KVM_GATE -->|"Verified"| TIER3["Micro-VM Isolated Execution<br>Hardware Hypervisor Boundary"]:::tier3Node
     KVM_GATE -->|"Missing"| FAIL3["FAIL-CLOSED<br>Execution Terminated (Exit 1)"]:::failClosedNode
 
-    TIER0 --> PROOF["Merkle Domain Proof Generation<br>Workload Output Binding"]:::proofNode
+    TIER0 --> PROOF["Cryptographic Domain Proof<br>Workload & Runtime Evidence Binding"]:::proofNode
     TIER1 --> PROOF
     TIER2 --> PROOF
     TIER3 --> PROOF
 
     PROOF --> JCS["RFC 8785 Canonical Serialization<br>Deterministic JCS Encoding"]:::proofNode
-    JCS --> ROOT[("5-Leaf Merkle StateRoot Attestation<br>Mathematical Workload Receipt")]:::stateNode
+    JCS --> ROOT[("5-Leaf StateRoot Attestation<br>Mathematical Workload Receipt")]:::stateNode
 
     classDef triggerNode fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
     classDef processNode fill:#1e293b,stroke:#94a3b8,stroke-width:1.5px,color:#f8fafc;
@@ -1003,7 +995,7 @@ neuronix hyperion status
 # Negotiate domain contract for a workload
 neuronix hyperion negotiate compiler-job --tier 1
 
-# Verify cryptographic Merkle DomainProof mathematically against StateRoot
+# Verify cryptographic DomainProof mathematically against StateRoot
 neuronix hyperion verify [DOMAIN_ID]
 
 # Enumerate executed domain receipts and proof roots
@@ -1198,7 +1190,7 @@ Formal design choices, invariants, and open governance specifications:
 - **[ADR-010](docs/adr/ADR-010-provable-state-and-causal-lineage.md):** Provable State Engine & Causal Lineage Architecture
 - **[ADR-011](docs/adr/ADR-011-hyperion-adaptive-execution-plane.md):** Hyperion Provable Adaptive Execution Architecture (PAEA)
 - **[NIP-0001](docs/rfcs/0001-north-star-and-rfc-process.md):** The North Star Thesis and Neuronix Improvement Proposal (RFC) Governance Standard
-- **[NIP-0002](docs/rfcs/0002-provable-state-engine.md):** Provable State Engine & 5-Leaf Merkle Tree Attestation
+- **[NIP-0002](docs/rfcs/0002-provable-state-engine.md):** Provable State Engine & 5-Leaf StateRoot Cryptographic Commitment
 - **[NIP-0003](docs/rfcs/0003-hyperion-adaptive-execution-architecture.md):** Hyperion Adaptive Execution Architecture & Domain Proof Specification
 
 ---

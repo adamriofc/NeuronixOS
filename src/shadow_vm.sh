@@ -50,6 +50,7 @@ IS_WINDOWS=false
 VIRTIO_WIN_ISO=""
 CUSTOM_AUTOUNATTEND=""
 CACHE_DIR="${NEURONIX_IMAGE_CACHE:-${NEURONIX_CACHE_DIR:-$HOME/.cache/neuronix/images}}"
+WORKLOAD_ARGS=()
 
 show_try_help() {
     echo -e "${BOLD}NEURONIX Shadow Micro-VM Sandbox (neuronix sandbox / try)${RESET}\n"
@@ -798,6 +799,11 @@ parse_args() {
                 echo -e "Run '${CYAN}neuronix sandbox --help${RESET}' for valid options."
                 exit 1
                 ;;
+            --)
+                shift
+                WORKLOAD_ARGS+=("$@")
+                break
+                ;;
             *)
                 if [[ "$1" =~ \.iso$ ]]; then
                     ISO_FILE="$1"
@@ -1159,7 +1165,7 @@ EOF
         if [[ "$HEADLESS" == true ]]; then
             vm_opts+=("-nographic")
         fi
-        QEMU_OPTS="${vm_opts[*]}" "$vm_runner" || vm_exit=$?
+        QEMU_OPTS="${vm_opts[*]}" "$vm_runner" "${WORKLOAD_ARGS[@]}" || vm_exit=$?
         end_epoch=$(date +%s)
         duration_ms=$(( (end_epoch - start_epoch) * 1000 ))
         if [[ $duration_ms -le 0 ]]; then duration_ms=200; fi

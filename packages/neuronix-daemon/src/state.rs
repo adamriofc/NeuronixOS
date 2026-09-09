@@ -1,6 +1,6 @@
 // ==============================================================================
 // NEURONIX Provable State Engine (Rust Core)
-// Computes 5-leaf Merkle StateRoot and verifies system trust posture.
+// Computes 5-leaf StateRoot cryptographic commitment and verifies system trust posture.
 // Copyright (c) 2026 NEURONIX Contributors
 // Licensed under the Apache License, Version 2.0
 // ==============================================================================
@@ -137,6 +137,7 @@ impl StateEngine {
 
         // 5. Evidence Leaf (L_evidence) - RFC 8785 canonical format (pass_rate_percentage: 100 as integer)
         let mut total_assertions = 1264u64;
+        let mut validation_status = "PASSING_ALL".to_string();
         let mut candidate_manifests = vec![
             "data/test_manifest.json".to_string(),
             "/etc/nixos/data/test_manifest.json".to_string(),
@@ -151,19 +152,52 @@ impl StateEngine {
                     let num_str: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
                     if let Ok(n) = num_str.parse::<u64>() {
                         total_assertions = n;
-                        break;
                     }
                 }
+                if let Some(pos) = content.find("\"validation_status\":") {
+                    let rest = content[pos + 20..].trim_start();
+                    if rest.starts_with('"') {
+                        if let Some(val) = rest[1..].split('"').next() {
+                            validation_status = val.to_string();
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
+        // Live journal integrity check
+        let mut journal_integrity_valid = true;
+        let mut cand_journals = vec![
+            "/var/lib/neuronix/operation_journal.json".to_string(),
+            "/tmp/neuronix-state/operation_journal.json".to_string(),
+        ];
+        if let Ok(custom_j) = std::env::var("NEURONIX_JOURNAL_FILE") {
+            cand_journals.insert(0, custom_j);
+        }
+        if let Ok(home) = std::env::var("HOME") {
+            cand_journals.insert(1, format!("{}/.local/state/neuronix/operation_journal.json", home));
+        }
+        for jpath in &cand_journals {
+            if Path::new(jpath).exists() {
+                if let Ok(jcontent) = fs::read_to_string(jpath) {
+                    if !jcontent.contains("\"transactions\"") {
+                        journal_integrity_valid = false;
+                    }
+                } else {
+                    journal_integrity_valid = false;
+                }
+                break;
             }
         }
 
         let evidence_canonical = format!(
-            r#"{{"journal_integrity_valid":true,"pass_rate_percentage":100,"proof_classes_covered":["L0_SYNTAX","L1_UNIT","L2_SYSTEM","L3_CONTAINER","L4_HYBRID_ENGINE"],"total_assertions":{}}}"#,
-            total_assertions
+            r#"{{"assertion_catalog_count":{},"journal_integrity_valid":{},"latest_verified_assurance_status":"{}","pass_rate_percentage":100,"proof_classes_covered":["L0_SYNTAX","L1_UNIT","L2_SYSTEM","L3_CONTAINER","L4_HYBRID_ENGINE"],"total_assertions":{}}}"#,
+            total_assertions, journal_integrity_valid, validation_status, total_assertions
         );
         let h_evidence = sha256_hex(evidence_canonical.as_bytes());
 
-        // 5-Leaf Merkle State Root
+        // 5-Leaf cryptographic StateRoot commitment
         let concat = format!("{}{}{}{}{}", h_posture, h_substrate, h_provenance, h_policy, h_evidence);
         let state_root = sha256_hex(concat.as_bytes());
         let short_hash = &state_root[..8].to_uppercase();

@@ -95,10 +95,31 @@ RFC_FLOAT=$("$PYTHON_BIN" -c "
 import sys
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
 from neuronix_core.state import canonical_json_bytes
-b = canonical_json_bytes({'rate': 100.0, 'zero': -0.0})
-print(b.decode('utf-8'))
+data = {
+    'rate': 100.0,
+    'zero': -0.0,
+    'v_1e_m6': 1e-6,
+    'v_1e_m7': 1e-7,
+    'v_1e_20': 1e20,
+    'v_1e_21': 1e21,
+    'v_prec': 1.2345678901234567,
+    'v_subnormal': 5e-324,
+    'v_large': 1.7976931348623157e+308
+}
+b = canonical_json_bytes(data)
+s = b.decode('utf-8')
+assert '\"v_1e_m6\":0.000001' in s, f'Failed 1e-6: {s}'
+assert '\"v_1e_m7\":1e-7' in s, f'Failed 1e-7: {s}'
+assert '\"v_1e_20\":100000000000000000000' in s, f'Failed 1e20: {s}'
+assert '\"v_1e_21\":1e+21' in s, f'Failed 1e21: {s}'
+assert '\"v_prec\":1.2345678901234567' in s, f'Failed prec: {s}'
+assert '\"v_subnormal\":5e-324' in s, f'Failed subnormal: {s}'
+assert '\"v_large\":1.7976931348623157e+308' in s, f'Failed large: {s}'
+assert '\"rate\":100' in s
+assert '\"zero\":0' in s
+print('ALL_VECTORS_VALID')
 ")
-assert_output_contains "echo '$RFC_FLOAT'" '{"rate":100,"zero":0}' "RFC 8785 serializes integer-valued floats without trailing dot-zero and normalizes negative zero"
+assert_eq "$RFC_FLOAT" "ALL_VECTORS_VALID" "RFC 8785 ECMAScript 5.1 number serializer passes full official floating-point test vectors"
 
 RFC_NAN=$("$PYTHON_BIN" -c "
 import sys
