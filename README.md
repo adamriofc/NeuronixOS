@@ -235,38 +235,43 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
 ```mermaid
 flowchart TD
     subgraph L1["Layer 1: User Experience (UX)"]
-        CAL["Calamares Declarative Installer"]
-        CTR["NEURONIX Center GUI & Telemetry"]
-        DE["KDE Plasma 6 / GNOME / Hyprland"]
-        SW["Dual-Layer Software (Nix Core + Flatpak)"]
+        CAL(["Calamares Declarative Installer"]):::ux
+        CTR["NEURONIX Center GUI & Telemetry"]:::ux
+        DE["KDE Plasma 6 / GNOME / Hyprland"]:::ux
+        SW["Dual-Layer Software (Nix Core + Flatpak)"]:::ux
     end
 
     subgraph L2["Layer 2: Desktop & System Core"]
-        NIX["Pure Nix Substrate (/nix/store)"]
-        HW["Hardware Hardening & Compatibility Matrix"]
-        NLD["Global Dynamic Linker (nix-ld)"]
-        GEN["Atomic Symlink Pointer Management"]
+        NIX[("Pure Nix Substrate (/nix/store)")]:::core
+        HW["Hardware Hardening & Compatibility Matrix"]:::core
+        NLD["Global Dynamic Linker (nix-ld)"]:::core
+        GEN["Atomic Symlink Pointer Management"]:::core
     end
 
     subgraph L3["Layer 3: Developer Engine"]
-        DEV["Isolated Dev Shells (neuronix dev)"]
-        CON["RAM Containers & OCI Runner"]
-        GHO["Ephemeral Ghost RAM Persona"]
-        BRN["CoW Workspace Branching"]
+        DEV["Isolated Dev Shells (neuronix dev)"]:::dev
+        CON["RAM Containers & OCI Runner"]:::dev
+        GHO["Ephemeral Ghost RAM Persona"]:::dev
+        BRN["CoW Workspace Branching"]:::dev
     end
 
     subgraph L4["Layer 4: Reliability & Provable Engine"]
-        PSE["Provable State Engine (5-Leaf Merkle Root)"]
-        HYP["Project Hyperion (Adaptive Execution Plane)"]
-        DAE["Micro-Rust Systems Daemon (ast.sock)"]
-        MCP["Model Context Protocol Server (JSON-RPC 2.0)"]
-        TST["1,264 Automated Assertions (32 QA Suites)"]
+        PSE[("Provable State Engine (Merkle StateRoot)")]:::provable
+        HYP["Project Hyperion (Adaptive Execution Plane)"]:::provable
+        DAE["Micro-Rust Systems Daemon (ast.sock)"]:::provable
+        MCP["Model Context Protocol Server (JSON-RPC 2.0)"]:::provable
+        TST["Continuous Industrial Assurance Taxonomy"]:::provable
     end
 
     L1 --> L2
     L3 --> L2
     L4 --> L2
     L4 --> L3
+
+    classDef ux fill:#1e1e38,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef core fill:#0f2744,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef dev fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef provable fill:#3b1e54,stroke:#c084fc,stroke-width:2px,color:#f8fafc;
 ```
 
 ---
@@ -288,14 +293,23 @@ Storage partitioning uses an isolated subvolume layout:
 
 ```mermaid
 flowchart LR
-    DISK["Physical NVMe / SSD"] --> ESP["ESP Partition (/boot)<br>1.0 GiB FAT32"]
-    DISK --> BTRFS["Btrfs Root Partition<br>ZSTD:3 Transparent Compression"]
+    DISK[("Physical Storage Device<br>NVMe / SATA SSD")]:::disk --> ESP["ESP Partition (/boot)<br>UEFI System Bootloader"]:::boot
+    DISK --> BTRFS[("Btrfs Root Storage Pool<br>Transparent Zstandard Compression")]:::pool
     
-    BTRFS --> SUB_ROOT["@ (Root)<br>Mount: /<br>OS Root & Config Pointers"]
-    BTRFS --> SUB_HOME["@home (User Space)<br>Mount: /home<br>Preserved Across Rollbacks"]
-    BTRFS --> SUB_NIX["@nix (Nix Store)<br>Mount: /nix<br>Cryptographic Immutability"]
-    BTRFS --> SUB_SNAP["@snapshots (CoW Registry)<br>Mount: /.snapshots<br>Sub-10ms Time-Travel"]
-    BTRFS --> SUB_SWAP["@swap (RAM Swap Pool)<br>Mount: /swap (nodatacow)<br>ZRAM + Swapfile"]
+    BTRFS --> SUB_ROOT["@ (Root Filesystem)<br>Mount: /<br>Declarative System Pointers"]:::rootSub
+    BTRFS --> SUB_HOME["@home (User Space)<br>Mount: /home<br>Preserved Across Rollbacks"]:::homeSub
+    BTRFS --> SUB_NIX["@nix (Nix Store)<br>Mount: /nix<br>Cryptographic Immutability"]:::nixSub
+    BTRFS --> SUB_SNAP["@snapshots (CoW Registry)<br>Mount: /.snapshots<br>Zero-Latency Snapshots"]:::snapSub
+    BTRFS --> SUB_SWAP["@swap (Memory Swap Pool)<br>Mount: /swap (nodatacow)<br>ZRAM & Swapfile"]:::swapSub
+
+    classDef disk fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef boot fill:#1e293b,stroke:#94a3b8,stroke-width:1.5px,color:#f8fafc;
+    classDef pool fill:#1e1e38,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef rootSub fill:#0f2744,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef homeSub fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef nixSub fill:#312e81,stroke:#a78bfa,stroke-width:2px,color:#f8fafc;
+    classDef snapSub fill:#78350f,stroke:#fbbf24,stroke-width:2px,color:#f8fafc;
+    classDef swapSub fill:#334155,stroke:#cbd5e1,stroke-width:1.5px,color:#f8fafc;
 ```
 
 ### Transparent Block Compression (ZSTD:3)
@@ -658,14 +672,23 @@ An autonomous boot reliability monitor that protects against unbootable Wayland 
 - **Full Parity:** Accessible via CLI (`neuronix sentinel`), GUI Control Center, and JSON-RPC MCP server (`neuronix_sentinel`).
 
 ```mermaid
-stateDiagram-v2
-    [*] --> SystemBoot: Boot Generation N
-    SystemBoot --> AssessmentWindow: Arm Sentinel Watchdog (60s)
-    AssessmentWindow --> HealthyCommit: Desktop / Wayland Session OK
-    HealthyCommit --> [*]: Disarm Watchdog & Commit LKG (Gen N)
-    AssessmentWindow --> AutonomousFallback: Crash / Panic / Timeout
-    AutonomousFallback --> AtomicRollback: Trigger neuronix-boot-fallback
-    AtomicRollback --> SystemBoot: Restore LKG Generation N-1 (< 2s)
+flowchart TD
+    BOOT(["System Boot: Generation N"]):::entryNode --> WATCH["Arm Sentinel Watchdog<br>Systemd Assessment Window"]:::watchNode
+    WATCH --> CHECK{"Desktop Session<br>Healthy?"}:::checkNode
+
+    CHECK -->|"Session Initialized"| COMMIT(["Disarm Watchdog & Commit LKG<br>Generation N Certified"]):::successNode
+    CHECK -->|"Crash / Panic / Timeout"| FAIL["Crash Loop Detected<br>Fire Fallback Service"]:::failNode
+
+    FAIL --> ROLLBACK["Execute Transactional Rollback<br>Atomic Profile Switch"]:::rollbackNode
+    ROLLBACK --> RESTORE(["Reboot into Last Known Good State<br>Predecessor Generation Active"]):::restoreNode
+
+    classDef entryNode fill:#0f2744,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef watchNode fill:#78350f,stroke:#fbbf24,stroke-width:2px,color:#f8fafc;
+    classDef checkNode fill:#1e1e38,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef successNode fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef failNode fill:#881337,stroke:#f43f5e,stroke-width:2px,color:#f8fafc;
+    classDef rollbackNode fill:#4c0519,stroke:#fb7185,stroke-width:2px,color:#f8fafc;
+    classDef restoreNode fill:#042f2e,stroke:#2dd4bf,stroke-width:2px,color:#f8fafc;
 ```
 
 ```bash
@@ -865,22 +888,31 @@ NEURONIX elevates declarative immutability into mathematical provability ([NIP-0
 
 ```mermaid
 flowchart TD
-    ROOT["Merkle StateRoot (32-byte SHA-256)"]
+    ROOT[("Merkle StateRoot<br>Authoritative System Digest")]:::rootNode
     
-    H1["Branch Hash: H(L_posture || L_substrate)"]
-    H2["Branch Hash: H(L_provenance || L_policy)"]
+    H1(["Intermediate Branch Hash<br>Posture + Substrate"]):::branchNode
+    H2(["Intermediate Branch Hash<br>Provenance + Policy"]):::branchNode
     
     ROOT --> H1
     ROOT --> H2
-    ROOT --> L5["Leaf 5: Evidence (L_evidence)<br>1,264 Verified Industrial Assertions"]
+    ROOT --> L5["Leaf 5: Evidence (L_evidence)<br>Continuous Assurance Taxonomy"]:::leafEvidence
     
-    H1 --> L1["Leaf 1: Posture (L_posture)<br>TPM2 PCR 7 (SecureBoot) + PCR 11 (UKI)"]
-    H1 --> L2["Leaf 2: Substrate (L_substrate)<br>/nix/store Closure + flake.lock Hash"]
+    H1 --> L1["Leaf 1: Posture (L_posture)<br>TPM2 PCR Measurements & UKI"]:::leafPosture
+    H1 --> L2["Leaf 2: Substrate (L_substrate)<br>Nix Store Closure & Flake Lock"]:::leafSubstrate
     
-    H2 --> L3["Leaf 3: Provenance (L_provenance)<br>Actor SO_PEERCRED + Parent Hash"]
-    H2 --> L4["Leaf 4: Policy (L_policy)<br>Declarative eBPF LSM Policy Digest"]
+    H2 --> L3["Leaf 3: Provenance (L_provenance)<br>Actor Identity & Causal Chain"]:::leafProvenance
+    H2 --> L4["Leaf 4: Policy (L_policy)<br>Declarative eBPF LSM Contract"]:::leafPolicy
 
-    CHAIN["Predecessor StateRoot (S_n-1)"] -.->|"Causal Lineage Hash Chain"| L3
+    CHAIN[("Predecessor StateRoot<br>Historical State S_n-1")]:::chainNode -.->|"Cryptographic Lineage"| L3
+
+    classDef rootNode fill:#3b1e54,stroke:#c084fc,stroke-width:3px,color:#f8fafc;
+    classDef branchNode fill:#1e1e38,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef leafPosture fill:#0f2744,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef leafSubstrate fill:#1e293b,stroke:#60a5fa,stroke-width:2px,color:#f8fafc;
+    classDef leafProvenance fill:#042f2e,stroke:#2dd4bf,stroke-width:2px,color:#f8fafc;
+    classDef leafPolicy fill:#312e81,stroke:#a78bfa,stroke-width:2px,color:#f8fafc;
+    classDef leafEvidence fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef chainNode fill:#0f172a,stroke:#94a3b8,stroke-dasharray: 5 5,stroke-width:2px,color:#cbd5e1;
 ```
 
 ```bash
@@ -919,28 +951,40 @@ NEURONIX establishes Project Hyperion ([NIP-0003](docs/rfcs/0003-hyperion-adapti
 
 ```mermaid
 flowchart TD
-    A["User Invocation: neuronix run"] --> B["Strict sys.argv / stdin Sanitization"]
-    B --> C["HDS Schema Validation (data/schemas/hyperion-domain-v1.json)"]
-    C --> D{"Isolation Tier Check"}
-    
-    D -->|"Tier 0: Fast-Path"| E["Host Direct Execution"]
-    D -->|"Tier 1: RAM Ghost"| F["Bubblewrap Ephemeral RAM Overlay"]
-    D -->|"Tier 2: eBPF Enclave"| G{"bwrap Present?"}
-    D -->|"Tier 3: Micro-VM"| H{"/dev/kvm + QEMU + shadow_vm?"}
-    
-    G -->|"Yes"| I["Enclave Sandboxed Execution"]
-    G -->|"No / Missing"| J["FAIL-CLOSED (Exit 1)"]
-    
-    H -->|"Yes"| K["Micro-VM Isolated Execution"]
-    H -->|"No / Missing"| L["FAIL-CLOSED (Exit 1)"]
-    
-    E --> M["Merkle Domain Proof Generation"]
-    F --> M
-    I --> M
-    K --> M
-    
-    M --> N["RFC 8785 Canonical JSON Serialization"]
-    N --> O["5-Leaf Merkle StateRoot Attestation"]
+    INV(["User Invocation: neuronix run"]):::triggerNode --> SANITIZE["Input Sanitization<br>sys.argv & stdin Data Stream"]:::processNode
+    SANITIZE --> VALIDATE["HDS Schema Validation<br>Deterministic Gatekeeper"]:::processNode
+    VALIDATE --> TIER_CHECK{"Adaptive Isolation<br>Tier Selection"}:::decisionNode
+
+    TIER_CHECK -->|"Tier 0: Fast-Path"| TIER0["Host Direct Execution<br>Silicon Native Performance"]:::tier0Node
+    TIER_CHECK -->|"Tier 1: RAM Ghost"| TIER1["Bubblewrap RAM Overlay<br>Volatile tmpfs in /dev/shm"]:::tier1Node
+    TIER_CHECK -->|"Tier 2: eBPF Enclave"| ENCLAVE_GATE{"bwrap Isolation<br>Available?"}:::gateNode
+    TIER_CHECK -->|"Tier 3: Micro-VM"| KVM_GATE{"KVM & QEMU<br>Available?"}:::gateNode
+
+    ENCLAVE_GATE -->|"Verified"| TIER2["Enclave Sandboxed Execution<br>Declarative eBPF LSM Bounds"]:::tier2Node
+    ENCLAVE_GATE -->|"Missing"| FAIL2["FAIL-CLOSED<br>Execution Terminated (Exit 1)"]:::failClosedNode
+
+    KVM_GATE -->|"Verified"| TIER3["Micro-VM Isolated Execution<br>Hardware Hypervisor Boundary"]:::tier3Node
+    KVM_GATE -->|"Missing"| FAIL3["FAIL-CLOSED<br>Execution Terminated (Exit 1)"]:::failClosedNode
+
+    TIER0 --> PROOF["Merkle Domain Proof Generation<br>Workload Output Binding"]:::proofNode
+    TIER1 --> PROOF
+    TIER2 --> PROOF
+    TIER3 --> PROOF
+
+    PROOF --> JCS["RFC 8785 Canonical Serialization<br>Deterministic JCS Encoding"]:::proofNode
+    JCS --> ROOT[("5-Leaf Merkle StateRoot Attestation<br>Mathematical Workload Receipt")]:::stateNode
+
+    classDef triggerNode fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef processNode fill:#1e293b,stroke:#94a3b8,stroke-width:1.5px,color:#f8fafc;
+    classDef decisionNode fill:#1e1e38,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef gateNode fill:#2e1065,stroke:#a855f7,stroke-width:2px,color:#f8fafc;
+    classDef tier0Node fill:#0f2744,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef tier1Node fill:#042f2e,stroke:#2dd4bf,stroke-width:2px,color:#f8fafc;
+    classDef tier2Node fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef tier3Node fill:#312e81,stroke:#a78bfa,stroke-width:2px,color:#f8fafc;
+    classDef failClosedNode fill:#881337,stroke:#f43f5e,stroke-width:2px,color:#f8fafc;
+    classDef proofNode fill:#262626,stroke:#cbd5e1,stroke-width:1.5px,color:#f8fafc;
+    classDef stateNode fill:#3b1e54,stroke:#c084fc,stroke-width:3px,color:#f8fafc;
 ```
 
 ```bash
