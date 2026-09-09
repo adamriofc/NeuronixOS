@@ -232,28 +232,41 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
 
 ## Platform Architecture
 
-```text
-                                  NEURONIX OS PLATFORM
-                                           │
-  ┌────────────────────────────────────────┴────────────────────────────────────────┐
-  │                                                                                 │
-[ LAYER 1: USER EXPERIENCE (UX) ]                               [ LAYER 2: DESKTOP & SYSTEM CORE ]
-  ├─ Calamares Graphical Installer (Declarative Generator)        ├─ Pure Nix Substrate (Immutable /nix/store)
-  ├─ NEURONIX Center (GUI System Hub & Telemetry)                 ├─ Hardware Hardening & Compatibility Matrix
-  ├─ Generation Management & Instant Symlink Rollbacks            ├─ Global Dynamic Linker (nix-ld)
-  ├─ Dual-Layer Software Model (Nix Core + Flathub Flatpak)       ├─ Atomic Symlink Pointer Management
-  └─ Desktop Environments: KDE Plasma 6, GNOME, Hyprland          └─ Generation-Aware Shell Prompt [Gen #N]
-  │                                                                                 │
-  ├─────────────────────────────────────────────────────────────────────────────────┤
-  │                                                                                 │
-[ LAYER 3: DEVELOPER ENGINE ]                                   [ LAYER 4: RELIABILITY & PROVABLE ENGINE ]
-  ├─ neuronix dev python (uv, ruff, pyright, postgresql)          ├─ Provable State Engine (5-Leaf Merkle StateRoot)
-  ├─ neuronix dev rust   (rustc, cargo, rust-analyzer, clippy)   ├─ Project Hyperion (Adaptive Execution Architecture)
-  ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Micro-Rust Systems Daemon & High-Concurrency AST
-  ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Model Context Protocol (MCP) Server (JSON-RPC 2.0)
-  ├─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  ├─ In-Memory OS Sandbox & Disposable Ghost Persona
-  └─ neuronix container  (Micro-DNS, OCI Build, Quadlet Daemons)  ├─ Declarative eBPF LSM Gate & Reflink Branching
-                                                                  └─ 1,264 Automated Test Assertions (32 QA Suites)
+```mermaid
+flowchart TD
+    subgraph L1["Layer 1: User Experience (UX)"]
+        CAL["Calamares Declarative Installer"]
+        CTR["NEURONIX Center GUI & Telemetry"]
+        DE["KDE Plasma 6 / GNOME / Hyprland"]
+        SW["Dual-Layer Software (Nix Core + Flatpak)"]
+    end
+
+    subgraph L2["Layer 2: Desktop & System Core"]
+        NIX["Pure Nix Substrate (/nix/store)"]
+        HW["Hardware Hardening & Compatibility Matrix"]
+        NLD["Global Dynamic Linker (nix-ld)"]
+        GEN["Atomic Symlink Pointer Management"]
+    end
+
+    subgraph L3["Layer 3: Developer Engine"]
+        DEV["Isolated Dev Shells (neuronix dev)"]
+        CON["RAM Containers & OCI Runner"]
+        GHO["Ephemeral Ghost RAM Persona"]
+        BRN["CoW Workspace Branching"]
+    end
+
+    subgraph L4["Layer 4: Reliability & Provable Engine"]
+        PSE["Provable State Engine (5-Leaf Merkle Root)"]
+        HYP["Project Hyperion (Adaptive Execution Plane)"]
+        DAE["Micro-Rust Systems Daemon (ast.sock)"]
+        MCP["Model Context Protocol Server (JSON-RPC 2.0)"]
+        TST["1,264 Automated Assertions (32 QA Suites)"]
+    end
+
+    L1 --> L2
+    L3 --> L2
+    L4 --> L2
+    L4 --> L3
 ```
 
 ---
@@ -272,6 +285,18 @@ Storage partitioning uses an isolated subvolume layout:
 | `@home` | `/home` | `compress=zstd:3,noatime` | User home directories and documents. |
 | `@snapshots` | `/.snapshots` | `compress=zstd:3,noatime` | Storage for manual and automated filesystem snapshots. |
 | `@swap` | `/swap` | `nodatacow,noatime` | Dedicated swapfile subvolume with Copy-on-Write disabled to prevent fragmentation. |
+
+```mermaid
+flowchart LR
+    DISK["Physical NVMe / SSD"] --> ESP["ESP Partition (/boot)<br>1.0 GiB FAT32"]
+    DISK --> BTRFS["Btrfs Root Partition<br>ZSTD:3 Transparent Compression"]
+    
+    BTRFS --> SUB_ROOT["@ (Root)<br>Mount: /<br>OS Root & Config Pointers"]
+    BTRFS --> SUB_HOME["@home (User Space)<br>Mount: /home<br>Preserved Across Rollbacks"]
+    BTRFS --> SUB_NIX["@nix (Nix Store)<br>Mount: /nix<br>Cryptographic Immutability"]
+    BTRFS --> SUB_SNAP["@snapshots (CoW Registry)<br>Mount: /.snapshots<br>Sub-10ms Time-Travel"]
+    BTRFS --> SUB_SWAP["@swap (RAM Swap Pool)<br>Mount: /swap (nodatacow)<br>ZRAM + Swapfile"]
+```
 
 ### Transparent Block Compression (ZSTD:3)
 All read-write filesystem subvolumes use Zstandard level 3 (`zstd:3`) compression.
@@ -632,6 +657,17 @@ An autonomous boot reliability monitor that protects against unbootable Wayland 
 - **Explicit Session Confirmation:** Successful desktop login or running `neuronix sentinel confirm` disarms the active watchdog timer and commits the current generation into `/var/lib/neuronix/sentinel/lkg-generation`.
 - **Full Parity:** Accessible via CLI (`neuronix sentinel`), GUI Control Center, and JSON-RPC MCP server (`neuronix_sentinel`).
 
+```mermaid
+stateDiagram-v2
+    [*] --> SystemBoot: Boot Generation N
+    SystemBoot --> AssessmentWindow: Arm Sentinel Watchdog (60s)
+    AssessmentWindow --> HealthyCommit: Desktop / Wayland Session OK
+    HealthyCommit --> [*]: Disarm Watchdog & Commit LKG (Gen N)
+    AssessmentWindow --> AutonomousFallback: Crash / Panic / Timeout
+    AutonomousFallback --> AtomicRollback: Trigger neuronix-boot-fallback
+    AtomicRollback --> SystemBoot: Restore LKG Generation N-1 (< 2s)
+```
+
 ```bash
 # Query active boot health assessment, watchdog timer state, and LKG generation
 neuronix sentinel status
@@ -827,6 +863,26 @@ NEURONIX elevates declarative immutability into mathematical provability ([NIP-0
 - **Dual-Plane Execution:** Evaluates live state via micro-Rust daemon (`/run/neuronix/ast.sock` via `state/show` and `state/verify` in < 2ms) with seamless fallback to pure Python `neuronix_core.state`.
 - **Causal Lineage & Verified Recovery:** Traces exact history of mutating transactions via cryptographic hash chain (`prev_state_hash`) and validates historical StateRoots before rollbacks.
 
+```mermaid
+flowchart TD
+    ROOT["Merkle StateRoot (32-byte SHA-256)"]
+    
+    H1["Branch Hash: H(L_posture || L_substrate)"]
+    H2["Branch Hash: H(L_provenance || L_policy)"]
+    
+    ROOT --> H1
+    ROOT --> H2
+    ROOT --> L5["Leaf 5: Evidence (L_evidence)<br>1,264 Verified Industrial Assertions"]
+    
+    H1 --> L1["Leaf 1: Posture (L_posture)<br>TPM2 PCR 7 (SecureBoot) + PCR 11 (UKI)"]
+    H1 --> L2["Leaf 2: Substrate (L_substrate)<br>/nix/store Closure + flake.lock Hash"]
+    
+    H2 --> L3["Leaf 3: Provenance (L_provenance)<br>Actor SO_PEERCRED + Parent Hash"]
+    H2 --> L4["Leaf 4: Policy (L_policy)<br>Declarative eBPF LSM Policy Digest"]
+
+    CHAIN["Predecessor StateRoot (S_n-1)"] -.->|"Causal Lineage Hash Chain"| L3
+```
+
 ```bash
 # Display live 5-leaf Merkle StateRoot and component leaf hashes
 neuronix state show
@@ -860,6 +916,32 @@ NEURONIX establishes Project Hyperion ([NIP-0003](docs/rfcs/0003-hyperion-adapti
 - **Hyperion Domain Specification (HDS v1.0.0):** Canonical JSON contract declaring CPU cores, memory limits, storage mounts, network airgap policies, and forbidden path boundaries.
 - **Deterministic Safety Gatekeeper:** Strictly rejects execution of domains targeting sensitive paths (`/etc/shadow`, `/root`, SSH/GPG keys) or invalid memory limits prior to allocation.
 - **Merkle Domain Proof (MDP):** Binds workload execution output mathematically to the host's 5-leaf Merkle StateRoot and active eBPF security envelope (`DomainProof = SHA-256(StateRoot || HDS_hash || Policy_hash || Output_hash)`).
+
+```mermaid
+flowchart TD
+    A["User Invocation: neuronix run"] --> B["Strict sys.argv / stdin Sanitization"]
+    B --> C["HDS Schema Validation (data/schemas/hyperion-domain-v1.json)"]
+    C --> D{"Isolation Tier Check"}
+    
+    D -->|"Tier 0: Fast-Path"| E["Host Direct Execution"]
+    D -->|"Tier 1: RAM Ghost"| F["Bubblewrap Ephemeral RAM Overlay"]
+    D -->|"Tier 2: eBPF Enclave"| G{"bwrap Present?"}
+    D -->|"Tier 3: Micro-VM"| H{"/dev/kvm + QEMU + shadow_vm?"}
+    
+    G -->|"Yes"| I["Enclave Sandboxed Execution"]
+    G -->|"No / Missing"| J["FAIL-CLOSED (Exit 1)"]
+    
+    H -->|"Yes"| K["Micro-VM Isolated Execution"]
+    H -->|"No / Missing"| L["FAIL-CLOSED (Exit 1)"]
+    
+    E --> M["Merkle Domain Proof Generation"]
+    F --> M
+    I --> M
+    K --> M
+    
+    M --> N["RFC 8785 Canonical JSON Serialization"]
+    N --> O["5-Leaf Merkle StateRoot Attestation"]
+```
 
 ```bash
 # Execute workload with automatic intent-based tier negotiation
