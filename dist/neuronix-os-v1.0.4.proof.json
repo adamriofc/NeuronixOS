@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "proof_type": "NEURONIX_PROOF_CARRYING_RELEASE_V1",
+  "release_metadata": {
+    "distribution": "NEURONIX OS",
+    "release_version": "1.0.4",
+    "release_tag": "v1.0.4",
+    "commit_sha": "8f9a683e9b628993f5b783b8d76aaad684cf31d0",
+    "target_architecture": "x86_64-linux"
+  },
+  "cryptographic_commitments": {
+    "merkle_state_root": "e83d7129498a4f961aa9e73771db87f80ad7e3e57dfbc6b96e954c98f0042f08",
+    "verification_passport_sha256": "c126c5a4c29b23e208c00d27722f239fdae384ba0012d8a6da8e3d800c8cf52f",
+    "evidence_graph_sha256": "823873464279386011a94ac2d4acf1a568a4017b3b0443600f19496c5f0c1913",
+    "iso_checksums_sha256": "4a24065718d8269ea318bb15b073b9c9f0df3c9927bcef6b99dba08f2ebb04f9",
+    "sbom_spdx_sha256": "de889c7126352fcf756b3b1485aaf55eb52280f93e0f015f39b72b0a56011ae3",
+    "reproducibility_evidence_sha256": "9c86e5330a64f976095e778da21befae1309bb6daab48970ba6f1ea16e488c46"
+  },
+  "verification_status": "CERTIFIED_PROVABLE_RELEASE",
+  "timestamp": "2026-09-09T03:20:50Z",
+  "release_proof_digest": "230986152cef419efb34a2ac3d51f72ae32111fd46641d3c44b637c44b3a8624"
+}

@@ -176,6 +176,9 @@ show_help() {
     echo -e "  ${GREEN}mcp${RESET}             Luncurkan server Model Context Protocol (JSON-RPC 2.0 over stdio)"
     echo -e "  ${GREEN}undo${RESET}            Roll back to preceding system generation atomically"
     echo -e "  ${GREEN}doctor${RESET}          Diagnosa sistem mendalam & buat laporan issue terformat Markdown"
+    echo -e "  ${GREEN}verify-passport${RESET} Standalone offline verification of cryptographic release passport"
+    echo -e "  ${GREEN}verify-release${RESET}  Offline verification of release passport and supply chain integrity"
+    echo -e "  ${GREEN}graph${RESET} [trace]   Inspect, verify, and trace the authoritative 10-node Evidence Graph"
     echo -e "  ${GREEN}welcome${RESET}         Luncurkan panduan sambutan interaktif dan onboarding wizard"
     echo -e "  ${GREEN}quickstart${RESET}      Katalog aplikasi harian terkurasi 1-klik (Flatpak/Flathub)"
     echo -e "  ${GREEN}kernel${RESET} [flavor] Manajemen & peralihan profil kernel (default/zen/lts/latest/hardened)"
@@ -3859,12 +3862,22 @@ main() {
         doctor)
             cmd_doctor "$@"
             ;;
-        verify-passport)
-            shift
+        verify-passport|verify-release)
             local py_bin="$(resolve_python)"
             local verify_script="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/tools/verify_passport.py"
             if [[ -f "$verify_script" && -n "$py_bin" ]]; then
                 "$py_bin" "$verify_script" "$@"
+                exit $?
+            else
+                log_error "Offline verifier script not found at $verify_script"
+                exit 1
+            fi
+            ;;
+        graph)
+            local py_bin="$(resolve_python)"
+            local verify_script="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/tools/verify_passport.py"
+            if [[ -f "$verify_script" && -n "$py_bin" ]]; then
+                "$py_bin" "$verify_script" --graph "$@"
                 exit $?
             else
                 log_error "Offline verifier script not found at $verify_script"

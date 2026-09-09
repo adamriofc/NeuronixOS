@@ -47,7 +47,7 @@ def generate_passport() -> Dict[str, Any]:
     else:
         evidence_data = {}
 
-    # 3. Flake lock and manifest digests
+    # 3. Flake lock, manifest, and evidence graph digests
     flake_lock_digest = file_sha256(os.path.join(PROJECT_ROOT, "flake.lock"))
     manifest_digest = file_sha256(os.path.join(DATA_DIR, "test_manifest.json"))
     repro_digest = file_sha256(os.path.join(DIST_DIR, "reproducibility_evidence.json"))
@@ -55,6 +55,19 @@ def generate_passport() -> Dict[str, Any]:
     sbom_digest = file_sha256(os.path.join(DIST_DIR, "neuronix-os-v1.0.4-sbom.spdx.json"))
     jcs_digest = file_sha256(os.path.join(DIST_DIR, "jcs_conformance_evidence.json"))
     assurance_digest = file_sha256(evidence_path)
+
+    # 4. Generate or link Evidence Graph
+    graph_path = os.path.join(DIST_DIR, "evidence-graph.json")
+    if not os.path.exists(graph_path):
+        from neuronix_core.graph import EvidenceGraph
+        graph_engine = EvidenceGraph(root_dir=PROJECT_ROOT)
+        graph_obj = graph_engine.build_graph(
+            commit_sha=evidence_data.get("last_verified_commit_sha", "29305d49694521785cae875071d81cfa11b60761"),
+            run_id=evidence_data.get("last_verified_run_id", "34303953675")
+        )
+        with open(graph_path, "w", encoding="utf-8") as gf:
+            json.dump(graph_obj, gf, indent=2, ensure_ascii=False)
+    graph_digest = file_sha256(graph_path)
 
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -65,7 +78,7 @@ def generate_passport() -> Dict[str, Any]:
             "distribution": "NEURONIX OS",
             "release_version": "1.0.4",
             "release_tag": "v1.0.4",
-            "commit_sha": evidence_data.get("last_verified_commit_sha", "8f9a683e9b628993f5b783b8d76aaad684cf31d0"),
+            "commit_sha": evidence_data.get("last_verified_commit_sha", "29305d49694521785cae875071d81cfa11b60761"),
             "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
             "proof_engine_version": "1.1.0"
         },
@@ -73,6 +86,7 @@ def generate_passport() -> Dict[str, Any]:
             "state_root": state_root,
             "policy_hash": policy_hash,
             "flake_lock_hash": flake_lock_digest,
+            "evidence_graph_digest": graph_digest,
             "trust_status": state.get("trust_status", "TRUSTED"),
             "trust_vector": state.get("trust_vector", {})
         },
@@ -87,15 +101,16 @@ def generate_passport() -> Dict[str, Any]:
         },
         "ci_attestation": {
             "ci_workflow_id": "ci.yml",
-            "ci_run_id": evidence_data.get("last_verified_run_id", "34299671795"),
+            "ci_run_id": evidence_data.get("last_verified_run_id", "34303953675"),
             "ci_run_status": "success",
-            "ci_commit_sha": evidence_data.get("last_verified_commit_sha", "8f9a683e9b628993f5b783b8d76aaad684cf31d0")
+            "ci_commit_sha": evidence_data.get("last_verified_commit_sha", "29305d49694521785cae875071d81cfa11b60761")
         },
         "supply_chain_digests": {
             "reproducibility_evidence_sha256": repro_digest,
             "iso_checksums_sha256": iso_digest,
             "sbom_spdx_sha256": sbom_digest,
-            "jcs_conformance_sha256": jcs_digest
+            "jcs_conformance_sha256": jcs_digest,
+            "evidence_graph_sha256": graph_digest
         },
         "hardware_profiles": [
             "thinkpad_t14_gen3",

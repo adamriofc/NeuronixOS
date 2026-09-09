@@ -88,14 +88,32 @@ fn main() {
                 println!("{}", hds);
                 return;
             } else if sub == "proof" {
-                let did = if pos + 2 < args.len() { &args[pos + 2] } else { "DOM-ACTIVE" };
+                let state_root = if pos + 2 < args.len() { &args[pos + 2] } else { "0000000000000000000000000000000000000000000000000000000000000000" };
+                let hds_spec = if pos + 3 < args.len() { &args[pos + 3] } else { "DOM-ACTIVE" };
+                let policy_hash = if pos + 4 < args.len() { &args[pos + 4] } else { "0000000000000000000000000000000000000000000000000000000000000000" };
+                let input_hash = if pos + 5 < args.len() { &args[pos + 5] } else { "0000000000000000000000000000000000000000000000000000000000000000" };
+                let output_digest = if pos + 6 < args.len() { &args[pos + 6] } else { "0000000000000000000000000000000000000000000000000000000000000000" };
+                let evidence_json = if pos + 7 < args.len() { Some(args[pos + 7].as_str()) } else { None };
+                let exit_code = if pos + 8 < args.len() { args[pos + 8].parse::<i32>().unwrap_or(0) } else { 0 };
+                let tier = if pos + 9 < args.len() { &args[pos + 9] } else { "TIER_1_RAM_GHOST" };
+
                 let proof = hyperion::HyperionBroker::generate_proof(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                    did,
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                    "0000000000000000000000000000000000000000000000000000000000000000"
+                    state_root,
+                    hds_spec,
+                    policy_hash,
+                    input_hash,
+                    output_digest,
+                    evidence_json,
+                    exit_code,
+                    tier
                 );
                 println!("{}", proof);
+                return;
+            } else if sub == "verify" {
+                let proof_json = if pos + 2 < args.len() { &args[pos + 2] } else { "{}" };
+                let spec_json = if pos + 3 < args.len() { Some(args[pos + 3].as_str()) } else { None };
+                let (valid, msg) = hyperion::HyperionBroker::verify_domain_proof(proof_json, spec_json);
+                println!(r#"{{"valid":{},"message":"{}"}}"#, valid, msg);
                 return;
             }
         }

@@ -268,11 +268,36 @@ pub fn handle_jsonrpc(request_str: &str) -> String {
             let state_root = extract_json_string_field(req, "state_root").unwrap_or_default();
             let hds_json = extract_json_string_field(req, "hds_spec").unwrap_or_default();
             let policy_hash = extract_json_string_field(req, "policy_hash").unwrap_or_default();
+            let workload_input_hash = extract_json_string_field(req, "workload_input_hash").unwrap_or_default();
             let output_digest = extract_json_string_field(req, "output_digest").unwrap_or_default();
-            let proof = crate::hyperion::HyperionBroker::generate_proof(&state_root, &hds_json, &policy_hash, &output_digest);
+            let runtime_evidence = extract_json_field(req, "runtime_evidence");
+            let exit_code = extract_json_field(req, "exit_code")
+                .and_then(|c| c.parse::<i32>().ok())
+                .unwrap_or(0);
+            let tier = extract_json_string_field(req, "isolation_tier").unwrap_or_else(|| "TIER_1_RAM_GHOST".to_string());
+
+            let proof = crate::hyperion::HyperionBroker::generate_proof(
+                &state_root,
+                &hds_json,
+                &policy_hash,
+                &workload_input_hash,
+                &output_digest,
+                runtime_evidence.as_deref(),
+                exit_code,
+                &tier
+            );
             format!(
                 r#"{{"jsonrpc":"2.0","result":{},"id":{}}}"#,
                 proof, id_val
+            )
+        }
+        "hyperion/verify" => {
+            let proof_json = extract_json_field(req, "proof").unwrap_or_default();
+            let spec_json = extract_json_field(req, "domain_spec");
+            let (valid, msg) = crate::hyperion::HyperionBroker::verify_domain_proof(&proof_json, spec_json.as_deref());
+            format!(
+                r#"{{"jsonrpc":"2.0","result":{{"valid":{},"message":"{}"}},"id":{}}}"#,
+                valid, msg, id_val
             )
         }
         "system/ping" => {

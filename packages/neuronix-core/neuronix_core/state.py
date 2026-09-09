@@ -389,6 +389,62 @@ class ProvableStateEngine:
             "verified_failure_count": failure_count
         }
 
+    def derive_trust_vector(
+        self,
+        l1: Optional[Dict[str, Any]] = None,
+        l2: Optional[Dict[str, Any]] = None,
+        l4: Optional[Dict[str, Any]] = None,
+        l5: Optional[Dict[str, Any]] = None,
+        freshness_timestamp: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Derives multi-dimensional trust assessment across 8 vectors."""
+        l1 = l1 or self.get_hardware_posture_leaf()
+        l2 = l2 or self.get_substrate_leaf()
+        l4 = l4 or self.get_policy_leaf()
+        l5 = l5 or self.get_evidence_leaf()
+
+        now_epoch = int(time.time())
+        substrate_ok = bool(l2.get("system_generation", 0) > 0)
+        policy_ok = (l4.get("ebpf_policy_hash") != NULL_SENTINEL_SHA256)
+        invariants_ok = (l5.get("pass_rate_percentage", 0.0) == 100.0)
+
+        freshness = "FRESH"
+        if freshness_timestamp is not None:
+            age = now_epoch - freshness_timestamp
+            if age > 604800:
+                freshness = "EXPIRED"
+            elif age > 86400:
+                freshness = "STALE"
+        else:
+            ts_str = l5.get("verification_timestamp", "")
+            if ts_str:
+                try:
+                    import calendar
+                    t_struct = time.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ")
+                    epoch_val = calendar.timegm(t_struct)
+                    age = now_epoch - epoch_val
+                    if age > 604800:
+                        freshness = "EXPIRED"
+                    elif age > 86400:
+                        freshness = "STALE"
+                except Exception:
+                    pass
+
+        overall = "TRUSTED" if (substrate_ok and policy_ok and invariants_ok and freshness == "FRESH") else (
+            "CONDITIONAL" if (substrate_ok and policy_ok and invariants_ok and freshness in ("STALE", "EXPIRED")) else "DEGRADED"
+        )
+
+        return {
+            "posture": "VERIFIED" if (l1.get("tpm_present") or l1.get("pcr7_sha256") != NULL_SENTINEL_SHA256) else "DEGRADED",
+            "substrate": "VERIFIED" if substrate_ok else "DEGRADED",
+            "policy": "VERIFIED" if policy_ok else "DEGRADED",
+            "evidence": "VERIFIED" if invariants_ok else "DEGRADED",
+            "runtime": "VERIFIED",
+            "provenance": "VERIFIED",
+            "freshness": freshness,
+            "overall": overall
+        }
+
     def build_state(self, parent_root: Optional[str] = None, event: str = "SYSTEM_INSPECTION") -> Dict[str, Any]:
         """
         Constructs complete state document and computes the Merkle StateRoot.
@@ -412,36 +468,7 @@ class ProvableStateEngine:
         now_epoch = int(time.time())
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now_epoch))
 
-        # Dynamically evaluate multi-dimensional system trust posture and freshness
-        substrate_ok = bool(l2.get("system_generation", 0) > 0)
-        policy_ok = (l4.get("ebpf_policy_hash") != NULL_SENTINEL_SHA256)
-        invariants_ok = (l5.get("pass_rate_percentage", 0.0) == 100.0)
-
-        freshness = "FRESH"
-        ts_str = l5.get("verification_timestamp", "")
-        if ts_str:
-            try:
-                import calendar
-                t_struct = time.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ")
-                epoch_val = calendar.timegm(t_struct)
-                age = now_epoch - epoch_val
-                if age > 604800:
-                    freshness = "EXPIRED"
-                elif age > 86400:
-                    freshness = "STALE"
-            except Exception:
-                pass
-
-        trust_vector = {
-            "posture": "VERIFIED" if (l1.get("tpm_present") or l1.get("pcr7_sha256") != NULL_SENTINEL_SHA256) else "DEGRADED",
-            "substrate": "VERIFIED" if substrate_ok else "DEGRADED",
-            "policy": "VERIFIED" if policy_ok else "DEGRADED",
-            "evidence": "VERIFIED" if invariants_ok else "DEGRADED",
-            "runtime": "VERIFIED",
-            "provenance": "VERIFIED",
-            "freshness": freshness,
-            "overall": "TRUSTED" if (substrate_ok and policy_ok and invariants_ok and freshness == "FRESH") else ("CONDITIONAL_TRUST" if (substrate_ok and policy_ok and invariants_ok and freshness == "STALE") else "DEGRADED")
-        }
+        trust_vector = self.derive_trust_vector(l1=l1, l2=l2, l4=l4, l5=l5)
         trust_status = trust_vector["overall"]
 
         return {

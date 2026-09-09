@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0.0",
+  "registry_type": "NEURONIX_SECURITY_INVARIANT_REGISTRY",
+  "specification": "SPEC-NRX-SEC-015",
+  "description": "Authoritative machine-readable security invariant matrix (SEC-001 to SEC-010)",
+  "invariants": [
+    {
+      "id": "SEC-001",
+      "title": "Missing Tier 2 Isolation Boundary",
+      "target_component": "packages/neuronix-core/neuronix_core/hyperion.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "FAIL_CLOSED",
+      "rule": "If Tier 2 is requested and Bubblewrap or eBPF LSM boundary is unavailable, execution must fail closed without fallback."
+    },
+    {
+      "id": "SEC-002",
+      "title": "Missing Tier 3 Virtual Boundary",
+      "target_component": "packages/neuronix-core/neuronix_core/hyperion.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "FAIL_CLOSED",
+      "rule": "If Tier 3 is requested and /dev/kvm is unavailable, execution must fail closed unless explicitly permitted by policy."
+    },
+    {
+      "id": "SEC-003",
+      "title": "Malformed HDS Contract Specification",
+      "target_component": "packages/neuronix-core/neuronix_core/hyperion.py",
+      "severity": "HIGH",
+      "failure_semantics": "REJECT_SPECIFICATION",
+      "rule": "Any HDS specification violating schema or security contracts must be rejected prior to execution."
+    },
+    {
+      "id": "SEC-004",
+      "title": "Domain Proof Root Mismatch",
+      "target_component": "packages/neuronix-daemon/src/hyperion.rs",
+      "severity": "CRITICAL",
+      "failure_semantics": "REJECT_PROOF",
+      "rule": "Any mismatch between claimed proof root and recomputed 6-part canonical digest triggers immediate proof rejection."
+    },
+    {
+      "id": "SEC-005",
+      "title": "Missing Runtime Execution Receipt",
+      "target_component": "packages/neuronix-core/neuronix_core/hyperion.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "FAIL_CLOSED",
+      "rule": "Proofs generated without authoritative runtime receipt must fail closed with verdict NO_RUNTIME_RECEIPT."
+    },
+    {
+      "id": "SEC-006",
+      "title": "Receipt Replay and Nonce Omission",
+      "target_component": "packages/neuronix-core/neuronix_core/hyperion.py",
+      "severity": "HIGH",
+      "failure_semantics": "REJECT_REPLAY",
+      "rule": "Receipts with missing, empty, or duplicate nonces must be cryptographically rejected to prevent replay attacks."
+    },
+    {
+      "id": "SEC-007",
+      "title": "StateRoot Leaf Tamper Sensitivity",
+      "target_component": "packages/neuronix-core/neuronix_core/state.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "ALTER_STATEROOT",
+      "rule": "Any mutation in policy, substrate, posture, provenance, or evidence leaves must strictly alter the Merkle StateRoot."
+    },
+    {
+      "id": "SEC-008",
+      "title": "Age-Bounded Evidence Staleness",
+      "target_component": "packages/neuronix-core/neuronix_core/state.py",
+      "severity": "MEDIUM",
+      "failure_semantics": "DEGRADE_TRUST_EXPIRED",
+      "rule": "Attested evidence older than 7 days must transition trust freshness status to EXPIRED and overall trust to CONDITIONAL."
+    },
+    {
+      "id": "SEC-009",
+      "title": "Missing Security Policy Handling",
+      "target_component": "packages/neuronix-daemon/src/state.rs",
+      "severity": "HIGH",
+      "failure_semantics": "DEGRADE_TRUST_POSTURE",
+      "rule": "If the eBPF LSM security policy file is missing or unreadable, StateEngine must degrade trust status to DEGRADED."
+    },
+    {
+      "id": "SEC-010",
+      "title": "Zero Silent Downgrade Enforcement",
+      "target_component": "packages/neuronix-daemon/src/hyperion.rs",
+      "severity": "CRITICAL",
+      "failure_semantics": "ISOLATION_EVIDENCE_MISMATCH",
+      "rule": "If execution executes on a weaker backend than declared in the HDS, proof verification must reject with ISOLATION_EVIDENCE_MISMATCH."
+    }
+  ]
+}

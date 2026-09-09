@@ -153,6 +153,64 @@ def run_differential_fuzz(iterations: int = 500) -> int:
         print(f"  ✔ Bit-exact StateRoot verified: {py_root}")
         print("  ✔ All 5 Merkle leaves match bit-for-bit with Rust daemon")
 
+        # Differential Fuzzing: DomainProof Generation Parity between Python and Rust daemon
+        print("[DIFFERENTIAL-FUZZ] Fuzzing DomainProof parity between Python and Rust daemon across 50 scenarios...")
+        dp_failures = []
+        for j in range(1, 51):
+            rand_nonce = f"fuzz_nonce_{random.randint(100000000, 999999999)}_{j}"
+            tier_choice = random.choice(["TIER_0_FAST_PATH", "TIER_1_RAM_GHOST", "TIER_2_EBPF_ENCLAVE", "TIER_3_MICRO_VM"])
+            backend_map = {
+                "TIER_0_FAST_PATH": ("host_direct", "real_host"),
+                "TIER_1_RAM_GHOST": ("bubblewrap_ram_overlay", "real_ghost"),
+                "TIER_2_EBPF_ENCLAVE": ("bwrap_ebpf_enclave", "real_enclave"),
+                "TIER_3_MICRO_VM": ("qemu_kvm_micro_vm", "real_isolated"),
+            }
+            backend, mode = backend_map[tier_choice]
+            hds_hash = hashlib.sha256(f"fuzz_hds_{j}".encode()).hexdigest()
+            inp_hash = hashlib.sha256(f"fuzz_input_{j}".encode()).hexdigest()
+            out_hash = hashlib.sha256(f"fuzz_output_{j}".encode()).hexdigest()
+            pol_hash = py_state.get("leaf_hashes", {}).get("policy_hash", "0"*64)
+
+            rec_obj = {
+                "backend": backend,
+                "execution_nonce": rand_nonce,
+                "runtime_mode": mode
+            }
+            rec_json = json.dumps(rec_obj, separators=(',', ':'))
+            rec_hash = hashlib.sha256(rec_json.encode('utf-8')).hexdigest()
+
+            # Python calculation
+            py_concat = f"{py_root}{hds_hash}{pol_hash}{inp_hash}{out_hash}{rec_hash}"
+            py_proof_root = hashlib.sha256(py_concat.encode('utf-8')).hexdigest()
+
+            # Rust daemon calculation
+            cmd = [
+                daemon_bin, "--hyperion", "proof",
+                py_root,
+                hds_hash,
+                pol_hash,
+                inp_hash,
+                out_hash,
+                rec_json,
+                "0",
+                tier_choice
+            ]
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            rust_res = json.loads(proc.stdout)
+            rust_proof_root = rust_res.get("domain_proof_root", "")
+
+            if py_proof_root != rust_proof_root:
+                dp_failures.append({
+                    "scenario": j,
+                    "python_root": py_proof_root,
+                    "rust_root": rust_proof_root
+                })
+
+        if dp_failures:
+            print(f"[FAIL] {len(dp_failures)} DomainProof parity mismatches between Python and Rust daemon!")
+            return 1
+        print("  ✔ Bit-exact DomainProof parity achieved across all 50 fuzz scenarios (0 mismatches)")
+
     return 0
 
 if __name__ == "__main__":

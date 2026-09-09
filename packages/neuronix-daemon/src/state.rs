@@ -174,11 +174,14 @@ impl StateEngine {
         }
 
         let mut candidate_records = vec![
+            "data/assurance_evidence_snapshot.json".to_string(),
             "data/assurance_record.json".to_string(),
+            "/etc/nixos/data/assurance_evidence_snapshot.json".to_string(),
             "/etc/nixos/data/assurance_record.json".to_string(),
         ];
         if let Ok(root) = std::env::var("PROJECT_ROOT") {
-            candidate_records.insert(0, format!("{}/data/assurance_record.json", root));
+            candidate_records.insert(0, format!("{}/data/assurance_evidence_snapshot.json", root));
+            candidate_records.insert(1, format!("{}/data/assurance_record.json", root));
         }
         for rec in &candidate_records {
             if let Ok(content) = fs::read_to_string(rec) {
@@ -200,9 +203,21 @@ impl StateEngine {
                     if let Ok(n) = num_str.parse::<u64>() {
                         verified_count = n;
                     }
+                } else if let Some(pos) = content.find("\"verified_assertions\":") {
+                    let rest = content[pos + 22..].trim_start();
+                    let num_str: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+                    if let Ok(n) = num_str.parse::<u64>() {
+                        verified_count = n;
+                    }
                 }
                 if let Some(pos) = content.find("\"verified_failure_count\":") {
                     let rest = content[pos + 25..].trim_start();
+                    let num_str: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+                    if let Ok(n) = num_str.parse::<u64>() {
+                        failure_count = n;
+                    }
+                } else if let Some(pos) = content.find("\"failed_assertions\":") {
+                    let rest = content[pos + 20..].trim_start();
                     let num_str: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
                     if let Ok(n) = num_str.parse::<u64>() {
                         failure_count = n;

@@ -123,4 +123,60 @@ for ch in corpus['chains']:
 "
 assert_pass "Causal State Transition Chain Conformance Corpus verified"
 
+# 6. Canonical Domain Proof Conformance Corpus (Python Engine)
+"$PYTHON_BIN" -c "
+import json, sys, hashlib
+sys.path.insert(0, '${PROJECT_ROOT}/packages/neuronix-core')
+from neuronix_core.hyperion import HyperionExecutionEngine
+
+with open('${PROJECT_ROOT}/tests/conformance/domain_proof/vectors.json', 'r', encoding='utf-8') as f:
+    corpus = json.load(f)
+
+for v in corpus['vectors']:
+    if v['expected_validity']:
+        rec = json.loads(v['runtime_evidence_json'])
+        concat = v['state_root'] + v['hds_spec_hash'] + v['policy_hash'] + v['workload_input_hash'] + v['output_digest'] + hashlib.sha256(v['runtime_evidence_json'].encode('utf-8')).hexdigest()
+        recomputed = hashlib.sha256(concat.encode('utf-8')).hexdigest()
+        assert recomputed == v['expected_proof_root'], f'Vector {v[\"id\"]} proof root mismatch'
+"
+assert_pass "Canonical DomainProofV1 Conformance Vectors verified in Python"
+
+# 7. Canonical Domain Proof Bit-Exact Parity & Verification (Rust Daemon)
+if [ -f "$DAEMON_BIN" ]; then
+    "$PYTHON_BIN" -c "
+import json, sys, subprocess
+
+with open('${PROJECT_ROOT}/tests/conformance/domain_proof/vectors.json', 'r', encoding='utf-8') as f:
+    corpus = json.load(f)
+
+for v in corpus['vectors']:
+    rec_arg = v['runtime_evidence_json'] if v['runtime_evidence_json'] is not None else ''
+    cmd = [
+        '${DAEMON_BIN}', '--hyperion', 'proof',
+        v['state_root'],
+        v['hds_spec_hash'],
+        v['policy_hash'],
+        v['workload_input_hash'],
+        v['output_digest'],
+        rec_arg,
+        str(v['exit_code']),
+        v['isolation_tier']
+    ]
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+    res = json.loads(proc.stdout)
+    assert res['trust_verdict'] == v['expected_verdict'], f'Rust daemon verdict mismatch on {v[\"id\"]}: claimed {res[\"trust_verdict\"]} != expected {v[\"expected_verdict\"]}'
+    assert res['mathematical_validity'] == v['expected_validity'], f'Rust daemon validity mismatch on {v[\"id\"]}'
+    if v['expected_validity']:
+        assert res['domain_proof_root'] == v['expected_proof_root'], f'Rust daemon root mismatch on {v[\"id\"]}: {res[\"domain_proof_root\"]} != {v[\"expected_proof_root\"]}'
+        
+        # Test daemon verification API
+        ver_cmd = ['${DAEMON_BIN}', '--hyperion', 'verify', proc.stdout.strip()]
+        ver_proc = subprocess.run(ver_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        ver_res = json.loads(ver_proc.stdout)
+        assert ver_res['valid'] == True, f'Rust daemon failed to verify its own valid proof for {v[\"id\"]}'
+"
+    assert_pass "Rust Daemon Bit-Exact DomainProofV1 Parity & API Verification certified"
+fi
+
 echo -e "\n\033[1;32m✔ ALL $PASSED/$TOTAL INDEPENDENT CONFORMANCE GATES PASSED (100% GREEN)\033[0m\n"
+

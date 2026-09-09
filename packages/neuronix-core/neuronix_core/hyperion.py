@@ -350,8 +350,8 @@ class HyperionExecutionEngine:
             inp_hash = hashlib.sha256(cmd.encode('utf-8')).hexdigest()
 
         evidence["workload_input_hash"] = inp_hash
-        if "execution_nonce" not in evidence or not evidence["execution_nonce"]:
-            evidence["execution_nonce"] = f"nrx_nonce_{int(time.time() * 1e9)}_{os.getpid()}"
+        if "execution_nonce" not in evidence:
+            evidence["execution_nonce"] = ""
 
         evidence_hash = sha256_canonical(evidence)
 
@@ -374,7 +374,10 @@ class HyperionExecutionEngine:
             if backend != "bubblewrap_ram_overlay" or mode != "real_ghost":
                 tier_backend_mismatch = True
 
-        if exit_code != 0:
+        nonce_val = evidence.get("execution_nonce", "")
+        if not nonce_val:
+            trust_verdict = "NO_RUNTIME_RECEIPT"
+        elif exit_code != 0:
             trust_verdict = "EXECUTION_ANOMALY"
         elif tier_backend_mismatch:
             trust_verdict = "ISOLATION_EVIDENCE_MISMATCH"

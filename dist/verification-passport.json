@@ -10,9 +10,10 @@
     "proof_engine_version": "1.1.0"
   },
   "cryptographic_commitments": {
-    "state_root": "e0a3089bd20d96a0cd178c61b4d79f26e1563552fb171374a588371423c3bb52",
+    "state_root": "e83d7129498a4f961aa9e73771db87f80ad7e3e57dfbc6b96e954c98f0042f08",
     "policy_hash": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
     "flake_lock_hash": "06135d460eb72c7dcb846ac22cab8cee65f9acea9f3b285a9adb9d27de876981",
+    "evidence_graph_digest": "823873464279386011a94ac2d4acf1a568a4017b3b0443600f19496c5f0c1913",
     "trust_status": "TRUSTED",
     "trust_vector": {
       "posture": "VERIFIED",
@@ -32,7 +33,7 @@
     "verified_failure_count": 0,
     "verified_pass_rate_percentage": 100,
     "verification_status": "PASSING_ALL",
-    "evidence_snapshot_digest": "72f42b10c22e91bfad24e219efab5276e009d5ea47077f207e1632bee7cf3287"
+    "evidence_snapshot_digest": "2e5931241a3b33acee99386d78bc4bd9ec9d2d235260337bcf1fc539aa0239e1"
   },
   "ci_attestation": {
     "ci_workflow_id": "ci.yml",
@@ -44,7 +45,8 @@
     "reproducibility_evidence_sha256": "9c86e5330a64f976095e778da21befae1309bb6daab48970ba6f1ea16e488c46",
     "iso_checksums_sha256": "4a24065718d8269ea318bb15b073b9c9f0df3c9927bcef6b99dba08f2ebb04f9",
     "sbom_spdx_sha256": "de889c7126352fcf756b3b1485aaf55eb52280f93e0f015f39b72b0a56011ae3",
-    "jcs_conformance_sha256": "ed15c5cf7cb07f2a4bf516610f28928a2d36d200dff9b65efecbe49d37d1c6de"
+    "jcs_conformance_sha256": "ed15c5cf7cb07f2a4bf516610f28928a2d36d200dff9b65efecbe49d37d1c6de",
+    "evidence_graph_sha256": "823873464279386011a94ac2d4acf1a568a4017b3b0443600f19496c5f0c1913"
   },
   "hardware_profiles": [
     "thinkpad_t14_gen3",
@@ -56,6 +58,6 @@
     "apple_silicon_m_series",
     "generic_uefi_hardware"
   ],
-  "verification_timestamp": "2026-09-09T02:34:36Z",
-  "passport_digest": "df814f10b90fd82b40d958c52e7c39b0a6985966e7c4ebde5b6350543d54abcc"
+  "verification_timestamp": "2026-09-09T03:20:50Z",
+  "passport_digest": "af8bd3af2ffb1dde4a1fa124cb9ae086ade0d61b7c52e63dd701ec8891194053"
 }
