@@ -283,7 +283,8 @@ class HyperionExecutionEngine:
         domain_spec: Dict[str, Any],
         output_digest: str = NULL_SENTINEL_SHA256,
         exit_code: int = 0,
-        runtime_evidence: Optional[Dict[str, Any]] = None
+        runtime_evidence: Optional[Dict[str, Any]] = None,
+        workload_input_hash: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Formulates the authoritative Cryptographic Domain Proof (CDP).
@@ -339,10 +340,23 @@ class HyperionExecutionEngine:
                     "runtime_mode": "real_host"
                 }
 
+        # 3b. Derive and bind workload input hash
+        if workload_input_hash is not None:
+            inp_hash = workload_input_hash
+        elif "workload_input_hash" in evidence:
+            inp_hash = evidence["workload_input_hash"]
+        else:
+            cmd = domain_spec.get("workload_name") or domain_spec.get("workload_command") or ""
+            inp_hash = hashlib.sha256(cmd.encode('utf-8')).hexdigest()
+
+        evidence["workload_input_hash"] = inp_hash
+        if "execution_nonce" not in evidence or not evidence["execution_nonce"]:
+            evidence["execution_nonce"] = f"nrx_nonce_{int(time.time() * 1e9)}_{os.getpid()}"
+
         evidence_hash = sha256_canonical(evidence)
 
         # 4. Cryptographic domain synthesis
-        concat = f"{state_root}{hds_canonical_hash}{policy_hash}{out_hash}{evidence_hash}"
+        concat = f"{state_root}{hds_canonical_hash}{policy_hash}{inp_hash}{out_hash}{evidence_hash}"
         domain_proof_root = hashlib.sha256(concat.encode('utf-8')).hexdigest()
 
         # Trust verdict evaluation
@@ -377,9 +391,11 @@ class HyperionExecutionEngine:
             "host_state_root": state_root,
             "hds_spec_hash": hds_canonical_hash,
             "policy_hash": policy_hash,
+            "workload_input_hash": inp_hash,
             "output_digest": out_hash,
             "runtime_evidence_hash": evidence_hash,
             "runtime_evidence": evidence,
+            "execution_nonce": evidence["execution_nonce"],
             "exit_code": exit_code,
             "timestamp": int(time.time()),
             "isolation_tier": tier,
@@ -418,7 +434,10 @@ class HyperionExecutionEngine:
                 return False, f"Runtime evidence digest mismatch: claimed {evidence_hash} != recomputed {recomputed_evidence_hash}"
 
         # 2. Mathematical consistency check
-        if evidence_hash:
+        inp_hash = proof.get("workload_input_hash")
+        if inp_hash:
+            recomputed_concat = f"{state_root}{hds_hash}{policy_hash}{inp_hash}{out_hash}{evidence_hash}"
+        elif evidence_hash:
             recomputed_concat = f"{state_root}{hds_hash}{policy_hash}{out_hash}{evidence_hash}"
         else:
             recomputed_concat = f"{state_root}{hds_hash}{policy_hash}{out_hash}"
@@ -426,6 +445,11 @@ class HyperionExecutionEngine:
 
         if claimed_proof != recomputed_proof or not claimed_proof:
             return False, f"Proof root mismatch: claimed {claimed_proof} != recomputed {recomputed_proof}"
+
+        # Replay protection check
+        nonce = evidence.get("execution_nonce") or proof.get("execution_nonce", "")
+        if not nonce:
+            return False, "Runtime evidence missing mandatory execution_nonce (replay protection violated)"
 
         # 3. Check domain_spec if provided
         if domain_spec is not None:

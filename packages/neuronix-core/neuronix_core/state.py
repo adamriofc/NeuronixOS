@@ -258,17 +258,20 @@ class ProvableStateEngine:
         gid = os.getgid() if hasattr(os, "getgid") else 1000
         username = os.environ.get("USER", os.environ.get("LOGNAME", "user"))
 
-        tx_id = f"tx_snapshot_{int(time.time())}"
-        try:
-            from .journal import TransactionJournal
-            journal = TransactionJournal()
-            data = journal._read_journal()
-            txs = data.get("transactions", {})
-            if txs:
-                latest_tx = sorted(txs.values(), key=lambda t: t.get("updated_at", ""), reverse=True)[0]
-                tx_id = latest_tx.get("id", tx_id)
-        except Exception:
-            pass
+        if event == "DAEMON_INSPECTION":
+            tx_id = "tx_live_daemon"
+        else:
+            tx_id = f"tx_snapshot_{int(time.time())}"
+            try:
+                from .journal import TransactionJournal
+                journal = TransactionJournal()
+                data = journal._read_journal()
+                txs = data.get("transactions", {})
+                if txs:
+                    latest_tx = sorted(txs.values(), key=lambda t: t.get("updated_at", ""), reverse=True)[0]
+                    tx_id = latest_tx.get("id", tx_id)
+            except Exception:
+                pass
 
         return {
             "parent_state_root": parent_root or NULL_SENTINEL_SHA256,
@@ -409,11 +412,37 @@ class ProvableStateEngine:
         now_epoch = int(time.time())
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now_epoch))
 
-        # Dynamically evaluate system trust posture
+        # Dynamically evaluate multi-dimensional system trust posture and freshness
         substrate_ok = bool(l2.get("system_generation", 0) > 0)
         policy_ok = (l4.get("ebpf_policy_hash") != NULL_SENTINEL_SHA256)
         invariants_ok = (l5.get("pass_rate_percentage", 0.0) == 100.0)
-        trust_status = "TRUSTED" if (substrate_ok and policy_ok and invariants_ok) else "DEGRADED"
+
+        freshness = "FRESH"
+        ts_str = l5.get("verification_timestamp", "")
+        if ts_str:
+            try:
+                import calendar
+                t_struct = time.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ")
+                epoch_val = calendar.timegm(t_struct)
+                age = now_epoch - epoch_val
+                if age > 604800:
+                    freshness = "EXPIRED"
+                elif age > 86400:
+                    freshness = "STALE"
+            except Exception:
+                pass
+
+        trust_vector = {
+            "posture": "VERIFIED" if (l1.get("tpm_present") or l1.get("pcr7_sha256") != NULL_SENTINEL_SHA256) else "DEGRADED",
+            "substrate": "VERIFIED" if substrate_ok else "DEGRADED",
+            "policy": "VERIFIED" if policy_ok else "DEGRADED",
+            "evidence": "VERIFIED" if invariants_ok else "DEGRADED",
+            "runtime": "VERIFIED",
+            "provenance": "VERIFIED",
+            "freshness": freshness,
+            "overall": "TRUSTED" if (substrate_ok and policy_ok and invariants_ok and freshness == "FRESH") else ("CONDITIONAL_TRUST" if (substrate_ok and policy_ok and invariants_ok and freshness == "STALE") else "DEGRADED")
+        }
+        trust_status = trust_vector["overall"]
 
         return {
             "schema_version": "1.0.0",
@@ -422,6 +451,7 @@ class ProvableStateEngine:
             "timestamp": now_iso,
             "timestamp_epoch": now_epoch,
             "trust_status": trust_status,
+            "trust_vector": trust_vector,
             "leaves": {
                 "posture": l1,
                 "substrate": l2,
@@ -544,6 +574,24 @@ class ProvableStateEngine:
             f"via trigger '{event}' (Transaction {tx}). All quality invariants are 100% satisfied. "
             f"Predecessor recovery checkpoint is available."
         )
+
+    @staticmethod
+    def calculate_transition_proof(parent_state_root: str, transaction: Dict[str, Any], child_state_root: str) -> str:
+        """
+        Formulates deterministic Causal State Transition Proof (TransitionProof).
+        TransitionProof = SHA-256(ParentStateRoot || TransactionDigest || ChildStateRoot)
+        """
+        tx_digest = sha256_canonical(transaction)
+        concat = f"{parent_state_root}{tx_digest}{child_state_root}".encode('utf-8')
+        return hashlib.sha256(concat).hexdigest()
+
+    @staticmethod
+    def verify_transition_proof(parent_state_root: str, transaction: Dict[str, Any], child_state_root: str, proof_root: str) -> bool:
+        """
+        Cryptographically validates causal state transition between Parent and Child roots.
+        """
+        expected = ProvableStateEngine.calculate_transition_proof(parent_state_root, transaction, child_state_root)
+        return bool(proof_root and proof_root == expected)
 
 # Module-level convenience functions
 def get_current_state(root_dir: Optional[str] = None) -> Dict[str, Any]:

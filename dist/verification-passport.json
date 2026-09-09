@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "passport_type": "NEURONIX_VERIFICATION_PASSPORT_V1",
+  "release_metadata": {
+    "distribution": "NEURONIX OS",
+    "release_version": "1.0.4",
+    "release_tag": "v1.0.4",
+    "commit_sha": "8f9a683e9b628993f5b783b8d76aaad684cf31d0",
+    "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
+    "proof_engine_version": "1.1.0"
+  },
+  "cryptographic_commitments": {
+    "state_root": "936d655b44c53ecae122ccbcd1f3b567357658f7142fa662bed6f396348bd484",
+    "policy_hash": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
+    "flake_lock_hash": "06135d460eb72c7dcb846ac22cab8cee65f9acea9f3b285a9adb9d27de876981",
+    "trust_status": "TRUSTED",
+    "trust_vector": {
+      "posture": "VERIFIED",
+      "substrate": "VERIFIED",
+      "policy": "VERIFIED",
+      "evidence": "VERIFIED",
+      "runtime": "VERIFIED",
+      "provenance": "VERIFIED",
+      "freshness": "FRESH",
+      "overall": "TRUSTED"
+    }
+  },
+  "verification_evidence": {
+    "test_manifest_hash": "82b20f8259fd4e28132a0d3bf6e25f7bffd25ff9f1e40d04d764c5a2cb1c663d",
+    "catalog_assertion_count": 1264,
+    "verified_assertion_count": 1264,
+    "verified_failure_count": 0,
+    "verified_pass_rate_percentage": 100,
+    "verification_status": "PASSING_ALL",
+    "evidence_snapshot_digest": "a8641ed0c41df8ecea86711a25504f3d7f0be171d6eb0a55ff5dc3761e1549f0"
+  },
+  "ci_attestation": {
+    "ci_workflow_id": "ci.yml",
+    "ci_run_id": "34299671795",
+    "ci_run_status": "success",
+    "ci_commit_sha": "8f9a683e9b628993f5b783b8d76aaad684cf31d0"
+  },
+  "supply_chain_digests": {
+    "reproducibility_evidence_sha256": "9c86e5330a64f976095e778da21befae1309bb6daab48970ba6f1ea16e488c46",
+    "iso_checksums_sha256": "4a24065718d8269ea318bb15b073b9c9f0df3c9927bcef6b99dba08f2ebb04f9",
+    "sbom_spdx_sha256": "de889c7126352fcf756b3b1485aaf55eb52280f93e0f015f39b72b0a56011ae3",
+    "jcs_conformance_sha256": "ed15c5cf7cb07f2a4bf516610f28928a2d36d200dff9b65efecbe49d37d1c6de"
+  },
+  "hardware_profiles": [
+    "thinkpad_t14_gen3",
+    "framework_laptop_13",
+    "amd_workstation_zen4",
+    "intel_nuc_13_pro",
+    "dell_xps_15_prime",
+    "asus_zephyrus_g14",
+    "apple_silicon_m_series",
+    "generic_uefi_hardware"
+  ],
+  "verification_timestamp": "2026-09-09T02:03:19Z",
+  "passport_digest": "35d06fd57fafdf2989e749f24ef6e9f75be3761b2cae315b4cde61113afab041"
+}

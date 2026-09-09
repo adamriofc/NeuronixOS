@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0.0",
+  "standard": "NEURONIX-RECEIPT-CONFORMANCE-V1",
+  "total_samples": 4,
+  "samples": [
+    {
+      "id": "RCPT-V01-TIER0-VALID",
+      "tier": "TIER_0_FAST_PATH",
+      "receipt": {
+        "backend": "host_direct",
+        "execution_backend": "host_direct",
+        "boundary_id": "boundary-t0-100",
+        "runtime_boundary_id": "boundary-t0-100",
+        "execution_nonce": "nrx_nonce_t0_12345",
+        "exit_code": 0,
+        "guest_boot_identity": "host-pid-100",
+        "guest_pid_or_vm": "host-pid-100",
+        "kvm_enabled": false,
+        "runner_instance": "host_direct_runner_v1",
+        "runtime_mode": "real_host",
+        "timestamp": "2026-09-09T08:00:00Z"
+      },
+      "expected_trust_verdict": "VERIFIED_TRUSTED"
+    },
+    {
+      "id": "RCPT-V02-TIER3-VALID-REAL",
+      "tier": "TIER_3_MICRO_VM",
+      "receipt": {
+        "backend": "qemu_kvm_micro_vm",
+        "execution_backend": "qemu_kvm_micro_vm",
+        "boundary_id": "boundary-t3-real-200",
+        "runtime_boundary_id": "boundary-t3-real-200",
+        "execution_nonce": "nrx_nonce_t3_67890",
+        "exit_code": 0,
+        "guest_boot_identity": "qemu-guest-real-200",
+        "guest_pid_or_vm": "qemu-guest-real-200",
+        "kvm_enabled": true,
+        "runner_instance": "shadow_vm_runner_v1",
+        "runtime_mode": "real_isolated",
+        "timestamp": "2026-09-09T08:00:00Z"
+      },
+      "expected_trust_verdict": "VERIFIED_TRUSTED"
+    },
+    {
+      "id": "RCPT-INV01-TIER3-SYNTHETIC-MISMATCH",
+      "tier": "TIER_3_MICRO_VM",
+      "receipt": {
+        "backend": "qemu_kvm_micro_vm",
+        "execution_backend": "qemu_kvm_micro_vm",
+        "boundary_id": "boundary-t3-sim-300",
+        "runtime_boundary_id": "boundary-t3-sim-300",
+        "execution_nonce": "nrx_nonce_t3_sim",
+        "exit_code": 0,
+        "guest_boot_identity": "sim-guest-300",
+        "guest_pid_or_vm": "sim-guest-300",
+        "kvm_enabled": false,
+        "runner_instance": "shadow_vm_runner_v1",
+        "runtime_mode": "synthetic_simulation",
+        "timestamp": "2026-09-09T08:00:00Z"
+      },
+      "expected_trust_verdict": "ISOLATION_EVIDENCE_MISMATCH"
+    },
+    {
+      "id": "RCPT-INV02-NONZERO-EXIT-ANOMALY",
+      "tier": "TIER_3_MICRO_VM",
+      "receipt": {
+        "backend": "qemu_kvm_micro_vm",
+        "execution_backend": "qemu_kvm_micro_vm",
+        "boundary_id": "boundary-t3-real-400",
+        "runtime_boundary_id": "boundary-t3-real-400",
+        "execution_nonce": "nrx_nonce_t3_fail",
+        "exit_code": 137,
+        "guest_boot_identity": "qemu-guest-real-400",
+        "guest_pid_or_vm": "qemu-guest-real-400",
+        "kvm_enabled": true,
+        "runner_instance": "shadow_vm_runner_v1",
+        "runtime_mode": "real_isolated",
+        "timestamp": "2026-09-09T08:00:00Z"
+      },
+      "expected_trust_verdict": "EXECUTION_ANOMALY"
+    }
+  ]
+}

@@ -1310,9 +1310,14 @@ cmd_doctor() {
     local output_file="/tmp/neuronix-doctor.md"
     local json_output=0
     local share_mode=0
+    local proof_mode=0
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --proof)
+                proof_mode=1
+                shift
+                ;;
             --json)
                 json_output=1
                 shift
@@ -1329,6 +1334,7 @@ cmd_doctor() {
                 echo -e "${BOLD}USAGE:${RESET}"
                 echo -e "  ${CYAN}${PROGRAM_NAME} doctor${RESET} [OPTIONS]\n"
                 echo -e "${BOLD}OPTIONS:${RESET}"
+                echo -e "  ${GREEN}--proof${RESET}              Hasilkan SystemVerificationReceipt terotentikasi & digest kanonikal"
                 echo -e "  ${GREEN}--output, -o <file>${RESET}  Tentukan lokasi berkas laporan (Default: /tmp/neuronix-doctor.md)"
                 echo -e "  ${GREEN}--json${RESET}               Cetak output dalam format terstruktur JSON"
                 echo -e "  ${GREEN}--share${RESET}              Saring data privat (MAC, serial, IP, token) untuk dibagikan ke publik"
@@ -1345,6 +1351,16 @@ cmd_doctor() {
     local py_bin core_path
     py_bin="$(resolve_python)"
     core_path="$(resolve_core_path)"
+
+    if [[ "$proof_mode" -eq 1 && -n "$py_bin" && -n "$core_path" ]]; then
+        "$py_bin" -c "
+import sys
+sys.path.insert(0, '${core_path}')
+from neuronix_core.doctor import print_doctor_proof
+print_doctor_proof(root_dir='${PROJECT_ROOT:-}')
+"
+        return 0
+    fi
 
     if [[ "$json_output" -eq 1 && -n "$py_bin" && -n "$core_path" ]]; then
         "$py_bin" -c "
@@ -3712,6 +3728,18 @@ main() {
             ;;
         doctor)
             cmd_doctor "$@"
+            ;;
+        verify-passport)
+            shift
+            local py_bin="$(resolve_python)"
+            local verify_script="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/tools/verify_passport.py"
+            if [[ -f "$verify_script" && -n "$py_bin" ]]; then
+                "$py_bin" "$verify_script" "$@"
+                exit $?
+            else
+                log_error "Offline verifier script not found at $verify_script"
+                exit 1
+            fi
             ;;
         welcome)
             cmd_welcome "$@"

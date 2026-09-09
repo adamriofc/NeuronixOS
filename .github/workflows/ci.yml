@@ -143,6 +143,24 @@ jobs:
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json
 
+      - name: Execute Independent Conformance Corpus Gate (5 Domains)
+        run: |
+          bash tests/test_conformance_corpus.sh
+
+      - name: Execute Negative Reproducibility & Mutation Sensitivity Gate (6 Mutants)
+        run: |
+          bash tests/test_negative_reproducibility.sh
+
+      - name: Execute Cross-Language Differential Serialization Gate
+        run: |
+          python3 tests/test_differential_fuzz.py 200
+
+      - name: Compile Assurance Evidence & Generate Verification Passport
+        run: |
+          python3 tools/compile_evidence.py
+          python3 tools/generate_verification_passport.py
+          python3 tools/verify_passport.py dist/verification-passport.json
+
       - name: Publish Verified Commit Status to GitHub API
         if: success()
         run: |

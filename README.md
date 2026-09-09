@@ -12,6 +12,8 @@
   <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
   <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
+  <a href="dist/verification-passport.json"><img src="https://img.shields.io/badge/Verification_Passport-Signed_%26_Audited-brightgreen.svg" alt="Verification Passport"></a>
+  <a href="tests/conformance/"><img src="https://img.shields.io/badge/RFC_8785_JCS-Bit--Level_Conformance-blue.svg" alt="RFC 8785 JCS Conformance"></a>
 </p>
 
 <p align="center">
@@ -77,9 +79,12 @@
   - [23. Declarative eBPF LSM Security Policy Gate (neuronix ebpf)](#23-declarative-ebpf-lsm-security-policy-gate-neuronix-ebpf)
   - [24. Provable State Engine & Cryptographic Causal Lineage (neuronix state)](#24-provable-state-engine--cryptographic-causal-lineage-neuronix-state)
   - [25. Provable Adaptive Execution Architecture (Project Hyperion)](#25-provable-adaptive-execution-architecture-project-hyperion)
+  - [26. Verification Passport & Zero-Dependency Offline Verifier (neuronix verify-passport)](#26-verification-passport--zero-dependency-offline-verifier-neuronix-verify-passport)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
 - [Verification, Lifecycle Gate & Test Harness (1,264 Assertions)](#verification--test-harness)
+  - [Independent Conformance Corpus & Differential Fuzzing](#independent-conformance-corpus--differential-fuzzing)
+  - [Negative Reproducibility & Sensitivity Testing](#negative-reproducibility--sensitivity-testing)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
 - [License](#license)
 
@@ -438,7 +443,7 @@ USAGE:
 | `mcp` | None | Starts the Model Context Protocol (MCP) server over `stdio` adhering to JSON-RPC 2.0. | `neuronix mcp` |
 | `check-update` | None | Checks upstream flake repository and remote releases for system updates. | `neuronix check-update` |
 | `upgrade` | `[--staged \| --switch]` | Performs atomic system upgrade (staged by default for reboot, or instant switch). | `neuronix upgrade --staged` |
-| `doctor` | `[--json \| --output <f>]` | Deep diagnostic probe producing privacy-sanitized reports for GitHub issues. | `neuronix doctor` |
+| `doctor` | `[--json \| --output <f> \| --proof]` | Deep diagnostic probe producing privacy-sanitized reports and authoritative SystemVerificationReceipts. | `neuronix doctor --proof` |
 | `welcome` | `[--cli \| --disable-autostart]` | Interactive first-boot welcome wizard and distro onboarding guide. | `neuronix welcome` |
 | `quickstart` | `[list \| install <id>]` | Curated Flathub desktop & engineering app hub (zero store pollution). | `neuronix quickstart list` |
 | `kernel` | `[status \| list \| set <flv>]` | Declarative kernel flavor manager (default, zen, lts, latest, hardened). | `neuronix kernel list` |
@@ -455,6 +460,7 @@ USAGE:
 | `ebpf` | `[status \| policy <pkg>]` | Declarative eBPF LSM capability status and security policy contract generator. | `neuronix ebpf status` |
 | `state` | `[show \| verify \| explain \| diff \| history \| recover \| prove]` | Provable State Engine: 5-leaf Merkle StateRoot calculation, cryptographic lineage, and verified recovery. | `neuronix state verify` |
 | `hyperion` | `[status \| negotiate \| proof \| verify \| list]` | Provable Adaptive Execution Architecture: HDS synthesis, domain lifecycle, and Merkle Domain Proofs. | `neuronix hyperion status` |
+| `verify-passport` | `[passport.json] [--public-key <k>]` | Zero-dependency standalone offline verification engine for system release passports. | `neuronix verify-passport dist/verification-passport.json` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
 | `help` | None (`-h`, `--help`)   | Displays available commands and syntax summaries. | `neuronix help` |
 
@@ -1004,6 +1010,65 @@ neuronix hyperion list
 
 ---
 
+### 26. Verification Passport & Zero-Dependency Offline Verifier (neuronix verify-passport)
+
+To satisfy the engineering principle of *maximum epistemic trust per line of code*, NEURONIX OS introduces the **Verification Passport & Offline Verifier Architecture**. Instead of relying on vendor assurances or online authority servers, every release, commit, and state transition can be audited, falsified, and mathematically verified completely offline with zero third-party dependencies.
+
+```mermaid
+flowchart TD
+    A["Authoritative Test Harness (1,264 Assertions)"] --> B["Evidence Compiler (tools/compile_evidence.py)"]
+    C["5-Leaf Merkle StateRoot Engine"] --> B
+    D["Golden Host Matrix (8 Hardware Profiles)"] --> B
+    B --> E["Verification Passport (dist/verification-passport.json)"]
+    E --> F["Zero-Dependency Offline Verifier (tools/verify_passport.py)"]
+    E --> G["Integrated CLI (neuronix verify-passport)"]
+    H["Negative Reproducibility Gate (6 Mutants)"] -.->|Falsifiability Audit| E
+    I["Differential Fuzzer (Python vs Node.js vs Rust)"] -.->|Bit-Exact Parity| C
+```
+
+#### Core Components & Architectural Invariants:
+
+1. **Authoritative Evidence Compiler (`tools/compile_evidence.py`):**
+   Aggregates all 1,264 system assertions across 32 suites, 19 distro suites, and 14 standalone verification gates into a multi-tier taxonomy:
+   - `CATALOG`: 1,264 registered system assertions with suite boundaries and test categories.
+   - `VERIFIED`: 1,264 verified assertions with zero unverified regressions.
+   - `OBSERVED`: Live hardware and kernel capability probes (KVM virtualization, Bubblewrap, cgroups v2, eBPF LSM).
+   - `ATTESTED`: SLSA Level 3 keyless build provenance and GPG detached release signatures.
+   Computes a deterministic canonical SHA-256 digest (`data/assurance_evidence_snapshot.json`) bound directly into `L_evidence` of the 5-leaf Merkle StateRoot.
+
+2. **Verification Passport Specification (`dist/verification-passport.json`):**
+   A self-contained release passport formatted in RFC 8785 ECMAScript 5.1 canonical JSON. The passport specifies:
+   - Target Release Version and Commit SHA lineage.
+   - 5-Leaf Merkle StateRoot cryptographic commitment.
+   - Comprehensive assertion catalog and test results.
+   - Golden Host Reference Matrix across all 8 certified hardware platforms.
+   - Detached SHA-256 passport digest ensuring tamper-free distribution.
+
+3. **Zero-Dependency Offline Verifier (`tools/verify_passport.py`):**
+   A standalone single-file Python engine requiring only the standard library (Python 3.8+). It embeds an independent RFC 8785 canonical serializer, parses detached passport digests, and validates Merkle StateRoot commitments without internet access, third-party packages, or background daemons.
+
+4. **Integrated CLI Command (`neuronix verify-passport`):**
+   Exposes the offline verification engine directly through the system CLI dispatcher for immediate operator validation.
+
+5. **System Doctor Proof Mode (`neuronix doctor --proof`):**
+   Extends system diagnostics to emit an authoritative `SystemVerificationReceipt` JSON payload cryptographically bound to the active StateRoot, hardware PCR state, JCS conformance vectors, and an 8-dimensional `trust_vector` (`posture`, `substrate`, `policy`, `evidence`, `runtime`, `provenance`, `freshness`, `overall`).
+
+```bash
+# Verify official release passport offline with zero dependencies
+neuronix verify-passport dist/verification-passport.json
+
+# Run standalone verifier in any clean Python environment
+python3 tools/verify_passport.py dist/verification-passport.json
+
+# Generate authoritative SystemVerificationReceipt with cryptographic proof
+neuronix doctor --proof
+
+# Recompile canonical evidence snapshot from live test manifest
+python3 tools/compile_evidence.py
+```
+
+---
+
 ## Building & Installation
 
 ### Building the Installation Medium
@@ -1154,7 +1219,39 @@ bash tests/test_reproducible_iso.sh
 
 # Run performance benchmarks and latency budgets (4 benchmarks)
 bash tests/test_benchmarks.sh
+
+# Run independent conformance corpus (RFC 8785, StateRoot, HDS, Receipts, Transitions)
+bash tests/test_conformance_corpus.sh
+
+# Run cross-language differential fuzzing (Python JCS vs Node.js ECMAScript vs Rust)
+python3 tests/test_differential_fuzz.py 300
+
+# Run negative reproducibility and mutation sensitivity gate (6 mutants)
+bash tests/test_negative_reproducibility.sh
+
+# Compile authoritative evidence snapshot & generate Verification Passport
+python3 tools/compile_evidence.py
+python3 tools/generate_verification_passport.py
+python3 tools/verify_passport.py dist/verification-passport.json
 ```
+
+### Independent Conformance Corpus & Differential Fuzzing
+
+To ensure that cryptographic StateRoots and Domain Proofs are mathematically portable across runtimes and operating systems, NEURONIX OS maintains an independent conformance corpus and continuous differential fuzzing battery:
+
+- **RFC 8785 Canonical JSON (JCS):** Tested against the 14 official RFC 8785 test vectors covering ECMAScript 5.1 number serialization, IEEE 754 floating point extremes, and lexicographical UTF-16 code unit ordering.
+- **StateRoot Mathematical Commitments:** Validated across Python and Rust daemon implementations to guarantee bit-exact parity across all five Merkle leaves (`L_posture`, `L_substrate`, `L_policy`, `L_evidence`, `L_provenance`).
+- **Differential Fuzzing Engine:** Executes hundreds of randomized structural fuzzing iterations comparing the Python canonical encoder against the native Node.js V8 engine and the Rust daemon with zero tolerated divergence.
+
+### Negative Reproducibility & Sensitivity Testing
+
+Rather than only verifying happy-path executions, NEURONIX OS subjects its assurance architecture to active mutation and falsifiability testing across six critical failure gates:
+1. **Policy Mutation:** Alterations to security policy contracts immediately produce diverging hashes and fail closed.
+2. **Evidence Mutation:** Injected defects into verified assertions strictly alter canonical evidence leaves.
+3. **Passport Tamper Detection:** Forged passport signatures or altered digests trigger immediate cryptographic rejection.
+4. **Workload Input Mutation:** Distinct workload inputs produce distinct execution receipts and proof roots.
+5. **Replay Defense:** Missing nonces or replayed domain receipts fail closed.
+6. **Causal Transition Integrity:** Broken parent state roots in transition proofs abort state progression.
 
 ---
 

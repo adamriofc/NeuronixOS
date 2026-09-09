@@ -1,0 +1,451 @@
+{
+  "schema_version": "1.0.0",
+  "standard": "NEURONIX-HDS-CONFORMANCE-V1",
+  "total_contracts": 7,
+  "contracts": [
+    {
+      "id": "HDS-V01-TIER0",
+      "spec": {
+        "schema_version": "1.0.0",
+        "domain_id": "DOM-2026-09-09-8BEF2E9A",
+        "workload_name": "echo hello",
+        "intent_source": {
+          "actor_uid": 1000,
+          "actor_role": "USER",
+          "intent_text": "Execute echo hello",
+          "prompt_digest": "584a331fd6b02dcb1ecbe2eba731f609a2e1e3dac0bb73ae998dfad14c309a77"
+        },
+        "isolation_tier": "TIER_0_FAST_PATH",
+        "resource_envelope": {
+          "cpu": {
+            "cores_allocated": [
+              0,
+              1
+            ],
+            "scheduling_policy": "SCHED_NORMAL",
+            "nice_level": 0
+          },
+          "memory": {
+            "limit_mb": 2048,
+            "hugepages": "none",
+            "swap_policy": "ZRAM_COMPRESSED_ONLY"
+          },
+          "accelerator": {
+            "device": "none",
+            "visible_devices": [],
+            "vram_ceiling_mb": 0
+          },
+          "storage": {
+            "mount_type": "HOST_PASSTHROUGH",
+            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "auto_vaporize_on_exit": true
+          },
+          "network": {
+            "policy": "HOST_SHARED",
+            "allow_inbound": false,
+            "allow_outbound": true,
+            "allowed_hosts": []
+          }
+        },
+        "security_contracts": {
+          "ebpf_lsm_ruleset": "STANDARD",
+          "credential_scrubbing": false,
+          "disallowed_paths": [
+            "/etc/shadow",
+            "/root",
+            "/etc/ssh",
+            "/home/*/.ssh",
+            "/home/*/.gnupg"
+          ],
+          "permitted_syscalls": "STANDARD_POSIX"
+        },
+        "lifecycle": {
+          "max_duration_seconds": 3600,
+          "on_anomaly": "FAIL_CLOSED"
+        }
+      },
+      "expected_valid": true,
+      "expected_tier": "TIER_0_FAST_PATH"
+    },
+    {
+      "id": "HDS-V02-TIER1",
+      "spec": {
+        "schema_version": "1.0.0",
+        "domain_id": "DOM-2026-09-09-8C38F3FF",
+        "workload_name": "python3 script.py",
+        "intent_source": {
+          "actor_uid": 1000,
+          "actor_role": "USER",
+          "intent_text": "Execute python3 script.py",
+          "prompt_digest": "f0c1d65b93de8b7965be815956e8eb7ee4715afd76be78680ef5d2a1e22e57de"
+        },
+        "isolation_tier": "TIER_1_RAM_GHOST",
+        "resource_envelope": {
+          "cpu": {
+            "cores_allocated": [
+              0,
+              1
+            ],
+            "scheduling_policy": "SCHED_NORMAL",
+            "nice_level": 0
+          },
+          "memory": {
+            "limit_mb": 2048,
+            "hugepages": "none",
+            "swap_policy": "ZRAM_COMPRESSED_ONLY"
+          },
+          "accelerator": {
+            "device": "none",
+            "visible_devices": [],
+            "vram_ceiling_mb": 0
+          },
+          "storage": {
+            "mount_type": "MEMFD_VOLATILE_RAM",
+            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "auto_vaporize_on_exit": true
+          },
+          "network": {
+            "policy": "HOST_SHARED",
+            "allow_inbound": false,
+            "allow_outbound": true,
+            "allowed_hosts": []
+          }
+        },
+        "security_contracts": {
+          "ebpf_lsm_ruleset": "STRICT_WORKSPACE_ONLY",
+          "credential_scrubbing": true,
+          "disallowed_paths": [
+            "/etc/shadow",
+            "/root",
+            "/etc/ssh",
+            "/home/*/.ssh",
+            "/home/*/.gnupg"
+          ],
+          "permitted_syscalls": "STANDARD_POSIX"
+        },
+        "lifecycle": {
+          "max_duration_seconds": 3600,
+          "on_anomaly": "FAIL_CLOSED"
+        }
+      },
+      "expected_valid": true,
+      "expected_tier": "TIER_1_RAM_GHOST"
+    },
+    {
+      "id": "HDS-V03-TIER2",
+      "spec": {
+        "schema_version": "1.0.0",
+        "domain_id": "DOM-2026-09-09-5FB215A2",
+        "workload_name": "cargo build",
+        "intent_source": {
+          "actor_uid": 1000,
+          "actor_role": "USER",
+          "intent_text": "Execute cargo build",
+          "prompt_digest": "63ebb6266662bc0c1765c716ccc993d5bcf965f13ac3bd1322d739bafdee58a1"
+        },
+        "isolation_tier": "TIER_2_EBPF_ENCLAVE",
+        "resource_envelope": {
+          "cpu": {
+            "cores_allocated": [
+              0,
+              1
+            ],
+            "scheduling_policy": "SCHED_NORMAL",
+            "nice_level": 0
+          },
+          "memory": {
+            "limit_mb": 2048,
+            "hugepages": "none",
+            "swap_policy": "ZRAM_COMPRESSED_ONLY"
+          },
+          "accelerator": {
+            "device": "none",
+            "visible_devices": [],
+            "vram_ceiling_mb": 0
+          },
+          "storage": {
+            "mount_type": "MEMFD_VOLATILE_RAM",
+            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "auto_vaporize_on_exit": true
+          },
+          "network": {
+            "policy": "HOST_SHARED",
+            "allow_inbound": false,
+            "allow_outbound": true,
+            "allowed_hosts": []
+          }
+        },
+        "security_contracts": {
+          "ebpf_lsm_ruleset": "STRICT_WORKSPACE_ONLY",
+          "credential_scrubbing": true,
+          "disallowed_paths": [
+            "/etc/shadow",
+            "/root",
+            "/etc/ssh",
+            "/home/*/.ssh",
+            "/home/*/.gnupg"
+          ],
+          "permitted_syscalls": "STANDARD_POSIX"
+        },
+        "lifecycle": {
+          "max_duration_seconds": 3600,
+          "on_anomaly": "FAIL_CLOSED"
+        }
+      },
+      "expected_valid": true,
+      "expected_tier": "TIER_2_EBPF_ENCLAVE"
+    },
+    {
+      "id": "HDS-V04-TIER3",
+      "spec": {
+        "schema_version": "1.0.0",
+        "domain_id": "DOM-2026-09-09-BD11606C",
+        "workload_name": "curl https://untrusted.com",
+        "intent_source": {
+          "actor_uid": 1000,
+          "actor_role": "USER",
+          "intent_text": "Execute curl https://untrusted.com",
+          "prompt_digest": "6d4f9e603d988080f7920dffd4b6c69b9a3bef89db70d4af859b3d0eaeb236fa"
+        },
+        "isolation_tier": "TIER_3_MICRO_VM",
+        "resource_envelope": {
+          "cpu": {
+            "cores_allocated": [
+              0,
+              1
+            ],
+            "scheduling_policy": "SCHED_NORMAL",
+            "nice_level": 0
+          },
+          "memory": {
+            "limit_mb": 2048,
+            "hugepages": "none",
+            "swap_policy": "ZRAM_COMPRESSED_ONLY"
+          },
+          "accelerator": {
+            "device": "none",
+            "visible_devices": [],
+            "vram_ceiling_mb": 0
+          },
+          "storage": {
+            "mount_type": "MEMFD_VOLATILE_RAM",
+            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "auto_vaporize_on_exit": true
+          },
+          "network": {
+            "policy": "HOST_SHARED",
+            "allow_inbound": false,
+            "allow_outbound": true,
+            "allowed_hosts": []
+          }
+        },
+        "security_contracts": {
+          "ebpf_lsm_ruleset": "STANDARD",
+          "credential_scrubbing": true,
+          "disallowed_paths": [
+            "/etc/shadow",
+            "/root",
+            "/etc/ssh",
+            "/home/*/.ssh",
+            "/home/*/.gnupg"
+          ],
+          "permitted_syscalls": "STANDARD_POSIX"
+        },
+        "lifecycle": {
+          "max_duration_seconds": 3600,
+          "on_anomaly": "FAIL_CLOSED"
+        }
+      },
+      "expected_valid": true,
+      "expected_tier": "TIER_3_MICRO_VM"
+    },
+    {
+      "id": "HDS-INV01-MISSING-SHADOW-CONTRACT",
+      "spec": {
+        "schema_version": "1.0.0",
+        "domain_id": "DOM-2026-09-09-5FB215A2",
+        "workload_name": "cargo build",
+        "intent_source": {
+          "actor_uid": 1000,
+          "actor_role": "USER",
+          "intent_text": "Execute cargo build",
+          "prompt_digest": "63ebb6266662bc0c1765c716ccc993d5bcf965f13ac3bd1322d739bafdee58a1"
+        },
+        "isolation_tier": "TIER_2_EBPF_ENCLAVE",
+        "resource_envelope": {
+          "cpu": {
+            "cores_allocated": [
+              0,
+              1
+            ],
+            "scheduling_policy": "SCHED_NORMAL",
+            "nice_level": 0
+          },
+          "memory": {
+            "limit_mb": 2048,
+            "hugepages": "none",
+            "swap_policy": "ZRAM_COMPRESSED_ONLY"
+          },
+          "accelerator": {
+            "device": "none",
+            "visible_devices": [],
+            "vram_ceiling_mb": 0
+          },
+          "storage": {
+            "mount_type": "MEMFD_VOLATILE_RAM",
+            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "auto_vaporize_on_exit": true
+          },
+          "network": {
+            "policy": "HOST_SHARED",
+            "allow_inbound": false,
+            "allow_outbound": true,
+            "allowed_hosts": []
+          }
+        },
+        "security_contracts": {
+          "ebpf_lsm_ruleset": "STRICT_WORKSPACE_ONLY",
+          "credential_scrubbing": true,
+          "disallowed_paths": [
+            "/root"
+          ],
+          "permitted_syscalls": "STANDARD_POSIX"
+        },
+        "lifecycle": {
+          "max_duration_seconds": 3600,
+          "on_anomaly": "FAIL_CLOSED"
+        }
+      },
+      "expected_valid": false,
+      "expected_error_contains": "disallowed_paths must include '/etc/shadow'"
+    },
+    {
+      "id": "HDS-INV02-SUB-MINIMUM-MEMORY",
+      "spec": {
+        "schema_version": "1.0.0",
+        "domain_id": "DOM-2026-09-09-BD11606C",
+        "workload_name": "curl https://untrusted.com",
+        "intent_source": {
+          "actor_uid": 1000,
+          "actor_role": "USER",
+          "intent_text": "Execute curl https://untrusted.com",
+          "prompt_digest": "6d4f9e603d988080f7920dffd4b6c69b9a3bef89db70d4af859b3d0eaeb236fa"
+        },
+        "isolation_tier": "TIER_3_MICRO_VM",
+        "resource_envelope": {
+          "cpu": {
+            "cores_allocated": [
+              0,
+              1
+            ],
+            "scheduling_policy": "SCHED_NORMAL",
+            "nice_level": 0
+          },
+          "memory": {
+            "limit_mb": 32,
+            "hugepages": "none",
+            "swap_policy": "ZRAM_COMPRESSED_ONLY"
+          },
+          "accelerator": {
+            "device": "none",
+            "visible_devices": [],
+            "vram_ceiling_mb": 0
+          },
+          "storage": {
+            "mount_type": "MEMFD_VOLATILE_RAM",
+            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "auto_vaporize_on_exit": true
+          },
+          "network": {
+            "policy": "HOST_SHARED",
+            "allow_inbound": false,
+            "allow_outbound": true,
+            "allowed_hosts": []
+          }
+        },
+        "security_contracts": {
+          "ebpf_lsm_ruleset": "STANDARD",
+          "credential_scrubbing": true,
+          "disallowed_paths": [
+            "/etc/shadow",
+            "/root",
+            "/etc/ssh",
+            "/home/*/.ssh",
+            "/home/*/.gnupg"
+          ],
+          "permitted_syscalls": "STANDARD_POSIX"
+        },
+        "lifecycle": {
+          "max_duration_seconds": 3600,
+          "on_anomaly": "FAIL_CLOSED"
+        }
+      },
+      "expected_valid": false,
+      "expected_error_contains": "Memory limit_mb must be an integer >= 64 MB"
+    },
+    {
+      "id": "HDS-INV03-FORBIDDEN-PATH-BIND",
+      "spec": {
+        "schema_version": "1.0.0",
+        "domain_id": "DOM-2026-09-09-8C38F3FF",
+        "workload_name": "python3 script.py",
+        "intent_source": {
+          "actor_uid": 1000,
+          "actor_role": "USER",
+          "intent_text": "Execute python3 script.py",
+          "prompt_digest": "f0c1d65b93de8b7965be815956e8eb7ee4715afd76be78680ef5d2a1e22e57de"
+        },
+        "isolation_tier": "TIER_1_RAM_GHOST",
+        "resource_envelope": {
+          "cpu": {
+            "cores_allocated": [
+              0,
+              1
+            ],
+            "scheduling_policy": "SCHED_NORMAL",
+            "nice_level": 0
+          },
+          "memory": {
+            "limit_mb": 2048,
+            "hugepages": "none",
+            "swap_policy": "ZRAM_COMPRESSED_ONLY"
+          },
+          "accelerator": {
+            "device": "none",
+            "visible_devices": [],
+            "vram_ceiling_mb": 0
+          },
+          "storage": {
+            "mount_type": "MEMFD_VOLATILE_RAM",
+            "workspace_bind": "/etc/shadow",
+            "auto_vaporize_on_exit": true
+          },
+          "network": {
+            "policy": "HOST_SHARED",
+            "allow_inbound": false,
+            "allow_outbound": true,
+            "allowed_hosts": []
+          }
+        },
+        "security_contracts": {
+          "ebpf_lsm_ruleset": "STRICT_WORKSPACE_ONLY",
+          "credential_scrubbing": true,
+          "disallowed_paths": [
+            "/etc/shadow",
+            "/root",
+            "/etc/ssh",
+            "/home/*/.ssh",
+            "/home/*/.gnupg"
+          ],
+          "permitted_syscalls": "STANDARD_POSIX"
+        },
+        "lifecycle": {
+          "max_duration_seconds": 3600,
+          "on_anomaly": "FAIL_CLOSED"
+        }
+      },
+      "expected_valid": false,
+      "expected_error_contains": "workspace_bind targets forbidden path"
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "standard": "RFC 8785 JSON Canonicalization Scheme (JCS)",
+  "description": "Authoritative byte-for-byte conformance vectors for ECMAScript 5.1 numbers, key ordering, and string escaping",
+  "vectors": [
+    {
+      "id": "exp_threshold_1e_m6",
+      "category": "exponent_threshold",
+      "input": 0.000001,
+      "expected_jcs": "0.000001"
+    },
+    {
+      "id": "exp_threshold_1e_m7",
+      "category": "exponent_threshold",
+      "input": 0.0000001,
+      "expected_jcs": "1e-7"
+    },
+    {
+      "id": "exp_threshold_1e_20",
+      "category": "exponent_threshold",
+      "input": 1e20,
+      "expected_jcs": "100000000000000000000"
+    },
+    {
+      "id": "exp_threshold_1e_21",
+      "category": "exponent_threshold",
+      "input": 1e21,
+      "expected_jcs": "1e+21"
+    },
+    {
+      "id": "signed_negative_zero",
+      "category": "zero_normalization",
+      "input": -0.0,
+      "expected_jcs": "0"
+    },
+    {
+      "id": "integer_float_100",
+      "category": "integer_float",
+      "input": 100.0,
+      "expected_jcs": "100"
+    },
+    {
+      "id": "integer_float_neg42",
+      "category": "integer_float",
+      "input": -42.0,
+      "expected_jcs": "-42"
+    },
+    {
+      "id": "precision_double",
+      "category": "precision",
+      "input": 1.2345678901234567,
+      "expected_jcs": "1.2345678901234567"
+    },
+    {
+      "id": "subnormal_min",
+      "category": "subnormal",
+      "input": 5e-324,
+      "expected_jcs": "5e-324"
+    },
+    {
+      "id": "large_double_max",
+      "category": "extrema",
+      "input": 1.7976931348623157e+308,
+      "expected_jcs": "1.7976931348623157e+308"
+    },
+    {
+      "id": "shortest_repr_0_1",
+      "category": "shortest_repr",
+      "input": 0.1,
+      "expected_jcs": "0.1"
+    },
+    {
+      "id": "shortest_repr_0_2",
+      "category": "shortest_repr",
+      "input": 0.2,
+      "expected_jcs": "0.2"
+    },
+    {
+      "id": "utf16_key_sorting",
+      "category": "key_ordering",
+      "input": {
+        "z": 1,
+        "a": 2,
+        "\u00e9": 3,
+        "\u0100": 4
+      },
+      "expected_jcs": "{\"a\":2,\"z\":1,\"é\":3,\"Ā\":4}"
+    },
+    {
+      "id": "escaped_controls",
+      "category": "string_escaping",
+      "input": "quote: \" backslash: \\ newline: \n tab: \t",
+      "expected_jcs": "\"quote: \\\" backslash: \\\\ newline: \\n tab: \\t\""
+    }
+  ]
+}

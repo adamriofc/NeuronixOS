@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0.0",
+  "standard": "NEURONIX-STATEROOT-CONFORMANCE-V1",
+  "total_vectors": 1,
+  "vectors": [
+    {
+      "id": "SR-V01-STANDARD-BASELINE",
+      "description": "Standard valid 5-leaf StateRoot commitment",
+      "leaves": {
+        "posture": {
+          "kernel_release": "6.12.0",
+          "pcr11_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "pcr7_sha256": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "secure_boot_policy": "enforcing",
+          "tpm_present": true,
+          "uki_pcr_binding": [
+            7,
+            11
+          ]
+        },
+        "substrate": {
+          "architecture": "x86_64",
+          "flake_lock_hash": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+          "immutable_nix_store": true,
+          "system_generation": 1,
+          "system_store_path": "/nix/store/test"
+        },
+        "provenance": {
+          "actor_gid": 1000,
+          "actor_uid": 1000,
+          "actor_username": "testuser",
+          "auth_boundary": "SO_PEERCRED",
+          "parent_state_root": "0000000000000000000000000000000000000000000000000000000000000000",
+          "transaction_id": "tx_001",
+          "trigger_event": "SYSTEM_INSPECTION"
+        },
+        "policy": {
+          "ebpf_lsm_mode": "enforcing",
+          "ebpf_policy_hash": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+          "pcr_binding_rules": [
+            7,
+            11
+          ],
+          "protected_paths": [
+            "/etc/shadow",
+            "/etc/ssh",
+            "/root"
+          ],
+          "recovery_passphrase_mandatory": true
+        },
+        "evidence": {
+          "assertion_catalog_count": 1264,
+          "journal_integrity_valid": true,
+          "last_verified_commit_sha": "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
+          "last_verified_run_id": "1000",
+          "latest_verified_assurance_status": "PASSING_ALL",
+          "pass_rate_percentage": 100,
+          "proof_classes_covered": [
+            "L0_STATIC"
+          ],
+          "total_assertions": 1264,
+          "verification_timestamp": "2026-09-09T00:00:00Z",
+          "verified_assertion_count": 1264,
+          "verified_failure_count": 0
+        }
+      },
+      "expected_leaf_hashes": {
+        "posture": "ff5f37730b835076ed2051e260766353c2b353c301387fa3a1b7b90a3c8ada4e",
+        "substrate": "0445cc0cb5b1f02cb2c2167e9095426fa2d2f0923acabdf6244be977aab262dd",
+        "provenance": "06dfd68eefe0f653001e5f6ce6757eb78f45a5505cd8f746beef74407fc1f0d7",
+        "policy": "c4289fad870dd5d89cb00c034f4dd2519da18e82060c156aaf589842ba85e102",
+        "evidence": "13aaee940f6276e21f96b606608a0bfdffbf98c63aa83c7cb2242a5ac59b23ef"
+      },
+      "expected_state_root": "6130a1e30a4b35c20ba778849ea52f4b512fc5691234fb81f04ab1a9d6c86e76",
+      "expected_trust_status": "TRUSTED"
+    }
+  ]
+}

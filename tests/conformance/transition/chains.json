@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "standard": "NEURONIX-CAUSAL-TRANSITION-CONFORMANCE-V1",
+  "total_chains": 2,
+  "chains": [
+    {
+      "id": "TR-V01-BOOT-GENESIS",
+      "parent_state_root": "0000000000000000000000000000000000000000000000000000000000000000",
+      "transaction": {
+        "id": "tx_boot_001",
+        "action": "SYSTEM_BOOT",
+        "timestamp": "2026-09-09T08:00:00Z",
+        "generation": 1
+      },
+      "transaction_digest": "54927659b23f86267dbbb546ad9ba0ea48f0257f4807eb4b8940a7e42df9775c",
+      "child_state_root": "b3f12cce4ffa0d69e6caee4c1b70e4270c6aeeebe7da5e894713df36f975d25a",
+      "expected_transition_proof": "5ecdd48fcba8d80c214e316f148b478baa0e83484c6fe75b8e507e5606a9e7b4",
+      "expected_valid": true
+    },
+    {
+      "id": "TR-V02-PACKAGE-MUTATION",
+      "parent_state_root": "b3f12cce4ffa0d69e6caee4c1b70e4270c6aeeebe7da5e894713df36f975d25a",
+      "transaction": {
+        "id": "tx_pkg_002",
+        "action": "PACKAGE_INSTALL",
+        "timestamp": "2026-09-09T08:05:00Z",
+        "packages": [
+          "ripgrep"
+        ]
+      },
+      "transaction_digest": "95f3dd5f1d129d07a9401f319ed760b96ba87e6b0cfcf71bdc5f3a00842e4d78",
+      "child_state_root": "fcaa942b7b6b1a9c64cdc08798c6075d392a9a1c232aa53343afb6eef5107667",
+      "expected_transition_proof": "b25dc6d589b3dfc2da4b0ff710d6d49b2b9c35046c6d0498f31bc1e66c9f7b70",
+      "expected_valid": true
+    }
+  ]
+}

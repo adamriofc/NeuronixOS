@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.0.0",
+  "matrix_type": "NEURONIX_GOLDEN_HOST_REFERENCE_MATRIX",
+  "version": "1.0.4",
+  "profiles": [
+    {
+      "profile_id": "amd64-kvm-workstation",
+      "architecture": "x86_64",
+      "cpu_family": "AMD Zen 4 / Zen 5",
+      "boot_mode": "UEFI_UKI_LANZABOOTE",
+      "secure_boot": "ENFORCING",
+      "tpm_version": "TPM_2_0",
+      "capabilities": {
+        "kvm_virtualization": true,
+        "qemu_binary": true,
+        "bubblewrap_sandbox": true,
+        "ebpf_lsm_guard": true,
+        "cgroups_v2": true,
+        "memfd_volatile_ram": true
+      },
+      "hyperion_enforceable_tiers": [
+        "TIER_0_FAST_PATH",
+        "TIER_1_RAM_GHOST",
+        "TIER_2_EBPF_ENCLAVE",
+        "TIER_3_MICRO_VM"
+      ],
+      "latency_budgets": {
+        "tier0_dispatch_us": 10,
+        "tier1_startup_ms": 45,
+        "tier2_startup_ms": 120,
+        "tier3_boot_ms": 850
+      },
+      "confidence": "HIGH"
+    },
+    {
+      "profile_id": "intel-kvm-enterprise",
+      "architecture": "x86_64",
+      "cpu_family": "Intel Raptor Lake / Arrow Lake",
+      "boot_mode": "UEFI_UKI_LANZABOOTE",
+      "secure_boot": "ENFORCING",
+      "tpm_version": "TPM_2_0",
+      "capabilities": {
+        "kvm_virtualization": true,
+        "qemu_binary": true,
+        "bubblewrap_sandbox": true,
+        "ebpf_lsm_guard": true,
+        "cgroups_v2": true,
+        "memfd_volatile_ram": true
+      },
+      "hyperion_enforceable_tiers": [
+        "TIER_0_FAST_PATH",
+        "TIER_1_RAM_GHOST",
+        "TIER_2_EBPF_ENCLAVE",
+        "TIER_3_MICRO_VM"
+      ],
+      "latency_budgets": {
+        "tier0_dispatch_us": 10,
+        "tier1_startup_ms": 45,
+        "tier2_startup_ms": 110,
+        "tier3_boot_ms": 920
+      },
+      "confidence": "HIGH"
+    },
+    {
+      "profile_id": "amd64-no-kvm-ci-enclave",
+      "architecture": "x86_64",
+      "cpu_family": "Cloud Hypervisor VM / Container",
+      "boot_mode": "CONTAINER_DIRECT",
+      "secure_boot": "NOT_APPLICABLE",
+      "tpm_version": "NONE",
+      "capabilities": {
+        "kvm_virtualization": false,
+        "qemu_binary": true,
+        "bubblewrap_sandbox": true,
+        "ebpf_lsm_guard": false,
+        "cgroups_v2": true,
+        "memfd_volatile_ram": true
+      },
+      "hyperion_enforceable_tiers": [
+        "TIER_0_FAST_PATH",
+        "TIER_1_RAM_GHOST",
+        "TIER_2_EBPF_ENCLAVE"
+      ],
+      "latency_budgets": {
+        "tier0_dispatch_us": 10,
+        "tier1_startup_ms": 50,
+        "tier2_startup_ms": 150,
+        "tier3_boot_ms": null
+      },
+      "confidence": "HIGH"
+    },
+    {
+      "profile_id": "arm64-generic-uefi",
+      "architecture": "aarch64",
+      "cpu_family": "ARMv8.2-A / ARMv9-A (Apple Silicon / Neoverse)",
+      "boot_mode": "UEFI_SYSTEMD_BOOT",
+      "secure_boot": "OPTIONAL",
+      "tpm_version": "TPM_2_0_OPTIONAL",
+      "capabilities": {
+        "kvm_virtualization": true,
+        "qemu_binary": true,
+        "bubblewrap_sandbox": true,
+        "ebpf_lsm_guard": true,
+        "cgroups_v2": true,
+        "memfd_volatile_ram": true
+      },
+      "hyperion_enforceable_tiers": [
+        "TIER_0_FAST_PATH",
+        "TIER_1_RAM_GHOST",
+        "TIER_2_EBPF_ENCLAVE",
+        "TIER_3_MICRO_VM"
+      ],
+      "latency_budgets": {
+        "tier0_dispatch_us": 12,
+        "tier1_startup_ms": 60,
+        "tier2_startup_ms": 140,
+        "tier3_boot_ms": 1100
+      },
+      "confidence": "MEDIUM_EXPERIMENTAL"
+    }
+  ]
+}
