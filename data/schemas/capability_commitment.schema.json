@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/control-plane/capability-commitment-v1.json",
+  "title": "CapabilityCommitmentSpecification",
+  "description": "Declarative schema defining the capability boundaries, resource allowances, and hardware primitives in the NEURONIX OS Universal Control Plane.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "commitment_type",
+    "capability_root",
+    "hardware_capabilities",
+    "storage_capabilities",
+    "identity_capabilities",
+    "timestamp"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0.0"]
+    },
+    "commitment_type": {
+      "type": "string",
+      "enum": ["CAPABILITY_COMMITMENT_V1"]
+    },
+    "capability_root": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "hardware_capabilities": {
+      "type": "object",
+      "required": [
+        "cpu_cores",
+        "virtualization",
+        "memory_bytes",
+        "tpm2_present",
+        "gpu_passthrough_capable"
+      ],
+      "properties": {
+        "cpu_cores": { "type": "integer", "minimum": 1 },
+        "virtualization": {
+          "type": "object",
+          "required": ["kvm_available", "svm_vmx_present", "iommu_active"],
+          "properties": {
+            "kvm_available": { "type": "boolean" },
+            "svm_vmx_present": { "type": "boolean" },
+            "iommu_active": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "memory_bytes": { "type": "integer", "minimum": 0 },
+        "tpm2_present": { "type": "boolean" },
+        "gpu_passthrough_capable": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "storage_capabilities": {
+      "type": "object",
+      "required": [
+        "target_disk_id",
+        "destructive_allowed",
+        "max_storage_bytes"
+      ],
+      "properties": {
+        "target_disk_id": { "type": "string" },
+        "destructive_allowed": { "type": "boolean" },
+        "max_storage_bytes": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "identity_capabilities": {
+      "type": "object",
+      "required": ["actor_uid", "granted_tiers"],
+      "properties": {
+        "actor_uid": { "type": "integer", "minimum": 0 },
+        "granted_tiers": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}

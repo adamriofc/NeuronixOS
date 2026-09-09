@@ -147,9 +147,13 @@ jobs:
         run: |
           bash tests/test_conformance_corpus.sh
 
-      - name: Execute Security Invariants & Fail-Closed Gate (SEC-001 to SEC-010)
+      - name: Execute Security Invariants & Fail-Closed Gate (SEC-001 to SEC-020)
         run: |
           bash tests/test_security_invariants.sh
+
+      - name: Execute Storage Planner & 7-Factor Safety Firewall Gate
+        run: |
+          python3 -m unittest tests/test_storage_planner.py
 
       - name: Execute Negative Reproducibility & Mutation Sensitivity Gate (6 Mutants)
         run: |

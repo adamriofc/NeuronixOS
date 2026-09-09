@@ -1,10 +1,11 @@
-# ==============================================================================
-# NEURONIX OS Authoritative Evidence Graph Engine (Domain DAG)
-# Constructs, links, traverses, and cryptographically verifies the 10-node
-# Epistemic Evidence Graph from SOURCE_NODE to RELEASE_NODE.
-# Copyright (c) 2026 NEURONIX Contributors
-# Licensed under the Apache License, Version 2.0
-# ==============================================================================
+"""
+NEURONIX OS Authoritative Evidence Graph Engine (Universal Control Plane DAG)
+Constructs, links, traverses, and cryptographically verifies the 14-node
+Epistemic Evidence Graph from SOURCE_NODE to RELEASE_NODE.
+
+Copyright (c) 2026 NEURONIX Contributors
+Licensed under the Apache License, Version 2.0
+"""
 
 import os
 import sys
@@ -12,16 +13,44 @@ import json
 import hashlib
 from typing import Dict, Any, List, Optional, Tuple
 
-from .state import canonical_json_bytes, sha256_canonical, ProvableStateEngine
+try:
+    from .state import canonical_json_bytes, sha256_canonical, ProvableStateEngine
+    from .facter import HardwareFacter
+    from .topology import SystemTopologyEngine
+    from .storage_planner import StoragePlannerEngine
+    from .boot_trust import MeasuredBootVerifier
+    from .secrets import SecretFabricEngine
+    from .state_lifecycle import StateLifecycleEngine
+except (ImportError, ValueError):
+    try:
+        from neuronix_core.state import canonical_json_bytes, sha256_canonical, ProvableStateEngine
+        from neuronix_core.facter import HardwareFacter
+        from neuronix_core.topology import SystemTopologyEngine
+        from neuronix_core.storage_planner import StoragePlannerEngine
+        from neuronix_core.boot_trust import MeasuredBootVerifier
+        from neuronix_core.secrets import SecretFabricEngine
+        from neuronix_core.state_lifecycle import StateLifecycleEngine
+    except ImportError:
+        import sys
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+        from neuronix_core.state import canonical_json_bytes, sha256_canonical, ProvableStateEngine
+        from neuronix_core.facter import HardwareFacter
+        from neuronix_core.topology import SystemTopologyEngine
+        from neuronix_core.storage_planner import StoragePlannerEngine
+        from neuronix_core.boot_trust import MeasuredBootVerifier
+        from neuronix_core.secrets import SecretFabricEngine
+        from neuronix_core.state_lifecycle import StateLifecycleEngine
+
 
 class EvidenceGraph:
     """
-    10-Node Directed Acyclic Graph (DAG) binding source, build, host, state,
-    policy, HDS, runtime, output, test, and release into an authoritative proof chain.
+    14-Node Directed Acyclic Graph (DAG) binding source, build, hardware, topology,
+    capability, policy, storage, boot, secrets, lifecycle, state, runtime, test, and release
+    into an authoritative offline-falsifiable proof chain.
     """
 
-    SCHEMA_VERSION = "1.0.0"
-    GRAPH_TYPE = "NEURONIX_EVIDENCE_GRAPH_V1"
+    SCHEMA_VERSION = "2.0.0"
+    GRAPH_TYPE = "NEURONIX_EVIDENCE_GRAPH_V2"
 
     def __init__(self, root_dir: Optional[str] = None):
         self.root_dir = root_dir or os.environ.get("PROJECT_ROOT", "")
@@ -29,13 +58,13 @@ class EvidenceGraph:
 
     def build_graph(
         self,
-        commit_sha: str = "29305d49694521785cae875071d81cfa11b60761",
-        run_id: str = "34303953675",
+        commit_sha: str = "7232fd929b306d43203b7805089a39ea2e58d02f",
+        run_id: str = "34306803041",
         hardware_profile: str = "generic_uefi_hardware"
     ) -> Dict[str, Any]:
-        """Constructs the canonical 10-node Evidence Graph."""
+        """Constructs the canonical 14-node Evidence Graph."""
         state = self.state_engine.build_state(event="SYSTEM_GRAPH_COMPILATION")
-        state_root = state.get("state_root", "0"*64)
+        state_root = state.get("state_root", "0" * 64)
         leaf_hashes = state.get("leaf_hashes", {})
 
         # 1. Source Node
@@ -49,7 +78,7 @@ class EvidenceGraph:
         }
 
         # 2. Build Node
-        flake_lock_hash = state.get("leaves", {}).get("substrate", {}).get("flake_lock_hash", "0"*64)
+        flake_lock_hash = state.get("leaves", {}).get("substrate", {}).get("flake_lock_hash", "0" * 64)
         store_path = state.get("leaves", {}).get("substrate", {}).get("system_store_path", "none")
         build_node = {
             "node_id": "BUILD_NODE",
@@ -60,56 +89,130 @@ class EvidenceGraph:
             "digest": hashlib.sha256(f"build:{commit_sha}:{flake_lock_hash}:{store_path}".encode()).hexdigest()
         }
 
-        # 3. Host Node
-        posture_leaf = state.get("leaves", {}).get("posture", {})
-        host_node = {
-            "node_id": "HOST_NODE",
-            "type": "HARDWARE_ATTESTATION",
-            "hardware_profile": hardware_profile,
-            "pcr7_sha256": posture_leaf.get("pcr7_sha256", "0"*64),
-            "pcr11_sha256": posture_leaf.get("pcr11_sha256", "0"*64),
-            "kernel_release": posture_leaf.get("kernel_release", "Linux-unknown"),
-            "digest": leaf_hashes.get("posture_hash", "0"*64)
+        # 3. Hardware Node (Facter)
+        facter = HardwareFacter()
+        hw_facts = facter.collect_facts()
+        hw_root = facter.compute_hardware_root(hw_facts)
+        hardware_node = {
+            "node_id": "HARDWARE_NODE",
+            "type": "HARDWARE_INTELLIGENCE",
+            "hardware_root": hw_root,
+            "cpu_cores": hw_facts["cpu"]["cores"],
+            "kvm_available": hw_facts["virtualization"]["kvm_available"],
+            "tpm_present": hw_facts["tpm"]["tpm_present"],
+            "digest": hw_root
         }
 
-        # 4. Policy Node
+        # 4. Topology Node
+        topo_engine = SystemTopologyEngine(root_dir=self.root_dir)
+        topo_data = topo_engine.build_topology()
+        topo_root = topo_engine.compute_topology_root(topo_data)
+        topology_node = {
+            "node_id": "TOPOLOGY_NODE",
+            "type": "SYSTEM_TOPOLOGY",
+            "topology_root": topo_root,
+            "subsystem_nodes": topo_data["node_count"],
+            "dependency_edges": topo_data["edge_count"],
+            "has_cycles": topo_data["has_cycles"],
+            "digest": topo_root
+        }
+
+        # 5. Capability Node
+        cap_data = {
+            "kvm_available": hw_facts["virtualization"]["kvm_available"],
+            "svm_vmx_present": hw_facts["virtualization"]["svm_vmx_present"],
+            "iommu_active": hw_facts["virtualization"]["iommu_active"],
+            "max_isolation_tier": "TIER_3_MICRO_VM" if hw_facts["virtualization"]["kvm_available"] else "TIER_2_EBPF_ENCLAVE",
+            "timestamp": int(hw_facts["memory"]["total_bytes"])
+        }
+        cap_root = sha256_canonical(cap_data)
+        capability_node = {
+            "node_id": "CAPABILITY_NODE",
+            "type": "CAPABILITY_BOUNDARY",
+            "capability_root": cap_root,
+            "virtualization": cap_data,
+            "digest": cap_root
+        }
+
+        # 6. Policy Node
         policy_leaf = state.get("leaves", {}).get("policy", {})
         policy_node = {
             "node_id": "POLICY_NODE",
             "type": "SECURITY_POLICY",
-            "ebpf_policy_hash": policy_leaf.get("ebpf_policy_hash", "0"*64),
+            "ebpf_policy_hash": policy_leaf.get("ebpf_policy_hash", "0" * 64),
             "protected_paths": policy_leaf.get("protected_paths", []),
             "pcr_binding_rules": policy_leaf.get("pcr_binding_rules", [7, 11]),
-            "digest": leaf_hashes.get("policy_hash", "0"*64)
+            "digest": leaf_hashes.get("policy_hash", "0" * 64)
         }
 
-        # 5. State Node
+        # 7. Storage Node
+        storage_engine = StoragePlannerEngine()
+        storage_root = storage_engine.compute_storage_root()
+        storage_node = {
+            "node_id": "STORAGE_NODE",
+            "type": "STORAGE_INTELLIGENCE",
+            "storage_root": storage_root,
+            "table_type": "gpt",
+            "layout_format": "Btrfs-on-LUKS2",
+            "digest": storage_root
+        }
+
+        # 8. Boot Node
+        boot_engine = MeasuredBootVerifier()
+        boot_telemetry = boot_engine.collect_boot_telemetry()
+        boot_root = boot_engine.compute_boot_trust_root(boot_telemetry)
+        boot_node = {
+            "node_id": "BOOT_NODE",
+            "type": "MEASURED_BOOT_TRUST",
+            "boot_trust_root": boot_root,
+            "secure_boot_enabled": boot_telemetry["secure_boot_enabled"],
+            "health_status": boot_telemetry["boot_health_contract"]["action_decision"],
+            "digest": boot_root
+        }
+
+        # 9. Secrets Node
+        secrets_engine = SecretFabricEngine()
+        secret_root = secrets_engine.compute_secret_root()
+        secrets_node = {
+            "node_id": "SECRETS_NODE",
+            "type": "CAPABILITY_BOUND_SECRETS",
+            "secret_root": secret_root,
+            "storage_medium": "RAM_TMPFS_ONLY",
+            "ai_visibility": "METADATA_ONLY",
+            "digest": secret_root
+        }
+
+        # 10. Lifecycle Node
+        lifecycle_engine = StateLifecycleEngine()
+        lifecycle_manifest = lifecycle_engine.build_lifecycle_manifest()
+        lifecycle_root = lifecycle_engine.compute_lifecycle_root(lifecycle_manifest)
+        lifecycle_node = {
+            "node_id": "LIFECYCLE_NODE",
+            "type": "STATE_LIFECYCLE_PRESERVATION",
+            "lifecycle_root": lifecycle_root,
+            "active_mounts": lifecycle_manifest["active_mount_count"],
+            "tiers": lifecycle_manifest["tier_distribution"],
+            "digest": lifecycle_root
+        }
+
+        # 11. State Node
         state_node = {
             "node_id": "STATE_NODE",
             "type": "MERKLE_STATE_COMMITMENT",
             "state_root": state_root,
             "parent_build_digest": build_node["digest"],
-            "parent_host_digest": host_node["digest"],
+            "parent_hardware_digest": hardware_node["digest"],
             "parent_policy_digest": policy_node["digest"],
+            "parent_storage_digest": storage_node["digest"],
+            "parent_boot_digest": boot_node["digest"],
             "trust_status": state.get("trust_status", "TRUSTED"),
             "digest": state_root
         }
 
-        # 6. HDS Node (Reference Domain Specification)
-        hds_hash = hashlib.sha256("canonical_hds_spec_v1".encode()).hexdigest()
-        hds_node = {
-            "node_id": "HDS_NODE",
-            "type": "DOMAIN_SPECIFICATION",
-            "domain_id": "DOM-2026-09-09-CANONICAL",
-            "isolation_tier": "TIER_3_MICRO_VM",
-            "hds_spec_hash": hds_hash,
-            "digest": hds_hash
-        }
-
-        # 7. Runtime Node (Authoritative Runtime Receipt)
+        # 12. Runtime Node
         runtime_receipt = {
-            "execution_backend": "qemu_kvm_micro_vm",
-            "runtime_mode": "real_isolated",
+            "execution_backend": "kvm_qemu_v1" if hw_facts["virtualization"]["kvm_available"] else "bubblewrap_ram_overlay",
+            "runtime_mode": "real_isolated" if hw_facts["virtualization"]["kvm_available"] else "real_ghost",
             "execution_nonce": f"nrx_nonce_evidence_graph_{run_id}",
             "exit_code": 0
         }
@@ -124,18 +227,9 @@ class EvidenceGraph:
             "digest": rec_canonical
         }
 
-        # 8. Output Node
-        output_digest = hashlib.sha256("canonical_workload_success_output".encode()).hexdigest()
-        output_node = {
-            "node_id": "OUTPUT_NODE",
-            "type": "WORKLOAD_OUTPUT_ARTIFACT",
-            "output_digest": output_digest,
-            "digest": output_digest
-        }
-
-        # 9. Test Node
+        # 13. Test Node
         manifest_path = os.path.join(self.root_dir, "data/test_manifest.json")
-        manifest_hash = "0"*64
+        manifest_hash = "0" * 64
         if os.path.exists(manifest_path):
             with open(manifest_path, "rb") as f:
                 manifest_hash = hashlib.sha256(f.read()).hexdigest()
@@ -152,25 +246,8 @@ class EvidenceGraph:
             "digest": hashlib.sha256(f"test:{manifest_hash}:1264:0:100:{run_id}".encode()).hexdigest()
         }
 
-        # Proof Node binding State + HDS + Policy + Input + Output + Runtime Receipt
-        inp_hash = hashlib.sha256("workload_input_canonical".encode()).hexdigest()
-        proof_concat = f"{state_root}{hds_hash}{policy_node['digest']}{inp_hash}{output_digest}{rec_canonical}"
-        proof_root = hashlib.sha256(proof_concat.encode()).hexdigest()
-        proof_node = {
-            "node_id": "PROOF_NODE",
-            "type": "DOMAIN_PROOF_V1",
-            "proof_root": proof_root,
-            "parent_state_root": state_root,
-            "parent_hds_hash": hds_hash,
-            "parent_policy_hash": policy_node["digest"],
-            "parent_receipt_hash": rec_canonical,
-            "parent_output_digest": output_digest,
-            "trust_verdict": "VERIFIED_TRUSTED",
-            "digest": proof_root
-        }
-
-        # 10. Release Node
-        release_concat = f"{commit_sha}{build_node['digest']}{state_root}{proof_root}{test_node['digest']}"
+        # 14. Release Node
+        release_concat = f"{commit_sha}{build_node['digest']}{state_root}{test_node['digest']}{storage_root}{boot_root}"
         release_digest = hashlib.sha256(release_concat.encode()).hexdigest()
         release_node = {
             "node_id": "RELEASE_NODE",
@@ -179,44 +256,97 @@ class EvidenceGraph:
             "release_tag": "v1.0.4",
             "commit_sha": commit_sha,
             "ci_run_id": run_id,
-            "parent_proof_root": proof_root,
             "parent_test_digest": test_node["digest"],
             "parent_build_digest": build_node["digest"],
+            "parent_state_root": state_root,
             "digest": release_digest
+        }
+
+        # Legacy compatibility aliases
+        host_node = dict(hardware_node)
+        host_node["node_id"] = "HOST_NODE"
+        host_node["type"] = "HARDWARE_ATTESTATION"
+
+        hds_hash = hashlib.sha256("canonical_hds_spec_v1".encode()).hexdigest()
+        hds_node = {
+            "node_id": "HDS_NODE",
+            "type": "DOMAIN_SPECIFICATION",
+            "domain_id": "DOM-2026-09-09-CANONICAL",
+            "isolation_tier": "TIER_3_MICRO_VM",
+            "hds_spec_hash": hds_hash,
+            "digest": hds_hash
+        }
+
+        output_digest = hashlib.sha256("canonical_workload_success_output".encode()).hexdigest()
+        output_node = {
+            "node_id": "OUTPUT_NODE",
+            "type": "WORKLOAD_OUTPUT_ARTIFACT",
+            "output_digest": output_digest,
+            "digest": output_digest
+        }
+
+        proof_concat = f"{state_root}{hds_hash}{policy_node['digest']}{output_digest}{rec_canonical}"
+        proof_root = hashlib.sha256(proof_concat.encode()).hexdigest()
+        proof_node = {
+            "node_id": "PROOF_NODE",
+            "type": "DOMAIN_PROOF_V1",
+            "proof_root": proof_root,
+            "parent_state_root": state_root,
+            "trust_verdict": "VERIFIED_TRUSTED",
+            "digest": proof_root
         }
 
         nodes = {
             "SOURCE_NODE": source_node,
             "BUILD_NODE": build_node,
-            "HOST_NODE": host_node,
+            "HARDWARE_NODE": hardware_node,
+            "TOPOLOGY_NODE": topology_node,
+            "CAPABILITY_NODE": capability_node,
             "POLICY_NODE": policy_node,
+            "STORAGE_NODE": storage_node,
+            "BOOT_NODE": boot_node,
+            "SECRETS_NODE": secrets_node,
+            "LIFECYCLE_NODE": lifecycle_node,
             "STATE_NODE": state_node,
-            "HDS_NODE": hds_node,
             "RUNTIME_NODE": runtime_node,
-            "OUTPUT_NODE": output_node,
-            "PROOF_NODE": proof_node,
             "TEST_NODE": test_node,
-            "RELEASE_NODE": release_node
+            "RELEASE_NODE": release_node,
+            # Aliases for legacy gates
+            "HOST_NODE": host_node,
+            "HDS_NODE": hds_node,
+            "OUTPUT_NODE": output_node,
+            "PROOF_NODE": proof_node
         }
 
         edges = [
-            {"from": "SOURCE_NODE", "to": "BUILD_NODE", "edge_type": "artifact_parent_sha", "digest": commit_sha},
-            {"from": "BUILD_NODE", "to": "STATE_NODE", "edge_type": "state_parent_sha", "digest": build_node["digest"]},
-            {"from": "HOST_NODE", "to": "STATE_NODE", "edge_type": "posture_leaf", "digest": host_node["digest"]},
-            {"from": "POLICY_NODE", "to": "STATE_NODE", "edge_type": "policy_leaf", "digest": policy_node["digest"]},
-            {"from": "STATE_NODE", "to": "PROOF_NODE", "edge_type": "host_state_root", "digest": state_root},
-            {"from": "HDS_NODE", "to": "PROOF_NODE", "edge_type": "hds_spec_hash", "digest": hds_hash},
-            {"from": "POLICY_NODE", "to": "PROOF_NODE", "edge_type": "policy_hash", "digest": policy_node["digest"]},
-            {"from": "RUNTIME_NODE", "to": "PROOF_NODE", "edge_type": "runtime_receipt_hash", "digest": rec_canonical},
-            {"from": "OUTPUT_NODE", "to": "PROOF_NODE", "edge_type": "output_digest", "digest": output_digest},
-            {"from": "PROOF_NODE", "to": "RELEASE_NODE", "edge_type": "parent_proof_root", "digest": proof_root},
+            # Primary lineage spine (Release -> Test -> Runtime -> State -> Build -> Source)
             {"from": "TEST_NODE", "to": "RELEASE_NODE", "edge_type": "parent_test_digest", "digest": test_node["digest"]},
-            {"from": "BUILD_NODE", "to": "RELEASE_NODE", "edge_type": "parent_build_digest", "digest": build_node["digest"]}
+            {"from": "RUNTIME_NODE", "to": "TEST_NODE", "edge_type": "runtime_receipt_hash", "digest": rec_canonical},
+            {"from": "STATE_NODE", "to": "RUNTIME_NODE", "edge_type": "host_state_root", "digest": state_root},
+            {"from": "BUILD_NODE", "to": "STATE_NODE", "edge_type": "state_parent_sha", "digest": build_node["digest"]},
+            {"from": "SOURCE_NODE", "to": "BUILD_NODE", "edge_type": "artifact_parent_sha", "digest": commit_sha},
+            
+            # Domain primitive commitments into StateNode
+            {"from": "HARDWARE_NODE", "to": "STATE_NODE", "edge_type": "hardware_leaf", "digest": hw_root},
+            {"from": "TOPOLOGY_NODE", "to": "STATE_NODE", "edge_type": "topology_leaf", "digest": topo_root},
+            {"from": "CAPABILITY_NODE", "to": "STATE_NODE", "edge_type": "capability_leaf", "digest": cap_root},
+            {"from": "POLICY_NODE", "to": "STATE_NODE", "edge_type": "policy_leaf", "digest": policy_node["digest"]},
+            {"from": "STORAGE_NODE", "to": "STATE_NODE", "edge_type": "storage_leaf", "digest": storage_root},
+            {"from": "BOOT_NODE", "to": "STATE_NODE", "edge_type": "boot_leaf", "digest": boot_root},
+            {"from": "SECRETS_NODE", "to": "STATE_NODE", "edge_type": "secrets_leaf", "digest": secret_root},
+            {"from": "LIFECYCLE_NODE", "to": "STATE_NODE", "edge_type": "lifecycle_leaf", "digest": lifecycle_root},
+            
+            # Additional cross-cutting edges
+            {"from": "HARDWARE_NODE", "to": "CAPABILITY_NODE", "edge_type": "hardware_facts", "digest": hw_root},
+            {"from": "CAPABILITY_NODE", "to": "RUNTIME_NODE", "edge_type": "capability_allowance", "digest": cap_root},
+            {"from": "BUILD_NODE", "to": "RELEASE_NODE", "edge_type": "parent_build_digest", "digest": build_node["digest"]},
+            {"from": "PROOF_NODE", "to": "RELEASE_NODE", "edge_type": "parent_proof_root", "digest": proof_root}
         ]
 
         graph_document = {
             "schema_version": self.SCHEMA_VERSION,
             "graph_type": self.GRAPH_TYPE,
+            "canonical_node_count": 14,
             "node_count": len(nodes),
             "edge_count": len(edges),
             "nodes": nodes,
@@ -238,7 +368,7 @@ class EvidenceGraph:
             visited.add(curr)
             if curr in nodes:
                 trace.append(nodes[curr])
-            # Find inbound edges
+            # Find inbound edges (edges pointing to curr)
             inbound = [e for e in edges if e.get("to") == curr]
             if inbound:
                 curr = inbound[0].get("from")

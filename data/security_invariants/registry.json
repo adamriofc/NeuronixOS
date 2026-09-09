@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "registry_type": "NEURONIX_SECURITY_INVARIANT_REGISTRY",
   "specification": "SPEC-NRX-SEC-015",
-  "description": "Authoritative machine-readable security invariant matrix (SEC-001 to SEC-010)",
+  "description": "Authoritative machine-readable security invariant matrix (SEC-001 to SEC-020)",
   "invariants": [
     {
       "id": "SEC-001",
@@ -83,6 +83,86 @@
       "severity": "CRITICAL",
       "failure_semantics": "ISOLATION_EVIDENCE_MISMATCH",
       "rule": "If execution executes on a weaker backend than declared in the HDS, proof verification must reject with ISOLATION_EVIDENCE_MISMATCH."
+    },
+    {
+      "id": "SEC-011",
+      "title": "Capability-Bound Resource Consumption",
+      "target_component": "packages/neuronix-core/neuronix_core/facter.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "FAIL_CLOSED",
+      "rule": "Workloads cannot acquire hardware or isolation capabilities exceeding declared CapabilityRoot bounds."
+    },
+    {
+      "id": "SEC-012",
+      "title": "7-Factor Destructive Storage Authorization",
+      "target_component": "packages/neuronix-core/neuronix_core/storage_planner.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "FAIL_CLOSED",
+      "rule": "Destructive disk actions require all 7 verification factors including active mount lockout and typed confirmation token."
+    },
+    {
+      "id": "SEC-013",
+      "title": "Plaintext Secret Omission from State and Evidence",
+      "target_component": "packages/neuronix-core/neuronix_core/secrets.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "FAIL_CLOSED",
+      "rule": "Secret plaintexts must never appear in StateRoot leaves, evidence receipts, logs, or disk structures."
+    },
+    {
+      "id": "SEC-014",
+      "title": "AI Secret Visibility Masking",
+      "target_component": "packages/neuronix-core/neuronix_core/secrets.py",
+      "severity": "HIGH",
+      "failure_semantics": "REJECT_INSPECTION",
+      "rule": "AI query interfaces must strictly mask secret payloads to metadata only (AI_SECRET_VISIBILITY = METADATA_ONLY)."
+    },
+    {
+      "id": "SEC-015",
+      "title": "Multi-Stage Boot Health Contract Verification",
+      "target_component": "packages/neuronix-core/neuronix_core/boot_trust.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "TRIGGER_ROLLBACK",
+      "rule": "System boot cannot commit current generation to Last-Known-Good until Kernel, Mounts, Daemon, StateRoot, and Desktop reach verified READY."
+    },
+    {
+      "id": "SEC-016",
+      "title": "Actual KVM Hypervisor Boundary Proof",
+      "target_component": "packages/neuronix-core/neuronix_core/hyperion.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "FAIL_CLOSED",
+      "rule": "Tier 3 execution receipts must cryptographically bind to actual /dev/kvm hardware backend with zero host-direct execution fallback."
+    },
+    {
+      "id": "SEC-017",
+      "title": "Hardware Fact Read-Only Probe Safety",
+      "target_component": "packages/neuronix-core/neuronix_core/facter.py",
+      "severity": "HIGH",
+      "failure_semantics": "FAIL_CLOSED",
+      "rule": "Hardware fact discovery must operate strictly via read-only sysfs and procfs interfaces with zero kernel state mutation."
+    },
+    {
+      "id": "SEC-018",
+      "title": "Universal Topology Graph Causality",
+      "target_component": "packages/neuronix-core/neuronix_core/topology.py",
+      "severity": "HIGH",
+      "failure_semantics": "REJECT_TRANSITION",
+      "rule": "State transition mutations must pass causal blast-radius analysis and dependency cycle validation before generation synthesis."
+    },
+    {
+      "id": "SEC-019",
+      "title": "AI Proposed State Transition Simulation",
+      "target_component": "packages/neuronix-core/neuronix_core/semantic.py",
+      "severity": "HIGH",
+      "failure_semantics": "REJECT_PROPOSAL",
+      "rule": "AI-originated configuration mutations are restricted to proposer mode and must pass offline dry-run AST evaluation."
+    },
+    {
+      "id": "SEC-020",
+      "title": "Decoupled State and Evidence Cryptographic Authenticity",
+      "target_component": "tools/verify_passport.py",
+      "severity": "CRITICAL",
+      "failure_semantics": "REJECT_PASSPORT",
+      "rule": "StateCommitment and EvidenceCommitment are cryptographically decoupled; evidence cannot tautologically declare state validity without independent verification."
     }
   ]
 }

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/control-plane/state-commitment-v1.json",
+  "title": "StateCommitmentSpecification",
+  "description": "Declarative schema defining the observed and verified state commitment in the NEURONIX OS Universal Control Plane.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "commitment_type",
+    "state_root",
+    "canonical_domains",
+    "generation",
+    "timestamp",
+    "canonical_serialization"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0.0"]
+    },
+    "commitment_type": {
+      "type": "string",
+      "enum": ["STATE_COMMITMENT_V1"]
+    },
+    "state_root": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "canonical_domains": {
+      "type": "object",
+      "required": [
+        "substrate_hash",
+        "storage_hash",
+        "hardware_hash",
+        "boot_hash",
+        "lifecycle_hash"
+      ],
+      "properties": {
+        "substrate_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "storage_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "hardware_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "boot_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "lifecycle_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "canonical_serialization": {
+      "type": "string",
+      "enum": ["RFC_8785_JCS"]
+    }
+  },
+  "additionalProperties": false
+}

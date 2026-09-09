@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/control-plane/policy-commitment-v1.json",
+  "title": "PolicyCommitmentSpecification",
+  "description": "Declarative schema defining the active policy commitment, security invariants, and boundaries in the NEURONIX OS Universal Control Plane.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "commitment_type",
+    "policy_root",
+    "lsm_profile_hash",
+    "seccomp_filter_hash",
+    "ai_boundary_policy",
+    "active_invariants",
+    "timestamp"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0.0"]
+    },
+    "commitment_type": {
+      "type": "string",
+      "enum": ["POLICY_COMMITMENT_V1"]
+    },
+    "policy_root": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "lsm_profile_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "seccomp_filter_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "ai_boundary_policy": {
+      "type": "object",
+      "required": [
+        "secret_visibility",
+        "mutation_privilege",
+        "interactive_confirmation"
+      ],
+      "properties": {
+        "secret_visibility": {
+          "type": "string",
+          "enum": ["METADATA_ONLY", "NONE"]
+        },
+        "mutation_privilege": {
+          "type": "string",
+          "enum": ["PROPOSER_ONLY", "NONE"]
+        },
+        "interactive_confirmation": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "active_invariants": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^SEC-[0-9]{3}$"
+      }
+    },
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}

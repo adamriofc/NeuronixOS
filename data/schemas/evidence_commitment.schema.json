@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/control-plane/evidence-commitment-v1.json",
+  "title": "EvidenceCommitmentSpecification",
+  "description": "Declarative schema defining the verified evidence commitment and assertion receipts in the NEURONIX OS Universal Control Plane.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "commitment_type",
+    "evidence_root",
+    "assertion_count",
+    "passed_count",
+    "failed_count",
+    "receipt_hashes",
+    "execution_nonces",
+    "timestamp",
+    "falsifiability"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0.0"]
+    },
+    "commitment_type": {
+      "type": "string",
+      "enum": ["EVIDENCE_COMMITMENT_V1"]
+    },
+    "evidence_root": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "assertion_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "passed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "failed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "receipt_hashes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "execution_nonces": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 16
+      }
+    },
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "falsifiability": {
+      "type": "object",
+      "required": ["offline_verifiable", "tamper_evident"],
+      "properties": {
+        "offline_verifiable": { "type": "boolean" },
+        "tamper_evident": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

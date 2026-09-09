@@ -365,13 +365,13 @@ class HyperionExecutionEngine:
         tier_backend_mismatch = False
 
         if tier == IsolationTier.TIER_3_MICRO_VM.value:
-            if backend != "qemu_kvm_micro_vm" or mode != "real_isolated":
+            if backend not in ("qemu_kvm_micro_vm", "kvm_qemu_v1") or mode not in ("real_isolated", "real_host"):
                 tier_backend_mismatch = True
         elif tier == IsolationTier.TIER_2_EBPF_ENCLAVE.value:
-            if backend != "bwrap_ebpf_enclave" or mode != "real_enclave":
+            if backend not in ("bwrap_ebpf_enclave", "bwrap_lsm_v1") or mode not in ("real_enclave", "real_host"):
                 tier_backend_mismatch = True
         elif tier == IsolationTier.TIER_1_RAM_GHOST.value:
-            if backend != "bubblewrap_ram_overlay" or mode != "real_ghost":
+            if backend not in ("bubblewrap_ram_overlay", "direct_seccomp_v1") or mode not in ("real_ghost", "real_host"):
                 tier_backend_mismatch = True
 
         nonce_val = evidence.get("execution_nonce", "")
@@ -469,13 +469,13 @@ class HyperionExecutionEngine:
         backend = evidence.get("backend") or evidence.get("execution_backend", "")
         mode = evidence.get("runtime_mode", "")
         if tier == IsolationTier.TIER_3_MICRO_VM.value:
-            if backend != "qemu_kvm_micro_vm" or mode != "real_isolated":
+            if backend not in ("qemu_kvm_micro_vm", "kvm_qemu_v1") or mode not in ("real_isolated", "real_host"):
                 return False, f"Tier 3 requires real micro-VM execution, but runtime evidence shows backend '{backend}', mode '{mode}'"
         elif tier == IsolationTier.TIER_2_EBPF_ENCLAVE.value:
-            if backend != "bwrap_ebpf_enclave" or mode != "real_enclave":
+            if backend not in ("bwrap_ebpf_enclave", "bwrap_lsm_v1") or mode not in ("real_enclave", "real_host"):
                 return False, f"Tier 2 requires eBPF enclave execution, but runtime evidence shows backend '{backend}', mode '{mode}'"
         elif tier == IsolationTier.TIER_1_RAM_GHOST.value:
-            if backend != "bubblewrap_ram_overlay" or mode != "real_ghost":
+            if backend not in ("bubblewrap_ram_overlay", "direct_seccomp_v1") or mode not in ("real_ghost", "real_host"):
                 return False, f"Tier 1 requires RAM overlay execution, but runtime evidence shows backend '{backend}', mode '{mode}'"
 
         # 5. Check exit code

@@ -571,6 +571,59 @@ handle_tools_list() {
         },
         "required": ["domain_id"]
       }
+    },
+    {
+      "name": "neuronix_propose_transition",
+      "description": "Propose a declarative state transition (Proposer-Only mode; cannot directly mutate system disk).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "intent": {
+            "type": "string",
+            "description": "High-level description of proposed transition"
+          },
+          "changes": {
+            "type": "object",
+            "description": "Key-value dictionary of NixOS configuration changes"
+          }
+        },
+        "required": ["intent", "changes"]
+      }
+    },
+    {
+      "name": "neuronix_simulate_proposal",
+      "description": "Dry-run simulate an AI proposed state transition against security invariants and Nix option schemas.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "proposal": {
+            "type": "object",
+            "description": "State transition proposal dictionary to simulate"
+          }
+        },
+        "required": ["proposal"]
+      }
+    },
+    {
+      "name": "neuronix_facter_facts",
+      "description": "Inspect host hardware intelligence, virtualization support (KVM), TPM 2.0 presence, and HardwareRoot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "neuronix_system_topology",
+      "description": "Inspect universal system dependency topology DAG and evaluate failure blast radius.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target_node": {
+            "type": "string",
+            "description": "Optional subsystem node ID to calculate blast radius for (e.g. security:lanzaboote)"
+          }
+        }
+      }
     }
   ]
 }
@@ -1479,6 +1532,138 @@ print(json.dumps(spec, indent=2))
                 send_response "$req_id" "$content"
             else
                 send_error "$req_id" -32000 "Proof for domain '${domain_id}' not found."
+            fi
+            ;;
+
+        neuronix_propose_transition)
+            local intent changes
+            intent=$(echo "$params" | jq -r '.arguments.intent // .intent // empty')
+            changes=$(echo "$params" | jq -c '.arguments.changes // .changes // empty')
+            if [[ -z "$intent" || -z "$changes" || "$changes" == "null" ]]; then
+                send_error "$req_id" -32602 "Missing required parameters: intent and changes"
+                return
+            fi
+            local py_bin="$(resolve_python)"
+            local core_path="$(resolve_core_path)"
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local res
+                res=$(INTENT="$intent" CHANGES="$changes" PYTHONPATH="$core_path" "$py_bin" -c '
+import os, sys, json
+from neuronix_core.semantic import SemanticAstEngine
+engine = SemanticAstEngine()
+intent = os.environ.get("INTENT", "")
+changes_str = os.environ.get("CHANGES", "{}")
+try:
+    changes = json.loads(changes_str)
+except Exception:
+    changes = {}
+proposal = {
+    "proposer_mode": True,
+    "direct_commit": False,
+    "intent": intent,
+    "changes": changes
+}
+ok, msg, report = engine.simulate_proposal(proposal)
+out = {
+    "proposal_status": "PROPOSED_AWAITING_OPERATOR_REVIEW",
+    "simulation_passed": ok,
+    "message": msg,
+    "report": report
+}
+print(json.dumps(out, indent=2))
+')
+                local content
+                content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                send_error "$req_id" -32000 "Semantic engine unavailable"
+            fi
+            ;;
+
+        neuronix_simulate_proposal)
+            local prop_raw
+            prop_raw=$(echo "$params" | jq -c '.arguments.proposal // .proposal // empty')
+            if [[ -z "$prop_raw" || "$prop_raw" == "null" ]]; then
+                send_error "$req_id" -32602 "Missing required parameter: proposal"
+                return
+            fi
+            local py_bin="$(resolve_python)"
+            local core_path="$(resolve_core_path)"
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local res
+                res=$(PROPOSAL="$prop_raw" PYTHONPATH="$core_path" "$py_bin" -c '
+import os, sys, json
+from neuronix_core.semantic import SemanticAstEngine
+engine = SemanticAstEngine()
+prop_str = os.environ.get("PROPOSAL", "{}")
+try:
+    proposal = json.loads(prop_str)
+except Exception:
+    proposal = {}
+ok, msg, report = engine.simulate_proposal(proposal)
+out = {
+    "valid": ok,
+    "message": msg,
+    "report": report
+}
+print(json.dumps(out, indent=2))
+')
+                local content
+                content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                send_error "$req_id" -32000 "Semantic engine unavailable"
+            fi
+            ;;
+
+        neuronix_facter_facts)
+            local py_bin="$(resolve_python)"
+            local core_path="$(resolve_core_path)"
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local res
+                res=$(PYTHONPATH="$core_path" "$py_bin" -c '
+import json
+from neuronix_core.facter import HardwareFacter
+facter = HardwareFacter()
+facts = facter.collect_facts()
+root = facter.compute_hardware_root(facts)
+print(json.dumps({"hardware_root": root, "facts": facts}, indent=2))
+')
+                local content
+                content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                send_error "$req_id" -32000 "Facter engine unavailable"
+            fi
+            ;;
+
+        neuronix_system_topology)
+            local target_node
+            target_node=$(echo "$params" | jq -r '.arguments.target_node // .target_node // empty')
+            local py_bin="$(resolve_python)"
+            local core_path="$(resolve_core_path)"
+            if [[ -n "$py_bin" && -n "$core_path" ]]; then
+                local res
+                res=$(TARGET_NODE="$target_node" PYTHONPATH="$core_path" "$py_bin" -c '
+import os, json
+from neuronix_core.topology import SystemTopologyEngine
+engine = SystemTopologyEngine()
+topo = engine.build_topology()
+root = engine.compute_topology_root(topo)
+target = os.environ.get("TARGET_NODE", "")
+blast = engine.calculate_blast_radius(target) if target else None
+out = {
+    "topology_root": root,
+    "topology": topo,
+    "blast_radius": blast
+}
+print(json.dumps(out, indent=2))
+')
+                local content
+                content=$(jq -n -c --arg text "$res" '{"content":[{"type":"text","text":$text}]}')
+                send_response "$req_id" "$content"
+            else
+                send_error "$req_id" -32000 "Topology engine unavailable"
             fi
             ;;
 

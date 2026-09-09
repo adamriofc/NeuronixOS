@@ -3,10 +3,10 @@
 ## 1. Specification Metadata
 - **Specification ID:** SPEC-NRX-SEC-015
 - **Title:** Security Invariant Registry and Verification Matrix
-- **Version:** 1.0.0
+- **Version:** 2.0.0
 - **Status:** AUTHORITATIVE_STANDARD
-- **Scope:** Complete NEURONIX OS kernel boundary, Hyperion Execution Broker, State Engine, and Verification Gates.
-- **Reference Document:** RFC 8785 (JCS), FIPS 180-4, NIST SP 800-207 (Zero Trust Architecture).
+- **Scope:** Complete NEURONIX OS kernel boundary, Hyperion Execution Broker, State Engine, Storage Planner, Secret Fabric, and Verification Gates.
+- **Reference Standards:** RFC 8785 (JCS), FIPS 180-4, NIST SP 800-207 (Zero Trust Architecture).
 
 ---
 
@@ -16,7 +16,7 @@ The Security Invariant Registry establishes a deterministic mapping between arch
 
 ---
 
-## 3. Invariant Registry Matrix (SEC-001 to SEC-010)
+## 3. Invariant Registry Matrix (SEC-001 to SEC-020)
 
 | Invariant ID | Security Invariant Title | Target Component | Failure Semantics | Automated Gate |
 | :--- | :--- | :--- | :--- | :--- |
@@ -30,6 +30,16 @@ The Security Invariant Registry establishes a deterministic mapping between arch
 | **SEC-008** | Age-Bounded Evidence Staleness | `packages/neuronix-core/state.py` | Degrade trust to `EXPIRED` if evidence > 7 days | `tests/test_security_invariants.sh` |
 | **SEC-009** | Missing Security Policy Handling | `packages/neuronix-daemon/src/state.rs` | Degrade trust posture to `DEGRADED` | `tests/test_security_invariants.sh` |
 | **SEC-010** | Zero Silent Downgrade Enforcement | Python & Rust Hyperion Engines | Reject with `ISOLATION_EVIDENCE_MISMATCH` | `tests/test_conformance_corpus.sh` |
+| **SEC-011** | Capability-Bound Resource Consumption | `packages/neuronix-core/facter.py` | Fail closed on capability oversubscription | `tests/test_security_invariants.sh` |
+| **SEC-012** | 7-Factor Destructive Storage Auth | `packages/neuronix-core/storage_planner.py` | Fail closed on missing factor or active mount | `tests/test_security_invariants.sh` |
+| **SEC-013** | Plaintext Secret Omission from State | `packages/neuronix-core/secrets.py` | Fail closed if plaintext found in State/Logs | `tests/test_security_invariants.sh` |
+| **SEC-014** | AI Secret Visibility Masking | `packages/neuronix-core/secrets.py` | Mask payloads to `METADATA_ONLY` | `tests/test_security_invariants.sh` |
+| **SEC-015** | Multi-Stage Boot Health Contract | `packages/neuronix-core/boot_trust.py` | Trigger rollback if 5-stage health fails | `tests/test_security_invariants.sh` |
+| **SEC-016** | Actual KVM Hypervisor Boundary Proof | `packages/neuronix-core/hyperion.py` | Fail closed if Tier 3 receipt lacks KVM binding | `tests/test_security_invariants.sh` |
+| **SEC-017** | Hardware Fact Read-Only Probe Safety | `packages/neuronix-core/facter.py` | Fail closed if hardware probe alters state | `tests/test_security_invariants.sh` |
+| **SEC-018** | Universal Topology Graph Causality | `packages/neuronix-core/topology.py` | Reject transitions with circular dependencies | `tests/test_security_invariants.sh` |
+| **SEC-019** | AI Proposed Transition Simulation | `packages/neuronix-core/semantic.py` | Reject proposals without AST dry-run simulation | `tests/test_security_invariants.sh` |
+| **SEC-020** | Decoupled State & Evidence Authenticity | `tools/verify_passport.py` | Reject passports with tautological circular proofs | `tests/test_security_invariants.sh` |
 
 ---
 
@@ -47,7 +57,9 @@ flowchart TD
 
     CheckTier -- Tier 3 --> SEC_002{"SEC-002: Is Hardware KVM Available?"}
     SEC_002 -- No --> Rej_T3["FAIL_CLOSED (No Silent Downgrade)"]
-    SEC_002 -- Yes --> Exec_T3["Execute in Micro-VM"]
+    SEC_002 -- Yes --> SEC_016{"SEC-016: Hardware KVM Bound to Receipt?"}
+    SEC_016 -- No --> Rej_KVM["FAIL_CLOSED (Fake Hypervisor Rejected)"]
+    SEC_016 -- Yes --> Exec_T3["Execute in Micro-VM"]
 
     Exec_T2 --> GenReceipt["Executor Emits Runtime Receipt"]
     Exec_T3 --> GenReceipt

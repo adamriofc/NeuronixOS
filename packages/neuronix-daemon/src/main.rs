@@ -129,6 +129,20 @@ fn main() {
         return;
     }
 
+    // Direct facts probe (One-shot mode)
+    if args.contains(&"--facts".to_string()) {
+        let resp = handle_jsonrpc(r#"{"jsonrpc":"2.0","method":"system/facts","id":1}"#);
+        println!("{}", resp);
+        return;
+    }
+
+    // Direct topology probe (One-shot mode)
+    if args.contains(&"--topology".to_string()) {
+        let resp = handle_jsonrpc(r#"{"jsonrpc":"2.0","method":"system/topology","id":1}"#);
+        println!("{}", resp);
+        return;
+    }
+
     // Ghost execution
     if let Some(pos) = args.iter().position(|a| a == "--ghost-run") {
         if pos + 1 < args.len() {
@@ -216,6 +230,8 @@ fn print_usage() {
     println!("  --socket <path>           Specify custom UNIX domain socket path");
     println!("  --ast                     Emit JSON-formatted System State AST and exit");
     println!("  --state                   Emit JSON-formatted Provable State Root and exit");
+    println!("  --facts                   Emit JSON-formatted hardware facts and exit");
+    println!("  --topology                Emit JSON-formatted system topology summary and exit");
     println!("  --hyperion                Emit Hyperion execution plane capabilities and exit");
     println!("  --ping                    Verify AST engine responsiveness and exit");
     println!("  --ghost-run <cmd>         Execute command in ephemeral RAM overlay");

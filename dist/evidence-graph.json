@@ -1,8 +1,9 @@
 {
-  "schema_version": "1.0.0",
-  "graph_type": "NEURONIX_EVIDENCE_GRAPH_V1",
-  "node_count": 11,
-  "edge_count": 12,
+  "schema_version": "2.0.0",
+  "graph_type": "NEURONIX_EVIDENCE_GRAPH_V2",
+  "canonical_node_count": 14,
+  "node_count": 18,
+  "edge_count": 17,
   "nodes": {
     "SOURCE_NODE": {
       "node_id": "SOURCE_NODE",
@@ -20,14 +21,36 @@
       "system_store_path": "none",
       "digest": "74ac0182ca923612e78489f95674b235adf685033dd6f29dba50d79ac255505d"
     },
-    "HOST_NODE": {
-      "node_id": "HOST_NODE",
-      "type": "HARDWARE_ATTESTATION",
-      "hardware_profile": "generic_uefi_hardware",
-      "pcr7_sha256": "DCA24C9AB789495350A02B3841B2F64FEB22D72E2FE54746EB8669D622190D03",
-      "pcr11_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-      "kernel_release": "6.18.49-2-lts",
-      "digest": "15610fd3f507c64bcb16e70cef494e00f70ae01ea0dc319b5facb8e6eee976dc"
+    "HARDWARE_NODE": {
+      "node_id": "HARDWARE_NODE",
+      "type": "HARDWARE_INTELLIGENCE",
+      "hardware_root": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d",
+      "cpu_cores": 16,
+      "kvm_available": true,
+      "tpm_present": true,
+      "digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d"
+    },
+    "TOPOLOGY_NODE": {
+      "node_id": "TOPOLOGY_NODE",
+      "type": "SYSTEM_TOPOLOGY",
+      "topology_root": "7a58184b245dbecabed669d040ea95109229c18163394fbe55de8ba11ff31aa1",
+      "subsystem_nodes": 14,
+      "dependency_edges": 10,
+      "has_cycles": false,
+      "digest": "7a58184b245dbecabed669d040ea95109229c18163394fbe55de8ba11ff31aa1"
+    },
+    "CAPABILITY_NODE": {
+      "node_id": "CAPABILITY_NODE",
+      "type": "CAPABILITY_BOUNDARY",
+      "capability_root": "b1d4195597930602bf57a3b8e10055bd62471ec5273e442bcab9cf04d4c0220e",
+      "virtualization": {
+        "kvm_available": true,
+        "svm_vmx_present": true,
+        "iommu_active": true,
+        "max_isolation_tier": "TIER_3_MICRO_VM",
+        "timestamp": 16130027520
+      },
+      "digest": "b1d4195597930602bf57a3b8e10055bd62471ec5273e442bcab9cf04d4c0220e"
     },
     "POLICY_NODE": {
       "node_id": "POLICY_NODE",
@@ -44,50 +67,64 @@
       ],
       "digest": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30"
     },
+    "STORAGE_NODE": {
+      "node_id": "STORAGE_NODE",
+      "type": "STORAGE_INTELLIGENCE",
+      "storage_root": "aefd61691edb1f7f3420ec759ac825b5313e9f6ae23c86d31a2be6ed6806bbf5",
+      "table_type": "gpt",
+      "layout_format": "Btrfs-on-LUKS2",
+      "digest": "aefd61691edb1f7f3420ec759ac825b5313e9f6ae23c86d31a2be6ed6806bbf5"
+    },
+    "BOOT_NODE": {
+      "node_id": "BOOT_NODE",
+      "type": "MEASURED_BOOT_TRUST",
+      "boot_trust_root": "f569cd653e1cbba6f2844709c1e6d4dca6df318d1fc523b2dfec53108440e5e1",
+      "secure_boot_enabled": false,
+      "health_status": "TRIGGER_ROLLBACK: Missing required stages ['KERNEL_REACH', 'MOUNTS_HEALTHY', 'DAEMON_READY', 'STATE_VERIFIED', 'DESKTOP_TARGET']",
+      "digest": "f569cd653e1cbba6f2844709c1e6d4dca6df318d1fc523b2dfec53108440e5e1"
+    },
+    "SECRETS_NODE": {
+      "node_id": "SECRETS_NODE",
+      "type": "CAPABILITY_BOUND_SECRETS",
+      "secret_root": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "storage_medium": "RAM_TMPFS_ONLY",
+      "ai_visibility": "METADATA_ONLY",
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    "LIFECYCLE_NODE": {
+      "node_id": "LIFECYCLE_NODE",
+      "type": "STATE_LIFECYCLE_PRESERVATION",
+      "lifecycle_root": "07f40baa094e6a2a87f3e27655ff17301950b3c7a38d4ff62a086b3d2ca5dccd",
+      "active_mounts": 20,
+      "tiers": {
+        "IMMUTABLE": 0,
+        "DURABLE": 12,
+        "EPHEMERAL": 7,
+        "DISPOSABLE_GHOST": 1,
+        "FORENSIC": 0
+      },
+      "digest": "07f40baa094e6a2a87f3e27655ff17301950b3c7a38d4ff62a086b3d2ca5dccd"
+    },
     "STATE_NODE": {
       "node_id": "STATE_NODE",
       "type": "MERKLE_STATE_COMMITMENT",
-      "state_root": "4aa9080f286d7c3180a51fdfb6ea64e62eb1f4e7741b42d6a7d613fb5c8bdf91",
+      "state_root": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e",
       "parent_build_digest": "74ac0182ca923612e78489f95674b235adf685033dd6f29dba50d79ac255505d",
-      "parent_host_digest": "15610fd3f507c64bcb16e70cef494e00f70ae01ea0dc319b5facb8e6eee976dc",
+      "parent_hardware_digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d",
       "parent_policy_digest": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
+      "parent_storage_digest": "aefd61691edb1f7f3420ec759ac825b5313e9f6ae23c86d31a2be6ed6806bbf5",
+      "parent_boot_digest": "f569cd653e1cbba6f2844709c1e6d4dca6df318d1fc523b2dfec53108440e5e1",
       "trust_status": "TRUSTED",
-      "digest": "4aa9080f286d7c3180a51fdfb6ea64e62eb1f4e7741b42d6a7d613fb5c8bdf91"
-    },
-    "HDS_NODE": {
-      "node_id": "HDS_NODE",
-      "type": "DOMAIN_SPECIFICATION",
-      "domain_id": "DOM-2026-09-09-CANONICAL",
-      "isolation_tier": "TIER_3_MICRO_VM",
-      "hds_spec_hash": "60f485dce30385348588ea809acb51a4ae9d7d6b232d42809ec36259e0754177",
-      "digest": "60f485dce30385348588ea809acb51a4ae9d7d6b232d42809ec36259e0754177"
+      "digest": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e"
     },
     "RUNTIME_NODE": {
       "node_id": "RUNTIME_NODE",
       "type": "AUTHORITATIVE_RUNTIME_RECEIPT",
-      "backend": "qemu_kvm_micro_vm",
+      "backend": "kvm_qemu_v1",
       "execution_nonce": "nrx_nonce_evidence_graph_34299671795",
       "exit_code": 0,
-      "runtime_evidence_hash": "81c8be2a280d484553d4509704fb6900c9ee613a7e4432af46af248f32171d72",
-      "digest": "81c8be2a280d484553d4509704fb6900c9ee613a7e4432af46af248f32171d72"
-    },
-    "OUTPUT_NODE": {
-      "node_id": "OUTPUT_NODE",
-      "type": "WORKLOAD_OUTPUT_ARTIFACT",
-      "output_digest": "e4d38222bbe402e33189841aa2cb3b8746e282bc9ea9f72eed38e8bfc49dfe18",
-      "digest": "e4d38222bbe402e33189841aa2cb3b8746e282bc9ea9f72eed38e8bfc49dfe18"
-    },
-    "PROOF_NODE": {
-      "node_id": "PROOF_NODE",
-      "type": "DOMAIN_PROOF_V1",
-      "proof_root": "891ef08603e0cecd3c3c5370f91659245a371a316b10f505eabfd9f207412d73",
-      "parent_state_root": "4aa9080f286d7c3180a51fdfb6ea64e62eb1f4e7741b42d6a7d613fb5c8bdf91",
-      "parent_hds_hash": "60f485dce30385348588ea809acb51a4ae9d7d6b232d42809ec36259e0754177",
-      "parent_policy_hash": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
-      "parent_receipt_hash": "81c8be2a280d484553d4509704fb6900c9ee613a7e4432af46af248f32171d72",
-      "parent_output_digest": "e4d38222bbe402e33189841aa2cb3b8746e282bc9ea9f72eed38e8bfc49dfe18",
-      "trust_verdict": "VERIFIED_TRUSTED",
-      "digest": "891ef08603e0cecd3c3c5370f91659245a371a316b10f505eabfd9f207412d73"
+      "runtime_evidence_hash": "c602938354d70952a9593de2a75039c7dfd2a4c7013a1662250a39cacc331430",
+      "digest": "c602938354d70952a9593de2a75039c7dfd2a4c7013a1662250a39cacc331430"
     },
     "TEST_NODE": {
       "node_id": "TEST_NODE",
@@ -107,18 +144,61 @@
       "release_tag": "v1.0.4",
       "commit_sha": "8f9a683e9b628993f5b783b8d76aaad684cf31d0",
       "ci_run_id": "34299671795",
-      "parent_proof_root": "891ef08603e0cecd3c3c5370f91659245a371a316b10f505eabfd9f207412d73",
       "parent_test_digest": "0d415a85817a30d72f127fcd0d5629ceabc264975b3460a4ad7684006b335e6d",
       "parent_build_digest": "74ac0182ca923612e78489f95674b235adf685033dd6f29dba50d79ac255505d",
-      "digest": "964ca7981af15f51291041b9670e344c355ef69c9afe0e679f956b60fdcaced1"
+      "parent_state_root": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e",
+      "digest": "234abbfe2850a514392ab50751802689e8d4787390c66ffef372da336421c489"
+    },
+    "HOST_NODE": {
+      "node_id": "HOST_NODE",
+      "type": "HARDWARE_ATTESTATION",
+      "hardware_root": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d",
+      "cpu_cores": 16,
+      "kvm_available": true,
+      "tpm_present": true,
+      "digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d"
+    },
+    "HDS_NODE": {
+      "node_id": "HDS_NODE",
+      "type": "DOMAIN_SPECIFICATION",
+      "domain_id": "DOM-2026-09-09-CANONICAL",
+      "isolation_tier": "TIER_3_MICRO_VM",
+      "hds_spec_hash": "60f485dce30385348588ea809acb51a4ae9d7d6b232d42809ec36259e0754177",
+      "digest": "60f485dce30385348588ea809acb51a4ae9d7d6b232d42809ec36259e0754177"
+    },
+    "OUTPUT_NODE": {
+      "node_id": "OUTPUT_NODE",
+      "type": "WORKLOAD_OUTPUT_ARTIFACT",
+      "output_digest": "e4d38222bbe402e33189841aa2cb3b8746e282bc9ea9f72eed38e8bfc49dfe18",
+      "digest": "e4d38222bbe402e33189841aa2cb3b8746e282bc9ea9f72eed38e8bfc49dfe18"
+    },
+    "PROOF_NODE": {
+      "node_id": "PROOF_NODE",
+      "type": "DOMAIN_PROOF_V1",
+      "proof_root": "d2c2af3a53e6c789ee4cbbb6a67f94c19277afb67ca3a90efec63a1fd58ef5f8",
+      "parent_state_root": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e",
+      "trust_verdict": "VERIFIED_TRUSTED",
+      "digest": "d2c2af3a53e6c789ee4cbbb6a67f94c19277afb67ca3a90efec63a1fd58ef5f8"
     }
   },
   "edges": [
     {
-      "from": "SOURCE_NODE",
-      "to": "BUILD_NODE",
-      "edge_type": "artifact_parent_sha",
-      "digest": "8f9a683e9b628993f5b783b8d76aaad684cf31d0"
+      "from": "TEST_NODE",
+      "to": "RELEASE_NODE",
+      "edge_type": "parent_test_digest",
+      "digest": "0d415a85817a30d72f127fcd0d5629ceabc264975b3460a4ad7684006b335e6d"
+    },
+    {
+      "from": "RUNTIME_NODE",
+      "to": "TEST_NODE",
+      "edge_type": "runtime_receipt_hash",
+      "digest": "c602938354d70952a9593de2a75039c7dfd2a4c7013a1662250a39cacc331430"
+    },
+    {
+      "from": "STATE_NODE",
+      "to": "RUNTIME_NODE",
+      "edge_type": "host_state_root",
+      "digest": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e"
     },
     {
       "from": "BUILD_NODE",
@@ -127,10 +207,28 @@
       "digest": "74ac0182ca923612e78489f95674b235adf685033dd6f29dba50d79ac255505d"
     },
     {
-      "from": "HOST_NODE",
+      "from": "SOURCE_NODE",
+      "to": "BUILD_NODE",
+      "edge_type": "artifact_parent_sha",
+      "digest": "8f9a683e9b628993f5b783b8d76aaad684cf31d0"
+    },
+    {
+      "from": "HARDWARE_NODE",
       "to": "STATE_NODE",
-      "edge_type": "posture_leaf",
-      "digest": "15610fd3f507c64bcb16e70cef494e00f70ae01ea0dc319b5facb8e6eee976dc"
+      "edge_type": "hardware_leaf",
+      "digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d"
+    },
+    {
+      "from": "TOPOLOGY_NODE",
+      "to": "STATE_NODE",
+      "edge_type": "topology_leaf",
+      "digest": "7a58184b245dbecabed669d040ea95109229c18163394fbe55de8ba11ff31aa1"
+    },
+    {
+      "from": "CAPABILITY_NODE",
+      "to": "STATE_NODE",
+      "edge_type": "capability_leaf",
+      "digest": "b1d4195597930602bf57a3b8e10055bd62471ec5273e442bcab9cf04d4c0220e"
     },
     {
       "from": "POLICY_NODE",
@@ -139,53 +237,53 @@
       "digest": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30"
     },
     {
-      "from": "STATE_NODE",
-      "to": "PROOF_NODE",
-      "edge_type": "host_state_root",
-      "digest": "4aa9080f286d7c3180a51fdfb6ea64e62eb1f4e7741b42d6a7d613fb5c8bdf91"
+      "from": "STORAGE_NODE",
+      "to": "STATE_NODE",
+      "edge_type": "storage_leaf",
+      "digest": "aefd61691edb1f7f3420ec759ac825b5313e9f6ae23c86d31a2be6ed6806bbf5"
     },
     {
-      "from": "HDS_NODE",
-      "to": "PROOF_NODE",
-      "edge_type": "hds_spec_hash",
-      "digest": "60f485dce30385348588ea809acb51a4ae9d7d6b232d42809ec36259e0754177"
+      "from": "BOOT_NODE",
+      "to": "STATE_NODE",
+      "edge_type": "boot_leaf",
+      "digest": "f569cd653e1cbba6f2844709c1e6d4dca6df318d1fc523b2dfec53108440e5e1"
     },
     {
-      "from": "POLICY_NODE",
-      "to": "PROOF_NODE",
-      "edge_type": "policy_hash",
-      "digest": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30"
+      "from": "SECRETS_NODE",
+      "to": "STATE_NODE",
+      "edge_type": "secrets_leaf",
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
     },
     {
-      "from": "RUNTIME_NODE",
-      "to": "PROOF_NODE",
-      "edge_type": "runtime_receipt_hash",
-      "digest": "81c8be2a280d484553d4509704fb6900c9ee613a7e4432af46af248f32171d72"
+      "from": "LIFECYCLE_NODE",
+      "to": "STATE_NODE",
+      "edge_type": "lifecycle_leaf",
+      "digest": "07f40baa094e6a2a87f3e27655ff17301950b3c7a38d4ff62a086b3d2ca5dccd"
     },
     {
-      "from": "OUTPUT_NODE",
-      "to": "PROOF_NODE",
-      "edge_type": "output_digest",
-      "digest": "e4d38222bbe402e33189841aa2cb3b8746e282bc9ea9f72eed38e8bfc49dfe18"
+      "from": "HARDWARE_NODE",
+      "to": "CAPABILITY_NODE",
+      "edge_type": "hardware_facts",
+      "digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d"
     },
     {
-      "from": "PROOF_NODE",
-      "to": "RELEASE_NODE",
-      "edge_type": "parent_proof_root",
-      "digest": "891ef08603e0cecd3c3c5370f91659245a371a316b10f505eabfd9f207412d73"
-    },
-    {
-      "from": "TEST_NODE",
-      "to": "RELEASE_NODE",
-      "edge_type": "parent_test_digest",
-      "digest": "0d415a85817a30d72f127fcd0d5629ceabc264975b3460a4ad7684006b335e6d"
+      "from": "CAPABILITY_NODE",
+      "to": "RUNTIME_NODE",
+      "edge_type": "capability_allowance",
+      "digest": "b1d4195597930602bf57a3b8e10055bd62471ec5273e442bcab9cf04d4c0220e"
     },
     {
       "from": "BUILD_NODE",
       "to": "RELEASE_NODE",
       "edge_type": "parent_build_digest",
       "digest": "74ac0182ca923612e78489f95674b235adf685033dd6f29dba50d79ac255505d"
+    },
+    {
+      "from": "PROOF_NODE",
+      "to": "RELEASE_NODE",
+      "edge_type": "parent_proof_root",
+      "digest": "d2c2af3a53e6c789ee4cbbb6a67f94c19277afb67ca3a90efec63a1fd58ef5f8"
     }
   ],
-  "graph_digest": "964ca7981af15f51291041b9670e344c355ef69c9afe0e679f956b60fdcaced1"
+  "graph_digest": "234abbfe2850a514392ab50751802689e8d4787390c66ffef372da336421c489"
 }
