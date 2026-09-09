@@ -1023,6 +1023,90 @@ cmd_generations() {
 }
 
 cmd_shield() {
+    local as_json=0
+    for arg in "$@"; do
+        if [[ "$arg" == "--json" ]]; then
+            as_json=1
+        fi
+    done
+
+    if [[ "$as_json" -eq 1 ]]; then
+        python3 -c '
+import os, sys, json, subprocess
+
+swaps = []
+if os.path.exists("/proc/swaps"):
+    with open("/proc/swaps") as f:
+        for line in f.readlines()[1:]:
+            p = line.split()
+            if len(p) >= 5:
+                is_zram = "zram" in p[0]
+                used = int(p[3])
+                swaps.append({
+                    "device": p[0],
+                    "type": p[1],
+                    "size_kb": int(p[2]),
+                    "used_kb": used,
+                    "priority": int(p[4]),
+                    "tier": "ZRAM_COMPRESSED_RAM" if is_zram else "COLD_DISK_FALLBACK",
+                    "zero_wear_protected": (used == 0) if not is_zram else None
+                })
+
+zswap_enabled = False
+if os.path.exists("/sys/module/zswap/parameters/enabled"):
+    with open("/sys/module/zswap/parameters/enabled") as f:
+        zswap_enabled = f.read().strip().lower() in ("y", "1")
+
+def get_sysctl(key):
+    try:
+        out = subprocess.check_output(["sysctl", "-n", key], stderr=subprocess.DEVNULL).decode().strip()
+        return int(out) if out.isdigit() else out
+    except Exception:
+        return None
+
+sysctl_data = {
+    "vm.swappiness": get_sysctl("vm.swappiness"),
+    "vm.page-cluster": get_sysctl("vm.page-cluster"),
+    "vm.vfs_cache_pressure": get_sysctl("vm.vfs_cache_pressure"),
+    "vm.max_map_count": get_sysctl("vm.max_map_count")
+}
+
+def is_active(srv):
+    try:
+        res = subprocess.run(["systemctl", "is-active", "--quiet", srv], check=False)
+        return res.returncode == 0
+    except Exception:
+        return False
+
+oom_status = {
+    "systemd_oomd": is_active("systemd-oomd"),
+    "earlyoom": is_active("earlyoom")
+}
+
+psi = {}
+if os.path.exists("/proc/pressure/memory"):
+    with open("/proc/pressure/memory") as f:
+        for line in f:
+            parts = line.strip().split()
+            if parts:
+                psi[parts[0]] = {kv.split("=")[0]: kv.split("=")[1] for kv in parts[1:] if "=" in kv}
+
+payload = {
+    "schema_version": "1.0.0",
+    "timestamp": subprocess.check_output(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"]).decode().strip(),
+    "zram_active": any("zram" in s["device"] for s in swaps),
+    "zswap_enabled": zswap_enabled,
+    "double_compression_eliminated": not zswap_enabled,
+    "swaps": swaps,
+    "kernel_parameters": sysctl_data,
+    "oom_daemon": oom_status,
+    "psi": psi
+}
+print(json.dumps(payload, indent=2))
+'
+        return 0
+    fi
+
     print_banner
     log_step ""
     echo
@@ -1036,15 +1120,61 @@ cmd_shield() {
     fi
     echo
     
-    local swappiness vfs_pressure max_map
+    echo -e "  ${BOLD}Layered Swap Hierarchy & Storage Protection:${RESET}"
+    if [[ -f /proc/swaps ]] && [[ $(wc -l < /proc/swaps) -gt 1 ]]; then
+        awk 'NR>1 {
+            dev=$1; type=$2; size=int($3/1024)"MB"; used=int($4/1024)"MB"; prio=$5;
+            if (dev ~ /zram/) {
+                printf "  ├─ %-16s [%-9s] Size: %-7s Used: %-7s Prio: %-6s \033[32m[ZRAM TIER 1 - IN-RAM]\033[0m\n", dev, type, size, used, prio
+            } else {
+                if ($4 == 0) {
+                    printf "  └─ %-16s [%-9s] Size: %-7s Used: %-7s Prio: %-6s \033[36m[ZERO-WEAR STANDBY - HIBERNATION READY]\033[0m\n", dev, type, size, used, prio
+                } else {
+                    printf "  └─ %-16s [%-9s] Size: %-7s Used: %-7s Prio: %-6s \033[33m[COLD FALLBACK ACTIVE]\033[0m\n", dev, type, size, used, prio
+                }
+            }
+        }' /proc/swaps
+    else
+        echo -e "  └─ Swap Devices      : ${YELLOW}None active${RESET}"
+    fi
+    echo
+    
+    if [[ -f /sys/module/zswap/parameters/enabled ]]; then
+        local zval zswap_status zswap_msg
+        zval=$(cat /sys/module/zswap/parameters/enabled 2>/dev/null | tr -d '\n')
+        if [[ "$zval" == "N" || "$zval" == "0" ]]; then
+            zswap_status="${GREEN}DISABLED (N)${RESET}"
+            zswap_msg="Double-compression CPU overhead eliminated (100% ZRAM ZSTD)"
+        else
+            zswap_status="${YELLOW}ENABLED (Y)${RESET}"
+            zswap_msg="In-kernel zswap active (potential double-compression with ZRAM)"
+        fi
+        echo -e "  ${BOLD}In-Kernel Zswap Status:${RESET}"
+        echo -e "  └─ zswap.enabled      : ${zswap_status} - ${zswap_msg}"
+        echo
+    fi
+
+    local swappiness vfs_pressure page_cluster max_map
     swappiness=$(sysctl -n vm.swappiness 2>/dev/null || echo "unknown")
     vfs_pressure=$(sysctl -n vm.vfs_cache_pressure 2>/dev/null || echo "unknown")
+    page_cluster=$(sysctl -n vm.page-cluster 2>/dev/null || echo "unknown")
     max_map=$(sysctl -n vm.max_map_count 2>/dev/null || echo "unknown")
     
     echo -e "  ${BOLD}Kernel Memory Parameters:${RESET}"
-    echo -e "  ├─ vm.swappiness      : ${CYAN}${swappiness}${RESET} (Standard: 180)"
-    echo -e "  ├─ vm.vfs_cache_press : ${CYAN}${vfs_pressure}${RESET} (Standard: 50)"
+    echo -e "  ├─ vm.swappiness      : ${CYAN}${swappiness}${RESET} (Standard: 180 - Proactive ZRAM compression)"
+    echo -e "  ├─ vm.page-cluster    : ${CYAN}${page_cluster}${RESET} (Standard: 0 - Zero readahead latency)"
+    echo -e "  ├─ vm.vfs_cache_press : ${CYAN}${vfs_pressure}${RESET} (Standard: 50 - Retain dentries/inodes)"
     echo -e "  └─ vm.max_map_count   : ${CYAN}${max_map}${RESET} (SteamOS standard: 2147483642)"
+    echo
+
+    local oom_status="STANDBY"
+    if systemctl is-active --quiet systemd-oomd 2>/dev/null; then
+        oom_status="${GREEN}ACTIVE (systemd-oomd PSI)${RESET}"
+    elif systemctl is-active --quiet earlyoom 2>/dev/null; then
+        oom_status="${GREEN}ACTIVE (earlyoom)${RESET}"
+    fi
+    echo -e "  ${BOLD}Out-Of-Memory (OOM) Protection:${RESET}"
+    echo -e "  └─ OOM Monitor        : ${oom_status}"
     echo
     
     if [[ -f /proc/pressure/memory ]]; then

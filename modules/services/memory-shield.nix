@@ -8,11 +8,16 @@
   zramSwap = {
     enable = true;
     algorithm = "zstd";
-    memoryPercent = 100; # Allocate up to 100% RAM as compressed swap pool (~2x-3x ratio)
-    priority = 100;
+    memoryPercent = 100; # Dynamically allocates up to 100% of host RAM as compressed swap pool (~2x-3x ratio)
+    priority = 32767;   # Linux maximum swapon priority (0x7fff) ensuring ZRAM is strictly saturated first
   };
 
-  # 2. Pressure Stall Information (PSI) based systemd-oomd memory pressure daemon
+  # 2. Kernel Parameters: Disable in-kernel zswap to eliminate double-compression CPU overhead
+  boot.kernelParams = [
+    "zswap.enabled=0"
+  ];
+
+  # 3. Pressure Stall Information (PSI) based systemd-oomd memory pressure daemon
   systemd.oomd = {
     enable = true;
     enableRootSlice = true;

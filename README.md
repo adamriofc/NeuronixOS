@@ -357,25 +357,28 @@ While Btrfs is the default and recommended filesystem for NEURONIX, standard **E
 
 ## Memory Pressure Management
 
-To prevent system lockups under memory exhaustion, NEURONIX implements a three-tier memory management strategy using ZRAM, tuned kernel paging parameters, and `systemd-oomd`:
+To prevent system lockups under memory exhaustion, NEURONIX implements an intelligent four-tier memory management strategy using ZRAM, zswap deactivation, tuned kernel paging parameters, zero-wear storage fallback, and active PSI monitoring:
 
 | Tier | Component | Configuration / Path | Action |
 | :--- | :--- | :--- | :--- |
-| **1. Swap Pool** | ZRAM (ZSTD) | `zramSwap.enable = true` | Compressed RAM block device sized to 100% of physical RAM capacity. |
-| **2. Paging Policy** | sysctl | `vm.swappiness = 180`, `page-cluster = 0` | Moves idle anonymous memory pages into compressed ZRAM early to preserve uncompressed RAM for active workloads. |
-| **3. Eviction Guard** | `systemd-oomd` | `/proc/pressure/memory` | Monitors Pressure Stall Information (PSI) to react to sustained memory saturation according to configured systemd policy. |
+| **1. In-RAM Swap Pool** | ZRAM (ZSTD) | `zramSwap.priority = 32767`, `memoryPercent = 100` | Compressed RAM block device dynamically sized to 100% of host RAM. Highest kernel priority routes all paging to RAM first. |
+| **2. Double-Compression Defense** | `zswap.enabled = 0` | `boot.kernelParams` | Disables in-kernel zswap to eliminate duplicate compression and unnecessary CPU overhead. |
+| **3. Zero-Wear Storage Fallback** | Physical Swap / `@swap` | Low priority (`-2`), `nodatacow` subvolume | Preserves secondary swap and hibernation (`resume=UUID=...`) while keeping physical SSD writes at 0 bytes under normal loads. |
+| **4. Eviction & PSI Guard** | `systemd-oomd` / `earlyoom` | `/proc/pressure/memory` | Monitors Pressure Stall Information (PSI) to terminate runaway processes before desktop freezes. |
 
-### ZRAM In-Memory Swap Pool
-- Configured using `zram-generator` with the ZSTD compression algorithm.
-- Provides an in-memory swap pool expanding effective memory headroom by 1.5x to 2.5x on compressible data, maintaining interactive responsiveness under memory pressure with minimal CPU overhead.
+### ZRAM In-Memory Swap Pool & Prioritization
+- Configured with `priority = 32767` and the ZSTD compression algorithm.
+- Provides an in-memory swap pool expanding effective memory headroom by 1.5x to 2.7x on compressible data, maintaining interactive responsiveness under memory pressure with minimal CPU overhead.
+- Because ZRAM is assigned the maximum Linux swapon priority (`32767`), secondary disk partitions remain untouched at 0 bytes used, providing zero-wear protection for modern NVMe SSDs (including QLC and TLC media).
 
-### Kernel Paging Tuning (vm.swappiness = 180)
-- The default Linux swappiness value (60) delays swapping until memory is nearly exhausted, increasing the risk of disk thrashing.
-- Setting `vm.swappiness = 180` and `vm.page-cluster = 0` shifts idle background memory into ZRAM early, keeping physical memory free for compilers and desktop applications.
+### Kernel Paging Tuning & Zswap Elimination
+- `zswap.enabled = 0`: Explicitly disables kernel zswap to avoid compressing memory twice (once in zswap, once in ZRAM).
+- `vm.swappiness = 180` and `vm.page-cluster = 0`: Shifts idle background memory into ZRAM early with zero readahead latency, keeping physical uncompressed memory free for compilers and desktop applications.
+- `vm.vfs_cache_pressure = 50`: Retains directory and inode caches to prevent filesystem stuttering.
 
-### Pressure Stall Information (PSI) & systemd-oomd
+### Pressure Stall Information (PSI) & OOM Protection
 - The kernel continuously monitors memory pressure via Pressure Stall Information (`/proc/pressure/memory`).
-- When memory stall duration exceeds 10% for more than 10 seconds, `systemd-oomd` terminates the responsible application, preventing desktop UI freezes.
+- When memory stall duration exceeds configured safety thresholds, the userspace OOM daemon terminates the responsible application, preventing desktop UI freezes while preserving system stability.
 
 ---
 
@@ -430,7 +433,7 @@ USAGE:
 | Command | Arguments | Description | Example |
 | :--- | :--- | :--- | :--- |
 | `status` | None | Shows system version, storage usage, active systemd timers, and hardware matrix status. | `neuronix status` |
-| `shield` | None | Displays live memory pressure diagnostics, ZRAM allocation, swappiness, and PSI metrics. | `neuronix shield` |
+| `shield` | `[--json]` | Displays live memory pressure diagnostics, layered swap hierarchy, zswap status, and PSI metrics. | `neuronix shield --json` |
 | `generations` | None (or `list`) | Lists system generations with timestamps and indicates the active generation. | `neuronix generations` |
 | `battery` | `[80 \| 100 \| status]` | Reads or modifies the laptop battery charging threshold limit. | `neuronix battery 80` |
 | `diet` | None | Runs garbage collection, deduplicates `/nix/store` hardlinks, and issues filesystem TRIM. | `neuronix diet` |

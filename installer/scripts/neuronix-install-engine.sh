@@ -282,12 +282,17 @@ cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
   boot.loader.efi.canTouchEfiVariables = true;
   time.hardwareClockInLocalTime = ${has_windows};
 
-  # Active Memory Pressure Shield (ZRAM ZSTD + systemd-oomd)
+  # Active Memory Pressure Shield (ZRAM ZSTD + systemd-oomd + Hierarchical Swap)
   zramSwap.enable = true;
   zramSwap.algorithm = "zstd";
+  zramSwap.memoryPercent = 100;
+  zramSwap.priority = 32767;
+  boot.kernelParams = [ "zswap.enabled=0" ];
   systemd.oomd.enable = true;
   boot.kernel.sysctl."vm.max_map_count" = 2147483642;
   boot.kernel.sysctl."vm.swappiness" = 180;
+  boot.kernel.sysctl."vm.page-cluster" = 0;
+  boot.kernel.sysctl."vm.vfs_cache_pressure" = 50;
 
   # Audio PipeWire HD Duplex subsystem
   security.rtkit.enable = true;

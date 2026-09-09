@@ -10,7 +10,7 @@
     "proof_engine_version": "1.1.0"
   },
   "cryptographic_commitments": {
-    "state_root": "936d655b44c53ecae122ccbcd1f3b567357658f7142fa662bed6f396348bd484",
+    "state_root": "e0a3089bd20d96a0cd178c61b4d79f26e1563552fb171374a588371423c3bb52",
     "policy_hash": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
     "flake_lock_hash": "06135d460eb72c7dcb846ac22cab8cee65f9acea9f3b285a9adb9d27de876981",
     "trust_status": "TRUSTED",
@@ -32,7 +32,7 @@
     "verified_failure_count": 0,
     "verified_pass_rate_percentage": 100,
     "verification_status": "PASSING_ALL",
-    "evidence_snapshot_digest": "a8641ed0c41df8ecea86711a25504f3d7f0be171d6eb0a55ff5dc3761e1549f0"
+    "evidence_snapshot_digest": "72f42b10c22e91bfad24e219efab5276e009d5ea47077f207e1632bee7cf3287"
   },
   "ci_attestation": {
     "ci_workflow_id": "ci.yml",
@@ -56,6 +56,6 @@
     "apple_silicon_m_series",
     "generic_uefi_hardware"
   ],
-  "verification_timestamp": "2026-09-09T02:03:19Z",
-  "passport_digest": "35d06fd57fafdf2989e749f24ef6e9f75be3761b2cae315b4cde61113afab041"
+  "verification_timestamp": "2026-09-09T02:34:36Z",
+  "passport_digest": "df814f10b90fd82b40d958c52e7c39b0a6985966e7c4ebde5b6350543d54abcc"
 }
