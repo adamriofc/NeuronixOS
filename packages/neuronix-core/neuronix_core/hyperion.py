@@ -346,7 +346,7 @@ class HyperionExecutionEngine:
         domain_proof_root = hashlib.sha256(concat.encode('utf-8')).hexdigest()
 
         # Trust verdict evaluation
-        backend = evidence.get("execution_backend", "")
+        backend = evidence.get("backend") or evidence.get("execution_backend", "")
         mode = evidence.get("runtime_mode", "")
         tier_backend_mismatch = False
 
@@ -438,8 +438,8 @@ class HyperionExecutionEngine:
             if domain_spec.get("isolation_tier") != tier:
                 return False, f"Isolation tier mismatch between proof ({tier}) and spec ({domain_spec.get('isolation_tier')})"
 
-        # 4. Strict isolation tier vs runtime evidence backend verification
-        backend = evidence.get("execution_backend", "")
+        # 4. Strict isolation tier vs authoritative runtime receipt verification
+        backend = evidence.get("backend") or evidence.get("execution_backend", "")
         mode = evidence.get("runtime_mode", "")
         if tier == IsolationTier.TIER_3_MICRO_VM.value:
             if backend != "qemu_kvm_micro_vm" or mode != "real_isolated":

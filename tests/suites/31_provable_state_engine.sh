@@ -92,9 +92,23 @@ print(b.decode('utf-8'))
 assert_output_contains "echo '$RFC_UNICODE'" '{"unicode":"café 🎉"}' "RFC 8785 canonical serializer emits raw UTF-8 printable unicode"
 
 RFC_FLOAT=$("$PYTHON_BIN" -c "
-import sys
+import sys, json, os
 sys.path.insert(0, '${DISTRO_PATH}/packages/neuronix-core')
 from neuronix_core.state import canonical_json_bytes
+
+corpus_path = '${DISTRO_PATH}/tests/corpus/rfc8785_jcs_conformance_vectors.json'
+if os.path.exists(corpus_path):
+    with open(corpus_path, 'r', encoding='utf-8') as f:
+        corpus = json.load(f)
+    results = []
+    for v in corpus['vectors']:
+        actual = canonical_json_bytes(v['input']).decode('utf-8')
+        assert actual == v['expected_jcs'], f'Vector {v[\"id\"]} failed: expected {v[\"expected_jcs\"]} got {actual}'
+        results.append({'id': v['id'], 'category': v['category'], 'status': 'PASS', 'byte_match': True})
+    os.makedirs('${DISTRO_PATH}/dist', exist_ok=True)
+    with open('${DISTRO_PATH}/dist/jcs_conformance_evidence.json', 'w', encoding='utf-8') as f:
+        json.dump({'corpus_version': corpus['schema_version'], 'standard': corpus['standard'], 'total_vectors': len(results), 'passed_vectors': len(results), 'failed_vectors': 0, 'status': 'VERIFIED_100_PERCENT', 'results': results}, f, indent=2)
+
 data = {
     'rate': 100.0,
     'zero': -0.0,
@@ -108,13 +122,13 @@ data = {
 }
 b = canonical_json_bytes(data)
 s = b.decode('utf-8')
-assert '\"v_1e_m6\":0.000001' in s, f'Failed 1e-6: {s}'
-assert '\"v_1e_m7\":1e-7' in s, f'Failed 1e-7: {s}'
-assert '\"v_1e_20\":100000000000000000000' in s, f'Failed 1e20: {s}'
-assert '\"v_1e_21\":1e+21' in s, f'Failed 1e21: {s}'
-assert '\"v_prec\":1.2345678901234567' in s, f'Failed prec: {s}'
-assert '\"v_subnormal\":5e-324' in s, f'Failed subnormal: {s}'
-assert '\"v_large\":1.7976931348623157e+308' in s, f'Failed large: {s}'
+assert '\"v_1e_m6\":0.000001' in s
+assert '\"v_1e_m7\":1e-7' in s
+assert '\"v_1e_20\":100000000000000000000' in s
+assert '\"v_1e_21\":1e+21' in s
+assert '\"v_prec\":1.2345678901234567' in s
+assert '\"v_subnormal\":5e-324' in s
+assert '\"v_large\":1.7976931348623157e+308' in s
 assert '\"rate\":100' in s
 assert '\"zero\":0' in s
 print('ALL_VECTORS_VALID')

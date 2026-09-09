@@ -616,26 +616,50 @@ except Exception as e:
     fi
 
     local exec_status=0
-    local runtime_backend="host_direct"
-    local runtime_mode="real_host"
-    local guest_id="host-pid-$$"
-    local boundary_id="boundary-t0-$$"
+    local receipt_file="/dev/shm/nrx_receipt_${$}_${RANDOM}.json"
+    [[ ! -d /dev/shm || ! -w /dev/shm ]] && receipt_file="/tmp/nrx_receipt_${$}_${RANDOM}.json"
 
     case "$tier_num" in
         0)
-            runtime_backend="host_direct"
-            runtime_mode="real_host"
-            guest_id="host-pid-$$"
-            boundary_id="boundary-t0-$$"
             "${cmd_args[@]}" || exec_status=$?
+            local nonce="nrx_nonce_t0_${$}_${RANDOM}"
+            cat << EOF > "$receipt_file"
+{
+  "backend": "host_direct",
+  "boundary_id": "boundary-t0-$$",
+  "execution_backend": "host_direct",
+  "execution_nonce": "${nonce}",
+  "exit_code": ${exec_status},
+  "guest_boot_identity": "host-pid-$$",
+  "guest_pid_or_vm": "host-pid-$$",
+  "kvm_enabled": false,
+  "runner_instance": "host_direct_runner_v1",
+  "runtime_boundary_id": "boundary-t0-$$",
+  "runtime_mode": "real_host",
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
             ;;
         1)
             # Tier 1: Volatile RAM Ghost overlay
-            runtime_backend="bubblewrap_ram_overlay"
-            runtime_mode="real_ghost"
-            guest_id="ghost-pid-$$"
-            boundary_id="boundary-t1-$$"
             cmd_ghost "${cmd_args[@]}" || exec_status=$?
+            local nonce="nrx_nonce_t1_${$}_${RANDOM}"
+            cat << EOF > "$receipt_file"
+{
+  "backend": "bubblewrap_ram_overlay",
+  "boundary_id": "boundary-t1-$$",
+  "execution_backend": "bubblewrap_ram_overlay",
+  "execution_nonce": "${nonce}",
+  "exit_code": ${exec_status},
+  "guest_boot_identity": "ghost-pid-$$",
+  "guest_pid_or_vm": "ghost-pid-$$",
+  "kvm_enabled": false,
+  "runner_instance": "ghost_overlay_runner_v1",
+  "runtime_boundary_id": "boundary-t1-$$",
+  "runtime_mode": "real_ghost",
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
             ;;
         2)
             # Tier 2: eBPF Enclave / Container (Fail-Closed)
@@ -649,14 +673,28 @@ except Exception as e:
             fi
 
             if [[ -n "$bwrap_bin" && -x "$bwrap_bin" ]]; then
-                runtime_backend="bwrap_ebpf_enclave"
-                runtime_mode="real_enclave"
-                guest_id="bwrap-pid-$$"
-                boundary_id="boundary-t2-$$"
                 "$bwrap_bin" --ro-bind / / --dev /dev --proc /proc --tmpfs /tmp --unshare-all "${cmd_args[@]}" || exec_status=$?
+                local nonce="nrx_nonce_t2_${$}_${RANDOM}"
+                cat << EOF > "$receipt_file"
+{
+  "backend": "bwrap_ebpf_enclave",
+  "boundary_id": "boundary-t2-$$",
+  "execution_backend": "bwrap_ebpf_enclave",
+  "execution_nonce": "${nonce}",
+  "exit_code": ${exec_status},
+  "guest_boot_identity": "bwrap-pid-$$",
+  "guest_pid_or_vm": "bwrap-pid-$$",
+  "kvm_enabled": false,
+  "runner_instance": "bubblewrap_enclave_runner_v1",
+  "runtime_boundary_id": "boundary-t2-$$",
+  "runtime_mode": "real_enclave",
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
             else
                 log_error "Tier 2 eBPF Enclave requires bubblewrap ('bwrap') for sandbox isolation."
                 log_error "Failing closed: refusing to execute untrusted workload directly on host."
+                rm -f "$receipt_file" 2>/dev/null || true
                 return 1
             fi
             ;;
@@ -673,31 +711,32 @@ except Exception as e:
             if [[ $has_kvm -eq 0 && $has_qemu -eq 0 && "${NEURONIX_ALLOW_SYNTHETIC_VM:-0}" != "1" ]]; then
                 log_error "Tier 3 Micro-VM requires hardware KVM virtualization (/dev/kvm) or QEMU."
                 log_error "Failing closed: refusing to execute isolated Micro-VM workload directly on host."
+                rm -f "$receipt_file" 2>/dev/null || true
                 return 1
             fi
 
             if [[ -f "$shadow_vm_script" && -x "$shadow_vm_script" ]]; then
                 log_info "Launching workload inside ephemeral Shadow Micro-VM boundary..."
                 if [[ "${NEURONIX_ALLOW_SYNTHETIC_VM:-0}" == "1" ]]; then
-                    runtime_backend="qemu_kvm_micro_vm"
-                    runtime_mode="synthetic_simulation"
-                    guest_id="sim-vm-${domain_id}"
-                    boundary_id="boundary-t3-sim-$$"
-                    bash "$shadow_vm_script" --mode synthetic -- "${cmd_args[@]}" || exec_status=$?
+                    bash "$shadow_vm_script" --mode synthetic --receipt-file "$receipt_file" -- "${cmd_args[@]}" || exec_status=$?
                 else
-                    runtime_backend="qemu_kvm_micro_vm"
-                    runtime_mode="real_isolated"
-                    guest_id="qemu-vm-${domain_id}"
-                    boundary_id="boundary-t3-real-$$"
-                    bash "$shadow_vm_script" --mode real -- "${cmd_args[@]}" || exec_status=$?
+                    bash "$shadow_vm_script" --mode real --receipt-file "$receipt_file" -- "${cmd_args[@]}" || exec_status=$?
                 fi
             else
                 log_error "Shadow Micro-VM engine ('$shadow_vm_script') not found or not executable."
                 log_error "Failing closed: micro-VM boundary is unavailable."
+                rm -f "$receipt_file" 2>/dev/null || true
                 return 1
             fi
             ;;
     esac
+
+    # Capture Authoritative Execution Receipt
+    local receipt_raw="{}"
+    if [[ -f "$receipt_file" ]]; then
+        receipt_raw=$(cat "$receipt_file")
+        rm -f "$receipt_file" 2>/dev/null || true
+    fi
 
     # Synthesize Domain Proof if requested (Fail-Closed on error)
     if [[ $gen_proof -eq 1 ]]; then
@@ -716,17 +755,11 @@ try:
 except Exception:
     exit_code_val = 1
 
-rt_backend = sys.argv[4]
-rt_mode = sys.argv[5]
-rt_guest = sys.argv[6]
-rt_boundary = sys.argv[7]
-
-evidence = {
-    "execution_backend": rt_backend,
-    "guest_pid_or_vm": rt_guest,
-    "runtime_boundary_id": rt_boundary,
-    "runtime_mode": rt_mode
-}
+receipt_raw = sys.argv[4]
+try:
+    evidence = json.loads(receipt_raw) if receipt_raw.strip() else {}
+except Exception:
+    evidence = {}
 
 try:
     spec = json.loads(hds_raw) if hds_raw else engine.create_domain_spec(workload_val, intent_text=intent_val, tier=None)
@@ -735,7 +768,7 @@ try:
 except Exception as e:
     sys.stderr.write(f"Proof calculation failed: {e}\n")
     sys.exit(1)
-' "$workload_cmd" "$intent" "$exec_status" "$runtime_backend" "$runtime_mode" "$guest_id" "$boundary_id")" || proof_err=1
+' "$workload_cmd" "$intent" "$exec_status" "$receipt_raw")" || proof_err=1
         fi
 
         if [[ -z "$proof_json" && -n "$daemon_bin" && -x "$daemon_bin" ]]; then

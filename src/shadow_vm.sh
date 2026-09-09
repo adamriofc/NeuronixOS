@@ -51,6 +51,7 @@ VIRTIO_WIN_ISO=""
 CUSTOM_AUTOUNATTEND=""
 CACHE_DIR="${NEURONIX_IMAGE_CACHE:-${NEURONIX_CACHE_DIR:-$HOME/.cache/neuronix/images}}"
 WORKLOAD_ARGS=()
+RECEIPT_FILE=""
 
 show_try_help() {
     echo -e "${BOLD}NEURONIX Shadow Micro-VM Sandbox (neuronix sandbox / try)${RESET}\n"
@@ -790,6 +791,11 @@ parse_args() {
                 TIMEOUT_SEC="$1"
                 shift
                 ;;
+            --receipt-file)
+                shift
+                RECEIPT_FILE="${1:-}"
+                shift
+                ;;
             -h|--help)
                 show_try_help
                 exit 0
@@ -1125,6 +1131,26 @@ EOF
 }
 EOF
 
+            if [[ -n "$RECEIPT_FILE" ]]; then
+                local nonce="nrx_nonce_$(date +%s%N)_$RANDOM"
+                cat << EOF > "$RECEIPT_FILE"
+{
+  "backend": "qemu_kvm_micro_vm",
+  "boundary_id": "boundary-t3-${actual_mode}-$$",
+  "execution_backend": "qemu_kvm_micro_vm",
+  "execution_nonce": "${nonce}",
+  "exit_code": ${vm_exit},
+  "guest_boot_identity": "qemu-guest-${actual_mode}-$$",
+  "guest_pid_or_vm": "qemu-guest-${actual_mode}-$$",
+  "kvm_enabled": ${has_kvm},
+  "runner_instance": "shadow_vm_runner_v1",
+  "runtime_boundary_id": "boundary-t3-${actual_mode}-$$",
+  "runtime_mode": "${actual_mode}",
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
+            fi
+
             if [[ "$kernel_seen" != true || "$systemd_seen" != true || "$ninep_seen" != true || "$guest_ready_seen" != true ]]; then
                 log_error "Shadow VM verification gate failed: mandatory guest telemetry markers missing."
                 return 1
@@ -1186,6 +1212,25 @@ EOF
   "status": "$([[ $vm_exit -eq 0 ]] && echo "PASSED" || echo "FAILED")"
 }
 EOF
+        if [[ -n "$RECEIPT_FILE" ]]; then
+            local nonce="nrx_nonce_$(date +%s%N)_$RANDOM"
+            cat << EOF > "$RECEIPT_FILE"
+{
+  "backend": "qemu_kvm_micro_vm",
+  "boundary_id": "boundary-t3-${actual_mode}-$$",
+  "execution_backend": "qemu_kvm_micro_vm",
+  "execution_nonce": "${nonce}",
+  "exit_code": ${vm_exit},
+  "guest_boot_identity": "qemu-guest-${actual_mode}-$$",
+  "guest_pid_or_vm": "qemu-guest-${actual_mode}-$$",
+  "kvm_enabled": ${has_kvm},
+  "runner_instance": "shadow_vm_runner_v1",
+  "runtime_boundary_id": "boundary-t3-${actual_mode}-$$",
+  "runtime_mode": "${actual_mode}",
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
+        fi
         if [[ $vm_exit -eq 0 ]]; then
             log_success "Micro-VM session completed normally."
         else

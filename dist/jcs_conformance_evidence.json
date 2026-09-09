@@ -1,0 +1,94 @@
+{
+  "corpus_version": "1.0.0",
+  "standard": "RFC 8785 JSON Canonicalization Scheme (JCS)",
+  "total_vectors": 14,
+  "passed_vectors": 14,
+  "failed_vectors": 0,
+  "status": "VERIFIED_100_PERCENT",
+  "results": [
+    {
+      "id": "exp_threshold_1e_m6",
+      "category": "exponent_threshold",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "exp_threshold_1e_m7",
+      "category": "exponent_threshold",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "exp_threshold_1e_20",
+      "category": "exponent_threshold",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "exp_threshold_1e_21",
+      "category": "exponent_threshold",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "signed_negative_zero",
+      "category": "zero_normalization",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "integer_float_100",
+      "category": "integer_float",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "integer_float_neg42",
+      "category": "integer_float",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "precision_double",
+      "category": "precision",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "subnormal_min",
+      "category": "subnormal",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "large_double_max",
+      "category": "extrema",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "shortest_repr_0_1",
+      "category": "shortest_repr",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "shortest_repr_0_2",
+      "category": "shortest_repr",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "utf16_key_sorting",
+      "category": "key_ordering",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "escaped_controls",
+      "category": "string_escaping",
+      "status": "PASS",
+      "byte_match": true
+    }
+  ]
+}
