@@ -90,7 +90,7 @@
   - [34. NEURONIX Skill System & Delegated Authority Engine (SPEC-NRX-SKL-019)](#34-neuronix-skill-system--delegated-authority-engine-spec-nrx-skl-019)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (1,299 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (1,353 Assertions)](#verification--test-harness)
   - [Independent Conformance Corpus & Differential Fuzzing](#independent-conformance-corpus--differential-fuzzing)
   - [Negative Reproducibility & Sensitivity Testing](#negative-reproducibility--sensitivity-testing)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
@@ -199,7 +199,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 | **FHS Dynamic Binary Compatibility** | Pre-configured `nix-ld` for VS Code, CUDA, and ELFs | Requires manual `nix-ld` or `steam-run` wrapping | Handled via Toolbox / Distrobox containers | Handled via Distrobox containers | Native POSIX/FHS directory hierarchy |
 | **AI Copilot & Telemetry Daemon** | Native OpenCode daemon + MCP JSON-RPC 2.0 server | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) | None (user-installed applications only) |
 | **Storage Topology & Compression** | 5 Btrfs subvolumes (`@`, `@home`, `@nix`, `@snapshots`, `@swap`) + ZSTD:3 | User-defined partitioning (defaults to monolithic) | Btrfs root with subvolumes; no transparent compression | Btrfs root with Snapper read-only subvolumes | Monolithic Btrfs or EXT4 without subvolume convention |
-| **Automated Assurance Gate** | 1,299 verified assertions across 32 QA suites, distro harness, and 15 standalone gates (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
+| **Automated Assurance Gate** | 1,353 verified assertions across 32 QA suites, distro harness, and 21 standalone gates (100% Pass) | Hydra continuous integration build checks | Fedora Zuul CI / openQA test suites | openQA automated validation matrix | User community testing repository |
 | **Release Provenance** | Pinned Flake commit + RFC SHA-256 + SPDX 2.3 SBOM | Hydra output provenance | Koji build logs / RPM signatures | OBS build provenance | Arch build system logs |
 
 ---
@@ -209,7 +209,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 #### 1. NEURONIX OS vs. Vanilla NixOS
 Vanilla NixOS provides an exceptional functional package management paradigm, but operates fundamentally as an infrastructure toolkit rather than a cohesive, out-of-the-box desktop distribution. A user installing vanilla NixOS must manually architect their Btrfs subvolume layout, configure swap parameters, script hardware driver integrations (such as NVIDIA PRIME offloading), research dynamic linker workarounds for proprietary software (`nix-ld`), and resolve complex multi-desktop configurations.
 
-NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 1,299-assertion test taxonomy (cataloged in `data/test_manifest.json`). Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
+NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 1,353-assertion test taxonomy (cataloged in `data/test_manifest.json`). Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
 
 #### 2. NEURONIX OS vs. Fedora Silverblue / Atomic Desktops
 Fedora Silverblue enforces immutability by composing system states as read-only OSTree commits. While effective at preventing host corruption, Silverblue introduces significant operational overhead:
@@ -236,7 +236,7 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
 | Proof Class | Rigor Level & Scope | Verification Grounding | Subsystems & Features |
 | :--- | :--- | :--- | :--- |
 | **P0: Mathematical Determinism** | Functional derivations, bit-identical store paths, pinned inputs. | Verified via Nix derivation graph, `flake.lock` pinned commit, and RFC SHA-256 digests. | Pure Nix substrate, pinned Nixpkgs closures, RFC 8785 Merkle StateRoot, Merkle Domain Proofs (MDP), reproducible ISO builds, release manifest hashes. |
-| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 1,299 automated test assertions across 32 QA suites, 19 distro component suites, and 15 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC, Provable State & Hyperion Engine, Semantic Closure Gate. |
+| **P1: Automated CI Verification** | System regression suites, multi-architecture evaluations, micro-VM boots. | Validated through 1,353 automated test assertions across 32 QA suites, 19 distro component suites, and 21 lifecycle gates. | Multi-arch evaluation, Shadow VM lifecycle, Calamares flake generation, CLI argument fuzzing, MCP JSON-RPC, Provable State & Hyperion Engine, Semantic Closure Gate, Conductor Native Surface & Zero-Idle Runtime, Vital Observation Substrate. |
 | **P2: Qualified Reference Hardware** | Empirical hardware validation on representative bare-metal systems. | Validated across 8 reference platforms (ThinkPad, Framework, AMD/Intel workstations, XPS, Zephyrus, Apple Silicon). | Intel/AMD microcode, Mesa RADV, Intel Arc Xe, NVIDIA PRIME offload, S3/s2idle power management, PipeWire HD audio. |
 | **P3: Declarative Module Support** | Composable NixOS configuration modules and subsystem policies. | 27 hardware configuration pillars managed in `modules/hardware/` and `data/hardware_qualification.json`. | ZRAM ZSTD swap, systemd-oomd memory monitor, Btrfs subvolumes (@, @home, @nix, @log, @snapshots), auto-TRIM. |
 | **P4: Experimental / Community** | Optional hardware features, custom Wayland compositor rules, community packages. | Documented with operational caveats and manual verification steps in operational runbooks. | Lanzaboote UEFI Secure Boot signing chain, TPM2 LUKS auto-unlocking, custom Hyprland animations. |
@@ -1029,7 +1029,7 @@ To satisfy the engineering principle of *maximum epistemic trust per line of cod
 
 ```mermaid
 flowchart TD
-    A["Authoritative Test Harness (1,299 Assertions)"] --> B["Evidence Compiler (tools/compile_evidence.py)"]
+    A["Authoritative Test Harness (1,353 Assertions)"] --> B["Evidence Compiler (tools/compile_evidence.py)"]
     C["5-Leaf Merkle StateRoot Engine"] --> B
     D["Golden Host Matrix (8 Hardware Profiles)"] --> B
     B --> E["Verification Passport (dist/verification-passport.json)"]
@@ -1042,9 +1042,9 @@ flowchart TD
 #### Core Components & Architectural Invariants:
 
 1. **Authoritative Evidence Compiler (`tools/compile_evidence.py`):**
-   Aggregates all 1,299 system assertions across 32 suites, 19 distro suites, and 15 standalone verification gates into a multi-tier taxonomy:
-   - `CATALOG`: 1,299 registered system assertions with suite boundaries and test categories.
-   - `VERIFIED`: 1,299 verified assertions with zero unverified regressions.
+   Aggregates all 1,353 system assertions across 32 suites, 19 distro suites, and 21 standalone verification gates into a multi-tier taxonomy:
+   - `CATALOG`: 1,353 registered system assertions with suite boundaries and test categories.
+   - `VERIFIED`: 1,353 verified assertions with zero unverified regressions.
    - `OBSERVED`: Live hardware and kernel capability probes (KVM virtualization, Bubblewrap, cgroups v2, eBPF LSM).
    - `ATTESTED`: SLSA Level 3 keyless build provenance and GPG detached release signatures.
    Computes a deterministic canonical SHA-256 digest (`data/assurance_evidence_snapshot.json`) bound directly into `L_evidence` of the 5-leaf Merkle StateRoot.
@@ -1087,7 +1087,7 @@ NEURONIX OS structures all epistemic guarantees into an authoritative 10-node Di
   2. `FLAKE_NODE`: Hermetic Nix Flake lockfile (`flake.lock`) evaluating locked nixpkgs revisions.
   3. `STATEROOT_NODE`: 5-leaf Merkle StateRoot commitment ($L_{\text{posture}}$, $L_{\text{substrate}}$, $L_{\text{provenance}}$, $L_{\text{policy}}$, $L_{\text{evidence}}$).
   4. `DAEMON_NODE`: Micro-Rust systems daemon binary digest and compiled architecture.
-  5. `TEST_SUITES_NODE`: Master test taxonomy digest (`data/test_manifest.json`, 1,299 assertions across 32 suites and 15 standalone gates).
+  5. `TEST_SUITES_NODE`: Master test taxonomy digest (`data/test_manifest.json`, 1,353 assertions across 32 suites and 21 standalone gates).
   6. `REPRODUCIBILITY_NODE`: Bit-identical build evaluation records and cross-language differential parity.
   7. `SECURITY_INVARIANTS_NODE`: Continuous security invariant registry (10/10 formal invariant proofs).
   8. `PASSPORT_NODE`: Signed verification passport binding hardware matrices and test catalogs.
@@ -1100,7 +1100,7 @@ NEURONIX OS structures all epistemic guarantees into an authoritative 10-node Di
 ```mermaid
 flowchart TD
     SOURCE["1. SOURCE_NODE<br>Git Tree & Commit SHA"]:::rootNode --> FLAKE["2. FLAKE_NODE<br>flake.lock & nixpkgs"]:::midNode
-    SOURCE --> TEST["5. TEST_SUITES_NODE<br>1,299 Assertions Manifest"]:::midNode
+    SOURCE --> TEST["5. TEST_SUITES_NODE<br>1,353 Assertions Manifest"]:::midNode
     SOURCE --> INVARIANTS["7. SECURITY_INVARIANTS_NODE<br>SEC-001..SEC-010 Registry"]:::midNode
     
     FLAKE --> STATE["3. STATEROOT_NODE<br>5-Leaf Merkle Tree"]:::stateNode
@@ -1370,9 +1370,9 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Industrial Test Battery (1,299 Assertions)
+## Verification, Lifecycle Gate & Industrial Test Battery (1,353 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,299 automated assertions across 17 test harnesses (32 master suites, 19 distro suites, and 15 standalone gates):
+System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,353 automated assertions across 23 test harnesses (32 master suites, 19 distro suites, and 21 standalone gates):
 
 ```text
 ═══════════════════════════════════════════════════════════════════
@@ -1385,7 +1385,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Two-Build Derivation Repro (two_build_repro)     :   8 /   8 PASS
   Hybrid E2E ISO Lifecycle Gate (e2e/test_iso_install):  8 /   8 PASS
   Real OS Install & Boot Gate (test_real_os_install_boot): 10 /  10 PASS
-  Release Lifecycle Gate (test_release_lifecycle)  :  34 /  34 PASS
+  Release Lifecycle Gate (test_release_lifecycle)  :  48 /  48 PASS
   Multi-Hop Rollback Correctness (rollback_corr)   :  13 /  13 PASS
   Enterprise Security Audit (security_audit)       :  14 /  14 PASS
   Failure Injection & Chaos (failure_injection)    :   6 /   6 PASS
@@ -1394,10 +1394,17 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Historical Regression Corpus (regression_corpus) :   7 /   7 PASS
   Reproducibility Gate (test_reproducible_iso)     :   6 /   6 PASS
   Performance Benchmarks (test_benchmarks)         :   4 /   4 PASS
-  Semantic Closure & Subsystems (semantic_closure) :  35 /  35 PASS
-  Total Executed Assertions                        : 1,299 Assertions
+  Semantic Closure & Subsystems (semantic_closure) :  37 /  37 PASS
+  Conductor Native Interactive Surface (Rust crate):  13 /  13 PASS
+  Conductor Runtime & Socket Activation (runtime)  :  10 /  10 PASS
+  Conductor MCP 2026-07-28 Adapter (conductor_mcp) :   8 /   8 PASS
+  Conductor Control Protocol v1 (control_protocol) :   6 /   6 PASS
+  Vital Observation Contract & Domains (vital_obs) :   4 /   4 PASS
+  Vital 16 Collectors & Skills Broker (vital_skl)  :   9 /   9 PASS
+  Universal Skill Registry & Delegation (skills)   :   5 /   5 PASS
+  Total Executed Assertions                        : 1,353 Assertions
   Failed Verification                              : 0 Failures
-  Execution Duration                               : ~147 seconds
+  Execution Duration                               : ~195 seconds
   Confidence Score                                 : 100%
 ═══════════════════════════════════════════════════════════════════
   ✔ NEURONIX VALIDATION SUITE PASSED: 100% OF DECLARED ASSERTIONS VERIFIED
