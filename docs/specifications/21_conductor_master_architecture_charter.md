@@ -2,17 +2,17 @@
 
 ## 1. Specification Metadata
 - **Specification ID:** SPEC-NRX-CND-021
-- **Title:** Conductor Master Architecture Charter, Definitive Doctrine, and Interaction Taxonomy
-- **Version:** 1.0.0
+- **Title:** Conductor Master Architecture Charter, User Sovereignty, and Interaction Taxonomy
+- **Version:** 1.1.0
 - **Status:** RATIFIED_CHARTER
-- **Scope:** Native Operating Surface, Universal Local Interface, 5 Core Signatures, Multi-Horizon Observability, and Closed-Loop System Intelligence.
+- **Scope:** Native Operating Surface, Universal Local Agent Substrate, User Sovereignty Doctrine, 3-Tier Principal Taxonomy, Guardrail vs Barrier Engineering, and Closed-Loop System Intelligence.
 - **Reference Standards:** SPEC-NRX-CND-018, SPEC-NRX-SKL-019, SPEC-NRX-VTL-020, RFC 8785 (JCS).
 
 ---
 
 ## 2. Definitive Canonical Definition
 
-**Conductor is the universal native operating surface for NEURONIX OS.**
+**Conductor is the universal native operating surface and local agent substrate for NEURONIX OS.**
 
 It is not a dashboard, not an AI chatbot, not an agent manager, not a system monitor, not an Electron web application, and not an expanded MCP server.
 
@@ -20,86 +20,87 @@ It is not a dashboard, not an AI chatbot, not an agent manager, not a system mon
 ```text
 CONDUCTOR: One Surface. Every Capability.
 Minimal Surface. Maximum Capability.
-Observe with Vital. Reason with AI. Act through Skills. Enforce with NEURONIX.
+Vital sees. AI reasons. Skills act. The user remains sovereign.
 ```
 
 ### The Division of Responsibilities:
-- **NixOS:** Declarative host substrate and Linux kernel.
-- **NEURONIX Control Plane:** Authoritative intelligence, state engine, policy, capability bounds, and cryptographic evidence.
-- **NEURONIX Skills:** Canonical, typed, deterministic machine-readable capabilities.
+- **NixOS:** Declarative host substrate, Linux kernel, immutable store, and atomic rollback generations.
+- **NEURONIX Control Plane:** Authoritative system intelligence, state engine, policy, capability bounds, and cryptographic evidence.
+- **NEURONIX Skill Registry:** Canonical machine-readable operating manual and deterministic capability registry.
 - **Vital:** High-fidelity machine observation, laboratory instrumentation, and sensing substrate.
 - **Conductor Runtime:** Lightweight, event-driven, dormant capability broker.
 - **Conductor GUI:** Minimalist, terminal-first native visual surface.
 - **External AI Agents:** External reasoning, diagnosis, and planning layer (vendor-neutral).
 - **neuronix CLI:** Command-line, automation, and CI/CD interface.
-- **Human Engineer:** Ultimate principal and authoritative decision maker.
+- **Human Owner:** Ultimate sovereign authority and final decision maker.
 
 ---
 
-## 3. The Five Core Signatures of Conductor
+## 3. The Core Principles: User Sovereignty & Guardrail Engineering
+
+### 3.1 Principle of User Sovereignty
+> **"The system owner retains ultimate authority over their machine and may explicitly authorize high-risk operations."**  
+> NEURONIX is not a paternalistic operating system. The platform does not own the machine; the user owns the machine. NEURONIX exists to empower the owner with complete visibility, rich telemetry, and deterministic safety nets, but never prevents an informed owner from executing their deliberate will.
+
+### 3.2 The Guardrail vs Barrier Doctrine
+> **"NEURONIX must protect the user from unintended consequences, not from their own explicitly intended decisions."**
+- **Barrier (Paternalistic, Prohibited as Default):** Arbitrarily halts the owner with opaque denials.
+- **Guardrail (Sovereign Engineering Standard):** Informs the owner of blast radius, checks rollback availability, verifies evidence requirements, and presents clear paths to proceed or abort.
+
+### 3.3 The Legitimate Role of `sudo` and Privileged Operations
+`sudo` and administrative escalation are not architectural flaws; they are standard privileged capabilities of the Linux substrate. For the `HUMAN_OWNER`, elevated capabilities remain accessible. For `AI_AGENT` principals, privilege escalation requires explicit, unbypassable human delegation.
+
+---
+
+## 4. The 3-Tier Principal Taxonomy & Transparent Delegation
+
+Authority flows strictly downward through explicit delegation:
+
+```mermaid
+flowchart TD
+    subgraph P_SOVEREIGN["Sovereign Principal"]
+        OWNER["HUMAN_OWNER (System Owner: Ultimate Authority, Sovereign Override)"]
+    end
+
+    subgraph P_DELEGATED["Delegated Principals"]
+        OPERATOR["HUMAN_OPERATOR (Secondary User: Scoped Delegation)"]
+        AGENT["AI_AGENT (External AI: Delegated, Constrained, Non-Root)"]
+    end
+
+    subgraph S_BROKER["Conductor Capability Broker"]
+        GATE["Delegation Engine & Invariant Gate"]
+    end
+
+    subgraph S_TARGET["NEURONIX Execution"]
+        EXEC["Deterministic Execution & Evidence Receipt"]
+    end
+
+    OWNER -->|"Direct Command / Sovereign Override"| GATE
+    OWNER -->|"Explicit Delegation Policy"| OPERATOR
+    OWNER -->|"Scoped Delegation Contract"| AGENT
+
+    OPERATOR -->|"Scoped Invocation"| GATE
+    AGENT -->|"Typed Skill Call"| GATE
+    GATE -->|"Authorized"| EXEC
+```
+
+1. **`HUMAN_OWNER`:** Ultimate sovereign authority. Holds root ownership, can execute any skill, can override guardrails with explicit responsibility assumption.
+2. **`HUMAN_OPERATOR`:** Delegated human operator. Operates within granted role-based capability boundaries.
+3. **`AI_AGENT`:** Autonomous external intelligence. Operates strictly within delegated, schema-bounded skill contracts. **AI capability != root shell.** AI agents never inherit authority implicitly; all agent delegation is explicit, inspectable, and revocable.
+
+---
+
+## 5. The Five Core Signatures of Conductor
 
 1. **One Window:** All visual interactions (terminal, system control, Vital telemetry, workspace, connected agents) reside within a single native window host.
 2. **Terminal First:** 95% of the viewport is an uncompromised, zero-latency VT/ANSI terminal canvas. Chrome and system surfaces appear strictly on demand.
 3. **Vital (Laboratory Observatory):** Machine telemetry is rich with provenance, freshness, quality, and explicit absence-of-data, yet represented in the UI as a clean, single-point indicator.
-4. **Skills as First-Class Contracts:** All system capabilities are deterministic machine contracts with JSON schemas, invariant checks, and human approval gates.
-5. **External Agent Native:** AI agents (OpenCode, Claude Desktop, Codex, OpenWork) consume machine capabilities directly without requiring an arbitrary root bash shell.
+4. **Skills as Machine-Readable Operating Manual:** Every system capability is documented and executable as a deterministic machine contract with JSON schemas, invariant checks, and human approval gates.
+5. **Universal Local Agent Substrate:** External agents (OpenCode, Claude Desktop, Codex, OpenWork) consume machine capabilities directly through a unified local socket and MCP interface.
 
 ---
 
-## 4. The Unified Architectural Hierarchy
-
-```mermaid
-flowchart TD
-    subgraph S_SUBSTRATE["Physical Substrate & NixOS"]
-        HOST["Hardware, Linux Kernel, Nix Store & Generation Profiles"]
-    end
-
-    subgraph S_CONTROL["NEURONIX Control Plane (Authority)"]
-        DAEMON["neuronix-daemon (Rust, AST, LSM, StateRoot)"]
-        CORE["neuronix-core (Python, 7-Factor Storage, Boot Trust, Proof)"]
-    end
-
-    subgraph S_CAPABILITY["NEURONIX Capability Layer"]
-        SKILLS["Skill System (READ / PROPOSE / MUTATE Contracts)"]
-        VITAL["Vital Observatory (OBSERVED / DERIVED / EVENT / DIAGNOSTIC)"]
-    end
-
-    subgraph S_RUNTIME["Conductor Runtime Broker (/run/user/1000/conductor.sock)"]
-        BROKER["Dormant Socket Broker (systemd Socket Activation)"]
-    end
-
-    subgraph S_SURFACE["Conductor Operational Surface"]
-        GUI["Conductor GUI (Hot Visual Canvas, Topbar, Proposal Cards)"]
-        CLI["neuronix CLI (Terminal Profile / Automation)"]
-        MCP["Conductor MCP Adapter (JSON-RPC / SSE)"]
-    end
-
-    subgraph S_PRINCIPALS["Co-Equal Principals"]
-        HUMAN["Human Systems Engineer"]
-        AGENTS["External AI Agents (OpenCode, Claude, Codex, OpenWork)"]
-    end
-
-    HOST --> DAEMON
-    HOST --> CORE
-    DAEMON --> SKILLS
-    CORE --> SKILLS
-    HOST --> VITAL
-
-    SKILLS --> BROKER
-    VITAL --> BROKER
-
-    BROKER --> GUI
-    BROKER --> CLI
-    BROKER --> MCP
-
-    GUI --> HUMAN
-    CLI --> HUMAN
-    MCP --> AGENTS
-```
-
----
-
-## 5. Closed-Loop System Intelligence
+## 6. Closed-Loop System Intelligence
 
 Conductor formalizes the interaction between external intelligence and the operating system into an immutable closed loop:
 
@@ -125,23 +126,22 @@ flowchart LR
 
 ---
 
-## 6. The Negative Architecture: What Conductor Explicitly Refuses to Build
-
-To maintain its purity, minimalism, and performance, Conductor enforces an absolute prohibition against:
+## 7. The Negative Architecture: What Conductor Explicitly Refuses to Build
 
 | Prohibited Feature | Engineering Rationale |
 | :--- | :--- |
-| **Permanent Heavy Daemons** | Replaced by systemd socket activation and demand-driven execution (`COLD` $\to$ `WARM` $\to$ `HOT`). |
+| **Permanent Heavy Daemons** | Replaced by systemd socket activation and demand-driven execution (`COLD` -> `WARM` -> `HOT`). |
 | **Giant Cluttered Dashboards** | Replaced by on-demand contextual overlays and the command palette. |
 | **Electron / Web Technologies** | Replaced by high-performance native Rust (`alacritty_terminal` + `ratatui` + `portable-pty`). |
 | **Embedded AI Chatbots / Avatars** | Conductor is vendor-neutral machine infrastructure; external agents connect via MCP/API. |
 | **Arbitrary Root Shells for AI** | Replaced by typed, schema-validated skills with immutable security invariants. |
+| **Paternalistic User Barriers** | Replaced by informative guardrails and sovereign owner overrides. |
 | **Persistent Sensor Polling Walls** | Replaced by the "No Consumer, No Work" pull-based observation engine. |
 | **Duplicate Business Logic in GUI** | Conductor GUI contains zero domain logic; all capabilities reside in the canonical skill registry. |
 
 ---
 
-## 7. Lifecycle States: COLD, WARM, HOT
+## 8. Lifecycle States: COLD, WARM, HOT
 
 ```mermaid
 stateDiagram-v2
@@ -161,7 +161,7 @@ stateDiagram-v2
 
 ---
 
-## 8. Verification & Quality Invariants
+## 9. Verification & Quality Invariants
 
 1. **Deterministic Parity:** A skill invoked via CLI, Conductor GUI, or MCP must produce bit-exact identical execution results and evidence receipts.
 2. **Typography Guarantee:** Strictly 0 Unicode em-dashes (`\xe2\x80\x94`) or en-dashes (`\xe2\x80\x93`) across all documentation, code, and configuration.

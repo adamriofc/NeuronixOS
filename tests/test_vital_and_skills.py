@@ -111,10 +111,37 @@ class TestVitalObservatoryAndSkillBroker(unittest.TestCase):
         res_ai_authorized = skills.execute(
             skill_id="system.rollback",
             inputs={"target_generation": 42, "dry_run": True},
-            caller="AI",
+            caller="AI_AGENT",
             authorization_token="AUTH-ED25519-OPERATOR-VALID"
         )
         self.assertEqual(res_ai_authorized["status"], "DRY_RUN_PASSED")
+
+        # HUMAN_OWNER sovereign execution
+        res_owner = skills.execute(
+            skill_id="system.rollback",
+            inputs={"target_generation": 42, "dry_run": True},
+            caller="HUMAN_OWNER",
+            sovereign_override=True
+        )
+        self.assertEqual(res_owner["status"], "DRY_RUN_PASSED")
+
+    def test_skill_machine_readable_operating_manual(self):
+        """Test that skills.describe() acts as a machine-readable operating manual."""
+        manual = skills.describe("system.rollback")
+        self.assertEqual(manual["skill_id"], "system.rollback")
+        self.assertEqual(manual["category"], "MUTATE")
+        self.assertTrue(manual["approval_gate_required"])
+        self.assertIn("invariants_required", manual)
+        self.assertIn("inputs_schema", manual)
+        self.assertIn("outputs_schema", manual)
+
+        # Non-existent skill raises SkillExecutionError
+        with self.assertRaises(skills.SkillExecutionError):
+            skills.describe("non.existent.skill")
+
+        # list_skills returns non-empty array
+        all_skills = skills.list_skills()
+        self.assertGreaterEqual(len(all_skills), 5)
 
 
 if __name__ == "__main__":

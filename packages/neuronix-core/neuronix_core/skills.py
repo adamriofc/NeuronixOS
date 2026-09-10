@@ -58,14 +58,37 @@ class SkillRegistry:
     def get(self, skill_id: str) -> Optional[Dict[str, Any]]:
         return self._skills.get(skill_id)
 
+    def describe(self, skill_id: str) -> Dict[str, Any]:
+        """Exposes the skill contract as a machine-readable operating manual."""
+        skill = self.get(skill_id)
+        if not skill:
+            raise SkillExecutionError(f"Skill '{skill_id}' not found in registry")
+        return {
+            "skill_id": skill["skill_id"],
+            "version": skill["version"],
+            "category": skill["category"],
+            "title": skill["title"],
+            "description": skill["description"],
+            "invariants_required": skill["invariants_required"],
+            "approval_gate_required": skill["approval_gate_required"],
+            "inputs_schema": skill["inputs_schema"],
+            "outputs_schema": skill["outputs_schema"]
+        }
+
     def list_skills(self) -> List[Dict[str, Any]]:
         return list(self._skills.values())
 
 
+class PrincipalType:
+    HUMAN_OWNER = "HUMAN_OWNER"
+    HUMAN_OPERATOR = "HUMAN_OPERATOR"
+    AI_AGENT = "AI_AGENT"
+
+
 class SkillDispatcher:
     """
-    Executes skills according to their category (READ, PROPOSE, MUTATE)
-    and enforces the Human Approval Gate for AI agents.
+    Executes skills according to their category (READ, PROPOSE, MUTATE),
+    enforcing User Sovereignty for human owners and the Human Approval Gate for AI agents.
     """
 
     def __init__(self, registry: Optional[SkillRegistry] = None):
@@ -75,8 +98,9 @@ class SkillDispatcher:
         self,
         skill_id: str,
         inputs: Optional[Dict[str, Any]] = None,
-        caller: str = "HUMAN",
-        authorization_token: Optional[str] = None
+        caller: str = "HUMAN_OWNER",
+        authorization_token: Optional[str] = None,
+        sovereign_override: bool = False
     ) -> Dict[str, Any]:
         inputs = inputs or {}
         skill = self.registry.get(skill_id)
@@ -86,8 +110,17 @@ class SkillDispatcher:
         category = skill.get("category", "READ")
         requires_gate = skill.get("approval_gate_required", False)
 
-        # Enforce Human Approval Gate for AI callers executing MUTATE skills
-        if category == "MUTATE" and requires_gate and caller.upper() == "AI" and not authorization_token:
+        # Normalize principal taxonomy
+        caller_upper = caller.upper()
+        if caller_upper in ["HUMAN", "OWNER", "HUMAN_OWNER"]:
+            principal = PrincipalType.HUMAN_OWNER
+        elif caller_upper in ["OPERATOR", "HUMAN_OPERATOR"]:
+            principal = PrincipalType.HUMAN_OPERATOR
+        else:
+            principal = PrincipalType.AI_AGENT
+
+        # Enforce Human Approval Gate for AI agents executing MUTATE skills
+        if category == "MUTATE" and requires_gate and principal == PrincipalType.AI_AGENT and not authorization_token:
             proposal = self._generate_proposal(skill, inputs)
             raise SkillApprovalRequired(proposal)
 
@@ -235,7 +268,18 @@ def get_dispatcher() -> SkillDispatcher:
 def execute(
     skill_id: str,
     inputs: Optional[Dict[str, Any]] = None,
-    caller: str = "HUMAN",
-    authorization_token: Optional[str] = None
+    caller: str = "HUMAN_OWNER",
+    authorization_token: Optional[str] = None,
+    sovereign_override: bool = False
 ) -> Dict[str, Any]:
-    return get_dispatcher().execute(skill_id, inputs, caller, authorization_token)
+    return get_dispatcher().execute(skill_id, inputs, caller, authorization_token, sovereign_override)
+
+
+def describe(skill_id: str) -> Dict[str, Any]:
+    """Exposes the skill contract as a machine-readable operating manual."""
+    return get_dispatcher().registry.describe(skill_id)
+
+
+def list_skills() -> List[Dict[str, Any]]:
+    """Returns all available skills in the registry."""
+    return get_dispatcher().registry.list_skills()
