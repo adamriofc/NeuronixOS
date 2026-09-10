@@ -722,7 +722,7 @@ A deep forensic analysis engine that compares system generations to pinpoint exa
   - **Tier 2 (Authoritative Store Closures):** Leverages `nix store diff-closures` to analyze exact closure paths, added/removed packages, and upgraded versions with exact delta size byte accounting (KiB/MiB).
   - **Tier 3 (Convenience Deltas):** Forensics for executables (`/sw/bin`) and systemd background services (`/etc/systemd/system`).
 - **Zero Ambiguity:** Defaults to comparing the active generation against its immediate predecessor if arguments are omitted.
-- **Machine-Readable Telemetry:** Supports `--json` emitting structured Tier 1–3 telemetry for automated regression analysis by AI copilots and CI pipelines.
+- **Machine-Readable Telemetry:** Supports `--json` emitting structured Tier 1-3 telemetry for automated regression analysis by AI copilots and CI pipelines.
 
 ```bash
 # Diff active generation against previous generation with 3-tier analysis
