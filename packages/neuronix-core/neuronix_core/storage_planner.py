@@ -13,6 +13,7 @@ import os
 import sys
 import json
 import re
+import time
 import hashlib
 from typing import Dict, Any, List, Set, Optional, Tuple
 
@@ -25,6 +26,213 @@ except (ImportError, ValueError):
         import sys
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
         from neuronix_core.state import canonical_json_bytes, sha256_canonical
+
+
+# ------------------------------------------------------------------------------
+# RFC 8032 Pure-Python Ed25519 Cryptographic Primitives (Zero External Dependencies)
+# ------------------------------------------------------------------------------
+_ED25519_Q = 2**255 - 19
+_ED25519_L = 2**252 + 27742317777372353535851937790883648493
+_ED25519_D = -121665 * pow(121666, _ED25519_Q - 2, _ED25519_Q) % _ED25519_Q
+_ED25519_I = pow(2, (_ED25519_Q - 1) // 4, _ED25519_Q)
+
+def _ed25519_inv(x: int) -> int:
+    return pow(x, _ED25519_Q - 2, _ED25519_Q)
+
+def _ed25519_xrecover(y: int) -> int:
+    xx = (y * y - 1) * _ed25519_inv(_ED25519_D * y * y + 1)
+    x = pow(xx, (_ED25519_Q + 3) // 8, _ED25519_Q)
+    if (x * x - xx) % _ED25519_Q != 0:
+        x = (x * _ED25519_I) % _ED25519_Q
+    if x % 2 != 0:
+        x = _ED25519_Q - x
+    return x
+
+_ED25519_BY = 4 * _ed25519_inv(5) % _ED25519_Q
+_ED25519_BX = _ed25519_xrecover(_ED25519_BY)
+_ED25519_B = (_ED25519_BX, _ED25519_BY)
+
+def _ed25519_edwards_add(P: Tuple[int, int], Q: Tuple[int, int]) -> Tuple[int, int]:
+    x1, y1 = P
+    x2, y2 = Q
+    x3 = (x1 * y2 + x2 * y1) * _ed25519_inv(1 + _ED25519_D * x1 * x2 * y1 * y2) % _ED25519_Q
+    y3 = (y1 * y2 + x1 * x2) * _ed25519_inv(1 - _ED25519_D * x1 * x2 * y1 * y2) % _ED25519_Q
+    return (x3, y3)
+
+def _ed25519_scalarmult(P: Tuple[int, int], e: int) -> Tuple[int, int]:
+    if e == 0:
+        return (0, 1)
+    Q = _ed25519_scalarmult(P, e // 2)
+    Q = _ed25519_edwards_add(Q, Q)
+    if e & 1:
+        Q = _ed25519_edwards_add(Q, P)
+    return Q
+
+def _ed25519_encodepoint(P: Tuple[int, int]) -> bytes:
+    x, y = P
+    b = bytearray(y.to_bytes(32, 'little'))
+    b[31] |= (x & 1) << 7
+    return bytes(b)
+
+def _ed25519_decodepoint(b: bytes) -> Optional[Tuple[int, int]]:
+    if len(b) != 32:
+        return None
+    y = int.from_bytes(b[:31] + bytes([b[31] & 0x7f]), 'little')
+    x = _ed25519_xrecover(y)
+    if (x & 1) != ((b[31] >> 7) & 1):
+        x = _ED25519_Q - x
+    return (x, y)
+
+def _ed25519_publickey(sk: bytes) -> bytes:
+    h = hashlib.sha512(sk).digest()
+    a = 2**254 + (int.from_bytes(h[:32], 'little') & (2**254 - 8))
+    A = _ed25519_scalarmult(_ED25519_B, a)
+    return _ed25519_encodepoint(A)
+
+def _ed25519_sign(m: bytes, sk: bytes, pk: bytes) -> bytes:
+    h = hashlib.sha512(sk).digest()
+    a = 2**254 + (int.from_bytes(h[:32], 'little') & (2**254 - 8))
+    r = int.from_bytes(hashlib.sha512(h[32:] + m).digest(), 'little') % _ED25519_L
+    R = _ed25519_scalarmult(_ED25519_B, r)
+    k = int.from_bytes(hashlib.sha512(_ed25519_encodepoint(R) + pk + m).digest(), 'little') % _ED25519_L
+    S = (r + k * a) % _ED25519_L
+    return _ed25519_encodepoint(R) + S.to_bytes(32, 'little')
+
+def _ed25519_verify(s: bytes, m: bytes, pk: bytes) -> bool:
+    if len(s) != 64 or len(pk) != 32:
+        return False
+    try:
+        R = _ed25519_decodepoint(s[:32])
+        A = _ed25519_decodepoint(pk)
+        if R is None or A is None:
+            return False
+        S = int.from_bytes(s[32:], 'little')
+        if S >= _ED25519_L:
+            return False
+        k = int.from_bytes(hashlib.sha512(s[:32] + pk + m).digest(), 'little') % _ED25519_L
+        v1 = _ed25519_scalarmult(_ED25519_B, S)
+        v2 = _ed25519_edwards_add(R, _ed25519_scalarmult(A, k))
+        return v1 == v2
+    except Exception:
+        return False
+
+def generate_operator_keypair() -> Tuple[str, str]:
+    """Generates an authentic Ed25519 operator keypair returning (private_key_hex, public_key_hex)."""
+    sk = os.urandom(32)
+    pk = _ed25519_publickey(sk)
+    return sk.hex(), pk.hex()
+
+def sign_storage_authorization(
+    target_device: str,
+    plan_hash: str,
+    operator_id: str,
+    clearance: str,
+    challenge_nonce: str,
+    expiry: int,
+    secret_key_hex: str
+) -> Dict[str, Any]:
+    """
+    Synthesizes and signs an authoritative Ed25519 Storage Authorization Token.
+    AuthorizationPayload = canonical(challenge_nonce, clearance, expiry, operator_id, plan_hash, target_device)
+    """
+    sk = bytes.fromhex(secret_key_hex)
+    pk = _ed25519_publickey(sk)
+    payload = {
+        "challenge_nonce": challenge_nonce,
+        "clearance": clearance,
+        "expiry": expiry,
+        "operator_id": operator_id,
+        "plan_hash": plan_hash,
+        "target_device": target_device
+    }
+    payload_bytes = canonical_json_bytes(payload)
+    sig = _ed25519_sign(payload_bytes, sk, pk)
+    return {
+        "operator_id": operator_id,
+        "clearance": clearance,
+        "challenge_nonce": challenge_nonce,
+        "expiry": expiry,
+        "public_key": pk.hex(),
+        "signature": sig.hex()
+    }
+
+def verify_storage_authorization(
+    auth_dict: Any,
+    target_device: str,
+    plan_hash: str,
+    trusted_public_keys: Optional[List[str]] = None,
+    seen_nonces: Optional[Set[str]] = None,
+    current_time: Optional[int] = None
+) -> Tuple[bool, str]:
+    """
+    Cryptographically verifies Ed25519 Storage Authorization Payload.
+    Validates:
+    - Operator identity and clearance level (STORAGE_ADMIN, DISASTER_RECOVERY_OPERATOR, ROOT)
+    - Replay-resistant unique challenge nonce
+    - Freshness window (expiry > current_time)
+    - Target device and plan hash cryptographic binding
+    - Ed25519 asymmetric signature authenticity against trusted public keys
+    """
+    if not isinstance(auth_dict, dict):
+        return False, "Operator authorization must be a dictionary containing cryptographic signature"
+
+    operator_id = auth_dict.get("operator_id")
+    if not operator_id or not isinstance(operator_id, str):
+        return False, "Missing or invalid 'operator_id'"
+
+    clearance = auth_dict.get("clearance")
+    if clearance not in ("STORAGE_ADMIN", "DISASTER_RECOVERY_OPERATOR", "ROOT"):
+        return False, f"Insufficient clearance: '{clearance}' (must be STORAGE_ADMIN, DISASTER_RECOVERY_OPERATOR, or ROOT)"
+
+    nonce = auth_dict.get("challenge_nonce")
+    if not nonce or not isinstance(nonce, str):
+        return False, "Missing or invalid 'challenge_nonce' (replay protection required)"
+
+    if seen_nonces is not None and nonce in seen_nonces:
+        return False, f"REPLAY_ATTACK_DETECTED: challenge_nonce '{nonce}' has already been consumed"
+
+    expiry = auth_dict.get("expiry")
+    if not isinstance(expiry, int):
+        return False, "Missing or invalid 'expiry' timestamp integer"
+
+    now_val = current_time if current_time is not None else int(time.time())
+    if expiry <= now_val:
+        return False, f"EXPIRED_AUTHORIZATION: Authorization token expired at {expiry} (current: {now_val})"
+
+    pk_hex = auth_dict.get("public_key")
+    if not pk_hex or not isinstance(pk_hex, str) or len(pk_hex) != 64:
+        return False, "Missing or invalid 64-hex-character 'public_key'"
+
+    if trusted_public_keys is not None and pk_hex not in trusted_public_keys:
+        return False, f"UNTRUSTED_KEY: Operator public key '{pk_hex[:16]}...' not in trusted public keys registry"
+
+    sig_hex = auth_dict.get("signature")
+    if not sig_hex or not isinstance(sig_hex, str) or len(sig_hex) != 128:
+        return False, "Missing or invalid 128-hex-character Ed25519 'signature'"
+
+    try:
+        pk_bytes = bytes.fromhex(pk_hex)
+        sig_bytes = bytes.fromhex(sig_hex)
+    except Exception:
+        return False, "Malformed hexadecimal encoding in public_key or signature"
+
+    payload = {
+        "challenge_nonce": nonce,
+        "clearance": clearance,
+        "expiry": expiry,
+        "operator_id": operator_id,
+        "plan_hash": plan_hash,
+        "target_device": target_device
+    }
+    payload_bytes = canonical_json_bytes(payload)
+
+    if not _ed25519_verify(sig_bytes, payload_bytes, pk_bytes):
+        return False, "CRYPTOGRAPHIC_SIGNATURE_INVALID: Ed25519 asymmetric signature verification failed"
+
+    if seen_nonces is not None:
+        seen_nonces.add(nonce)
+
+    return True, "AUTHORIZATION_VALID_ED25519"
 
 
 DEFAULT_BTRFS_LAYOUT = {
@@ -67,6 +275,7 @@ class StorageFirewall:
     """
 
     CRITICAL_MOUNTS = {"/", "/nix", "/nix/store", "/boot", "/home", "/var"}
+    CONSUMED_NONCES: Set[str] = set()
 
     @classmethod
     def get_active_mounts(cls, mounts_file: str = "/proc/mounts") -> List[Dict[str, str]]:
@@ -140,7 +349,10 @@ class StorageFirewall:
         simulated_entropy: bool = True,
         active_mounts_override: Optional[List[Dict[str, str]]] = None,
         active_devices_override: Optional[Set[str]] = None,
-        allow_active_generation_override: bool = False
+        allow_active_generation_override: bool = False,
+        trusted_public_keys: Optional[List[str]] = None,
+        seen_nonces: Optional[Set[str]] = None,
+        current_time: Optional[int] = None
     ) -> Tuple[bool, str, Dict[str, bool]]:
         """
         Evaluates all 7 factors with fail-closed semantics:
@@ -150,7 +362,7 @@ class StorageFirewall:
         4. Factor 4: Existing Filesystem Entropy Inspection
         5. Factor 5: Preflight Simulation Clearance
         6. Factor 6: Exact-Match Typed Confirmation Token
-        7. Factor 7: Operator Identity & Cryptographic Authorization
+        7. Factor 7: Operator Identity & Asymmetric Cryptographic Authorization (Ed25519)
         """
         factors = {
             "factor_1_device_identity": False,
@@ -209,26 +421,29 @@ class StorageFirewall:
             factors["factor_4_entropy_cleared"] = True
             factors["factor_6_typed_token_valid"] = True
 
-        # Factor 7: Operator Identity & Cryptographic Authorization
-        # Binds authorization identity and clearance policy, rejecting plain boolean flags
+        # Factor 7: Operator Identity & Asymmetric Cryptographic Authorization (Ed25519)
+        # Binds authorization identity and clearance policy, strictly rejecting plain boolean flags and dummy strings
         auth = operator_auth if operator_auth is not None else operator_signature
 
-        if isinstance(auth, dict):
-            op_id = auth.get("operator_id", "")
-            clearance = auth.get("clearance", "")
-            sig = auth.get("signature", "")
-            if op_id and clearance in ("STORAGE_ADMIN", "DISASTER_RECOVERY_OPERATOR", "ROOT") and sig:
-                factors["factor_7_operator_authorized"] = True
-            else:
-                return False, "FIREWALL_VIOLATION: Factor 7 failed - Operator credentials lack required STORAGE_ADMIN clearance or signature", factors
-        elif isinstance(auth, str) and auth.startswith("AUTH_TOKEN_"):
-            # Accepted string token format
-            factors["factor_7_operator_authorized"] = True
-        elif auth is True:
-            # Plain boolean flag rejected: must provide operator identity credentials
-            return False, "FIREWALL_VIOLATION: Factor 7 failed - Operator identity and cryptographic authorization required (boolean flag disallowed)", factors
-        else:
-            return False, "FIREWALL_VIOLATION: Factor 7 failed - Operator explicit authorization missing", factors
+        if auth is None:
+            return False, "FIREWALL_VIOLATION: Factor 7 failed - Operator explicit cryptographic authorization missing", factors
+
+        if not isinstance(auth, dict):
+            return False, "FIREWALL_VIOLATION: Factor 7 failed - Operator authorization must be an Ed25519 signed dictionary (dummy strings and booleans disallowed)", factors
+
+        effective_nonces = seen_nonces if seen_nonces is not None else cls.CONSUMED_NONCES
+        sig_ok, sig_reason = verify_storage_authorization(
+            auth_dict=auth,
+            target_device=target_device,
+            plan_hash=plan_hash,
+            trusted_public_keys=trusted_public_keys,
+            seen_nonces=effective_nonces,
+            current_time=current_time
+        )
+        if not sig_ok:
+            return False, f"FIREWALL_VIOLATION: Factor 7 failed - {sig_reason}", factors
+
+        factors["factor_7_operator_authorized"] = True
 
         all_pass = all(factors.values())
         return all_pass, "AUTHORIZED_ALL_7_FACTORS_SATISFIED" if all_pass else "FIREWALL_REJECTED", factors

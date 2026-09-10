@@ -161,22 +161,33 @@ class SystemTopologyEngine:
         for cn in canonical_nodes:
             item = dict(cn)
             item["origin"] = "CANONICAL"
+            item["status"] = "MISSING_EXPECTED"
             node_map[cn["id"]] = item
 
         # Check for convergence between canonical and observed
         observed_mountpoints = {n.get("mountpoint"): n for n in observed_nodes if n.get("type") == "MOUNT"}
         if "/" in observed_mountpoints and "storage:subvol_root" in node_map:
             node_map["storage:subvol_root"]["origin"] = "CONVERGED"
+            node_map["storage:subvol_root"]["status"] = "CONVERGED"
             node_map["storage:subvol_root"]["observed_device"] = observed_mountpoints["/"]["device"]
 
         if "/nix" in observed_mountpoints and "storage:subvol_nix" in node_map:
             node_map["storage:subvol_nix"]["origin"] = "CONVERGED"
+            node_map["storage:subvol_nix"]["status"] = "CONVERGED"
+
+        # Check for observed sockets
+        observed_sockets = {n.get("path"): n for n in observed_nodes if n.get("type") == "SOCKET"}
+        for s_path in observed_sockets:
+            if "ast.sock" in s_path and "service:neuronix_daemon" in node_map:
+                node_map["service:neuronix_daemon"]["origin"] = "CONVERGED"
+                node_map["service:neuronix_daemon"]["status"] = "CONVERGED"
 
         # Add purely observed nodes
         for on in observed_nodes:
             if on["id"] not in node_map:
                 item = dict(on)
                 item["origin"] = "OBSERVED"
+                item["status"] = "OBSERVED"
                 item["criticality"] = "LOW"
                 node_map[on["id"]] = item
 
@@ -195,6 +206,7 @@ class SystemTopologyEngine:
         all_nodes = list(node_map.values())
         return {
             "schema_version": "1.1.0",
+            "scope": "NEURONIX Control-Plane Effective Topology",
             "topology_type": "NEURONIX_EFFECTIVE_TOPOLOGY_V1",
             "node_count": len(all_nodes),
             "edge_count": len(merged_edges),

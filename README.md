@@ -1235,7 +1235,7 @@ Following the v1.0.4 audit cycle, NEURONIX OS fully transitioned from mock or st
      - Factor 4: Existing Filesystem Entropy and signature check.
      - Factor 5: Preflight Simulation Clearance simulating partition geometry, LBA 2048 alignment, and Btrfs subvolumes.
      - Factor 6: Exact-Match Typed Confirmation Token (`DESTROY <dev> PLAN <64char_plan_hash>`).
-     - Factor 7: Operator Identity & Cryptographic Clearance (`STORAGE_ADMIN` or `DISASTER_RECOVERY_OPERATOR`).
+     - Factor 7: Operator Identity & Cryptographic Clearance (`STORAGE_ADMIN` or `DISASTER_RECOVERY_OPERATOR` via Ed25519 asymmetric cryptographic signatures and replay protection nonces).
    - Transactional postcondition verification confirming physical layout matches planned specifications.
 
 3. **Boot Health Contract (`neuronix_core.boot_trust`):**
@@ -1260,7 +1260,7 @@ Following the v1.0.4 audit cycle, NEURONIX OS fully transitioned from mock or st
    - Topological acyclic validation via Kahn's algorithm and backward lineage reachability tracing (`RELEASE_NODE` -> `SOURCE_NODE`).
 
 ```bash
-# Execute comprehensive semantic closure test suite (35 tests)
+# Execute comprehensive semantic closure test suite (37 tests)
 python3 tests/test_semantic_closure.py -v
 ```
 

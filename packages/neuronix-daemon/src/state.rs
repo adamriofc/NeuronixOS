@@ -138,8 +138,8 @@ impl StateEngine {
         // 5. Evidence Leaf (L_evidence) - RFC 8785 canonical format backed by authoritative assurance record
         let mut total_assertions = 1299u64;
         let mut validation_status = "PASSING_ALL".to_string();
-        let mut last_run_id = "34306803041".to_string();
-        let mut last_commit_sha = "60f8652ba75d8fd27d95f23a74bff7414b65f590".to_string();
+        let mut last_run_id = std::env::var("GITHUB_RUN_ID").unwrap_or_default();
+        let mut last_commit_sha = std::env::var("GITHUB_SHA").unwrap_or_default();
         let mut verified_count = 1299u64;
         let mut failure_count = 0u64;
         let mut timestamp = "2026-09-09T01:14:10Z".to_string();
@@ -225,6 +225,13 @@ impl StateEngine {
                 }
                 break;
             }
+        }
+
+        if last_run_id.is_empty() {
+            last_run_id = "UNBOUND_LOCAL_RUN".to_string();
+        }
+        if last_commit_sha.is_empty() {
+            last_commit_sha = "UNBOUND_LOCAL_COMMIT".to_string();
         }
 
         let total_executed = verified_count + failure_count;

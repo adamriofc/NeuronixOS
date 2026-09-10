@@ -29,6 +29,8 @@ from neuronix_core.storage_planner import (
     StoragePlannerEngine,
     StorageFirewall,
     get_active_generation_devices,
+    generate_operator_keypair,
+    sign_storage_authorization,
 )
 from neuronix_core.boot_trust import (
     CONTRACT_STAGES,
@@ -233,6 +235,7 @@ class TestStorageFirewallSemanticClosure(unittest.TestCase):
         self.planner = StoragePlannerEngine()
         self.plan = self.planner.generate_plan()
         self.plan_hash = self.planner.compute_plan_hash(self.plan)
+        self.op_priv, self.op_pub = generate_operator_keypair()
 
     def test_factor3_active_generation_rejection(self):
         active_gen_devices = {"/dev/vdz1", "/dev/vdz"}
@@ -281,17 +284,27 @@ class TestStorageFirewallSemanticClosure(unittest.TestCase):
         self.assertIn("STORAGE_ADMIN", reason)
 
     def test_all_7_factors_pass_when_compliant(self):
+        auth = sign_storage_authorization(
+            target_device="/dev/vdz",
+            plan_hash=self.plan_hash,
+            operator_id="secops@sys",
+            clearance="DISASTER_RECOVERY_OPERATOR",
+            challenge_nonce="test_nonce_closure_12345",
+            expiry=2147483647,
+            secret_key_hex=self.op_priv
+        )
         allowed, reason, factors = StorageFirewall.evaluate_7_factors(
             target_device="/dev/vdz",
             plan_hash=self.plan_hash,
             expected_plan_hash=self.plan_hash,
             confirmation_token=f"DESTROY vdz PLAN {self.plan_hash}",
-            operator_auth={"operator_id": "secops@sys", "clearance": "DISASTER_RECOVERY_OPERATOR", "signature": "valid_sig"},
+            operator_auth=auth,
+            trusted_public_keys=[self.op_pub],
             simulated_entropy=True,
             active_mounts_override=[],
             active_devices_override=set()
         )
-        self.assertTrue(allowed)
+        self.assertTrue(allowed, f"Should pass all 7 factors: {reason}")
         self.assertEqual(len(factors), 7)
         self.assertTrue(all(factors.values()))
 
@@ -387,6 +400,7 @@ class TestSemanticAIGovernance(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(report.get("simulation_verdict"), "ACCEPTED_FOR_OPERATOR_REVIEW")
         self.assertTrue(report.get("safe_for_operator_apply"))
+        self.assertTrue(report.get("safe_for_operator_review"))
 
     def test_simulate_proposal_direct_commit_rejection(self):
         proposal = {
@@ -398,6 +412,28 @@ class TestSemanticAIGovernance(unittest.TestCase):
         ok, msg, _ = self.engine.simulate_proposal(proposal)
         self.assertFalse(ok)
         self.assertIn("FIREWALL_BREACH", msg)
+
+    def test_simulate_proposal_missing_proposer_flag_rejection(self):
+        proposal = {
+            "author": "ai_copilot",
+            "changes": {"services.openssh.enable": False}
+        }
+        ok, msg, _ = self.engine.simulate_proposal(proposal)
+        self.assertFalse(ok)
+        self.assertIn("FIREWALL_BREACH", msg)
+        self.assertIn("proposer_mode", msg)
+
+    def test_simulate_proposal_unknown_option_rejection(self):
+        proposal = {
+            "proposer_mode": True,
+            "direct_commit": False,
+            "author": "ai_copilot",
+            "changes": {"nonexistent.rogue.option": True}
+        }
+        ok, msg, _ = self.engine.simulate_proposal(proposal)
+        self.assertFalse(ok)
+        self.assertIn("SECURITY_VIOLATION", msg)
+        self.assertIn("CANONICAL_OPTIONS", msg)
 
     def test_simulate_proposal_type_mismatch_rejection(self):
         proposal = {

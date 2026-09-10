@@ -45,7 +45,14 @@ def main():
         with open(passport_path, "r", encoding="utf-8") as f:
             passport_data = json.load(f)
 
-    commit_sha = passport_data.get("release_metadata", {}).get("commit_sha", "60f8652ba75d8fd27d95f23a74bff7414b65f590")
+    commit_sha = passport_data.get("release_metadata", {}).get("commit_sha") or os.environ.get("GITHUB_SHA")
+    if not commit_sha:
+        try:
+            import subprocess
+            p = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, capture_output=True, text=True, check=True)
+            commit_sha = p.stdout.strip()
+        except Exception:
+            commit_sha = "UNBOUND_LOCAL_COMMIT"
     state_root = passport_data.get("cryptographic_commitments", {}).get("state_root", "0"*64)
 
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

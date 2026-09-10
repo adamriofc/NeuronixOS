@@ -11,6 +11,7 @@ Licensed under the Apache License, Version 2.0
 import os
 import sys
 import json
+import math
 import random
 import subprocess
 import hashlib
@@ -39,16 +40,40 @@ def generate_random_value(depth: int = 0) -> Any:
         l_count = random.randint(1, 4)
         return [generate_random_value(depth + 1) for _ in range(l_count)]
     elif t == 3:
-        # numbers
-        num_type = random.randint(1, 7)
-        if num_type == 1: return -0.0
-        if num_type == 2: return 0.0
-        if num_type == 3: return 100.0
-        if num_type == 4: return 1e-6
-        if num_type == 5: return 1e-7
-        if num_type == 6: return 1e20
-        if num_type == 7: return 1e21
-        return random.uniform(-1000, 1000)
+        # numbers: comprehensive IEEE-754 finite doubles
+        category = random.randint(1, 10)
+        if category == 1:
+            return random.choice([0.0, -0.0, 0])
+        elif category == 2:
+            return random.choice([1.0, -1.0, 42.0, -42.0, 100.0, -100.0, 1000000.0, 10**9, -(10**9)])
+        elif category == 3:
+            return random.choice([
+                1e-7, 1e-6, 1e-5, 1e-1, 1e0, 1e1, 1e20, 1e21, 1e22,
+                -1e-7, -1e-6, -1e-5, -1e20, -1e21, -1e22
+            ])
+        elif category == 4:
+            exp = random.choice(list(range(-308, -250)) + list(range(250, 308)))
+            mantissa = random.uniform(1.0, 9.999)
+            return mantissa * (10.0 ** exp)
+        elif category == 5:
+            return random.choice([
+                5e-324, 1e-323, 2.2250738585072014e-308, 4.9406564584124654e-324,
+                -5e-324, -2.2250738585072014e-308
+            ])
+        elif category == 6:
+            return random.choice([
+                0.1 + 0.2, 1.0 / 3.0, 1.0 / 7.0, math.pi, math.e,
+                9007199254740991.0, 9007199254740992.0, -9007199254740991.0
+            ])
+        elif category == 7:
+            return random.uniform(-1000.0, 1000.0)
+        elif category == 8:
+            log_scale = random.uniform(-20, 20)
+            return (random.choice([-1.0, 1.0])) * (10.0 ** log_scale) * random.random()
+        elif category == 9:
+            return random.randint(-100000, 100000)
+        else:
+            return random.choice([1e-6, 1e-7, 1e20, 1e21, 0.00012345, 123456789.987654])
     elif t == 4:
         # string
         s_type = random.randint(1, 4)
@@ -130,6 +155,17 @@ def run_differential_fuzz(iterations: int = 500) -> int:
         return 1
 
     print(f"[SUCCESS] 100% Differential Parity achieved across all {iterations} iterations (0 mismatches)")
+
+    # Strict RFC 8785 NaN/Infinity rejection test
+    print("[DIFFERENTIAL-FUZZ] Verifying strict RFC 8785 rejection of NaN and Infinity...")
+    for invalid_val in [float("nan"), float("inf"), float("-inf")]:
+        try:
+            canonical_json_bytes({"invalid": invalid_val})
+            raise AssertionError(f"Expected ValueError for RFC 8785 invalid value: {invalid_val}")
+        except ValueError as e:
+            if "RFC 8785 disallows NaN and Infinity" not in str(e):
+                raise AssertionError(f"Unexpected error message: {e}")
+    print("  ✔ NaN and Infinity strictly rejected fail-closed per RFC 8785 §3.2.2.3")
 
     # Test StateRoot Parity against Rust daemon
     daemon_bin = os.path.join(PROJECT_ROOT, "packages/neuronix-daemon/target/release/neuronix-daemon")

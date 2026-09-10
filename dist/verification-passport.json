@@ -5,15 +5,15 @@
     "distribution": "NEURONIX OS",
     "release_version": "1.0.4",
     "release_tag": "v1.0.4",
-    "commit_sha": "60f8652ba75d8fd27d95f23a74bff7414b65f590",
+    "commit_sha": "5945a5d50f4c5f45d1562004782f574c49d1d498",
     "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
     "proof_engine_version": "1.1.0"
   },
   "cryptographic_commitments": {
-    "state_root": "099e6cc1ddcadf28fd9cf2193e3c3fcd42b0bda556062c139a07d3142a3efbf4",
+    "state_root": "5093dc22fed01d58783719c767f4f19c4709be0f4074a0fed56289835c12d945",
     "policy_hash": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
     "flake_lock_hash": "06135d460eb72c7dcb846ac22cab8cee65f9acea9f3b285a9adb9d27de876981",
-    "evidence_graph_digest": "c127aa082a55ab0841fc2c7f8bda882cd2e83d57f6845437e7f04c5f5e475906",
+    "evidence_graph_digest": "bee9479dfac2cee6503c3d753e40eceb48d6225f3c203b76f4f7cd6ab7fefef1",
     "trust_status": "TRUSTED",
     "trust_vector": {
       "posture": "VERIFIED",
@@ -33,20 +33,20 @@
     "verified_failure_count": 0,
     "verified_pass_rate_percentage": 100,
     "verification_status": "PASSING_ALL",
-    "evidence_snapshot_digest": "5736d81fbc92a06655385ec472c236746423dd5defbddf28c8d3dbe133aaedf9"
+    "evidence_snapshot_digest": "e8ee6c5d2331881085b9330242b97e677cf0358bc0bb41f57934d4c69e1079eb"
   },
   "ci_attestation": {
     "ci_workflow_id": "ci.yml",
-    "ci_run_id": "34306803041",
+    "ci_run_id": "34437228037",
     "ci_run_status": "success",
-    "ci_commit_sha": "60f8652ba75d8fd27d95f23a74bff7414b65f590"
+    "ci_commit_sha": "5945a5d50f4c5f45d1562004782f574c49d1d498"
   },
   "supply_chain_digests": {
     "reproducibility_evidence_sha256": "513b2b3937999c9d5e35fec52977a4d6363439f4375da5f86b457abd153a3117",
     "iso_checksums_sha256": "4a24065718d8269ea318bb15b073b9c9f0df3c9927bcef6b99dba08f2ebb04f9",
     "sbom_spdx_sha256": "de889c7126352fcf756b3b1485aaf55eb52280f93e0f015f39b72b0a56011ae3",
     "jcs_conformance_sha256": "4b6de0131501fa734da7072d71831dbfc992faef5f7b22a200cb87243d9805bc",
-    "evidence_graph_sha256": "c127aa082a55ab0841fc2c7f8bda882cd2e83d57f6845437e7f04c5f5e475906"
+    "evidence_graph_sha256": "bee9479dfac2cee6503c3d753e40eceb48d6225f3c203b76f4f7cd6ab7fefef1"
   },
   "hardware_profiles": [
     "thinkpad_t14_gen3",
@@ -58,6 +58,6 @@
     "apple_silicon_m_series",
     "generic_uefi_hardware"
   ],
-  "verification_timestamp": "2026-09-10T04:02:12Z",
-  "passport_digest": "a9ff0d73c9e6f72fb7abba81b080601bd92822287b6b4f215433164b1f23d96b"
+  "verification_timestamp": "2026-09-10T05:34:23Z",
+  "passport_digest": "2208f7d7d272e701a5af9d795f70c535ed14a8c032acadb8d81af2493e33b5d9"
 }

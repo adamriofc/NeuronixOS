@@ -87,6 +87,11 @@ CANONICAL_OPTIONS = {
         "allowed_values": ["METADATA_ONLY", "NONE"],
         "description": "AI agent visibility policy restricting access to secret metadata only (SEC-014)."
     },
+    "neuronix.provable_state.enforce": {
+        "type": "boolean",
+        "default": True,
+        "description": "Enforce cryptographic state proofs and integrity verification across lifecycle transitions."
+    },
 
     # Standard NixOS Core Subsystems
     "services.openssh.enable": {
@@ -256,7 +261,9 @@ class SemanticAstEngine:
             return False, "PROPOSAL_MALFORMED: Root must be a JSON dictionary", {}
 
         # 1. Proposer-only invariant check (SEC-019)
-        is_proposer = proposal.get("proposer_mode", True)
+        if "proposer_mode" not in proposal:
+            return False, "FIREWALL_BREACH: Missing mandatory proposer_mode flag (SEC-019)", {}
+        is_proposer = proposal.get("proposer_mode")
         if not is_proposer or proposal.get("direct_commit", False):
             return False, "FIREWALL_BREACH: AI models are restricted to PROPOSER_ONLY mode (direct commit prohibited)", {}
 
@@ -283,20 +290,26 @@ class SemanticAstEngine:
                 if re.match(regex, opt_key):
                     return False, f"SECURITY_VIOLATION: Option '{opt_key}' violates security baseline", {}
 
-            # Type checking against schema if registered
-            if opt_key in CANONICAL_OPTIONS:
-                opt_spec = CANONICAL_OPTIONS[opt_key]
-                expected_type = opt_spec.get("type")
-                if expected_type == "boolean" and not isinstance(opt_val, bool):
-                    return False, f"TYPE_MISMATCH: Option '{opt_key}' expects boolean, got {type(opt_val).__name__}", {}
-                elif expected_type == "integer" and not isinstance(opt_val, int):
-                    return False, f"TYPE_MISMATCH: Option '{opt_key}' expects integer, got {type(opt_val).__name__}", {}
-                elif expected_type == "string":
-                    if not isinstance(opt_val, str):
-                        return False, f"TYPE_MISMATCH: Option '{opt_key}' expects string, got {type(opt_val).__name__}", {}
-                    allowed = opt_spec.get("allowed_values")
-                    if allowed and opt_val not in allowed:
-                        return False, f"INVALID_VALUE: Option '{opt_key}' value '{opt_val}' not in allowed {allowed}", {}
+            # Strict canonical allowlist
+            if opt_key not in CANONICAL_OPTIONS:
+                return False, f"SECURITY_VIOLATION: Option '{opt_key}' is not in CANONICAL_OPTIONS allowlist", {}
+
+            # Type checking against schema
+            opt_spec = CANONICAL_OPTIONS[opt_key]
+            expected_type = opt_spec.get("type")
+            if expected_type == "boolean" and not isinstance(opt_val, bool):
+                return False, f"TYPE_MISMATCH: Option '{opt_key}' expects boolean, got {type(opt_val).__name__}", {}
+            elif expected_type == "integer" and not isinstance(opt_val, int):
+                return False, f"TYPE_MISMATCH: Option '{opt_key}' expects integer, got {type(opt_val).__name__}", {}
+            elif expected_type == "string":
+                if not isinstance(opt_val, str):
+                    return False, f"TYPE_MISMATCH: Option '{opt_key}' expects string, got {type(opt_val).__name__}", {}
+                allowed = opt_spec.get("allowed_values")
+                if allowed and opt_val not in allowed:
+                    return False, f"INVALID_VALUE: Option '{opt_key}' value '{opt_val}' not in allowed {allowed}", {}
+            elif expected_type == "list":
+                if not isinstance(opt_val, list):
+                    return False, f"TYPE_MISMATCH: Option '{opt_key}' expects list, got {type(opt_val).__name__}", {}
 
         # 5. Synthesize proposal hash, diff, and simulation report
         proposal_canonical = dict(proposal)
@@ -315,6 +328,7 @@ class SemanticAstEngine:
             "configuration_diff": diff,
             "blast_radius": "ISOLATED_CONFIGURATION_DELTA",
             "requires_operator_signature": True,
+            "safe_for_operator_review": True,
             "safe_for_operator_apply": True
         }
         return True, "PROPOSAL_SIMULATION_PASSED", report

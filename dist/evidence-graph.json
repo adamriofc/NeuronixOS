@@ -8,27 +8,27 @@
     "SOURCE_NODE": {
       "node_id": "SOURCE_NODE",
       "type": "GOVERNANCE_SOURCE",
-      "git_commit_sha": "60f8652ba75d8fd27d95f23a74bff7414b65f590",
+      "git_commit_sha": "5945a5d50f4c5f45d1562004782f574c49d1d498",
       "git_branch": "main",
       "repository": "https://github.com/adamriofc/NeuronixOS",
-      "digest": "bdb5f9183e962dbc7a09b8b110ce477a9d09cee9eb3d9c7a4342ddcf55e88697"
+      "digest": "2e2c150351cc6abe840e5bd9fc7c03a80c465378a38bb6484be6eb1a5ed2c353"
     },
     "BUILD_NODE": {
       "node_id": "BUILD_NODE",
       "type": "SUBSTRATE_BUILD",
-      "parent_source_sha": "60f8652ba75d8fd27d95f23a74bff7414b65f590",
+      "parent_source_sha": "5945a5d50f4c5f45d1562004782f574c49d1d498",
       "flake_lock_hash": "06135d460eb72c7dcb846ac22cab8cee65f9acea9f3b285a9adb9d27de876981",
       "system_store_path": "none",
-      "digest": "198b2430f17ca4cad575664bcb2bab9f496bd06ca2f880d7c34ad22e78f2112f"
+      "digest": "5738c425c6c61478d5f35d7e04147c3f3b5cb90d14219ea57945f8c0e7f89812"
     },
     "HARDWARE_NODE": {
       "node_id": "HARDWARE_NODE",
       "type": "HARDWARE_INTELLIGENCE",
-      "hardware_root": "7c6bddcddfe5a860481ca20ccb6c5f72261a2ee27fc9185caf24734cb95078c7",
+      "hardware_root": "4294546d4ff09f9324ea8eeba54de9104387ef12ce9de38b0c1616aaa329f092",
       "cpu_cores": 16,
       "kvm_available": true,
       "tpm_present": true,
-      "digest": "7c6bddcddfe5a860481ca20ccb6c5f72261a2ee27fc9185caf24734cb95078c7"
+      "digest": "4294546d4ff09f9324ea8eeba54de9104387ef12ce9de38b0c1616aaa329f092"
     },
     "TOPOLOGY_NODE": {
       "node_id": "TOPOLOGY_NODE",
@@ -78,10 +78,10 @@
     "BOOT_NODE": {
       "node_id": "BOOT_NODE",
       "type": "MEASURED_BOOT_TRUST",
-      "boot_trust_root": "0631a1055a2f44247ecbda72c210236c9ec6d0cbff31e907b8c2289dcaf98fd2",
+      "boot_trust_root": "ad59da0903fe9d13eefc2a0dafad78fcca10c8eccb613cda6b3f49538f0944de",
       "secure_boot_enabled": false,
       "health_status": "TRIGGER_ROLLBACK: Missing required stages ['KERNEL_REACH', 'MOUNTS_HEALTHY', 'DAEMON_READY', 'STATE_VERIFIED', 'DESKTOP_TARGET']",
-      "digest": "0631a1055a2f44247ecbda72c210236c9ec6d0cbff31e907b8c2289dcaf98fd2"
+      "digest": "ad59da0903fe9d13eefc2a0dafad78fcca10c8eccb613cda6b3f49538f0944de"
     },
     "SECRETS_NODE": {
       "node_id": "SECRETS_NODE",
@@ -108,23 +108,23 @@
     "STATE_NODE": {
       "node_id": "STATE_NODE",
       "type": "MERKLE_STATE_COMMITMENT",
-      "state_root": "7a63729a0f1cb2edcf27cfe1c6af7d74c35511cd35429e934d9665e3caa61703",
-      "parent_build_digest": "198b2430f17ca4cad575664bcb2bab9f496bd06ca2f880d7c34ad22e78f2112f",
-      "parent_hardware_digest": "7c6bddcddfe5a860481ca20ccb6c5f72261a2ee27fc9185caf24734cb95078c7",
+      "state_root": "922311d728daa7958228aee2056e63d03a09886014e4e3b099f143bd0866b23f",
+      "parent_build_digest": "5738c425c6c61478d5f35d7e04147c3f3b5cb90d14219ea57945f8c0e7f89812",
+      "parent_hardware_digest": "4294546d4ff09f9324ea8eeba54de9104387ef12ce9de38b0c1616aaa329f092",
       "parent_policy_digest": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
       "parent_storage_digest": "aefd61691edb1f7f3420ec759ac825b5313e9f6ae23c86d31a2be6ed6806bbf5",
-      "parent_boot_digest": "0631a1055a2f44247ecbda72c210236c9ec6d0cbff31e907b8c2289dcaf98fd2",
+      "parent_boot_digest": "ad59da0903fe9d13eefc2a0dafad78fcca10c8eccb613cda6b3f49538f0944de",
       "trust_status": "TRUSTED",
-      "digest": "7a63729a0f1cb2edcf27cfe1c6af7d74c35511cd35429e934d9665e3caa61703"
+      "digest": "922311d728daa7958228aee2056e63d03a09886014e4e3b099f143bd0866b23f"
     },
     "RUNTIME_NODE": {
       "node_id": "RUNTIME_NODE",
       "type": "AUTHORITATIVE_RUNTIME_RECEIPT",
       "backend": "kvm_qemu_v1",
-      "execution_nonce": "nrx_nonce_evidence_graph_34306803041",
+      "execution_nonce": "nrx_nonce_evidence_graph_34437228037",
       "exit_code": 0,
-      "runtime_evidence_hash": "49748f31e15b270fc9811248bcecac57e30f8e6719f9a8b23c17cef5b9101c10",
-      "digest": "49748f31e15b270fc9811248bcecac57e30f8e6719f9a8b23c17cef5b9101c10"
+      "runtime_evidence_hash": "454a9b231d95b9bb1223dbeea0156dbb8a142ac6b6fedf8bdca1dbb9b2030e1a",
+      "digest": "454a9b231d95b9bb1223dbeea0156dbb8a142ac6b6fedf8bdca1dbb9b2030e1a"
     },
     "TEST_NODE": {
       "node_id": "TEST_NODE",
@@ -134,29 +134,29 @@
       "failed_assertions": 0,
       "pass_rate_percentage": 100,
       "test_manifest_hash": "7c10d35c030789bedac57a3e40c825866d83911ff4051a066e1c43e75d34fc93",
-      "ci_run_id": "34306803041",
-      "digest": "375605f87a1243996c080e2d57969da4e8043b89551c131de70959668015f6e6"
+      "ci_run_id": "34437228037",
+      "digest": "46e642a038e6e0af2d097cf0dd9b23c83936030d4ab1b4dff0fb44d9ae20a98b"
     },
     "RELEASE_NODE": {
       "node_id": "RELEASE_NODE",
       "type": "QUALIFIED_RELEASE_ROOT",
       "release_version": "1.0.4",
       "release_tag": "v1.0.4",
-      "commit_sha": "60f8652ba75d8fd27d95f23a74bff7414b65f590",
-      "ci_run_id": "34306803041",
-      "parent_test_digest": "375605f87a1243996c080e2d57969da4e8043b89551c131de70959668015f6e6",
-      "parent_build_digest": "198b2430f17ca4cad575664bcb2bab9f496bd06ca2f880d7c34ad22e78f2112f",
-      "parent_state_root": "7a63729a0f1cb2edcf27cfe1c6af7d74c35511cd35429e934d9665e3caa61703",
-      "digest": "df7ad648e7f94189c35c6799491df0789008f3435cd4e1c3d0fa13747953060b"
+      "commit_sha": "5945a5d50f4c5f45d1562004782f574c49d1d498",
+      "ci_run_id": "34437228037",
+      "parent_test_digest": "46e642a038e6e0af2d097cf0dd9b23c83936030d4ab1b4dff0fb44d9ae20a98b",
+      "parent_build_digest": "5738c425c6c61478d5f35d7e04147c3f3b5cb90d14219ea57945f8c0e7f89812",
+      "parent_state_root": "922311d728daa7958228aee2056e63d03a09886014e4e3b099f143bd0866b23f",
+      "digest": "bb3f77af5856c7f4741340876bff892577ef95b3f0e060c416072f8a14180c0e"
     },
     "HOST_NODE": {
       "node_id": "HOST_NODE",
       "type": "HARDWARE_ATTESTATION",
-      "hardware_root": "7c6bddcddfe5a860481ca20ccb6c5f72261a2ee27fc9185caf24734cb95078c7",
+      "hardware_root": "4294546d4ff09f9324ea8eeba54de9104387ef12ce9de38b0c1616aaa329f092",
       "cpu_cores": 16,
       "kvm_available": true,
       "tpm_present": true,
-      "digest": "7c6bddcddfe5a860481ca20ccb6c5f72261a2ee27fc9185caf24734cb95078c7"
+      "digest": "4294546d4ff09f9324ea8eeba54de9104387ef12ce9de38b0c1616aaa329f092"
     },
     "HDS_NODE": {
       "node_id": "HDS_NODE",
@@ -175,10 +175,10 @@
     "PROOF_NODE": {
       "node_id": "PROOF_NODE",
       "type": "DOMAIN_PROOF_V1",
-      "proof_root": "04abfccc4d243585c5970ca1c9d5779734c50cb751cae5d7b76b54a76775c332",
-      "parent_state_root": "7a63729a0f1cb2edcf27cfe1c6af7d74c35511cd35429e934d9665e3caa61703",
+      "proof_root": "c798eae29cc040182858ee908e142cdce238d11374851ffba1814dfc05ac32be",
+      "parent_state_root": "922311d728daa7958228aee2056e63d03a09886014e4e3b099f143bd0866b23f",
       "trust_verdict": "VERIFIED_TRUSTED",
-      "digest": "04abfccc4d243585c5970ca1c9d5779734c50cb751cae5d7b76b54a76775c332"
+      "digest": "c798eae29cc040182858ee908e142cdce238d11374851ffba1814dfc05ac32be"
     }
   },
   "edges": [
@@ -186,37 +186,37 @@
       "from": "TEST_NODE",
       "to": "RELEASE_NODE",
       "edge_type": "parent_test_digest",
-      "digest": "375605f87a1243996c080e2d57969da4e8043b89551c131de70959668015f6e6"
+      "digest": "46e642a038e6e0af2d097cf0dd9b23c83936030d4ab1b4dff0fb44d9ae20a98b"
     },
     {
       "from": "RUNTIME_NODE",
       "to": "TEST_NODE",
       "edge_type": "runtime_receipt_hash",
-      "digest": "49748f31e15b270fc9811248bcecac57e30f8e6719f9a8b23c17cef5b9101c10"
+      "digest": "454a9b231d95b9bb1223dbeea0156dbb8a142ac6b6fedf8bdca1dbb9b2030e1a"
     },
     {
       "from": "STATE_NODE",
       "to": "RUNTIME_NODE",
       "edge_type": "host_state_root",
-      "digest": "7a63729a0f1cb2edcf27cfe1c6af7d74c35511cd35429e934d9665e3caa61703"
+      "digest": "922311d728daa7958228aee2056e63d03a09886014e4e3b099f143bd0866b23f"
     },
     {
       "from": "BUILD_NODE",
       "to": "STATE_NODE",
       "edge_type": "state_parent_sha",
-      "digest": "198b2430f17ca4cad575664bcb2bab9f496bd06ca2f880d7c34ad22e78f2112f"
+      "digest": "5738c425c6c61478d5f35d7e04147c3f3b5cb90d14219ea57945f8c0e7f89812"
     },
     {
       "from": "SOURCE_NODE",
       "to": "BUILD_NODE",
       "edge_type": "artifact_parent_sha",
-      "digest": "60f8652ba75d8fd27d95f23a74bff7414b65f590"
+      "digest": "5945a5d50f4c5f45d1562004782f574c49d1d498"
     },
     {
       "from": "HARDWARE_NODE",
       "to": "STATE_NODE",
       "edge_type": "hardware_leaf",
-      "digest": "7c6bddcddfe5a860481ca20ccb6c5f72261a2ee27fc9185caf24734cb95078c7"
+      "digest": "4294546d4ff09f9324ea8eeba54de9104387ef12ce9de38b0c1616aaa329f092"
     },
     {
       "from": "TOPOLOGY_NODE",
@@ -246,7 +246,7 @@
       "from": "BOOT_NODE",
       "to": "STATE_NODE",
       "edge_type": "boot_leaf",
-      "digest": "0631a1055a2f44247ecbda72c210236c9ec6d0cbff31e907b8c2289dcaf98fd2"
+      "digest": "ad59da0903fe9d13eefc2a0dafad78fcca10c8eccb613cda6b3f49538f0944de"
     },
     {
       "from": "SECRETS_NODE",
@@ -264,7 +264,7 @@
       "from": "HARDWARE_NODE",
       "to": "CAPABILITY_NODE",
       "edge_type": "hardware_facts",
-      "digest": "7c6bddcddfe5a860481ca20ccb6c5f72261a2ee27fc9185caf24734cb95078c7"
+      "digest": "4294546d4ff09f9324ea8eeba54de9104387ef12ce9de38b0c1616aaa329f092"
     },
     {
       "from": "CAPABILITY_NODE",
@@ -276,14 +276,14 @@
       "from": "BUILD_NODE",
       "to": "RELEASE_NODE",
       "edge_type": "parent_build_digest",
-      "digest": "198b2430f17ca4cad575664bcb2bab9f496bd06ca2f880d7c34ad22e78f2112f"
+      "digest": "5738c425c6c61478d5f35d7e04147c3f3b5cb90d14219ea57945f8c0e7f89812"
     },
     {
       "from": "PROOF_NODE",
       "to": "RELEASE_NODE",
       "edge_type": "parent_proof_root",
-      "digest": "04abfccc4d243585c5970ca1c9d5779734c50cb751cae5d7b76b54a76775c332"
+      "digest": "c798eae29cc040182858ee908e142cdce238d11374851ffba1814dfc05ac32be"
     }
   ],
-  "graph_digest": "df7ad648e7f94189c35c6799491df0789008f3435cd4e1c3d0fa13747953060b"
+  "graph_digest": "bb3f77af5856c7f4741340876bff892577ef95b3f0e060c416072f8a14180c0e"
 }

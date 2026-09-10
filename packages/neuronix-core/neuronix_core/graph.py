@@ -58,11 +58,44 @@ class EvidenceGraph:
 
     def build_graph(
         self,
-        commit_sha: str = "60f8652ba75d8fd27d95f23a74bff7414b65f590",
-        run_id: str = "34306803041",
+        commit_sha: Optional[str] = None,
+        run_id: Optional[str] = None,
         hardware_profile: str = "generic_uefi_hardware"
     ) -> Dict[str, Any]:
         """Constructs the canonical 14-node Evidence Graph."""
+        if not commit_sha:
+            commit_sha = os.environ.get("GITHUB_SHA")
+        if not run_id:
+            run_id = os.environ.get("GITHUB_RUN_ID")
+
+        # Check assurance record if missing
+        if not commit_sha or not run_id:
+            rec_path = os.path.join(self.root_dir, "data/assurance_record.json") if self.root_dir else "data/assurance_record.json"
+            if os.path.exists(rec_path):
+                try:
+                    with open(rec_path, "r", encoding="utf-8") as f:
+                        rec_data = json.load(f)
+                        if not commit_sha:
+                            commit_sha = rec_data.get("last_verified_commit_sha")
+                        if not run_id:
+                            run_id = rec_data.get("last_verified_run_id")
+                except Exception:
+                    pass
+
+        if not commit_sha:
+            try:
+                import subprocess
+                p = subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.root_dir or None, capture_output=True, text=True, timeout=2)
+                if p.returncode == 0 and p.stdout.strip():
+                    commit_sha = p.stdout.strip()
+            except Exception:
+                pass
+
+        if not commit_sha:
+            commit_sha = "UNBOUND_LOCAL_COMMIT"
+        if not run_id:
+            run_id = "UNBOUND_LOCAL_RUN"
+
         state = self.state_engine.build_state(event="SYSTEM_GRAPH_COMPILATION")
         state_root = state.get("state_root", "0" * 64)
         leaf_hashes = state.get("leaf_hashes", {})

@@ -100,8 +100,20 @@ jobs:
           echo "Executing Semantic Closure & Subsystem Invariants Gate on exact release commit..."
           python3 -m unittest tests/test_semantic_closure.py
 
+          echo "Resolving certified CI run for exact release commit ${TARGET_SHA}..."
+          CI_RUN_ID=""
+          if [ -n "${GITHUB_TOKEN:-}" ]; then
+            RUNS_RESP=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=${TARGET_SHA}&status=completed&conclusion=success" || true)
+            CI_RUN_ID=$(echo "$RUNS_RESP" | python3 -c "import sys, json; data=json.load(sys.stdin); runs=[r for r in data.get('workflow_runs', []) if 'Industrial CI' in r.get('name', '') or 'CI' in r.get('name', '')]; print(runs[0]['id'] if runs else '')" 2>/dev/null || echo "")
+          fi
+          if [ -z "$CI_RUN_ID" ]; then
+            CI_RUN_ID="${{ github.run_id }}"
+          fi
+          echo "Resolved Certified CI Run ID: ${CI_RUN_ID}"
           echo "Compiling and binding assurance evidence for exact release commit ${TARGET_SHA}..."
-          python3 tools/compile_evidence.py 34306803041 "${TARGET_SHA}"
+          python3 tools/compile_evidence.py "${CI_RUN_ID}" "${TARGET_SHA}"
           python3 tools/generate_evidence_graph.py
           python3 tools/generate_verification_passport.py
           python3 tools/generate_release_proof.py

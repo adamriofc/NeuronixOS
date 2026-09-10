@@ -365,13 +365,16 @@ class HyperionExecutionEngine:
         tier_backend_mismatch = False
 
         if tier == IsolationTier.TIER_3_MICRO_VM.value:
-            if backend not in ("qemu_kvm_micro_vm", "kvm_qemu_v1") or mode not in ("real_isolated", "real_host"):
+            if backend not in ("qemu_kvm_micro_vm", "kvm_qemu_v1") or mode != "real_isolated":
                 tier_backend_mismatch = True
         elif tier == IsolationTier.TIER_2_EBPF_ENCLAVE.value:
-            if backend not in ("bwrap_ebpf_enclave", "bwrap_lsm_v1") or mode not in ("real_enclave", "real_host"):
+            if backend not in ("bwrap_ebpf_enclave", "bwrap_lsm_v1") or mode != "real_enclave":
                 tier_backend_mismatch = True
         elif tier == IsolationTier.TIER_1_RAM_GHOST.value:
-            if backend not in ("bubblewrap_ram_overlay", "direct_seccomp_v1") or mode not in ("real_ghost", "real_host"):
+            if backend not in ("bubblewrap_ram_overlay", "direct_seccomp_v1") or mode != "real_ghost":
+                tier_backend_mismatch = True
+        elif tier == IsolationTier.TIER_0_FAST_PATH.value:
+            if backend not in ("host_direct", "fast_path_v1") or mode != "real_host":
                 tier_backend_mismatch = True
 
         nonce_val = evidence.get("execution_nonce", "")
@@ -469,14 +472,17 @@ class HyperionExecutionEngine:
         backend = evidence.get("backend") or evidence.get("execution_backend", "")
         mode = evidence.get("runtime_mode", "")
         if tier == IsolationTier.TIER_3_MICRO_VM.value:
-            if backend not in ("qemu_kvm_micro_vm", "kvm_qemu_v1") or mode not in ("real_isolated", "real_host"):
+            if backend not in ("qemu_kvm_micro_vm", "kvm_qemu_v1") or mode != "real_isolated":
                 return False, f"Tier 3 requires real micro-VM execution, but runtime evidence shows backend '{backend}', mode '{mode}'"
         elif tier == IsolationTier.TIER_2_EBPF_ENCLAVE.value:
-            if backend not in ("bwrap_ebpf_enclave", "bwrap_lsm_v1") or mode not in ("real_enclave", "real_host"):
+            if backend not in ("bwrap_ebpf_enclave", "bwrap_lsm_v1") or mode != "real_enclave":
                 return False, f"Tier 2 requires eBPF enclave execution, but runtime evidence shows backend '{backend}', mode '{mode}'"
         elif tier == IsolationTier.TIER_1_RAM_GHOST.value:
-            if backend not in ("bubblewrap_ram_overlay", "direct_seccomp_v1") or mode not in ("real_ghost", "real_host"):
+            if backend not in ("bubblewrap_ram_overlay", "direct_seccomp_v1") or mode != "real_ghost":
                 return False, f"Tier 1 requires RAM overlay execution, but runtime evidence shows backend '{backend}', mode '{mode}'"
+        elif tier == IsolationTier.TIER_0_FAST_PATH.value:
+            if backend not in ("host_direct", "fast_path_v1") or mode != "real_host":
+                return False, f"Tier 0 requires host direct execution, but runtime evidence shows backend '{backend}', mode '{mode}'"
 
         # 5. Check exit code
         if exit_code != 0:

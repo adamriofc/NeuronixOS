@@ -147,15 +147,19 @@ impl HyperionBroker {
 
                 let mut tier_mismatch = false;
                 if isolation_tier == "TIER_3_MICRO_VM" {
-                    if (backend != "qemu_kvm_micro_vm" && backend != "kvm_qemu_v1") || (mode != "real_isolated" && mode != "real_host") {
+                    if (backend != "qemu_kvm_micro_vm" && backend != "kvm_qemu_v1") || mode != "real_isolated" {
                         tier_mismatch = true;
                     }
                 } else if isolation_tier == "TIER_2_EBPF_ENCLAVE" {
-                    if (backend != "bwrap_ebpf_enclave" && backend != "bwrap_lsm_v1") || (mode != "real_enclave" && mode != "real_host") {
+                    if (backend != "bwrap_ebpf_enclave" && backend != "bwrap_lsm_v1") || mode != "real_enclave" {
                         tier_mismatch = true;
                     }
                 } else if isolation_tier == "TIER_1_RAM_GHOST" {
-                    if (backend != "bubblewrap_ram_overlay" && backend != "direct_seccomp_v1") || (mode != "real_ghost" && mode != "real_host") {
+                    if (backend != "bubblewrap_ram_overlay" && backend != "direct_seccomp_v1") || mode != "real_ghost" {
+                        tier_mismatch = true;
+                    }
+                } else if isolation_tier == "TIER_0_FAST_PATH" {
+                    if (backend != "host_direct" && backend != "fast_path_v1") || mode != "real_host" {
                         tier_mismatch = true;
                     }
                 }

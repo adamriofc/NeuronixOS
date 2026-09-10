@@ -93,35 +93,41 @@ def find_age_binaries() -> Tuple[str, str]:
 
 def is_volatile_ram_filesystem(path: str, mounts_file: str = "/proc/mounts") -> bool:
     """
-    Verifies that the target path resides on a volatile in-memory filesystem (tmpfs or ramfs).
+    Verifies that the target path strictly resides on a verified volatile in-memory filesystem (tmpfs or ramfs).
+    Inspects actual kernel mount table (/proc/mounts). Rejects unverified paths or persistent storage backings.
     Guarantees zero persistent SSD/disk wear and zero plaintext leakage to non-volatile storage.
     """
     abs_path = os.path.abspath(path)
 
-    # Standard Linux volatile RAM paths
-    if abs_path.startswith("/run/") or abs_path.startswith("/dev/shm/"):
-        return True
+    if not os.path.exists(mounts_file):
+        return False
 
-    if os.path.exists(mounts_file):
-        try:
-            best_match_len = -1
-            best_fs_type = ""
-            with open(mounts_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    parts = line.split()
-                    if len(parts) >= 3:
-                        mp = parts[1]
-                        fs_type = parts[2]
-                        if abs_path == mp or abs_path.startswith(mp.rstrip("/") + "/"):
-                            if len(mp) > best_match_len:
-                                best_match_len = len(mp)
-                                best_fs_type = fs_type
-            if best_fs_type in ("tmpfs", "ramfs"):
-                return True
-        except Exception:
-            pass
+    try:
+        best_match_len = -1
+        best_fs_type = ""
+        with open(mounts_file, "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) >= 3:
+                    mp = parts[1]
+                    fs_type = parts[2]
+                    # Check if abs_path matches mountpoint or is child of mountpoint
+                    if abs_path == mp or abs_path.startswith(mp.rstrip("/") + "/"):
+                        if len(mp) > best_match_len:
+                            best_match_len = len(mp)
+                            best_fs_type = fs_type
+        return best_fs_type in ("tmpfs", "ramfs")
+    except Exception:
+        return False
 
-    return False
+
+def get_verified_volatile_dir(mounts_file: str = "/proc/mounts") -> Optional[str]:
+    """Discovers a verified in-memory volatile directory for ephemeral key materialization."""
+    candidates = ["/dev/shm", "/run/user", "/run", "/tmp"]
+    for cand in candidates:
+        if os.path.exists(cand) and is_volatile_ram_filesystem(cand, mounts_file=mounts_file):
+            return cand
+    return None
 
 
 class SecretFabricEngine:
@@ -132,7 +138,7 @@ class SecretFabricEngine:
     Uses authentic X25519 Age identities and recipients (Bech32 age1...).
     """
 
-    def __init__(self, ramfs_root: str = DEFAULT_SECRETS_RAM_PATH, enforce_ramfs: bool = False):
+    def __init__(self, ramfs_root: str = DEFAULT_SECRETS_RAM_PATH, enforce_ramfs: bool = True):
         self.ramfs_root = ramfs_root
         self.enforce_ramfs = enforce_ramfs
         self.registry: Dict[str, Dict[str, Any]] = {}
@@ -301,8 +307,13 @@ class SecretFabricEngine:
 
         # Execute decryption via age CLI
         age_bin, _ = cls.get_binaries()
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as kf:
+        volatile_dir = get_verified_volatile_dir()
+        if not volatile_dir:
+            return False, "VOLATILE_STORAGE_REQUIRED: Cannot decrypt without verified volatile in-memory storage (tmpfs/ramfs required)", None
+
+        with tempfile.NamedTemporaryFile("w", dir=volatile_dir, encoding="utf-8", delete=False) as kf:
             kf.write(identity_key.strip() + "\n")
+            kf.flush()
             key_file_path = kf.name
 
         try:
@@ -323,6 +334,8 @@ class SecretFabricEngine:
                 try:
                     with open(key_file_path, "wb") as f:
                         f.write(b"\x00" * 4096)
+                        f.flush()
+                        os.fsync(f.fileno())
                     os.unlink(key_file_path)
                 except Exception:
                     pass

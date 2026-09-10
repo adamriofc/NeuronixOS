@@ -56,14 +56,25 @@ def generate_passport() -> Dict[str, Any]:
     jcs_digest = file_sha256(os.path.join(DIST_DIR, "jcs_conformance_evidence.json"))
     assurance_digest = file_sha256(evidence_path)
 
+    passport_commit = evidence_data.get("last_verified_commit_sha") or os.environ.get("GITHUB_SHA")
+    if not passport_commit:
+        try:
+            import subprocess
+            p = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, capture_output=True, text=True, check=True)
+            passport_commit = p.stdout.strip()
+        except Exception:
+            passport_commit = "UNBOUND_LOCAL_COMMIT"
+
+    passport_run_id = evidence_data.get("last_verified_run_id") or os.environ.get("GITHUB_RUN_ID") or "UNBOUND_LOCAL_RUN"
+
     # 4. Generate or link Evidence Graph
     graph_path = os.path.join(DIST_DIR, "evidence-graph.json")
     if not os.path.exists(graph_path):
         from neuronix_core.graph import EvidenceGraph
         graph_engine = EvidenceGraph(root_dir=PROJECT_ROOT)
         graph_obj = graph_engine.build_graph(
-            commit_sha=evidence_data.get("last_verified_commit_sha", "60f8652ba75d8fd27d95f23a74bff7414b65f590"),
-            run_id=evidence_data.get("last_verified_run_id", "34306803041")
+            commit_sha=passport_commit,
+            run_id=passport_run_id
         )
         with open(graph_path, "w", encoding="utf-8") as gf:
             json.dump(graph_obj, gf, indent=2, ensure_ascii=False)
@@ -78,7 +89,7 @@ def generate_passport() -> Dict[str, Any]:
             "distribution": "NEURONIX OS",
             "release_version": "1.0.4",
             "release_tag": "v1.0.4",
-            "commit_sha": evidence_data.get("last_verified_commit_sha", "60f8652ba75d8fd27d95f23a74bff7414b65f590"),
+            "commit_sha": passport_commit,
             "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
             "proof_engine_version": "1.1.0"
         },

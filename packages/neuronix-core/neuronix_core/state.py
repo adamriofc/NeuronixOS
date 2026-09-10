@@ -329,9 +329,17 @@ class ProvableStateEngine:
             except Exception:
                 pass
 
-        # Load authoritative assurance record
-        last_run_id = "34306803041"
-        last_commit_sha = "60f8652ba75d8fd27d95f23a74bff7414b65f590"
+        # Resolve authoritative assurance record
+        last_run_id = os.environ.get("GITHUB_RUN_ID", "")
+        last_commit_sha = os.environ.get("GITHUB_SHA", "")
+        if not last_commit_sha:
+            try:
+                import subprocess
+                p = subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.root_dir or None, capture_output=True, text=True, timeout=2)
+                if p.returncode == 0 and p.stdout.strip():
+                    last_commit_sha = p.stdout.strip()
+            except Exception:
+                pass
         verified_count = total_assertions
         failure_count = 0
         timestamp = "2026-09-09T01:14:10Z"
@@ -351,6 +359,11 @@ class ProvableStateEngine:
                     proof_classes = rec_data.get("proof_classes_covered", proof_classes)
             except Exception:
                 pass
+
+        if not last_run_id:
+            last_run_id = "UNBOUND_LOCAL_RUN"
+        if not last_commit_sha:
+            last_commit_sha = "UNBOUND_LOCAL_COMMIT"
 
         # Derive pass rate percentage directly from actual observed runs
         total_executed = verified_count + failure_count

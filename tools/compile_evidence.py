@@ -34,7 +34,32 @@ def get_default_commit_sha() -> str:
             return sha
     except Exception:
         pass
-    return "60f8652ba75d8fd27d95f23a74bff7414b65f590"
+    rec_path = os.path.join(DATA_DIR, "assurance_record.json")
+    if os.path.exists(rec_path):
+        try:
+            with open(rec_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                sha = data.get("last_verified_commit_sha")
+                if sha:
+                    return sha
+        except Exception:
+            pass
+    return "UNBOUND_LOCAL_COMMIT"
+
+def get_default_run_id() -> str:
+    if os.environ.get("GITHUB_RUN_ID"):
+        return os.environ["GITHUB_RUN_ID"]
+    rec_path = os.path.join(DATA_DIR, "assurance_record.json")
+    if os.path.exists(rec_path):
+        try:
+            with open(rec_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                rid = data.get("last_verified_run_id")
+                if rid:
+                    return str(rid)
+        except Exception:
+            pass
+    return "UNBOUND_LOCAL_RUN"
 
 def canonical_hash(data: Any) -> str:
     try:
@@ -47,11 +72,13 @@ def canonical_hash(data: Any) -> str:
         return hashlib.sha256(canonical_json_bytes(data)).hexdigest()
 
 def compile_evidence(
-    run_id: str = "34306803041",
+    run_id: Optional[str] = None,
     commit_sha: Optional[str] = None,
     failures_count: int = 0,
     observed: bool = True
 ) -> Dict[str, Any]:
+    if run_id is None:
+        run_id = get_default_run_id()
     if commit_sha is None:
         commit_sha = get_default_commit_sha()
     if not os.path.exists(MANIFEST_PATH):
@@ -141,7 +168,7 @@ def compile_evidence(
     return evidence_body
 
 if __name__ == "__main__":
-    run_id_arg = sys.argv[1] if len(sys.argv) > 1 else "34306803041"
+    run_id_arg = sys.argv[1] if len(sys.argv) > 1 else get_default_run_id()
     commit_arg = sys.argv[2] if len(sys.argv) > 2 else get_default_commit_sha()
     result = compile_evidence(run_id=run_id_arg, commit_sha=commit_arg)
     print(f"[SUCCESS] Compiled Evidence Snapshot: {result['metrics']['verified_assertions']}/{result['metrics']['total_assertions']} verified")
