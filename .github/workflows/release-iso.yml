@@ -38,6 +38,8 @@ jobs:
       - name: Magic Nix Cache (Continuous Binary Caching)
         uses: DeterminateSystems/magic-nix-cache-action@v8
         continue-on-error: true
+        with:
+          use-flakehub: false
 
       - name: Enforce Exact Commit SHA Lineage & Release Gate Assurance
         env:
@@ -64,11 +66,26 @@ jobs:
 
           if [ -n "${GITHUB_TOKEN:-}" ] && [ "${ALLOW_UNVERIFIED_CI:-0}" != "1" ]; then
             echo "Querying GitHub CI Commit Status for ${TARGET_SHA}..."
-            STATUS_RESP=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ github.repository }}/commits/${TARGET_SHA}/status" || true)
-            STATUS_STATE=$(echo "$STATUS_RESP" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('state', 'unknown'))" 2>/dev/null || echo "unknown")
-            echo "GitHub Commit Status for ${TARGET_SHA}: ${STATUS_STATE}"
+            MAX_WAIT=600
+            INTERVAL=15
+            ELAPSED=0
+            STATUS_STATE="unknown"
+            while [ $ELAPSED -lt $MAX_WAIT ]; do
+              STATUS_RESP=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/${{ github.repository }}/commits/${TARGET_SHA}/status" || true)
+              STATUS_STATE=$(echo "$STATUS_RESP" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('state', 'unknown'))" 2>/dev/null || echo "unknown")
+              echo "[${ELAPSED}s] GitHub Commit Status for ${TARGET_SHA}: ${STATUS_STATE}"
+              if [ "$STATUS_STATE" = "success" ]; then
+                break
+              elif [ "$STATUS_STATE" = "failure" ] || [ "$STATUS_STATE" = "error" ]; then
+                echo "::error::Release blocked: CI failed on commit ${TARGET_SHA} with state '${STATUS_STATE}'!"
+                exit 1
+              fi
+              echo "CI is running (${STATUS_STATE}). Waiting ${INTERVAL}s for verification gate completion..."
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+            done
             if [ "$STATUS_STATE" != "success" ]; then
               echo "::error::Release blocked: Strict release governance requires green CI ('success') on exact commit ${TARGET_SHA}, but got '${STATUS_STATE}'!"
               exit 1

@@ -7,12 +7,14 @@ Copyright (c) 2026 NEURONIX Contributors
 Licensed under the Apache License, Version 2.0
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import json
 import re
 import hashlib
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Set, Optional, Tuple
 
 try:
     from .state import canonical_json_bytes, sha256_canonical
