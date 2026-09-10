@@ -60,24 +60,28 @@ def canonical_json_bytes(obj: Any) -> bytes:
         if not digits:
             return "0"
 
+        trailing_zeroes = len(digits) - len(digits.rstrip("0"))
+        if trailing_zeroes > 0:
+            digits = digits[:len(digits) - trailing_zeroes]
+            exp += trailing_zeroes
+
         k = len(digits)
         n = exp + k
 
-        if 0 < n <= 21:
-            if k <= n:
-                return sign + digits + "0" * (n - k)
-            else:
-                return sign + digits[:n] + "." + digits[n:]
+        if k <= n <= 21:
+            res = digits + ("0" * (n - k))
+        elif 0 < n <= 21:
+            res = digits[:n] + "." + digits[n:]
         elif -6 < n <= 0:
-            return sign + "0." + "0" * (-n) + digits
+            res = "0." + ("0" * (-n)) + digits
+        elif k == 1:
+            sign_char = "+" if (n - 1) > 0 else "-"
+            res = digits + "e" + sign_char + str(abs(n - 1))
         else:
-            if k == 1:
-                mant = digits
-            else:
-                mant = digits[0] + "." + digits[1:]
-            exp_val = n - 1
-            exp_sign = "+" if exp_val >= 0 else "-"
-            return f"{sign}{mant}e{exp_sign}{abs(exp_val)}"
+            sign_char = "+" if (n - 1) > 0 else "-"
+            res = digits[0] + "." + digits[1:] + "e" + sign_char + str(abs(n - 1))
+
+        return sign + res
 
     if obj is None:
         return b"null"
@@ -93,9 +97,11 @@ def canonical_json_bytes(obj: Any) -> bytes:
         items = [canonical_json_bytes(x) for x in obj]
         return b"[" + b",".join(items) + b"]"
     elif isinstance(obj, dict):
-        sorted_keys = sorted(obj.keys(), key=lambda k: [ord(c) for c in k])
+        sorted_keys = sorted(obj.keys(), key=lambda k: str(k).encode('utf-16-be'))
         entries = []
         for k in sorted_keys:
+            if not isinstance(k, str):
+                raise TypeError(f"RFC 8785 object keys must be strings, got {type(k)}")
             v = obj[k]
             entries.append(_encode_str(k).encode('utf-8') + b":" + canonical_json_bytes(v))
         return b"{" + b",".join(entries) + b"}"
@@ -183,7 +189,7 @@ def verify_evidence_graph(graph_file: str, expected_digest: Optional[str] = None
                 return False, f"Node 'BUILD_NODE' digest mismatch: claimed {claimed_digest} != expected {expected}", {}
         elif node_id == "TEST_NODE":
             manifest = node_data.get("test_manifest_hash", "")
-            total = node_data.get("total_assertions", 1264)
+            total = node_data.get("total_assertions", 1299)
             failed = node_data.get("failed_assertions", 0)
             rate = node_data.get("pass_rate_percentage", 100)
             run_id = node_data.get("ci_run_id", "")
@@ -331,8 +337,8 @@ def verify_passport(passport_file: str, check_graph: bool = False) -> Tuple[bool
             return False, f"Evidence graph verification failed: {g_msg}", {}
         graph_summary = g_sum
 
-    # Independently synthesized trust verdict
-    independent_verdict = "VERIFIED_TRUSTED_100_PERCENT_OFFLINE_FALSIFIABLE"
+    # Independently synthesized trust verdict (strictly calibrated to offline structural consistency)
+    independent_verdict = "VERIFIED_OFFLINE_STRUCTURAL_CONSISTENCY"
 
     summary = {
         "status": "PASSPORT_VALID",
@@ -369,10 +375,10 @@ def verify_release_proof(proof_file: str) -> Tuple[bool, str, Dict[str, Any]]:
 
     body = {k: v for k, v in data.items() if k != "release_proof_digest"}
     try:
-        serialized = json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
-        recomputed_digest = hashlib.sha256(serialized.encode('utf-8')).hexdigest()
+        canonical_bytes = canonical_json_bytes(body)
+        recomputed_digest = hashlib.sha256(canonical_bytes).hexdigest()
     except Exception as e:
-        return False, f"Serialization failure: {e}", {}
+        return False, f"Canonical serialization failure: {e}", {}
 
     if claimed_digest != recomputed_digest:
         return False, f"Release proof digest mismatch: claimed {claimed_digest} != recomputed {recomputed_digest}", {}

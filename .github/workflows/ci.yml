@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (1264 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (1299 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -29,7 +29,7 @@ jobs:
 
       - name: Setup Hypervisor Tools & Local Environment
         run: |
-          sudo apt-get update -qy && sudo apt-get install -qy qemu-utils qemu-system-x86 bubblewrap
+          sudo apt-get update -qy && sudo apt-get install -qy qemu-utils qemu-system-x86 bubblewrap age
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
           mkdir -p ~/.local/bin
           ln -sf "$PWD/bin/neuronix" ~/.local/bin/neuronix
@@ -37,6 +37,11 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           cargo build --release --manifest-path packages/neuronix-daemon/Cargo.toml
           ln -sf "$PWD/packages/neuronix-daemon/target/release/neuronix-daemon" ~/.local/bin/neuronix-daemon
+          if ! command -v age >/dev/null 2>&1; then
+            cargo install rage --locked
+            ln -sf "$HOME/.cargo/bin/rage" ~/.local/bin/age
+            ln -sf "$HOME/.cargo/bin/rage-keygen" ~/.local/bin/age-keygen
+          fi
 
       - name: Flake Syntax & Derivation Proof
         run: |
@@ -138,7 +143,7 @@ jobs:
         run: |
           bash tests/test_reproducible_iso.sh
 
-      - name: Verify Single Source of Truth Test Manifest (1264 Assertions)
+      - name: Verify Single Source of Truth Test Manifest (1299 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json
@@ -154,6 +159,10 @@ jobs:
       - name: Execute Storage Planner & 7-Factor Safety Firewall Gate
         run: |
           python3 -m unittest tests/test_storage_planner.py
+
+      - name: Execute Semantic Closure & Subsystem Invariants Gate (35 Tests)
+        run: |
+          python3 -m unittest tests/test_semantic_closure.py
 
       - name: Execute Negative Reproducibility & Mutation Sensitivity Gate (6 Mutants)
         run: |
@@ -179,6 +188,6 @@ jobs:
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }} \
-            -d "{\"state\":\"success\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"description\":\"1264/1264 Assertions Verified 100% Green\",\"context\":\"continuous-integration/github-actions\"}"
+            -d "{\"state\":\"success\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"description\":\"1299/1299 Assertions Verified 100% Green\",\"context\":\"continuous-integration/github-actions\"}"
 
 

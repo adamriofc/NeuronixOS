@@ -1,8 +1,8 @@
 {
-  "corpus_version": "1.0.0",
+  "corpus_version": "1.1.0",
   "standard": "RFC 8785 JSON Canonicalization Scheme (JCS)",
-  "total_vectors": 14,
-  "passed_vectors": 14,
+  "total_vectors": 20,
+  "passed_vectors": 20,
   "failed_vectors": 0,
   "status": "VERIFIED_100_PERCENT",
   "results": [
@@ -87,6 +87,42 @@
     {
       "id": "escaped_controls",
       "category": "string_escaping",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "utf16_surrogate_order_emoji_vs_bmp",
+      "category": "utf16_surrogate_ordering",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "utf16_surrogate_order_astral_vs_ffff",
+      "category": "utf16_surrogate_ordering",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "supplementary_unicode_deseret_vs_ethiopic",
+      "category": "supplementary_unicode",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "precision_max_safe_integer",
+      "category": "precision_boundaries",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "subnormal_min_normalized",
+      "category": "extrema",
+      "status": "PASS",
+      "byte_match": true
+    },
+    {
+      "id": "object_ordering_differential",
+      "category": "object_ordering_differential",
       "status": "PASS",
       "byte_match": true
     }

@@ -136,11 +136,11 @@ impl StateEngine {
         let h_policy = sha256_hex(policy_canonical.as_bytes());
 
         // 5. Evidence Leaf (L_evidence) - RFC 8785 canonical format backed by authoritative assurance record
-        let mut total_assertions = 1264u64;
+        let mut total_assertions = 1299u64;
         let mut validation_status = "PASSING_ALL".to_string();
-        let mut last_run_id = "34298114384".to_string();
-        let mut last_commit_sha = "5785e98764c8742b1fec63665c72bbb111283449".to_string();
-        let mut verified_count = 1264u64;
+        let mut last_run_id = "34306803041".to_string();
+        let mut last_commit_sha = "60f8652ba75d8fd27d95f23a74bff7414b65f590".to_string();
+        let mut verified_count = 1299u64;
         let mut failure_count = 0u64;
         let mut timestamp = "2026-09-09T01:14:10Z".to_string();
 

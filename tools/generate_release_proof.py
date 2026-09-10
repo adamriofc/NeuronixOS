@@ -45,7 +45,7 @@ def main():
         with open(passport_path, "r", encoding="utf-8") as f:
             passport_data = json.load(f)
 
-    commit_sha = passport_data.get("release_metadata", {}).get("commit_sha", "29305d49694521785cae875071d81cfa11b60761")
+    commit_sha = passport_data.get("release_metadata", {}).get("commit_sha", "60f8652ba75d8fd27d95f23a74bff7414b65f590")
     state_root = passport_data.get("cryptographic_commitments", {}).get("state_root", "0"*64)
 
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -72,9 +72,17 @@ def main():
         "timestamp": now_iso
     }
 
-    # Compute self-authenticating release proof digest
-    serialized = json.dumps(proof_bundle, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
-    proof_digest = hashlib.sha256(serialized.encode('utf-8')).hexdigest()
+    # Compute self-authenticating release proof digest using RFC 8785 canonical JSON
+    body = {k: v for k, v in proof_bundle.items() if k != "release_proof_digest"}
+    try:
+        sys.path.insert(0, os.path.join(PROJECT_ROOT, "packages/neuronix-core"))
+        from neuronix_core.state import canonical_json_bytes
+        canonical_bytes = canonical_json_bytes(body)
+    except Exception:
+        sys.path.insert(0, os.path.join(PROJECT_ROOT, "tools"))
+        from verify_passport import canonical_json_bytes
+        canonical_bytes = canonical_json_bytes(body)
+    proof_digest = hashlib.sha256(canonical_bytes).hexdigest()
     proof_bundle["release_proof_digest"] = proof_digest
 
     with open(OUTPUT_PROOF, "w", encoding="utf-8") as f:

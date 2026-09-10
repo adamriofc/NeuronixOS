@@ -186,6 +186,14 @@ STANDALONE_GATES = [
         "assertions": 4,
         "proof_class": "L4_BENCHMARK",
         "release_blocker": True
+    },
+    {
+        "id": "gate_semantic_closure",
+        "file": "tests/test_semantic_closure.py",
+        "description": "Deterministic Semantic Closure across Subsystems, Secrets, Storage, Boot, Topology & Verifier",
+        "assertions": 35,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": True
     }
 ]
 

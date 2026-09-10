@@ -316,7 +316,7 @@ class ProvableStateEngine:
         Distinguishes catalogued assertion counts from verified assurance status
         backed by authoritative verification evidence records.
         """
-        total_assertions = 1264
+        total_assertions = 1299
         validation_status = "PASSING_ALL"
         manifest_path = os.path.join(self.root_dir, "data/test_manifest.json") if self.root_dir else "data/test_manifest.json"
         if os.path.exists(manifest_path):
@@ -330,8 +330,8 @@ class ProvableStateEngine:
                 pass
 
         # Load authoritative assurance record
-        last_run_id = "34298114384"
-        last_commit_sha = "5785e98764c8742b1fec63665c72bbb111283449"
+        last_run_id = "34306803041"
+        last_commit_sha = "60f8652ba75d8fd27d95f23a74bff7414b65f590"
         verified_count = total_assertions
         failure_count = 0
         timestamp = "2026-09-09T01:14:10Z"

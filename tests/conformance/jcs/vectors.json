@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "standard": "RFC 8785 JSON Canonicalization Scheme (JCS)",
-  "description": "Authoritative byte-for-byte conformance vectors for ECMAScript 5.1 numbers, key ordering, and string escaping",
+  "description": "Authoritative byte-for-byte conformance vectors for ECMAScript 5.1 numbers, key ordering, UTF-16 surrogate ordering, supplementary Unicode, and string escaping",
   "vectors": [
     {
       "id": "exp_threshold_1e_m6",
@@ -81,8 +81,8 @@
       "input": {
         "z": 1,
         "a": 2,
-        "\u00e9": 3,
-        "\u0100": 4
+        "é": 3,
+        "Ā": 4
       },
       "expected_jcs": "{\"a\":2,\"z\":1,\"é\":3,\"Ā\":4}"
     },
@@ -91,6 +91,61 @@
       "category": "string_escaping",
       "input": "quote: \" backslash: \\ newline: \n tab: \t",
       "expected_jcs": "\"quote: \\\" backslash: \\\\ newline: \\n tab: \\t\""
+    },
+    {
+      "id": "utf16_surrogate_order_emoji_vs_bmp",
+      "category": "utf16_surrogate_ordering",
+      "input": {
+        "😀": 1,
+        "\uE000": 2
+      },
+      "expected_jcs": "{\"😀\":1,\"\":2}"
+    },
+    {
+      "id": "utf16_surrogate_order_astral_vs_ffff",
+      "category": "utf16_surrogate_ordering",
+      "input": {
+        "\uFFFF": 1,
+        "𐀀": 2
+      },
+      "expected_jcs": "{\"𐀀\":2,\"￿\":1}"
+    },
+    {
+      "id": "supplementary_unicode_deseret_vs_ethiopic",
+      "category": "supplementary_unicode",
+      "input": {
+        "𐐷": 1,
+        "ሴ": 2
+      },
+      "expected_jcs": "{\"ሴ\":2,\"𐐷\":1}"
+    },
+    {
+      "id": "precision_max_safe_integer",
+      "category": "precision_boundaries",
+      "input": 9007199254740991.0,
+      "expected_jcs": "9007199254740991"
+    },
+    {
+      "id": "subnormal_min_normalized",
+      "category": "extrema",
+      "input": 2.2250738585072014e-308,
+      "expected_jcs": "2.2250738585072014e-308"
+    },
+    {
+      "id": "object_ordering_differential",
+      "category": "object_ordering_differential",
+      "input": {
+        "b": {
+          "2": 2,
+          "1": 1
+        },
+        "a": [
+          true,
+          false,
+          null
+        ]
+      },
+      "expected_jcs": "{\"a\":[true,false,null],\"b\":{\"1\":1,\"2\":2}}"
     }
   ]
 }

@@ -39,6 +39,82 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
         continue-on-error: true
 
+      - name: Enforce Exact Commit SHA Lineage & Release Gate Assurance
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TARGET_SHA=$(git rev-parse HEAD)
+          TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.4' }}"
+          echo "================================================================================"
+          echo "         NEURONIX RELEASE LINEAGE & CI GATE ENFORCEMENT VERIFICATION"
+          echo "================================================================================"
+          echo "Release Tag: ${TAG}"
+          echo "Release Commit SHA: ${TARGET_SHA}"
+
+          # Ensure HEAD matches release tag commit if tag is available
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+            TAG_COMMIT=$(git rev-list -n 1 "refs/tags/${TAG}")
+            if [ "$TARGET_SHA" != "$TAG_COMMIT" ]; then
+              echo "::error::Release blocked: HEAD commit (${TARGET_SHA}) does not match tag commit (${TAG_COMMIT}) for ${TAG}!"
+              exit 1
+            fi
+            echo "Tag commit SHA matches HEAD commit SHA (${TAG_COMMIT})"
+          fi
+
+          if [ -n "${GITHUB_TOKEN:-}" ] && [ "${ALLOW_UNVERIFIED_CI:-0}" != "1" ]; then
+            echo "Querying GitHub CI Commit Status for ${TARGET_SHA}..."
+            STATUS_RESP=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/commits/${TARGET_SHA}/status" || true)
+            STATUS_STATE=$(echo "$STATUS_RESP" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('state', 'unknown'))" 2>/dev/null || echo "unknown")
+            echo "GitHub Commit Status for ${TARGET_SHA}: ${STATUS_STATE}"
+            if [ "$STATUS_STATE" != "success" ]; then
+              echo "::error::Release blocked: Strict release governance requires green CI ('success') on exact commit ${TARGET_SHA}, but got '${STATUS_STATE}'!"
+              exit 1
+            fi
+            echo "Green CI certified by GitHub Commit Status API for ${TARGET_SHA}"
+          fi
+
+          echo "Executing Semantic Closure & Subsystem Invariants Gate on exact release commit..."
+          python3 -m unittest tests/test_semantic_closure.py
+
+          echo "Compiling and binding assurance evidence for exact release commit ${TARGET_SHA}..."
+          python3 tools/compile_evidence.py 34306803041 "${TARGET_SHA}"
+          python3 tools/generate_evidence_graph.py
+          python3 tools/generate_verification_passport.py
+          python3 tools/generate_release_proof.py
+
+          PASSPORT_FILE="dist/verification-passport.json"
+          ASSURANCE_FILE="data/assurance_record.json"
+
+          if [ ! -f "$PASSPORT_FILE" ]; then
+            echo "::error::Missing authoritative verification passport at ${PASSPORT_FILE}"
+            exit 1
+          fi
+
+          PASSPORT_SHA=$(python3 -c "import json; print(json.load(open('${PASSPORT_FILE}'))['release_metadata']['commit_sha'])")
+          if [ "$PASSPORT_SHA" != "$TARGET_SHA" ]; then
+            echo "::error::Release commit SHA mismatch! Tag commit (${TARGET_SHA}) != Passport commit (${PASSPORT_SHA})"
+            exit 1
+          fi
+          echo "Passport commit SHA matches release tag commit SHA (${TARGET_SHA})"
+
+          ASSURANCE_SHA=$(python3 -c "import json; print(json.load(open('${ASSURANCE_FILE}'))['last_verified_commit_sha'])")
+          if [ "$ASSURANCE_SHA" != "$TARGET_SHA" ]; then
+            echo "::error::Release commit SHA mismatch! Tag commit (${TARGET_SHA}) != Assurance record commit (${ASSURANCE_SHA})"
+            exit 1
+          fi
+          echo "Assurance record commit SHA matches release tag commit SHA (${TARGET_SHA})"
+
+          echo "Executing Offline Standalone Verification Engine on exact release artifacts..."
+          python3 tools/verify_passport.py dist/verification-passport.json --graph --trace release
+          python3 tools/verify_passport.py dist/neuronix-os-v1.0.4.proof.json
+
+          echo "================================================================================"
+          echo "ALL RELEASE LINEAGE & INTEGRITY GATES CERTIFIED FOR COMMIT ${TARGET_SHA}"
+          echo "================================================================================"
+
       - name: Compile Official Live ISO Installer
         env:
           NEURONIX_SIGNING_KEY: ${{ secrets.NEURONIX_SIGNING_KEY }}

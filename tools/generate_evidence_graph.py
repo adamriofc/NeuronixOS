@@ -21,8 +21,8 @@ def main():
     out_path = os.path.join(dist_dir, "evidence-graph.json")
 
     # Read latest commit sha and run id from snapshot if available
-    commit_sha = "29305d49694521785cae875071d81cfa11b60761"
-    run_id = "34303953675"
+    commit_sha = "60f8652ba75d8fd27d95f23a74bff7414b65f590"
+    run_id = "34306803041"
 
     snapshot_path = os.path.join(PROJECT_ROOT, "data/assurance_evidence_snapshot.json")
     if os.path.exists(snapshot_path):

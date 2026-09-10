@@ -1,6 +1,6 @@
 """
 NEURONIX Capability-Bound Secret Fabric
-Manages age-encrypted secrets with ephemeral RAM materialization (/run/neuronix/secrets),
+Manages true Age protocol encrypted secrets with ephemeral RAM materialization (/run/neuronix/secrets),
 strict AI visibility masking (SEC-014), and capability-bound access control (SEC-013).
 
 Copyright (c) 2026 NEURONIX Contributors
@@ -10,8 +10,10 @@ Licensed under the Apache License, Version 2.0
 import os
 import sys
 import json
+import shutil
 import hashlib
-import hmac
+import subprocess
+import tempfile
 import uuid
 from typing import Dict, Any, List, Optional, Tuple
 
@@ -27,6 +29,66 @@ except (ImportError, ValueError):
 
 
 DEFAULT_SECRETS_RAM_PATH = "/run/neuronix/secrets"
+
+# In-memory cache for derived public keys to avoid repeated subprocess invocations
+_RECIPIENT_CACHE: Dict[str, str] = {}
+
+
+def find_age_binaries() -> Tuple[str, str]:
+    """
+    Discovers the official Age encryption CLI and key-generation binaries.
+    Searches system PATH, local bin directories, cargo bin, and Nix profiles.
+    Supports both official 'age'/'age-keygen' and Rust implementation 'rage'/'rage-keygen'.
+    """
+    search_dirs = [
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "bin")),
+        os.path.expanduser("~/.cargo/bin"),
+        os.path.expanduser("~/.local/bin"),
+        "/run/current-system/sw/bin",
+        "/usr/local/bin",
+        "/usr/bin"
+    ]
+
+    age_bin = shutil.which("age")
+    if not age_bin:
+        for d in search_dirs:
+            candidate = os.path.join(d, "age")
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                age_bin = candidate
+                break
+
+    if not age_bin:
+        age_bin = shutil.which("rage")
+        if not age_bin:
+            for d in search_dirs:
+                candidate = os.path.join(d, "rage")
+                if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                    age_bin = candidate
+                    break
+
+    keygen_bin = shutil.which("age-keygen")
+    if not keygen_bin:
+        for d in search_dirs:
+            candidate = os.path.join(d, "age-keygen")
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                keygen_bin = candidate
+                break
+
+    if not keygen_bin:
+        keygen_bin = shutil.which("rage-keygen")
+        if not keygen_bin:
+            for d in search_dirs:
+                candidate = os.path.join(d, "rage-keygen")
+                if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                    keygen_bin = candidate
+                    break
+
+    if not age_bin:
+        raise RuntimeError("Missing age executable. Please install 'age' or 'rage' in system PATH or ~/.cargo/bin.")
+    if not keygen_bin:
+        raise RuntimeError("Missing age-keygen executable. Please install 'age-keygen' or 'rage-keygen' in system PATH or ~/.cargo/bin.")
+
+    return age_bin, keygen_bin
 
 
 def is_volatile_ram_filesystem(path: str, mounts_file: str = "/proc/mounts") -> bool:
@@ -65,8 +127,9 @@ def is_volatile_ram_filesystem(path: str, mounts_file: str = "/proc/mounts") -> 
 class SecretFabricEngine:
     """
     Capability-Bound Secret Fabric (MES-NRX-002).
-    Enforces authenticated Age decryption into volatile tmpfs RAM,
+    Enforces authentic Age protocol decryption into volatile tmpfs RAM,
     zero-disk persistence, atomic materialization, and AI metadata-only masking (SEC-013, SEC-014).
+    Uses authentic X25519 Age identities and recipients (Bech32 age1...).
     """
 
     def __init__(self, ramfs_root: str = DEFAULT_SECRETS_RAM_PATH, enforce_ramfs: bool = False):
@@ -74,13 +137,93 @@ class SecretFabricEngine:
         self.enforce_ramfs = enforce_ramfs
         self.registry: Dict[str, Dict[str, Any]] = {}
 
-    @staticmethod
-    def derive_public_key_from_identity(identity_key: str) -> str:
+    @classmethod
+    def get_binaries(cls) -> Tuple[str, str]:
+        """Returns the discovered age and age-keygen executable paths."""
+        return find_age_binaries()
+
+    @classmethod
+    def generate_keypair(cls) -> Tuple[str, str]:
         """
-        Derives canonical Age recipient string from an Age secret key string.
+        Generates a new authentic Age identity keypair using age-keygen.
+        Returns a tuple of (secret_identity_key, public_recipient_key).
         """
-        key_hash = hashlib.sha256(identity_key.encode("utf-8")).hexdigest()[:32]
-        return f"age1{key_hash}"
+        _, keygen_bin = cls.get_binaries()
+        proc = subprocess.run(
+            [keygen_bin],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        lines = [l.strip() for l in proc.stdout.splitlines() if l.strip()]
+        secret_key = ""
+        pub_key = ""
+        for line in lines:
+            if line.startswith("# public key:"):
+                pub_key = line.split(":", 1)[1].strip()
+            elif not line.startswith("#") and line.startswith("AGE-SECRET-KEY-1"):
+                secret_key = line.strip()
+
+        if not secret_key:
+            raise RuntimeError(f"Failed to generate Age secret key: {proc.stderr}")
+        if not pub_key:
+            pub_key = cls.derive_public_key_from_identity(secret_key)
+
+        _RECIPIENT_CACHE[secret_key] = pub_key
+        return secret_key, pub_key
+
+    @classmethod
+    def derive_public_key_from_identity(cls, identity_key: str) -> str:
+        """
+        Derives canonical Age recipient string (age1...) from an Age secret key string (AGE-SECRET-KEY-1...).
+        Uses age-keygen -y to perform authentic cryptographic derivation.
+        """
+        if not identity_key or not isinstance(identity_key, str):
+            raise ValueError("Identity key must be a non-empty string")
+
+        clean_key = identity_key.strip()
+
+        # Check in-memory cache
+        if clean_key in _RECIPIENT_CACHE:
+            return _RECIPIENT_CACHE[clean_key]
+
+        # Check if recipient is already annotated in file-style identity text
+        for line in clean_key.splitlines():
+            line = line.strip()
+            if line.startswith("# public key:"):
+                cand = line.split(":", 1)[1].strip()
+                if cand.startswith("age1"):
+                    _RECIPIENT_CACHE[clean_key] = cand
+                    return cand
+
+        # Isolate actual secret key line
+        actual_secret = ""
+        for line in clean_key.splitlines():
+            line = line.strip()
+            if line.startswith("AGE-SECRET-KEY-1"):
+                actual_secret = line
+                break
+
+        if not actual_secret:
+            raise ValueError("Invalid Age identity key format: missing 'AGE-SECRET-KEY-1' prefix")
+
+        _, keygen_bin = cls.get_binaries()
+        proc = subprocess.run(
+            [keygen_bin, "-y"],
+            input=actual_secret + "\n",
+            capture_output=True,
+            text=True
+        )
+        if proc.returncode != 0:
+            raise ValueError(f"Failed to derive Age public key: {proc.stderr.strip()}")
+
+        pub_key = proc.stdout.strip()
+        if not pub_key.startswith("age1"):
+            raise ValueError(f"Invalid derived recipient format: '{pub_key}'")
+
+        _RECIPIENT_CACHE[clean_key] = pub_key
+        _RECIPIENT_CACHE[actual_secret] = pub_key
+        return pub_key
 
     @classmethod
     def encrypt_secret_envelope(
@@ -90,87 +233,99 @@ class SecretFabricEngine:
         identity_key: Optional[str] = None
     ) -> str:
         """
-        Synthesizes an authenticated Age encryption envelope over plaintext.
-        Encapsulates recipient binding, ephemeral salt, payload ciphertext, and HMAC authentication.
+        Encrypts plaintext using the authentic Age protocol.
+        Produces an authentic ASCII-armored Age ciphertext envelope.
         """
-        salt = hashlib.sha256(os.urandom(32)).hexdigest()[:16]
-        primary_recipient = recipients[0] if recipients else "age1anonymous"
-        mac_key = hashlib.sha256(f"{primary_recipient}:{salt}".encode("utf-8")).digest()
+        if not recipients:
+            if identity_key:
+                recipients = [cls.derive_public_key_from_identity(identity_key)]
+            else:
+                raise ValueError("At least one recipient (age1...) or identity key is required for encryption")
 
-        raw_bytes = plaintext.encode("utf-8")
-        # Simple stream obfuscation with HMAC-SHA256 derived keystream
-        keystream = hashlib.sha256(mac_key + salt.encode("utf-8")).digest()
-        cipher_bytes = bytes([b ^ keystream[i % len(keystream)] for i, b in enumerate(raw_bytes)])
-        cipher_hex = cipher_bytes.hex()
-        payload_mac = hmac.new(mac_key, cipher_bytes, hashlib.sha256).hexdigest()
+        age_bin, _ = cls.get_binaries()
+        cmd = [age_bin, "-a"]
+        for r in recipients:
+            clean_r = r.strip()
+            if not clean_r.startswith("age1"):
+                raise ValueError(f"Recipient must start with 'age1': '{clean_r}'")
+            cmd.extend(["-r", clean_r])
 
-        envelope = {
-            "format": "age/v1-authenticated-envelope",
-            "recipients": sorted(recipients),
-            "salt": salt,
-            "mac": payload_mac,
-            "ciphertext": cipher_hex
-        }
-        return json.dumps(envelope, sort_keys=True, separators=(",", ":"))
+        proc = subprocess.run(
+            cmd,
+            input=plaintext,
+            capture_output=True,
+            text=True
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(f"Age encryption failed: {proc.stderr.strip()}")
+
+        return proc.stdout
 
     @classmethod
     def decrypt_secret_envelope(
         cls,
         ciphertext_raw: str,
         identity_key: str,
-        allowed_recipients: List[str]
+        allowed_recipients: Optional[List[str]] = None
     ) -> Tuple[bool, str, Optional[str]]:
         """
         Authenticates and decrypts an Age secret envelope using the supplied identity key.
         Enforces 3 strict conditions:
-        1. Valid identity key matching at least one declared recipient.
-        2. Valid HMAC payload integrity check (no tampering).
+        1. Valid identity key matching declared recipients (if recipient filtering specified).
+        2. Valid Age authenticated payload and MAC integrity check (no tampering).
         3. Decrypted plaintext cleanly reconstructed in memory.
         """
-        derived_recipient = cls.derive_public_key_from_identity(identity_key)
-
-        # Check if derived recipient or raw identity matches declared recipients
-        recipient_matched = False
-        for rec in allowed_recipients:
-            if rec == derived_recipient or rec in identity_key or identity_key in rec:
-                recipient_matched = True
-                break
-
-        if not recipient_matched:
+        if not identity_key or not isinstance(identity_key, str) or "AGE-SECRET-KEY-1" not in identity_key:
             return False, "MISSING_AGE_IDENTITY: Identity key does not match registered recipients", None
 
-        # Parse envelope
+        # Derive recipient from identity key
         try:
-            envelope = json.loads(ciphertext_raw)
-        except Exception:
-            return False, "AUTHENTICATED_DECRYPTION_FAILED: Ciphertext is not a valid authenticated envelope", None
+            derived_recipient = cls.derive_public_key_from_identity(identity_key)
+        except Exception as e:
+            return False, f"MISSING_AGE_IDENTITY: Failed to derive recipient: {str(e)}", None
 
-        salt = envelope.get("salt", "")
-        claimed_mac = envelope.get("mac", "")
-        cipher_hex = envelope.get("ciphertext", "")
+        # Check against allowed recipients if supplied
+        if allowed_recipients:
+            recipient_matched = any(
+                r.strip() == derived_recipient for r in allowed_recipients
+            )
+            if not recipient_matched:
+                return False, f"MISSING_AGE_IDENTITY: Identity key does not match registered recipients", None
+
+        # Validate ciphertext structure
+        if not ciphertext_raw or not isinstance(ciphertext_raw, str):
+            return False, "AUTHENTICATED_DECRYPTION_FAILED: Ciphertext is empty or not a string", None
+
+        if "BEGIN AGE ENCRYPTED FILE" not in ciphertext_raw and "age-encryption.org/v1" not in ciphertext_raw:
+            return False, "AUTHENTICATED_DECRYPTION_FAILED: Ciphertext is not a valid Age encrypted envelope", None
+
+        # Execute decryption via age CLI
+        age_bin, _ = cls.get_binaries()
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as kf:
+            kf.write(identity_key.strip() + "\n")
+            key_file_path = kf.name
 
         try:
-            cipher_bytes = bytes.fromhex(cipher_hex)
-        except Exception:
-            return False, "AUTHENTICATED_DECRYPTION_FAILED: Corrupted ciphertext encoding", None
+            os.chmod(key_file_path, 0o600)
+            proc = subprocess.run(
+                [age_bin, "-d", "-i", key_file_path],
+                input=ciphertext_raw,
+                capture_output=True,
+                text=True
+            )
+            if proc.returncode != 0:
+                err_msg = proc.stderr.strip()
+                return False, f"AUTHENTICATED_DECRYPTION_FAILED: Cryptographic MAC verification failed ({err_msg})", None
 
-        # Authenticate MAC against derived key
-        primary_recipient = allowed_recipients[0] if allowed_recipients else derived_recipient
-        mac_key = hashlib.sha256(f"{primary_recipient}:{salt}".encode("utf-8")).digest()
-        expected_mac = hmac.new(mac_key, cipher_bytes, hashlib.sha256).hexdigest()
-
-        if not hmac.compare_digest(claimed_mac, expected_mac):
-            return False, "AUTHENTICATED_DECRYPTION_FAILED: Cryptographic MAC verification failed (tampered ciphertext)", None
-
-        # Decrypt payload in memory
-        keystream = hashlib.sha256(mac_key + salt.encode("utf-8")).digest()
-        plain_bytes = bytes([b ^ keystream[i % len(keystream)] for i, b in enumerate(cipher_bytes)])
-
-        try:
-            plaintext = plain_bytes.decode("utf-8")
-            return True, "DECRYPTION_SUCCESS", plaintext
-        except Exception:
-            return False, "AUTHENTICATED_DECRYPTION_FAILED: Decrypted bytes could not be decoded as UTF-8", None
+            return True, "DECRYPTION_SUCCESS", proc.stdout
+        finally:
+            if os.path.exists(key_file_path):
+                try:
+                    with open(key_file_path, "wb") as f:
+                        f.write(b"\x00" * 4096)
+                    os.unlink(key_file_path)
+                except Exception:
+                    pass
 
     def register_secret(
         self,
@@ -180,7 +335,7 @@ class SecretFabricEngine:
         recipients: List[str]
     ) -> Dict[str, Any]:
         """
-        Registers an authenticated Age secret definition into the declarative fabric.
+        Registers an authentic Age secret definition into the declarative fabric.
         """
         ciphertext_hash = hashlib.sha256(ciphertext.encode("utf-8")).hexdigest()
         entry = {
@@ -220,7 +375,6 @@ class SecretFabricEngine:
 
         # Condition 1: Decryption key availability
         if not identity_key:
-            # Check default system identity path if present
             default_key_file = "/etc/neuronix/keys/age.key"
             if os.path.exists(default_key_file):
                 try:
@@ -258,13 +412,11 @@ class SecretFabricEngine:
                 os.fsync(f.fileno())
 
             os.chmod(tmp_target, 0o600)
-            # Atomic rename ensures NO partial secret file is ever visible
             os.replace(tmp_target, target_file)
 
             entry["materialized"] = True
             return True, "SECRET_MATERIALIZED_IN_RAM", target_file
         except Exception as e:
-            # Shred and cleanup on error
             if os.path.exists(tmp_target):
                 try:
                     with open(tmp_target, "wb") as f:
@@ -341,14 +493,14 @@ class SecretFabricEngine:
             }
         return sha256_canonical(metadata_map)
 
+
 encrypt_secret_envelope = SecretFabricEngine.encrypt_secret_envelope
 decrypt_secret_envelope = SecretFabricEngine.decrypt_secret_envelope
 
 
 def main():
     engine = SecretFabricEngine()
-    ident = "AGE-SECRET-KEY-1DEMOKEY987654321"
-    rec = SecretFabricEngine.derive_public_key_from_identity(ident)
+    ident, rec = SecretFabricEngine.generate_keypair()
     ciphertext = SecretFabricEngine.encrypt_secret_envelope(
         plaintext="ACTUAL_DECRYPTED_TOKEN_VALUE",
         recipients=[rec],
@@ -370,4 +522,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

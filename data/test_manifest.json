@@ -2,15 +2,15 @@
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
   "version": "1.0.4",
-  "generated_at": "2026-09-09T00:25:56Z",
+  "generated_at": "2026-09-10T03:42:35Z",
   "summary": {
-    "total_repository_assertions": 1264,
+    "total_repository_assertions": 1299,
     "qa_master_harness_assertions": 899,
     "distro_component_assertions": 209,
-    "standalone_gates_assertions": 156,
+    "standalone_gates_assertions": 191,
     "qa_master_suites_count": 32,
     "distro_suites_count": 19,
-    "standalone_gates_count": 14,
+    "standalone_gates_count": 15,
     "validation_status": "PASSING_ALL",
     "status": "PASSING_ALL"
   },
@@ -372,6 +372,14 @@
       "description": "Industrial Latency Performance Budgets",
       "assertions": 4,
       "proof_class": "L4_BENCHMARK",
+      "release_blocker": true
+    },
+    {
+      "id": "gate_semantic_closure",
+      "file": "tests/test_semantic_closure.py",
+      "description": "Deterministic Semantic Closure across Subsystems, Secrets, Storage, Boot, Topology & Verifier",
+      "assertions": 35,
+      "proof_class": "L2_SYSTEM",
       "release_blocker": true
     }
   ]

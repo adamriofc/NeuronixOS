@@ -33,7 +33,7 @@ an external auditor, automated pipeline, or air-gapped verifier can falsify or c
 flowchart TD
     SOURCE["Upstream Source & Flake Lock"]:::sourceNode
     BUILD["Reproducible Build Engine"]:::buildNode
-    TESTS["1,264 Verification Assertions"]:::testNode
+    TESTS["1,299 Verification Assertions"]:::testNode
     ENGINE["Provable State Engine"]:::stateNode
     SUPPLY["Supply Chain (SBOM & ISO)"]:::supplyNode
 
@@ -75,7 +75,7 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
     "distribution": "NEURONIX OS",
     "release_version": "1.0.4",
     "release_tag": "v1.0.4",
-    "commit_sha": "8f9a683e9b628993f5b783b8d76aaad684cf31d0",
+    "commit_sha": "60f8652ba75d8fd27d95f23a74bff7414b65f590",
     "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
     "proof_engine_version": "1.1.0"
   },
@@ -97,8 +97,8 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
   },
   "verification_evidence": {
     "test_manifest_hash": "5d2b7b51...",
-    "catalog_assertion_count": 1264,
-    "verified_assertion_count": 1264,
+    "catalog_assertion_count": 1299,
+    "verified_assertion_count": 1299,
     "verified_failure_count": 0,
     "verified_pass_rate_percentage": 100,
     "verification_status": "PASSING_ALL",
@@ -106,9 +106,9 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
   },
   "ci_attestation": {
     "ci_workflow_id": "ci.yml",
-    "ci_run_id": "34299671795",
+    "ci_run_id": "34306803041",
     "ci_run_status": "success",
-    "ci_commit_sha": "8f9a683e9b628993f5b783b8d76aaad684cf31d0"
+    "ci_commit_sha": "60f8652ba75d8fd27d95f23a74bff7414b65f590"
   },
   "supply_chain_digests": {
     "reproducibility_evidence_sha256": "4b91...",
@@ -137,7 +137,7 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
 
 The passport formalizes an epistemically rigorous taxonomy:
 
-1. **`CATALOG`**: Total test assertions registered in canonical manifest (`data/test_manifest.json`), fixed at 1,264 across 32 QA suites, 19 distro suites, and 14 standalone verification gates.
+1. **`CATALOG`**: Total test assertions registered in canonical manifest (`data/test_manifest.json`), fixed at 1,299 across 32 QA suites, 19 distro suites, and 15 standalone verification gates.
 2. **`VERIFIED`**: Assertions that were executed and observed green in CI/local runs.
 3. **`OBSERVED`**: Dynamic confirmation that execution occurred on a physical or hypervisor substrate.
 4. **`ATTESTED`**: Cryptographically bound into `assurance_evidence_snapshot.json` and signed.

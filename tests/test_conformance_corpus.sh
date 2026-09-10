@@ -28,20 +28,25 @@ assert_pass() {
     echo -e "  \033[32m✔ PASS\033[0m [$TOTAL] $desc"
 }
 
-# 1. JCS Conformance Corpus (14 vectors)
+# 1. JCS Conformance Corpus (20 vectors)
 "$PYTHON_BIN" -c "
 import json, sys
 sys.path.insert(0, '${PROJECT_ROOT}/packages/neuronix-core')
-from neuronix_core.state import canonical_json_bytes
+sys.path.insert(0, '${PROJECT_ROOT}/tools')
+from neuronix_core.state import canonical_json_bytes as core_cjb
+from verify_passport import canonical_json_bytes as vp_cjb
 
 with open('${PROJECT_ROOT}/tests/conformance/jcs/vectors.json', 'r', encoding='utf-8') as f:
     corpus = json.load(f)
 
 for v in corpus['vectors']:
-    actual = canonical_json_bytes(v['input']).decode('utf-8')
-    assert actual == v['expected_jcs'], f'Vector {v[\"id\"]} failed: expected {v[\"expected_jcs\"]} got {actual}'
+    actual_core = core_cjb(v['input']).decode('utf-8')
+    actual_vp = vp_cjb(v['input']).decode('utf-8')
+    assert actual_core == v['expected_jcs'], f'Core vector {v[\"id\"]} failed: expected {v[\"expected_jcs\"]} got {actual_core}'
+    assert actual_vp == v['expected_jcs'], f'Verifier vector {v[\"id\"]} failed: expected {v[\"expected_jcs\"]} got {actual_vp}'
+    assert actual_core == actual_vp, f'Cross-module JCS parity mismatch on {v[\"id\"]}'
 "
-assert_pass "RFC 8785 JCS 14-Vector Independent Conformance Corpus verified byte-for-byte"
+assert_pass "RFC 8785 JCS 20-Vector Independent Conformance Corpus verified byte-for-byte"
 
 # 2. StateRoot Conformance Corpus
 "$PYTHON_BIN" -c "

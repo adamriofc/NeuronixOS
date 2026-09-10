@@ -62,8 +62,8 @@ def generate_passport() -> Dict[str, Any]:
         from neuronix_core.graph import EvidenceGraph
         graph_engine = EvidenceGraph(root_dir=PROJECT_ROOT)
         graph_obj = graph_engine.build_graph(
-            commit_sha=evidence_data.get("last_verified_commit_sha", "29305d49694521785cae875071d81cfa11b60761"),
-            run_id=evidence_data.get("last_verified_run_id", "34303953675")
+            commit_sha=evidence_data.get("last_verified_commit_sha", "60f8652ba75d8fd27d95f23a74bff7414b65f590"),
+            run_id=evidence_data.get("last_verified_run_id", "34306803041")
         )
         with open(graph_path, "w", encoding="utf-8") as gf:
             json.dump(graph_obj, gf, indent=2, ensure_ascii=False)
@@ -78,7 +78,7 @@ def generate_passport() -> Dict[str, Any]:
             "distribution": "NEURONIX OS",
             "release_version": "1.0.4",
             "release_tag": "v1.0.4",
-            "commit_sha": evidence_data.get("last_verified_commit_sha", "29305d49694521785cae875071d81cfa11b60761"),
+            "commit_sha": evidence_data.get("last_verified_commit_sha", "60f8652ba75d8fd27d95f23a74bff7414b65f590"),
             "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
             "proof_engine_version": "1.1.0"
         },
@@ -92,8 +92,8 @@ def generate_passport() -> Dict[str, Any]:
         },
         "verification_evidence": {
             "test_manifest_hash": manifest_digest,
-            "catalog_assertion_count": evidence_data.get("taxonomy", {}).get("CATALOG", 1264),
-            "verified_assertion_count": evidence_data.get("taxonomy", {}).get("VERIFIED", 1264),
+            "catalog_assertion_count": evidence_data.get("taxonomy", {}).get("CATALOG", 1299),
+            "verified_assertion_count": evidence_data.get("taxonomy", {}).get("VERIFIED", 1299),
             "verified_failure_count": evidence_data.get("metrics", {}).get("failed_assertions", 0),
             "verified_pass_rate_percentage": evidence_data.get("metrics", {}).get("pass_rate_percentage", 100),
             "verification_status": evidence_data.get("verification_status", "PASSING_ALL"),
