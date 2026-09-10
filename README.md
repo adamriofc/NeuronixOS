@@ -1270,13 +1270,17 @@ python3 tests/test_semantic_closure.py -v
 ### 32. Conductor Operating Surface & Zero-Idle Capability Runtime (SPEC-NRX-CND-018, SPEC-NRX-CND-021)
 NEURONIX Conductor is the native operating surface and local agent substrate for the NEURONIX platform. Conductor replaces visual complexity with a single, terminal-first window offering maximum capability and zero permanent clutter:
 
-- **Surface Architecture:** One unified window featuring a 95% workspace canvas dedicated to an ultra-fast, native Rust terminal subsystem (`packages/conductor`). A subtle topbar displays `CONDUCTOR [ NEURONIX v1.0.4:gen-X ]` alongside live Vital health status (`VITAL o NOMINAL`).
+- **Surface Architecture:** One unified window featuring a 95% workspace canvas dedicated to an ultra-fast, native Rust terminal subsystem (`packages/conductor`). A subtle topbar displays `CONDUCTOR [ NEURONIX v1.0.4:gen-X ]` alongside live Vital health status (`VITAL o NOMINAL`) and adaptive workspace tabs:
+  - `Tab 1: Terminal` - Full-speed VT100 terminal canvas with 95% screen real estate.
+  - `Tab 2: Vital` - Real-time machine observation laboratory with CPU, memory, mount, and StateRoot telemetry.
+  - `Tab 3: Proposals` - Dedicated deck for reviewing and resolving pending mutation proposals.
+  - `Tab 4: Capabilities` - Live catalog of registered skills categorized into mutation and inspection gates.
 - **Terminal Emulator Subsystem:** High-performance VT100/ANSI state machine featuring full SGR color styling, cursor tracking, scrollback history, alternate screen buffer support, and POSIX PTY process management via `pty.rs` (`TIOCSWINSZ` window resizing and signal propagation).
 - **Zero-Idle Runtime Broker (`packages/conductor-runtime`):** Operates on an on-demand socket activation lifecycle (`systemd/user/conductor.socket` listening on `$XDG_RUNTIME_DIR/conductor.sock` with `0600` permissions):
   - `COLD`: 0 connected clients, 0% CPU overhead, near-zero resident footprint (socket managed by systemd). Target budget under 15 MB RSS when active.
   - `WARM`: External agents, MCP servers, or CLI tools connected via socket, executing capabilities with low-latency responsive IPC and zero GUI process overhead.
   - `HOT`: Visual desktop surface attached with interactive rendering overlays.
-- **Ephemeral Proposal Overlays:** When an operation requires human review, Conductor slides in a non-disruptive, structured proposal card displaying the title, risk tier, parameter diff, and cryptographic proposal hash without breaking terminal workflow.
+- **Ephemeral Proposal Overlays:** When an operation requires human review, Conductor slides in a non-disruptive, structured proposal card displaying the title, risk tier, parameter diff, and cryptographic proposal hash without breaking terminal workflow. Operators can interactively approve (`[y]`), reject (`[n]`), or dismiss (`[Esc]`) proposals in real time.
 
 ### 33. Vital Laboratory Observation Substrate & Machine Contracts (SPEC-NRX-VTL-020)
 Vital is the canonical observation provider and laboratory telemetry substrate for humans and AI interfaces, adhering to the fundamental doctrine: **"No Consumer, No Work"**.
@@ -1296,7 +1300,8 @@ The NEURONIX Skill System establishes a single, authoritative machine-readable o
 - **User Sovereignty & Delegated Authority:**
   - The human owner retains supreme sovereign authority over the system. Guardrails inform of blast radius and recovery paths rather than paternalistically blocking the owner.
   - `sudo` is explicitly recognized as a valid privileged capability under human ownership.
-  - 5-Tier Delegated Authority for AI agents: `OBSERVE_ONLY`, `PROPOSE_ONLY`, `USERSPACE_EXECUTE`, `PRIVILEGED_EXECUTE`, and `FULL_DELEGATED_CONTROL`. When granted mutation authority by the owner, AI agents execute capabilities without artificial confirmation friction.
+  - 5-Tier Delegated Authority for AI agents: `OBSERVE_ONLY`, `PROPOSE_ONLY`, `USERSPACE_EXECUTE`, `PRIVILEGED_EXECUTE`, and `FULL_DELEGATED_CONTROL`.
+  - Strict Token-Validated Authority: Self-asserted delegation claims from unauthenticated agents are rejected fail-closed. Valid execution requires an authentic delegation grant token (`DEL-...`) issued by the human owner with explicit scope and time expiry.
 - **Unbypassable Audit Trail:** Every skill execution generates an immutable cryptographic execution receipt (`RCP-...`) recording SHA-256 input digests, output digests, caller principal, delegation tier, duration, and execution timestamp.
 - **Model Context Protocol (MCP) Adapter (`packages/conductor-mcp`):** Native compatibility adapter supporting both modern MCP 2026-07-28 and legacy 2024-11-05 specifications, translating external agent tool calls directly into verified NEURONIX skills and exposing Vital telemetry as laboratory resources (`vital://snapshot`).
 

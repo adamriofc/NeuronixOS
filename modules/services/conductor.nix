@@ -1,7 +1,25 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, self ? null, ... }:
 
 let
   cfg = config.neuronix.services.conductor;
+  conductorPkg = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? conductor)
+    then self.packages.${pkgs.system}.conductor
+    else pkgs.callPackage ../../packages/conductor { };
+  runtimePkg = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? conductor-runtime)
+    then self.packages.${pkgs.system}.conductor-runtime
+    else pkgs.python3.pkgs.callPackage ../../packages/conductor-runtime {
+      neuronix-core = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? neuronix-core)
+        then self.packages.${pkgs.system}.neuronix-core
+        else pkgs.python3.pkgs.callPackage ../../packages/neuronix-core { };
+    };
+  mcpPkg = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? conductor-mcp)
+    then self.packages.${pkgs.system}.conductor-mcp
+    else pkgs.python3.pkgs.callPackage ../../packages/conductor-mcp {
+      neuronix-core = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? neuronix-core)
+        then self.packages.${pkgs.system}.neuronix-core
+        else pkgs.python3.pkgs.callPackage ../../packages/neuronix-core { };
+      conductor-runtime = runtimePkg;
+    };
 in
 {
   options.neuronix.services.conductor = {
@@ -13,19 +31,19 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.conductor or (pkgs.writeShellScriptBin "conductor" "echo 'Conductor package placeholder'");
+      default = conductorPkg;
       description = "The Conductor native Rust operating surface package.";
     };
 
     runtimePackage = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.conductor-runtime or (pkgs.writeShellScriptBin "conductor-runtime" "echo 'Conductor runtime placeholder'");
+      default = runtimePkg;
       description = "The Conductor zero-idle capability runtime and control broker package.";
     };
 
     mcpPackage = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.conductor-mcp or (pkgs.writeShellScriptBin "conductor-mcp" "echo 'Conductor MCP package placeholder'");
+      default = mcpPkg;
       description = "The Conductor MCP 2026-07-28 universal agent adapter package.";
     };
   };

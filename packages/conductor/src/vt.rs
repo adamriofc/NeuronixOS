@@ -190,6 +190,11 @@ impl TerminalBuffer {
         }
     }
 
+    pub fn write_bytes(&mut self, bytes: &[u8]) {
+        let text = String::from_utf8_lossy(bytes);
+        self.write_str(&text);
+    }
+
     pub fn write_str(&mut self, s: &str) {
         let mut chars = s.chars().peekable();
         while let Some(ch) = chars.next() {

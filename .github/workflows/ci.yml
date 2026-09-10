@@ -14,6 +14,8 @@ jobs:
   test-and-verify:
     name: Industrial Systems Verification & Release Gate (1353 Assertions + Reproducibility)
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/packages/neuronix-core:${{ github.workspace }}/packages/conductor-runtime:${{ github.workspace }}/packages/conductor-mcp:${{ github.workspace }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -170,7 +172,7 @@ jobs:
         run: |
           python3 -m unittest tests/test_semantic_closure.py
 
-      - name: Execute Conductor Native Surface & Rust Crate Gate (9 Tests)
+      - name: Execute Conductor Native Surface & Rust Crate Gate (13 Tests)
         run: |
           cargo test --manifest-path packages/conductor/Cargo.toml
 

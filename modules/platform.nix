@@ -24,5 +24,6 @@
     ./services/update.nix
     ./hardware/tuning.nix
     ./services/mesh.nix
+    ./services/conductor.nix
   ];
 }

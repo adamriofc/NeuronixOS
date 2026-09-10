@@ -15,6 +15,7 @@
     },
     "RpcMethod": {
       "type": "string",
+      "description": "Canonical Conductor JSON-RPC 2.0 methods: conductor.ping (liveness check), conductor.version (semantic version), vital.snapshot (full telemetry snapshot), vital.subscribe (continuous laboratory event stream), vital.unsubscribe (terminate event stream), skills.list (enumerate registered capability registry), skills.describe (detailed input schema and contract), skills.invoke (execute capability under sovereign authority), identity.resolve (verify cryptographic peer identity and role), authority.grant (issue sovereign time-bounded delegation grant), authority.revoke (immediate revocation of delegation token), proposal.resolve (human-sovereign approval or rejection of pending mutation proposal), surface.state (query minimalist operating canvas and lifecycle state).",
       "enum": [
         "conductor.ping",
         "conductor.version",

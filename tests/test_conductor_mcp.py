@@ -117,7 +117,15 @@ class TestConductorMcpServer(unittest.TestCase):
         self.assertIn("Proposal Hash:", text)
 
     def test_tool_call_mutate_with_delegated_authority(self):
-        """Test User Sovereignty: AI agent with delegated mutation authority executes cleanly."""
+        """Test User Sovereignty: AI agent with authentic delegated mutation token executes cleanly."""
+        # Issue an authentic sovereign delegation token
+        grant = skills.grant_delegation(
+            principal_id="external-claude-agent",
+            tier=skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL,
+            scope=["system.rollback"]
+        )
+        token = grant["token"]
+
         req = {
             "jsonrpc": "2.0",
             "id": 6,
@@ -126,8 +134,7 @@ class TestConductorMcpServer(unittest.TestCase):
                 "name": "system.rollback",
                 "arguments": {"target_generation": 42, "dry_run": True},
                 "_meta": {
-                    "caller_id": "external-claude-agent",
-                    "delegated_authority": skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL
+                    "authorization_token": token
                 }
             }
         }
@@ -137,6 +144,12 @@ class TestConductorMcpServer(unittest.TestCase):
         parsed = json.loads(text)
         self.assertEqual(parsed["status"], "DRY_RUN_PASSED")
         self.assertIn("_receipt", parsed)
+
+        # Ensure revoked token fails closed
+        skills.revoke_delegation(grant["delegation_id"])
+        res_revoked = self.server.handle_request(req)
+        self.assertTrue(res_revoked["result"]["isError"])
+        self.assertIn("APPROVAL_REQUIRED", res_revoked["result"]["content"][0]["text"])
 
     def test_resources_list_and_read(self):
         """Test accessing Vital laboratory telemetry as MCP resources."""

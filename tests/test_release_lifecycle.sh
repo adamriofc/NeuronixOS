@@ -48,11 +48,16 @@ assert_check() {
     local cmd="$2"
 
     echo -ne "  [GATE] ${desc} ... "
-    if eval "$cmd" >/dev/null 2>&1; then
+    local out
+    if out=$(eval "$cmd" 2>&1); then
         echo -e "${GREEN}PASSED${RESET}"
         ((PASSED++))
     else
         echo -e "${RED}FAILED${RESET}"
+        if [[ -n "$out" ]]; then
+            echo -e "    ${RED}Failure Detail:${RESET}"
+            echo "$out" | sed 's/^/      /'
+        fi
         ((FAILED++))
     fi
 }
@@ -147,9 +152,11 @@ echo -e "\n${BOLD}Phase 9: Conductor Surface, Socket Activation & Agent Substrat
 assert_check "Conductor socket unit exists & specifies correct socket mode" "test -f '${PROJECT_ROOT}/systemd/user/conductor.socket' && grep -q 'SocketMode=0600' '${PROJECT_ROOT}/systemd/user/conductor.socket'"
 assert_check "Conductor service unit declares security hardening" "test -f '${PROJECT_ROOT}/systemd/user/conductor.service' && grep -q 'NoNewPrivileges=true' '${PROJECT_ROOT}/systemd/user/conductor.service'"
 assert_check "Conductor Rust crate tests pass" "cargo test --manifest-path '${PROJECT_ROOT}/packages/conductor/Cargo.toml'"
-assert_check "Conductor runtime test suite passes" "python3 -m unittest tests/test_conductor_runtime.py"
-assert_check "Conductor MCP test suite passes" "python3 -m unittest tests/test_conductor_mcp.py"
-assert_check "Conductor control protocol suite passes" "python3 -m unittest tests/test_control_protocol.py"
+assert_check "Conductor runtime test suite passes" "PYTHONPATH=\"${PROJECT_ROOT}/packages/neuronix-core:${PROJECT_ROOT}/packages/conductor-runtime:${PROJECT_ROOT}/packages/conductor-mcp:.${PYTHONPATH:+:$PYTHONPATH}\" python3 -m unittest tests/test_conductor_runtime.py"
+assert_check "Conductor MCP test suite passes" "PYTHONPATH=\"${PROJECT_ROOT}/packages/neuronix-core:${PROJECT_ROOT}/packages/conductor-runtime:${PROJECT_ROOT}/packages/conductor-mcp:.${PYTHONPATH:+:$PYTHONPATH}\" python3 -m unittest tests/test_conductor_mcp.py"
+assert_check "Conductor control protocol suite passes" "PYTHONPATH=\"${PROJECT_ROOT}/packages/neuronix-core:${PROJECT_ROOT}/packages/conductor-runtime:${PROJECT_ROOT}/packages/conductor-mcp:.${PYTHONPATH:+:$PYTHONPATH}\" python3 -m unittest tests/test_control_protocol.py"
+assert_check "Vital and skills test suite passes" "PYTHONPATH=\"${PROJECT_ROOT}/packages/neuronix-core:${PROJECT_ROOT}/packages/conductor-runtime:${PROJECT_ROOT}/packages/conductor-mcp:.${PYTHONPATH:+:$PYTHONPATH}\" python3 -m unittest tests/test_vital_and_skills.py"
+assert_check "Observation contract test suite passes" "PYTHONPATH=\"${PROJECT_ROOT}/packages/neuronix-core:${PROJECT_ROOT}/packages/conductor-runtime:${PROJECT_ROOT}/packages/conductor-mcp:.${PYTHONPATH:+:$PYTHONPATH}\" python3 -m unittest tests/test_observation_contract.py"
 
 # ------------------------------------------------------------------------------
 # Summary & Certification Banner

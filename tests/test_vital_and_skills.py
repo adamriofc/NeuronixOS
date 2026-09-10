@@ -141,34 +141,47 @@ class TestVitalObservatoryAndSkillBroker(unittest.TestCase):
 
     def test_delegated_authority_matrix_for_ai_agents(self):
         """Test User Sovereignty via Delegated Authority Tiers for AI agents."""
-        # 1. AI with FULL_DELEGATED_CONTROL executes without human approval prompt
+        # 1. AI agent with an authentic FULL_DELEGATED_CONTROL token executes without human approval prompt
+        grant_full = skills.grant_delegation(
+            principal_id="AGENT_ALPHA",
+            tier=skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL,
+            scope=["system.rollback"]
+        )
         res_full = skills.execute(
             skill_id="system.rollback",
             inputs={"target_generation": 42, "dry_run": True},
             caller="AI_AGENT",
-            delegated_authority=skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL
+            authorization_token=grant_full["token"]
         )
         self.assertEqual(res_full["status"], "DRY_RUN_PASSED")
         self.assertEqual(res_full["_receipt"]["delegated_tier"], skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL)
 
-        # 2. AI with PRIVILEGED_EXECUTE executes without human approval prompt
+        # 2. AI agent with an authentic PRIVILEGED_EXECUTE token executes without human approval prompt
+        grant_priv = skills.grant_delegation(
+            principal_id="AGENT_BETA",
+            tier=skills.DelegatedAuthorityTier.PRIVILEGED_EXECUTE,
+            scope=["system.rollback"]
+        )
         res_priv = skills.execute(
             skill_id="system.rollback",
             inputs={"target_generation": 42, "dry_run": True},
             caller="AI_AGENT",
-            delegated_authority=skills.DelegatedAuthorityTier.PRIVILEGED_EXECUTE
+            authorization_token=grant_priv["token"]
         )
         self.assertEqual(res_priv["status"], "DRY_RUN_PASSED")
 
-        # 3. AI with PROPOSE_ONLY is blocked on MUTATE and must yield verifiable proposal
+        # 3. AI agent attempting to self-assert delegated_authority WITHOUT a valid token is blocked on MUTATE
         with self.assertRaises(skills.SkillApprovalRequired) as cm_prop:
             skills.execute(
                 skill_id="system.rollback",
                 inputs={"target_generation": 42, "dry_run": True},
                 caller="AI_AGENT",
-                delegated_authority=skills.DelegatedAuthorityTier.PROPOSE_ONLY
+                delegated_authority=skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL
             )
-        self.assertTrue(cm_prop.exception.proposal["proposal_hash"])
+        prop = cm_prop.exception.proposal
+        self.assertEqual(prop["skill_id"], "system.rollback")
+        self.assertTrue(prop["requires_human_approval"])
+        self.assertIn("proposal_hash", prop)
 
         # 4. AI with OBSERVE_ONLY is blocked on MUTATE
         with self.assertRaises(skills.SkillApprovalRequired):

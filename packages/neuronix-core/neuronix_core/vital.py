@@ -490,11 +490,22 @@ class VitalObservatory:
         proc_count = 0
         try:
             entries = os.listdir("/proc")
-            proc_count = sum(1 for e in entries if e.isdigit())
+            proc_pids = [e for e in entries if e.isdigit()]
+            proc_count = len(proc_pids)
         except Exception:
             pass
 
         res["process_count"] = self._create_record("process.count", proc_count, "count", "/proc", telemetry_class="OBSERVED").to_dict()
+        try:
+            with open("/proc/loadavg", "r") as f:
+                parts = f.read().strip().split()
+                if len(parts) >= 4 and "/" in parts[3]:
+                    running_threads = int(parts[3].split("/")[0])
+                    total_threads = int(parts[3].split("/")[1])
+                    res["running_threads"] = self._create_record("process.running_threads", running_threads, "count", "/proc/loadavg", telemetry_class="OBSERVED").to_dict()
+                    res["total_threads"] = self._create_record("process.total_threads", total_threads, "count", "/proc/loadavg", telemetry_class="OBSERVED").to_dict()
+        except Exception:
+            pass
         return res
 
     # -------------------------------------------------------------------------
@@ -557,6 +568,21 @@ class VitalObservatory:
         res: Dict[str, Any] = {}
         kvm_present = os.path.exists("/dev/kvm")
         res["kvm_accelerated"] = self._create_record("virtualization.kvm_accelerated", kvm_present, "boolean", "/dev/kvm", telemetry_class="OBSERVED").to_dict()
+
+        hypervisor_type = "NONE_BARE_METAL"
+        if os.path.exists("/sys/class/dmi/id/product_name"):
+            try:
+                with open("/sys/class/dmi/id/product_name", "r") as f:
+                    prod = f.read().strip().lower()
+                    if any(vm in prod for vm in ["qemu", "kvm", "standard pc", "bochs"]):
+                        hypervisor_type = "KVM_QEMU"
+                    elif "vmware" in prod:
+                        hypervisor_type = "VMWARE"
+                    elif "virtualbox" in prod:
+                        hypervisor_type = "VIRTUALBOX"
+            except Exception:
+                pass
+        res["hypervisor_type"] = self._create_record("virtualization.hypervisor", hypervisor_type, "enum", "/sys/class/dmi/id/product_name", telemetry_class="OBSERVED").to_dict()
         return res
 
     # -------------------------------------------------------------------------
@@ -566,8 +592,14 @@ class VitalObservatory:
         res: Dict[str, Any] = {}
         from neuronix_core import generation
         gen_str = generation.get_active_generation()
-        active_gen = int(gen_str) if (gen_str and gen_str.isdigit()) else 1
-        res["active_generation"] = self._create_record("nixos.active_generation", active_gen, "generation_number", "/run/current-system", telemetry_class="OBSERVED").to_dict()
+        if gen_str and gen_str.isdigit():
+            active_gen = int(gen_str)
+            res["active_generation"] = self._create_record("nixos.active_generation", active_gen, "generation_number", "/run/current-system", telemetry_class="OBSERVED").to_dict()
+        else:
+            res["active_generation"] = self._create_record(
+                "nixos.active_generation", None, "generation_number", "/run/current-system",
+                telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="nixos_generation_unavailable"
+            ).to_dict()
         return res
 
     # -------------------------------------------------------------------------
@@ -577,8 +609,14 @@ class VitalObservatory:
         res: Dict[str, Any] = {}
         from neuronix_core import state
         live_state = state.get_current_state()
-        stateroot = live_state.get("state_root", "00" * 32)
-        res["stateroot"] = self._create_record("neuronix.stateroot", stateroot, "sha256", "neuronix_core.state", telemetry_class="OBSERVED").to_dict()
+        stateroot = live_state.get("state_root")
+        if stateroot and len(stateroot) == 64 and stateroot != "00" * 32:
+            res["stateroot"] = self._create_record("neuronix.stateroot", stateroot, "sha256", "neuronix_core.state", telemetry_class="OBSERVED").to_dict()
+        else:
+            res["stateroot"] = self._create_record(
+                "neuronix.stateroot", None, "sha256", "neuronix_core.state",
+                telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="stateroot_uncomputed"
+            ).to_dict()
         return res
 
     # -------------------------------------------------------------------------
@@ -632,6 +670,19 @@ class VitalObservatory:
             telemetry_class="DERIVED",
             confidence=0.98
         ).to_dict()
+
+        # Edge-detection event generation across observation transitions
+        if self._history:
+            prev_snap = self._history[-1]
+            prev_health = prev_snap.get("system_health", {}).get("value")
+            if prev_health and prev_health != overall_health:
+                self._events.append({
+                    "event_type": "SYSTEM_HEALTH_TRANSITION",
+                    "previous_state": prev_health,
+                    "new_state": overall_health,
+                    "timestamp": observations["timestamp"],
+                    "severity": "CRITICAL" if overall_health == "CRITICAL" else "WARNING"
+                })
 
         observations["sampling_duration_ms"] = round((time.time() - start_time) * 1000, 2)
         self._history.append(observations)

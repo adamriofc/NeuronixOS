@@ -90,6 +90,10 @@ impl PtySession {
         &self.slave_name
     }
 
+    pub fn master_raw_fd(&self) -> RawFd {
+        self.master_fd
+    }
+
     pub fn resize(&self, cols: u16, rows: u16) -> Result<(), String> {
         let ws = Winsize {
             ws_row: rows,

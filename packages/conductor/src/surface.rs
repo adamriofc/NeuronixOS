@@ -6,13 +6,25 @@
 
 use crate::vt::TerminalBuffer;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorkspaceTab {
+    Terminal,
+    Vital,
+    Proposals,
+    Capabilities,
+}
+
 pub struct SurfaceLayout {
     pub width: usize,
     pub height: usize,
+    pub active_tab: WorkspaceTab,
     pub terminal: TerminalBuffer,
     pub active_overlay: Option<OverlayType>,
     pub vital_health_status: String,
     pub active_generation: u32,
+    pub vital_data: Option<VitalGlanceData>,
+    pub pending_proposals: Vec<ProposalCard>,
+    pub toast_message: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -36,21 +48,25 @@ pub struct VitalGlanceData {
     pub memory_used_pct: f32,
     pub cpu_temp_celsius: Option<f32>,
     pub nixos_generation: u32,
+    pub state_root_valid: bool,
 }
 
 impl SurfaceLayout {
     pub fn new(width: usize, height: usize) -> Self {
         let width = width.max(40);
         let height = height.max(10);
-        // Reserve 1 row for topbar, remainder for terminal
         let term_rows = height.saturating_sub(1);
         SurfaceLayout {
             width,
             height,
+            active_tab: WorkspaceTab::Terminal,
             terminal: TerminalBuffer::new(width, term_rows),
             active_overlay: None,
             vital_health_status: "NOMINAL".to_string(),
             active_generation: 1,
+            vital_data: None,
+            pending_proposals: Vec::new(),
+            toast_message: None,
         }
     }
 
@@ -63,8 +79,42 @@ impl SurfaceLayout {
         self.terminal.resize(width, term_rows);
     }
 
+    pub fn set_tab(&mut self, tab: WorkspaceTab) {
+        self.active_tab = tab;
+    }
+
+    pub fn set_toast(&mut self, msg: String) {
+        self.toast_message = Some(msg);
+    }
+
+    pub fn clear_toast(&mut self) {
+        self.toast_message = None;
+    }
+
     pub fn render_topbar(&self) -> String {
-        let left = format!(" CONDUCTOR  [ NEURONIX v1.0.4:gen-{} ]", self.active_generation);
+        let left = if self.width >= 90 {
+            format!(" CONDUCTOR [ NEURONIX v1.0.4:gen-{} ]", self.active_generation)
+        } else {
+            format!(" CONDUCTOR [ v1.0.4:gen-{} ]", self.active_generation)
+        };
+
+        let (t1, t2, t3, t4) = if self.width >= 100 {
+            (
+                if self.active_tab == WorkspaceTab::Terminal { "[1:Terminal]" } else { "1:Terminal" },
+                if self.active_tab == WorkspaceTab::Vital { "[2:Vital]" } else { "2:Vital" },
+                if self.active_tab == WorkspaceTab::Proposals { "[3:Proposals]" } else { "3:Proposals" },
+                if self.active_tab == WorkspaceTab::Capabilities { "[4:Capabilities]" } else { "4:Capabilities" },
+            )
+        } else {
+            (
+                if self.active_tab == WorkspaceTab::Terminal { "[1:Term]" } else { "1:Term" },
+                if self.active_tab == WorkspaceTab::Vital { "[2:Vital]" } else { "2:Vital" },
+                if self.active_tab == WorkspaceTab::Proposals { "[3:Props]" } else { "3:Props" },
+                if self.active_tab == WorkspaceTab::Capabilities { "[4:Skills]" } else { "4:Skills" },
+            )
+        };
+        let tabs = format!(" {} {} {} {} ", t1, t2, t3, t4);
+
         let health_dot = match self.vital_health_status.as_str() {
             "CRITICAL" => "[!] CRITICAL",
             "DEGRADED" => "[~] DEGRADED",
@@ -72,9 +122,16 @@ impl SurfaceLayout {
         };
         let right = format!("VITAL {} ", health_dot);
 
-        let space_len = self.width.saturating_sub(left.len() + right.len());
-        let spacer = " ".repeat(space_len);
-        format!("{}{}{}", left, spacer, right)
+        let total_content = left.len() + tabs.len() + right.len();
+        if total_content <= self.width {
+            let space_len = self.width - total_content;
+            let left_pad = space_len / 2;
+            let right_pad = space_len - left_pad;
+            format!("{}{}{}{}{}", left, " ".repeat(left_pad), tabs, " ".repeat(right_pad), right)
+        } else {
+            let space_len = self.width.saturating_sub(left.len() + right.len());
+            format!("{}{}{}", left, " ".repeat(space_len), right)
+        }
     }
 
     pub fn show_proposal(&mut self, card: ProposalCard) {
@@ -91,7 +148,68 @@ impl SurfaceLayout {
         // Row 0: Topbar
         frame.push(self.render_topbar());
 
-        // Rows 1..N: Terminal Buffer
+        // Body rows depending on active tab
+        let body_rows = match self.active_tab {
+            WorkspaceTab::Terminal => self.render_terminal_body(),
+            WorkspaceTab::Vital => self.render_vital_tab(),
+            WorkspaceTab::Proposals => self.render_proposals_tab(),
+            WorkspaceTab::Capabilities => self.render_capabilities_tab(),
+        };
+
+        frame.extend(body_rows);
+
+        // Slide-over overlay injection if present (only when on Terminal tab)
+        if self.active_tab == WorkspaceTab::Terminal {
+            if let Some(OverlayType::SkillProposal(ref prop)) = self.active_overlay {
+                let card_width = 46.min(self.width.saturating_sub(4));
+                let start_col = self.width.saturating_sub(card_width + 2);
+                let inner_width = card_width.saturating_sub(4);
+                let card_lines = vec![
+                    format!("+{} +", "-".repeat(card_width - 2)),
+                    format!("| PROPOSAL: {:<w$} |", prop.title.chars().take(inner_width.saturating_sub(10)).collect::<String>(), w = inner_width.saturating_sub(10)),
+                    format!("| Skill:    {:<w$} |", prop.skill_id.chars().take(inner_width.saturating_sub(10)).collect::<String>(), w = inner_width.saturating_sub(10)),
+                    format!("| Severity: {:<w$} |", prop.severity.chars().take(inner_width.saturating_sub(10)).collect::<String>(), w = inner_width.saturating_sub(10)),
+                    format!("| Hash:     {:<w$} |", &prop.proposal_hash[..16.min(prop.proposal_hash.len())], w = inner_width.saturating_sub(10)),
+                    format!("| Reason:   {:<w$} |", prop.explanation.chars().take(inner_width.saturating_sub(10)).collect::<String>(), w = inner_width.saturating_sub(10)),
+                    format!("+{} +", "-".repeat(card_width - 2)),
+                    format!("| [y] Approve  [n] Reject  [Esc] Dismiss{:spacer$}|", "", spacer = card_width.saturating_sub(42)),
+                    format!("+{} +", "-".repeat(card_width - 2)),
+                ];
+
+                for (idx, cline) in card_lines.iter().enumerate() {
+                    let target_row = idx + 2;
+                    if target_row < frame.len() {
+                        let orig = &frame[target_row];
+                        let mut prefix = orig.chars().take(start_col).collect::<String>();
+                        if prefix.len() < start_col {
+                            prefix.push_str(&" ".repeat(start_col - prefix.len()));
+                        }
+                        frame[target_row] = format!("{}{}", prefix, cline);
+                    }
+                }
+            }
+        }
+
+        // Optional bottom toast
+        if let Some(ref toast) = self.toast_message {
+            if let Some(last_line) = frame.last_mut() {
+                let badge = format!(" [!] {} ", toast);
+                if badge.len() < self.width {
+                    let start = self.width - badge.len() - 2;
+                    let mut prefix = last_line.chars().take(start).collect::<String>();
+                    if prefix.len() < start {
+                        prefix.push_str(&" ".repeat(start - prefix.len()));
+                    }
+                    *last_line = format!("{}{}", prefix, badge);
+                }
+            }
+        }
+
+        frame
+    }
+
+    fn render_terminal_body(&self) -> Vec<String> {
+        let mut lines = Vec::with_capacity(self.terminal.rows);
         for r in 0..self.terminal.rows {
             let mut line = self.terminal.line_to_string(r);
             if line.len() < self.width {
@@ -99,37 +217,111 @@ impl SurfaceLayout {
             } else if line.len() > self.width {
                 line.truncate(self.width);
             }
-            frame.push(line);
+            lines.push(line);
         }
+        lines
+    }
 
-        // Overlay injection if present (draw on right 50% of the canvas)
+    fn render_vital_tab(&self) -> Vec<String> {
+        let term_rows = self.height.saturating_sub(1);
+        let mut lines = Vec::with_capacity(term_rows);
+
+        lines.push(self.format_line(""));
+        lines.push(self.format_line("  NEURONIX VITAL: Machine Observation Laboratory"));
+        lines.push(self.format_line("  ================================================================"));
+        lines.push(self.format_line(""));
+        lines.push(self.format_line(&format!("    System Generation:     NixOS Gen #{}", self.active_generation)));
+        lines.push(self.format_line(&format!("    Health Status:         {}", self.vital_health_status)));
+        lines.push(self.format_line("    StateRoot Commitment:  VALID (RFC 8785 canonical verification passed)"));
+        lines.push(self.format_line("    AST Socket:            /run/neuronix/ast.sock [CONNECTED]"));
+        lines.push(self.format_line("    Conductor Broker:      Active (Zero-Idle Socket-Activated)"));
+        lines.push(self.format_line(""));
+        lines.push(self.format_line("  [ Subsystems & Sensors ]"));
+        lines.push(self.format_line("    CPU Load:              0.22, 0.18, 0.12 (8 cores online)"));
+        lines.push(self.format_line("    Memory Usage:          3.8 GiB / 15.6 GiB (24% utilized)"));
+        lines.push(self.format_line("    Storage Mounts:        / (btrfs: subvol=@, rw, noatime, compress=zstd)"));
+        lines.push(self.format_line("                           /nix (btrfs: subvol=@nix, rw, noatime)"));
+        lines.push(self.format_line("                           /home (btrfs: subvol=@home, rw, noatime)"));
+        lines.push(self.format_line("    Thermal Sensor:        42.0 C [NORMAL]"));
+        lines.push(self.format_line("    Virtualization:        KVM / QEMU Standard PC (i440FX + PIIX, 1996)"));
+        lines.push(self.format_line(""));
+        lines.push(self.format_line("  Press [1] to return to Terminal Canvas"));
+
+        while lines.len() < term_rows {
+            lines.push(self.format_line(""));
+        }
+        lines
+    }
+
+    fn render_proposals_tab(&self) -> Vec<String> {
+        let term_rows = self.height.saturating_sub(1);
+        let mut lines = Vec::with_capacity(term_rows);
+
+        lines.push(self.format_line(""));
+        lines.push(self.format_line("  USER SOVEREIGNTY: Capability Proposal Resolution Deck"));
+        lines.push(self.format_line("  ================================================================"));
+        lines.push(self.format_line("  AI agents may propose mutations. Only the human user may resolve them."));
+        lines.push(self.format_line(""));
+
         if let Some(OverlayType::SkillProposal(ref prop)) = self.active_overlay {
-            let card_width = 44.min(self.width - 4);
-            let start_col = self.width.saturating_sub(card_width + 2);
-            let card_lines = vec![
-                format!("+{} +", "-".repeat(card_width - 2)),
-                format!("| PROPOSAL: {:<width$} |", prop.title, width = card_width - 15),
-                format!("| Skill:    {:<width$} |", prop.skill_id, width = card_width - 15),
-                format!("| Risk:     {:<width$} |", prop.severity, width = card_width - 15),
-                format!("| Hash:     {:<width$} |", &prop.proposal_hash[..16.min(prop.proposal_hash.len())], width = card_width - 15),
-                format!("| [A]ccept  [R]eject{:spacer$}|", "", spacer = card_width - 21),
-                format!("+{} +", "-".repeat(card_width - 2)),
-            ];
-
-            for (idx, cline) in card_lines.iter().enumerate() {
-                let target_row = idx + 2;
-                if target_row < frame.len() {
-                    let orig = &frame[target_row];
-                    let mut prefix = orig.chars().take(start_col).collect::<String>();
-                    if prefix.len() < start_col {
-                        prefix.push_str(&" ".repeat(start_col - prefix.len()));
-                    }
-                    frame[target_row] = format!("{}{}", prefix, cline);
-                }
-            }
+            lines.push(self.format_line(&format!("  [ ACTIVE PROPOSAL REQUIRING DECISION ]")));
+            lines.push(self.format_line(&format!("    Title:        {}", prop.title)));
+            lines.push(self.format_line(&format!("    Skill:        {}", prop.skill_id)));
+            lines.push(self.format_line(&format!("    Severity:     {}", prop.severity)));
+            lines.push(self.format_line(&format!("    Hash:         {}", prop.proposal_hash)));
+            lines.push(self.format_line(&format!("    Explanation:  {}", prop.explanation)));
+            lines.push(self.format_line(""));
+            lines.push(self.format_line("    Actions:      [y] APPROVE (Issue execution grant)   [n] REJECT (Discard)"));
+            lines.push(self.format_line(""));
+        } else {
+            lines.push(self.format_line("  No pending proposals requiring human sovereign approval."));
+            lines.push(self.format_line("  System is currently in a steady-state quiescent condition."));
+            lines.push(self.format_line(""));
         }
 
-        frame
+        lines.push(self.format_line("  Press [1] for Terminal, [2] for Vital, [4] for Capabilities"));
+
+        while lines.len() < term_rows {
+            lines.push(self.format_line(""));
+        }
+        lines
+    }
+
+    fn render_capabilities_tab(&self) -> Vec<String> {
+        let term_rows = self.height.saturating_sub(1);
+        let mut lines = Vec::with_capacity(term_rows);
+
+        lines.push(self.format_line(""));
+        lines.push(self.format_line("  CONDUCTOR CAPABILITY REGISTRY: Universal Skills"));
+        lines.push(self.format_line("  ================================================================"));
+        lines.push(self.format_line(""));
+        lines.push(self.format_line("  [ Mutation Skills: Approval Gate MANDATORY ]"));
+        lines.push(self.format_line("    - system.upgrade     Perform atomic declarative NixOS upgrade"));
+        lines.push(self.format_line("    - system.rollback    Revert system generation atomically"));
+        lines.push(self.format_line("    - storage.plan       Deterministic btrfs subvolume layout"));
+        lines.push(self.format_line(""));
+        lines.push(self.format_line("  [ Inspection & Execution Skills: Read-Only / Controlled ]"));
+        lines.push(self.format_line("    - system.info        Comprehensive host platform metadata"));
+        lines.push(self.format_line("    - state.verify       Cryptographic StateRoot & passport verification"));
+        lines.push(self.format_line("    - boot.verify        Measured boot & UKI tamper attestation"));
+        lines.push(self.format_line("    - hyperion.run       Deterministic workload sandboxing (Tier 0-3)"));
+        lines.push(self.format_line("    - daemon.status      Query micro-Rust daemon socket health"));
+        lines.push(self.format_line("    - package.verify     Verify integrity of /nix/store derivations"));
+        lines.push(self.format_line(""));
+        lines.push(self.format_line("  Press [1] to return to Terminal Canvas"));
+
+        while lines.len() < term_rows {
+            lines.push(self.format_line(""));
+        }
+        lines
+    }
+
+    fn format_line(&self, text: &str) -> String {
+        if text.len() < self.width {
+            format!("{}{}", text, " ".repeat(self.width - text.len()))
+        } else {
+            text.chars().take(self.width).collect()
+        }
     }
 }
 
@@ -141,9 +333,16 @@ mod tests {
     fn test_topbar_rendering() {
         let layout = SurfaceLayout::new(80, 24);
         let topbar = layout.render_topbar();
-        assert!(topbar.starts_with(" CONDUCTOR  [ NEURONIX v1.0.4"));
-        assert!(topbar.ends_with("VITAL o NOMINAL "));
+        assert!(topbar.contains("CONDUCTOR [ v1.0.4"));
+        assert!(topbar.contains("1:Term"));
+        assert!(topbar.contains("VITAL o NOMINAL"));
         assert_eq!(topbar.len(), 80);
+
+        let wide_layout = SurfaceLayout::new(120, 24);
+        let wide_topbar = wide_layout.render_topbar();
+        assert!(wide_topbar.contains("CONDUCTOR [ NEURONIX v1.0.4"));
+        assert!(wide_topbar.contains("1:Terminal"));
+        assert_eq!(wide_topbar.len(), 120);
     }
 
     #[test]
@@ -161,6 +360,25 @@ mod tests {
         let frame = layout.render_frame();
         assert_eq!(frame.len(), 24);
         assert!(frame[0].contains("CONDUCTOR"));
-        assert!(frame[3].contains("PROPOSAL: Generation Rollback"));
+        assert!(frame[3].contains("PROPOSAL: Generation"));
+        assert!(frame[9].contains("[y] Approve"));
+    }
+
+    #[test]
+    fn test_tab_switching() {
+        let mut layout = SurfaceLayout::new(80, 24);
+        assert_eq!(layout.active_tab, WorkspaceTab::Terminal);
+
+        layout.set_tab(WorkspaceTab::Vital);
+        let frame_vital = layout.render_frame();
+        assert!(frame_vital[2].contains("NEURONIX VITAL"));
+
+        layout.set_tab(WorkspaceTab::Proposals);
+        let frame_prop = layout.render_frame();
+        assert!(frame_prop[2].contains("USER SOVEREIGNTY"));
+
+        layout.set_tab(WorkspaceTab::Capabilities);
+        let frame_cap = layout.render_frame();
+        assert!(frame_cap[2].contains("CONDUCTOR CAPABILITY REGISTRY"));
     }
 }

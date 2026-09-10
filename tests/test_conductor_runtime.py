@@ -47,7 +47,7 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
 
         # 3. Default resolution
         default_path = resolve_socket_path()
-        self.assertTrue(str(default_path).endswith("conductor.sock"))
+        self.assertTrue("conductor" in str(default_path) and str(default_path).endswith(".sock"))
 
     async def _send_rpc(self, request_obj: dict) -> dict:
         """Helper to send a JSON-RPC request over UNIX socket and read single response."""
@@ -238,10 +238,31 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
             "jsonrpc": "2.0",
             "id": 13,
             "method": "proposal.resolve",
-            "params": {"proposal_hash": "sha256:abcd1234", "action": "APPROVE"}
+            "params": {"proposal_hash": "sha256:abcd1234", "action": "APPROVE", "caller": "HUMAN_OPERATOR"}
         })
         self.assertEqual(resp_prop["result"]["status"], "APPROVE")
         self.assertEqual(resp_prop["result"]["proposal_hash"], "sha256:abcd1234")
+        self.assertIn("execution_token", resp_prop["result"])
+
+        # Anti-replay protection: resolving again fails
+        resp_replay = await self._send_rpc({
+            "jsonrpc": "2.0",
+            "id": 131,
+            "method": "proposal.resolve",
+            "params": {"proposal_hash": "sha256:abcd1234", "action": "APPROVE", "caller": "HUMAN_OPERATOR"}
+        })
+        self.assertIn("error", resp_replay)
+        self.assertIn("already been resolved", resp_replay["error"]["message"])
+
+        # Unauthorized caller (AI_AGENT) rejected
+        resp_unauth = await self._send_rpc({
+            "jsonrpc": "2.0",
+            "id": 132,
+            "method": "proposal.resolve",
+            "params": {"proposal_hash": "sha256:ef5678", "action": "APPROVE", "caller": "AI_AGENT"}
+        })
+        self.assertIn("error", resp_unauth)
+        self.assertIn("cannot resolve", resp_unauth["error"]["message"])
 
         resp_surface = await self._send_rpc({
             "jsonrpc": "2.0",

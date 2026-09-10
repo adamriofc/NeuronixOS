@@ -64,6 +64,7 @@
       # Target installed system configuration (Default Desktop x86_64)
       nixosConfigurations."neuronix-desktop" = nixpkgs.lib.nixosSystem {
         system = primarySystem;
+        specialArgs = { inherit self; };
         modules = [
           ./modules/platform.nix
           ./modules/desktop/gnome.nix
@@ -74,6 +75,7 @@
       # Target installed system configuration (ARM64 / aarch64 Desktop)
       nixosConfigurations."neuronix-desktop-aarch64" = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
+        specialArgs = { inherit self; };
         modules = [
           ./modules/platform.nix
           ./modules/desktop/gnome.nix

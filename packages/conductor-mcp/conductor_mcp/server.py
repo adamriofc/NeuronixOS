@@ -92,6 +92,7 @@ class McpServer:
                 "capabilities": {
                     "tools": {"listChanged": False},
                     "resources": {"subscribe": False, "listChanged": False},
+                    "logging": {},
                     "tasks": {}
                 }
             }
@@ -116,17 +117,16 @@ class McpServer:
             arguments = params.get("arguments", {})
             meta = params.get("_meta", {})
 
-            caller_id = meta.get("caller_id", "AI_AGENT")
-            delegated_authority = meta.get("delegated_authority")
+            # Enforce caller="AI_AGENT" and sovereign authorization token validation.
+            # Never trust caller-asserted delegated_authority from unauthenticated agent payload.
             token = meta.get("authorization_token")
 
             try:
                 res = skills.execute(
                     skill_id=tool_name,
                     inputs=arguments,
-                    caller=caller_id,
-                    authorization_token=token,
-                    delegated_authority=delegated_authority
+                    caller="AI_AGENT",
+                    authorization_token=token
                 )
                 return {
                     "content": [

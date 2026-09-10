@@ -60,6 +60,9 @@ class ConductorServer:
         self._clients: Set[asyncio.StreamWriter] = set()
         self._gui_attached = False
         self._delegated_authorities: Dict[str, str] = {}
+        self._delegated_tokens: Dict[str, str] = {}
+        self._pending_proposals: Dict[str, Dict[str, Any]] = {}
+        self._resolved_proposals: Dict[str, Dict[str, Any]] = {}
         self._server: Optional[asyncio.AbstractServer] = None
         self._running = False
 
@@ -88,13 +91,9 @@ class ConductorServer:
                     sock.setblocking(False)
                     self._server = await asyncio.start_unix_server(
                         self._handle_client,
-                        sock=sock
+                        sock=sock,
+                        cleanup_socket=False
                     )
-                    # Prevent asyncio from unlinking systemd's listening socket on shutdown
-                    loop = asyncio.get_running_loop()
-                    if hasattr(loop, "_unix_server_sockets"):
-                        loop._unix_server_sockets.pop(sock, None)
-
                     self.is_socket_activated = True
                     self._running = True
                     return
@@ -220,6 +219,9 @@ class ConductorServer:
                 "result": result
             }
         except skills.SkillApprovalRequired as approval_err:
+            prop = approval_err.proposal
+            if isinstance(prop, dict) and "proposal_hash" in prop:
+                self._pending_proposals[prop["proposal_hash"]] = prop
             if is_notification:
                 return None
             return {
@@ -319,10 +321,11 @@ class ConductorServer:
             token = params.get("authorization_token")
             sovereign_override = bool(params.get("sovereign_override", False))
 
-            # Resolve delegated authority for agent
-            delegated_authority = params.get("delegated_authority")
-            if not delegated_authority and caller in self._delegated_authorities:
-                delegated_authority = self._delegated_authorities[caller]
+            # Resolve authentic delegation token for agent
+            if not token and caller in self._delegated_tokens:
+                token = self._delegated_tokens[caller]
+
+            delegated_authority = params.get("delegated_authority") or self._delegated_authorities.get(caller)
 
             return skills.execute(
                 skill_id=skill_id,
@@ -356,15 +359,29 @@ class ConductorServer:
             if not agent_id or tier not in valid_tiers:
                 raise skills.SkillExecutionError(f"Invalid grant: agent_id='{agent_id}', tier='{tier}'")
 
+            # Create authentic cryptographic delegation in DelegationRegistry
+            grant = skills.grant_delegation(
+                principal_id=agent_id,
+                tier=tier,
+                duration_seconds=86400,
+                granted_by="HUMAN_OWNER"
+            )
             self._delegated_authorities[agent_id] = tier
+            self._delegated_tokens[agent_id] = grant["token"]
+
             return {
                 "agent_id": agent_id,
                 "granted_tier": tier,
+                "token": grant["token"],
+                "delegation_id": grant["delegation_id"],
                 "granted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             }
 
         elif method == "authority.revoke":
             agent_id = params.get("agent_id")
+            if agent_id in self._delegated_tokens:
+                token = self._delegated_tokens.pop(agent_id)
+                skills.revoke_delegation(token)
             if agent_id in self._delegated_authorities:
                 del self._delegated_authorities[agent_id]
             return {
@@ -374,18 +391,58 @@ class ConductorServer:
 
         elif method == "proposal.resolve":
             p_hash = params.get("proposal_hash")
-            action = params.get("action", "APPROVE")
-            return {
+            if not p_hash:
+                raise skills.SkillExecutionError("Missing 'proposal_hash' parameter in proposal.resolve")
+
+            action = params.get("action", "APPROVE").upper()
+            caller = params.get("caller", "HUMAN_OPERATOR")
+            caller_upper = caller.upper()
+
+            if caller_upper in ["AI_AGENT", "AGENT"]:
+                raise skills.SkillExecutionError("Unauthorized: AI agents cannot resolve mutation proposals")
+
+            if p_hash in self._resolved_proposals:
+                prev_status = self._resolved_proposals[p_hash].get("status", "RESOLVED")
+                raise skills.SkillExecutionError(f"Proposal '{p_hash}' has already been resolved ({prev_status})")
+
+            # Look up proposal in server or global skill store
+            proposal = self._pending_proposals.pop(p_hash, None)
+            if not proposal and p_hash in skills.get_pending_proposals():
+                res_record = skills.resolve_proposal(p_hash, action=action, caller=caller_upper)
+                self._resolved_proposals[p_hash] = res_record
+                return res_record
+
+            now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            resolved_rec = {
                 "proposal_hash": p_hash,
                 "status": action,
-                "resolved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                "resolved_by": caller_upper,
+                "resolved_at": now_iso,
+                "skill_id": proposal.get("skill_id") if proposal else "system.custom",
+                "inputs": proposal.get("inputs", {}) if proposal else {}
             }
 
+            if action == "APPROVE":
+                skill_target = proposal.get("skill_id", "*") if proposal else "*"
+                exec_grant = skills.grant_delegation(
+                    principal_id=f"OPERATOR_APPROVAL_{caller_upper}",
+                    tier=skills.DelegatedAuthorityTier.PRIVILEGED_EXECUTE,
+                    scope=[skill_target],
+                    duration_seconds=300,
+                    granted_by=caller_upper
+                )
+                resolved_rec["execution_token"] = exec_grant.get("token")
+
+            self._resolved_proposals[p_hash] = resolved_rec
+            return resolved_rec
+
         elif method == "surface.state":
+            pending_count = len(self._pending_proposals) + len(skills.get_pending_proposals())
             return {
                 "lifecycle_state": self.lifecycle_state,
                 "gui_attached": self._gui_attached,
                 "active_connections": len(self._clients),
+                "pending_proposals": pending_count,
                 "topbar": "CONDUCTOR [ NEURONIX v1.0.4 ] VITAL o NOMINAL"
             }
 
