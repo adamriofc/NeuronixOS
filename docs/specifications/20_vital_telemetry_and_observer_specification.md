@@ -2,167 +2,177 @@
 
 ## 1. Specification Metadata
 - **Specification ID:** SPEC-NRX-VTL-020
-- **Title:** Vital Machine Telemetry, Zero-Idle Observer, and Adaptive Streaming Engine
-- **Version:** 1.0.0
+- **Title:** Vital Observability Substrate, Laboratory Instrumentation, and Zero-Idle Telemetry Engine
+- **Version:** 1.1.0
 - **Status:** RATIFIED_SPECIFICATION
-- **Scope:** Host Telemetry Collection, Sensor Probing, Normalized Hardware Telemetry, Zero-Idle Sampling, and Telemetry Privacy Boundaries.
+- **Scope:** Host Telemetry Collection, Sensor Probing, Laboratory Evidence Schema, Zero-Idle Sampling, Anti-Hallucination Primitives, and Telemetry Privacy Boundaries.
 - **Reference Standards:** Linux sysfs/procfs APIs, Linux hwmon subsystem, RFC 8785 (JCS).
 
 ---
 
 ## 2. Executive Architectural Purpose
 
-**Vital** is the native host observability subsystem of NEURONIX OS. It provides real-time system health metrics, hardware performance telemetry, and thermal conditions to both human operators (via the Conductor topbar) and autonomous AI agents (via the `vital.snapshot` and `vital.subscribe` skills).
+**Vital** is not a cosmetic system monitor or GUI dashboard. It is the **authoritative machine observability and laboratory sensing substrate** of NEURONIX OS and Conductor.
 
 ### The Core Architectural Tenet:
+> **"Vital sees and measures. NEURONIX decides and controls. AI understands and reasons. Conductor presents and connects."**
+
+Vital operates as precision laboratory instrumentation for the host. It provides grounded, high-fidelity empirical facts about the operating system and physical machine so that human engineers and autonomous AI agents can diagnose bottlenecks, plan actions, and verify execution without guessing or hallucinating system state.
+
+### The Zero-Idle Doctrine:
 > **"No Consumer, No Work."**  
-> Vital does not run background polling loops or sample hardware sensors when no observer is active. Telemetry collection is pull-based by default. Continuous sampling occurs only when an active visual consumer (Conductor GUI) or explicit agent subscription exists. When the last subscriber disconnects or the Conductor window closes, all sampling threads immediately terminate.
+> Vital runs zero background polling loops and samples zero hardware sensors when no observer is active. Continuous sampling occurs only when an active visual consumer (Conductor GUI) or explicit agent subscription exists. When the last subscriber disconnects or the Conductor window closes, all sampling threads immediately terminate.
 
 ---
 
-## 3. Dual Operating Modes
+## 3. Four Telemetry Data Classes
 
-Vital operates in two distinct operational paradigms:
+To prevent AI agents from confusing raw sensor facts with computed trends or speculative interpretations, Vital strictly partitions all telemetry into four orthogonal data classes:
 
 ```mermaid
 flowchart TD
-    subgraph MODES["Vital Operational Modes"]
-        PULL["Pull-Based Snapshot (vital.snapshot)"]
-        PUSH["Push-Based Adaptive Stream (vital.subscribe)"]
+    subgraph SENSORS["Physical & Kernel Substrate"]
+        HW["Hardware Sensors (/sys/class/hwmon)"]
+        KERNEL["Kernel Accounting (/proc/stat, /proc/meminfo)"]
+        SYS["System Semantics (/run/current-system, StateRoot)"]
     end
 
-    subgraph TRIGGER["Trigger Conditions"]
-        REQ_AGENT["Agent invokes vital.snapshot"]
-        REQ_GUI["User opens Conductor GUI window"]
-        REQ_STREAM["Agent opens telemetry stream"]
+    subgraph C1["Class 1: OBSERVED (Ground Truth)"]
+        O_DATA["Direct Measurements (temp=91C, ram_avail=1.8GB)"]
     end
 
-    subgraph ENGINE["Vital Sampling Engine"]
-        SAMPLER["sysfs / procfs / hwmon / GPU Collector"]
-        NORMALIZER["Normalized JSON Schema Formatter"]
+    subgraph C2["Class 2: DERIVED (Deterministic Rules)"]
+        D_DATA["Deterministic Computation (mem_pressure=HIGH, trend=RISING)"]
     end
 
-    subgraph LIFECYCLE["Lifecycle State"]
-        DORMANT["0% CPU Dormant Sleep"]
+    subgraph C3["Class 3: EVENT (State Transitions)"]
+        E_DATA["Discrete State Transitions (swap_started, throttling_detected)"]
     end
 
-    REQ_AGENT --> PULL
-    PULL --> SAMPLER
-    SAMPLER --> NORMALIZER
-    NORMALIZER -->|"Single JSON-RPC Response"| DORMANT
+    subgraph C4["Class 4: DIAGNOSTIC (AI Reasoning)"]
+        A_DATA["Agent Synthesis (Memory-bound workload, reduce build parallelism)"]
+    end
 
-    REQ_GUI --> PUSH
-    REQ_STREAM --> PUSH
-    PUSH -->|"Adaptive Timer Loop (1-2s)"| SAMPLER
-    NORMALIZER -->|"Streaming Event Push"| PUSH
-    PUSH -->|"Subscribers == 0"| DORMANT
+    HW --> O_DATA
+    KERNEL --> O_DATA
+    SYS --> O_DATA
+
+    O_DATA -->|"Deterministic Rule Engine"| D_DATA
+    O_DATA -->|"Edge Detection"| E_DATA
+    
+    O_DATA --> A_DATA
+    D_DATA --> A_DATA
+    E_DATA --> A_DATA
 ```
 
-### 3.1 Pull-Based Snapshot Mode (`vital.snapshot`)
-- **Execution Lifecycle:** On-demand synchronous query.
-- **Sampling Behavior:** The collector samples kernel accounting data (`/proc/stat`, `/proc/meminfo`), hardware monitors (`/sys/class/hwmon`), and storage health.
-- **Duration:** < 15 ms total execution time.
-- **Postcondition:** Immediate return to zero-work dormant state.
-
-### 3.2 Push-Based Adaptive Stream Mode (`vital.subscribe`)
-- **Execution Lifecycle:** Activated strictly while `subscriber_count > 0`.
-- **Adaptive Sampling Frequencies:**
-  - CPU utilization and load average: 1000 ms
-  - Memory and ZRAM compression status: 1000 ms
-  - Storage I/O throughput: 1000 ms
-  - Thermal sensors and fan speeds: 2000 ms
-  - Battery / Power draw (mobile): 5000 ms
-- **Immediate Termination Invariant:** When the Conductor GUI window closes or an agent drops its subscription session, the reference count drops to 0 and all timer loops are cancelled.
+1. **`OBSERVED` (Ground Truth):** Direct physical and kernel sensor measurements. Completely objective, unmodified facts.
+2. **`DERIVED` (Deterministic Rules):** Rates of change, load pressures, and health states calculated by deterministic math and deterministic rule engines. Strictly never evaluated by an LLM.
+3. **`EVENT` (State Transitions):** Discrete transitions detected across sampling intervals (e.g., thermal throttling engaged, battery discharging).
+4. **`DIAGNOSTIC` (AI Reasoning):** High-level root cause analysis and recommendations formulated by external AI models based on the first three classes. AI models are strictly forbidden from treating their own diagnostics as system evidence.
 
 ---
 
-## 4. Normalized System Telemetry Schema
+## 4. Laboratory Evidence Metadata & Anti-Hallucination Invariants
 
-Vital normalizes diverse kernel interfaces into a canonical JSON telemetry schema:
+Every single measurement emitted by Vital is encapsulated within an **Observation Record** containing rigorous provenance and freshness metadata:
 
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "timestamp": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "host_id": {
-      "type": "string"
-    },
-    "cpu": {
-      "type": "object",
-      "properties": {
-        "overall_usage_percent": {"type": "number", "minimum": 0.0, "maximum": 100.0},
-        "core_count": {"type": "integer", "minimum": 1},
-        "frequency_mhz": {"type": "number"},
-        "load_average": {
-          "type": "array",
-          "items": {"type": "number"},
-          "minItems": 3,
-          "maxItems": 3
-        }
-      },
-      "required": ["overall_usage_percent", "core_count", "load_average"]
-    },
-    "memory": {
-      "type": "object",
-      "properties": {
-        "total_bytes": {"type": "integer"},
-        "used_bytes": {"type": "integer"},
-        "available_bytes": {"type": "integer"},
-        "swap_used_bytes": {"type": "integer"},
-        "zram_ratio": {"type": "number"}
-      },
-      "required": ["total_bytes", "used_bytes", "available_bytes"]
-    },
-    "storage": {
-      "type": "object",
-      "properties": {
-        "root_used_percent": {"type": "number"},
-        "nix_store_bytes": {"type": "integer"},
-        "read_bytes_sec": {"type": "number"},
-        "write_bytes_sec": {"type": "number"}
-      },
-      "required": ["root_used_percent", "nix_store_bytes"]
-    },
-    "thermals": {
-      "type": "object",
-      "properties": {
-        "cpu_package_celsius": {"type": "number"},
-        "gpu_celsius": {"type": ["number", "null"]},
-        "nvme_celsius": {"type": ["number", "null"]}
-      },
-      "required": ["cpu_package_celsius"]
-    },
-    "status": {
-      "type": "string",
-      "enum": ["NOMINAL", "DEGRADED", "CRITICAL"]
-    }
-  },
-  "required": ["timestamp", "cpu", "memory", "storage", "thermals", "status"],
-  "additionalProperties": false
+  "metric": "thermal.cpu_package_celsius",
+  "value": 74.2,
+  "unit": "celsius",
+  "timestamp": 1789028400.124,
+  "source": "/sys/class/hwmon/hwmon1/temp1_input",
+  "age_ms": 12,
+  "quality": "fresh",
+  "confidence": "measured",
+  "reason": null
+}
+```
+
+### The Absence of Data Invariant
+> **"Absence of data must be explicitly represented as absence of data."**  
+> If a sensor is unreadable, unexposed by the kernel driver, or restricted by LSM policy, Vital records `value: null` with `quality: "unavailable"` and an explicit `reason: "sensor_not_exposed"`. Vital never invents fallback defaults (such as reporting `0` for an unreadable temperature or fan speed), preventing AI models from hallucinating false normalcies.
+
+### Quality & Freshness Classification
+- **`fresh`:** Sampled within the current active request (< 1000 ms).
+- **`recent`:** Sampled within the last 5000 ms.
+- **`stale`:** Older than 5000 ms; must not be used for safety-critical mutation decisions.
+- **`unavailable`:** Sensor cannot be probed on this host hardware.
+
+---
+
+## 5. Dual Presentation Strategy: Minimalist UI vs Rich Machine API
+
+Vital maintains an intentional duality between visual presentation and machine consumption:
+
+| Operational Surface | Presentation Format | Purpose |
+| :--- | :--- | :--- |
+| **Conductor GUI (Human)** | `CONDUCTOR [ NEURONIX v ] VITAL o` | Radical minimalism. Single indicator dot (green/yellow/red) with tooltip hover for essential summary. |
+| **Agent API (`vital.snapshot`)** | Full structured JSON with metadata | High-fidelity machine context. Complete factual basis for automated diagnosis and verification. |
+| **Context API (`vital.context`)** | Purpose-tailored factual slice | Low-overhead context packaging for specific workflows (`system_upgrade`, `diagnostic`). |
+
+---
+
+## 6. Closed-Loop System Intelligence
+
+Vital enables a closed-loop operational cycle for autonomous AI agents:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Agent as Autonomous AI Agent
+    participant Vital as Vital Observatory
+    participant Skills as NEURONIX Skill Broker
+    participant Core as NEURONIX Control Plane
+
+    Agent->>Vital: vital.snapshot() or vital.context("system_upgrade")
+    Vital-->>Agent: Observation Evidence (RAM, disk free, thermal status)
+    Agent->>Agent: Reason & Diagnose (Determine if system meets pre-conditions)
+    Agent->>Skills: skill.execute("system.rollback", {target: 42})
+    Skills->>Core: Validate Invariants & Execute State Transition
+    Core-->>Skills: Execution Receipt & Commit StateRoot
+    Skills-->>Agent: Execution Result
+    Agent->>Vital: vital.snapshot()
+    Vital-->>Agent: Postcondition Observation (Verify active generation & health)
+```
+
+---
+
+## 7. Tailored AI Context Packaging (`vital.context`)
+
+To prevent context window bloat while maintaining strict grounding, Vital provides purpose-filtered context packages:
+
+```json
+{
+  "purpose": "system_upgrade",
+  "timestamp": "2026-09-10T09:34:09Z",
+  "overall_health": "NOMINAL",
+  "facts": {
+    "active_generation": 148,
+    "memory_available_bytes": 13316911104,
+    "root_available_bytes": 195427147776,
+    "root_used_percent": 24.8,
+    "cpu_load_1m": 0.42,
+    "thermal_status": "NORMAL"
+  }
 }
 ```
 
 ---
 
-## 5. Security, Privacy, and Redaction Boundary
-
-To protect developer confidentiality and system security, Vital enforces an unbypassable telemetry redaction filter:
+## 8. Security, Privacy, and Redaction Boundary
 
 1. **Process and Path Redaction:** Vital never emits command-line arguments of running processes, container mount paths, or user home directory names.
-2. **Network Masking:** Interface MAC addresses and internal private IP address ranges are masked by default unless invoked with elevated operator credentials.
+2. **Network Masking:** Interface MAC addresses and internal private IP address ranges are masked by default.
 3. **Zero Secret Leakage:** In accordance with Security Invariant `INV-SEC-014`, private cryptographic keys, Age identities, and decrypted environment buffers are permanently excluded from telemetry payloads.
-4. **LSM Compliance:** All sensor probing respects active AppArmor and seccomp filters. If a sensor node cannot be read due to kernel permissions, Vital records `null` rather than elevating privileges.
+4. **LSM Compliance:** All sensor probing respects active AppArmor and seccomp filters.
 
 ---
 
-## 6. Verification & Quality Gates
+## 9. Verification & Quality Gates
 
-1. **Zero-Idle Invariant:** When no clients are subscribed to `vital.subscribe`, the Vital thread pool must be completely idle (0.0% CPU usage measured over 60 seconds).
-2. **Schema Conformance:** Every payload emitted by `vital.snapshot` must validate against the normalized JSON Schema.
-3. **Response Latency:** `vital.snapshot` synchronous execution latency must be strictly < 25 ms on standard hardware.
-4. **Typography Invariant:** Strictly 0 Unicode em-dashes (`\xe2\x80\x94`) or en-dashes (`\xe2\x80\x93`) in any documentation or code.
+1. **Zero-Idle Invariant:** When no clients are subscribed, Vital sampling CPU usage must be strictly 0.0%.
+2. **Absence of Data Verification:** Unreadable sensors must emit `value: null` with `quality: "unavailable"`.
+3. **Response Latency:** Synchronous `vital.snapshot` execution latency must be strictly < 20 ms.
+4. **Typography Guarantee:** Strictly 0 Unicode em-dashes (`\xe2\x80\x94`) or en-dashes (`\xe2\x80\x93`) in any documentation or code.
