@@ -41,6 +41,10 @@ jobs:
         with:
           use-flakehub: false
 
+      - name: Install System Dependencies for Release Gate
+        run: |
+          sudo apt-get update -qy && sudo apt-get install -qy age
+
       - name: Enforce Exact Commit SHA Lineage & Release Gate Assurance
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
