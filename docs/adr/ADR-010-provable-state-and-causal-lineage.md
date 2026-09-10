@@ -10,7 +10,7 @@ Modern operating systems present state as a collection of unverified runtime obs
 NEURONIX establishes the **Provable State Engine** as the primary architectural abstraction governing the entire operating system:
 1. **Merkle StateRoot Formulation:** Every important machine state is committed into a 32-byte SHA-256 Merkle root aggregating five canonical leaves: Hardware Posture ($L_{\text{posture}}$), Software Substrate ($L_{\text{substrate}}$), Actor Provenance ($L_{\text{provenance}}$), Security Policy ($L_{\text{policy}}$), and Verification Evidence ($L_{\text{evidence}}$).
 2. **Causal Lineage Ledger:** All system mutations record their parent state root, transaction ID, and caller UID (authenticated at the Linux socket layer via `SO_PEERCRED`) in an append-only cryptographic hash chain.
-3. **Deterministic Attestation:** System health is proven in real time by recomputing the StateRoot against active TPM2 PCR 7/11 measurements, Nix store derivations, and the 1,264-assertion assurance taxonomy.
+3. **Deterministic Attestation:** System health is proven in real time by recomputing the StateRoot against active TPM2 PCR 7/11 measurements, Nix store derivations, and the 1,299-assertion assurance taxonomy.
 4. **Unified Command Interface:** The abstraction is exposed through the `neuronix state` command suite (`show`, `verify`, `explain`, `diff`, `history`, `recover`, `prove`) with sub-millisecond query performance backed by the micro-Rust systems daemon (`neuronix-daemon`).
 
 ## Consequences
