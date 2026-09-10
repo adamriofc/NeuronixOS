@@ -1,21 +1,37 @@
-{ lib, python3Packages, neuronix-core }:
+{ lib, buildPythonPackage, setuptools, neuronix-core }:
 
-python3Packages.buildPythonPackage rec {
+let
+  versionData = import ../../version.nix;
+in
+buildPythonPackage {
   pname = "conductor-runtime";
-  version = (import ../../version.nix).version;
+  version = versionData.version;
+  pyproject = true;
 
   src = ./.;
+
+  build-system = [
+    setuptools
+  ];
+
+  dependencies = [
+    neuronix-core
+  ];
 
   propagatedBuildInputs = [
     neuronix-core
   ];
 
-  doCheck = false;
+  pythonImportsCheck = [
+    "conductor_runtime"
+  ];
 
   meta = with lib; {
     description = "NEURONIX Conductor Zero-Idle Capability Runtime & Control Broker";
     homepage = "https://github.com/adamriofc/NeuronixOS";
     license = licenses.asl20;
+    maintainers = [ ];
     platforms = platforms.linux;
   };
 }
+

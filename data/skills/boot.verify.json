@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "boot.verify",
+  "version": "1.0.0",
+  "category": "READ",
+  "title": "Boot Health Contract and TPM Attestation",
+  "description": "Verify the 5-stage monotonic boot progression and Lanzaboote UKI TPM PCR measurements.",
+  "invariants_required": [
+    "INV-SEC-015"
+  ],
+  "approval_gate_required": false,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "require_pcr": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to require valid PCR measurements."
+      }
+    },
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "current_stage": {
+        "type": "string"
+      },
+      "stages_completed": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "contract_valid": {
+        "type": "boolean"
+      },
+      "pcr_binding": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "current_stage",
+      "stages_completed",
+      "contract_valid",
+      "pcr_binding"
+    ],
+    "additionalProperties": false
+  }
+}

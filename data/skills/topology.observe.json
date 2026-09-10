@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "topology.observe",
+  "version": "1.0.0",
+  "category": "READ",
+  "title": "Control-Plane Topology Inspection",
+  "description": "Inspect canonical architecture nodes, observed runtime mounts, sockets, and blast radius analysis.",
+  "invariants_required": [
+    "INV-SEC-018"
+  ],
+  "approval_gate_required": false,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "include_blast_radius": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "nodes_count": {
+        "type": "integer"
+      },
+      "topology_status": {
+        "type": "string"
+      },
+      "critical_nodes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "nodes_count",
+      "topology_status",
+      "critical_nodes"
+    ],
+    "additionalProperties": false
+  }
+}

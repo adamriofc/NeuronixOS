@@ -7,6 +7,9 @@
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 pub struct ConductorClient {
     socket_path: PathBuf,
@@ -37,7 +40,7 @@ impl ConductorClient {
         let mut stream = UnixStream::connect(&self.socket_path)
             .map_err(|e| format!("Failed to connect to Conductor socket at {}: {}", self.socket_path.display(), e))?;
 
-        let request_id = 1;
+        let request_id = REQUEST_COUNTER.fetch_add(1, Ordering::SeqCst);
         let frame = format!(
             "{{\"jsonrpc\":\"2.0\",\"id\":{},\"method\":\"{}\",\"params\":{}}}\n",
             request_id, method, params_json
@@ -60,6 +63,15 @@ impl ConductorClient {
         let resp = self.call("conductor.ping", "{}")?;
         Ok(resp.contains("\"PONG\""))
     }
+
+    pub fn get_surface_state(&self) -> Result<String, String> {
+        self.call("surface.state", "{}")
+    }
+
+    pub fn resolve_proposal(&self, proposal_hash: &str, action: &str) -> Result<String, String> {
+        let params = format!("{{\"proposal_hash\":\"{}\",\"action\":\"{}\"}}", proposal_hash, action);
+        self.call("proposal.resolve", &params)
+    }
 }
 
 unsafe fn libc_getuid() -> u32 {
@@ -72,10 +84,38 @@ unsafe fn libc_getuid() -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::unix::net::UnixListener;
+    use std::thread;
 
     #[test]
     fn test_default_socket_path() {
         let p = ConductorClient::default_socket_path();
         assert!(p.to_string_lossy().ends_with("conductor.sock"));
+    }
+
+    #[test]
+    fn test_client_call_mock_server() {
+        let temp_sock = format!("/tmp/conductor-test-mock-{}.sock", std::process::id());
+        let _ = std::fs::remove_file(&temp_sock);
+
+        let listener = UnixListener::bind(&temp_sock).expect("bind mock unix socket");
+
+        let handle = thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut line = String::new();
+                if reader.read_line(&mut line).is_ok() {
+                    let resp = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"status\":\"PONG\"}}\n";
+                    let _ = stream.write_all(resp.as_bytes());
+                }
+            }
+        });
+
+        let client = ConductorClient::new(Some(PathBuf::from(&temp_sock)));
+        let is_pong = client.ping().expect("ping mock server");
+        assert!(is_pong);
+
+        let _ = handle.join();
+        let _ = std::fs::remove_file(&temp_sock);
     }
 }

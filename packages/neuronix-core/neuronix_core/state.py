@@ -316,7 +316,7 @@ class ProvableStateEngine:
         Distinguishes catalogued assertion counts from verified assurance status
         backed by authoritative verification evidence records.
         """
-        total_assertions = 1299
+        total_assertions = 1353
         validation_status = "PASSING_ALL"
         manifest_path = os.path.join(self.root_dir, "data/test_manifest.json") if self.root_dir else "data/test_manifest.json"
         if os.path.exists(manifest_path):

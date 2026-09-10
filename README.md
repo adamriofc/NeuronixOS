@@ -8,7 +8,7 @@
   <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.4-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
-  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1299%2F1299_Passed_(100%25)-success.svg" alt="Testing"></a>
+  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1353%2F1353_Passed_(100%25)-success.svg" alt="Testing"></a>
   <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
   <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
@@ -1273,13 +1273,13 @@ NEURONIX Conductor is the native operating surface and local agent substrate for
 - **Surface Architecture:** One unified window featuring a 95% workspace canvas dedicated to an ultra-fast, native Rust terminal subsystem (`packages/conductor`). A subtle topbar displays `CONDUCTOR [ NEURONIX v1.0.4:gen-X ]` alongside live Vital health status (`VITAL o NOMINAL`).
 - **Terminal Emulator Subsystem:** High-performance VT100/ANSI state machine featuring full SGR color styling, cursor tracking, scrollback history, alternate screen buffer support, and POSIX PTY process management via `pty.rs` (`TIOCSWINSZ` window resizing and signal propagation).
 - **Zero-Idle Runtime Broker (`packages/conductor-runtime`):** Operates on an on-demand socket activation lifecycle (`systemd/user/conductor.socket` listening on `$XDG_RUNTIME_DIR/conductor.sock` with `0600` permissions):
-  - `COLD`: 0 connected clients, 0% CPU overhead, near-zero RAM footprint.
-  - `WARM`: External agents, MCP servers, or CLI tools connected via socket, executing capabilities with zero GUI process overhead.
+  - `COLD`: 0 connected clients, 0% CPU overhead, near-zero resident footprint (socket managed by systemd). Target budget under 15 MB RSS when active.
+  - `WARM`: External agents, MCP servers, or CLI tools connected via socket, executing capabilities with low-latency responsive IPC and zero GUI process overhead.
   - `HOT`: Visual desktop surface attached with interactive rendering overlays.
 - **Ephemeral Proposal Overlays:** When an operation requires human review, Conductor slides in a non-disruptive, structured proposal card displaying the title, risk tier, parameter diff, and cryptographic proposal hash without breaking terminal workflow.
 
 ### 33. Vital Laboratory Observation Substrate & Machine Contracts (SPEC-NRX-VTL-020)
-Vital is the high-fidelity machine observation and telemetry substrate for humans and AI agents, adhering to the fundamental doctrine: **"No Consumer, No Work"**.
+Vital is the canonical observation provider and laboratory telemetry substrate for humans and AI interfaces, adhering to the fundamental doctrine: **"No Consumer, No Work"**.
 
 - **Four Telemetry Classes:**
   - `OBSERVED`: Ground-truth hardware and kernel metrics sampled directly from `/proc`, `/sys`, `hwmon`, and `statvfs`.
@@ -1292,7 +1292,7 @@ Vital is the high-fidelity machine observation and telemetry substrate for human
 ### 34. NEURONIX Skill System & Delegated Authority Engine (SPEC-NRX-SKL-019)
 The NEURONIX Skill System establishes a single, authoritative machine-readable operating manual for every system capability across CLI, Conductor GUI, and MCP interfaces:
 
-- **Canonical Skill Contracts:** All system capabilities (`system.status`, `vital.snapshot`, `system.rollback`, `storage.plan`, `state.verify`) are formalized as declarative contracts in `data/skills/*.json` validated against `data/schemas/skill_contract.schema.json`.
+- **Canonical Skill Contracts:** All system capabilities (`system.status`, `vital.snapshot`, `system.rollback`, `storage.plan`, `state.verify`, `system.upgrade`, `boot.verify`, `hyperion.run`, `package.verify`, `daemon.status`, `topology.observe`) are formalized as declarative contracts in `data/skills/*.json` validated against `data/schemas/skill_contract.schema.json`. Execution is unified via the canonical `skills.invoke` pipeline.
 - **User Sovereignty & Delegated Authority:**
   - The human owner retains supreme sovereign authority over the system. Guardrails inform of blast radius and recovery paths rather than paternalistically blocking the owner.
   - `sudo` is explicitly recognized as a valid privileged capability under human ownership.

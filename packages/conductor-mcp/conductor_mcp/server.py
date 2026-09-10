@@ -85,6 +85,17 @@ class McpServer:
         elif method == "ping":
             return {}
 
+        elif method == "server/discover":
+            return {
+                "serverInfo": self.server_info,
+                "supportedProtocolVersions": ["2024-11-05", "2025-03-26", "2026-07-28"],
+                "capabilities": {
+                    "tools": {"listChanged": False},
+                    "resources": {"subscribe": False, "listChanged": False},
+                    "tasks": {}
+                }
+            }
+
         elif method == "tools/list":
             skill_list = skills.list_skills()
             mcp_tools = []

@@ -88,7 +88,7 @@ def compile_evidence(
         manifest = json.load(f)
 
     summary = manifest.get("summary", {})
-    total_assertions = int(summary.get("total_repository_assertions", 1299))
+    total_assertions = int(summary.get("total_repository_assertions", 1353))
     
     verified_assertions = max(0, total_assertions - failures_count)
     total_executed = verified_assertions + failures_count

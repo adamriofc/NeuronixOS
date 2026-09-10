@@ -175,6 +175,47 @@ class TestConductorMcpServer(unittest.TestCase):
         self.assertIn("system.rollback", manuals)
         self.assertIn("vital.snapshot", manuals)
 
+    def test_server_discover(self):
+        """Test modern MCP 2026-07-28 server/discover capability."""
+        req = {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "server/discover"
+        }
+        res = self.server.handle_request(req)
+        self.assertEqual(res["jsonrpc"], "2.0")
+        self.assertEqual(res["id"], 10)
+        self.assertIn("supportedProtocolVersions", res["result"])
+        self.assertIn("2026-07-28", res["result"]["supportedProtocolVersions"])
+        self.assertIn("serverInfo", res["result"])
+
+    def test_token_authenticated_execution(self):
+        """Test tool execution authenticated with cryptographic DelegationRegistry token."""
+        # Grant token to agent
+        grant_rec = skills.delegation_registry.grant(
+            principal_id="autonomous-security-agent",
+            tier=skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL,
+            scope=["system.rollback"]
+        )
+
+        req = {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/call",
+            "params": {
+                "name": "system.rollback",
+                "arguments": {"target_generation": 42, "dry_run": True},
+                "_meta": {
+                    "caller_id": "autonomous-security-agent",
+                    "authorization_token": grant_rec.token
+                }
+            }
+        }
+        res = self.server.handle_request(req)
+        self.assertFalse(res["result"]["isError"])
+        parsed = json.loads(res["result"]["content"][0]["text"])
+        self.assertEqual(parsed["status"], "DRY_RUN_PASSED")
+
 
 if __name__ == "__main__":
     unittest.main()

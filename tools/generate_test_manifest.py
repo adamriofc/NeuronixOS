@@ -119,7 +119,7 @@ STANDALONE_GATES = [
         "id": "gate_release_lifecycle",
         "file": "tests/test_release_lifecycle.sh",
         "description": "Release Lifecycle, Target Layout & Runtime Invariants",
-        "assertions": 34,
+        "assertions": 46,
         "proof_class": "L2_SYSTEM",
         "release_blocker": True
     },
@@ -193,6 +193,54 @@ STANDALONE_GATES = [
         "description": "Deterministic Semantic Closure across Subsystems, Secrets, Storage, Boot, Topology & Verifier",
         "assertions": 35,
         "proof_class": "L2_SYSTEM",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_conductor_runtime",
+        "file": "tests/test_conductor_runtime.py",
+        "description": "Conductor Zero-Idle Socket Broker, FD3 Activation & JSON-RPC Lifecycle",
+        "assertions": 10,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_conductor_mcp",
+        "file": "tests/test_conductor_mcp.py",
+        "description": "Conductor MCP 2026-07-28 Universal Agent Adapter & Authenticated Authority",
+        "assertions": 8,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_control_protocol",
+        "file": "tests/test_control_protocol.py",
+        "description": "Conductor Control Protocol Schema Validation & JSON-RPC Invariants",
+        "assertions": 6,
+        "proof_class": "L0_STATIC",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_observation_contract",
+        "file": "tests/test_observation_contract.py",
+        "description": "Vital Observation Contract Schema, Telemetry Invariants & Domain Boundaries",
+        "assertions": 4,
+        "proof_class": "L0_STATIC",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_vital_and_skills",
+        "file": "tests/test_vital_and_skills.py",
+        "description": "Vital 16 Canonical Collectors & Skill Dispatcher Integration Invariants",
+        "assertions": 9,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_skill_system",
+        "file": "tests/test_skill_system.py",
+        "description": "Universal Skill Executor Registry, Delegation Records & Invariant Enforcement",
+        "assertions": 5,
+        "proof_class": "L1_UNIT",
         "release_blocker": True
     }
 ]

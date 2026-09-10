@@ -141,6 +141,17 @@ assert_check "Release proof binds verification passport file hash" "python3 -c \
 assert_check "Release proof binds evidence graph file hash" "python3 -c \"import json, hashlib; proof=json.load(open('${PROJECT_ROOT}/dist/neuronix-os-v1.0.4.proof.json')); h=hashlib.sha256(open('${PROJECT_ROOT}/dist/evidence-graph.json', 'rb').read()).hexdigest(); assert proof['cryptographic_commitments']['evidence_graph_sha256'] == h\""
 
 # ------------------------------------------------------------------------------
+# 9. Conductor Operating Surface, Socket Activation & Agent Substrate Invariants
+# ------------------------------------------------------------------------------
+echo -e "\n${BOLD}Phase 9: Conductor Surface, Socket Activation & Agent Substrate Invariants${RESET}"
+assert_check "Conductor socket unit exists & specifies correct socket mode" "test -f '${PROJECT_ROOT}/systemd/user/conductor.socket' && grep -q 'SocketMode=0600' '${PROJECT_ROOT}/systemd/user/conductor.socket'"
+assert_check "Conductor service unit declares security hardening" "test -f '${PROJECT_ROOT}/systemd/user/conductor.service' && grep -q 'NoNewPrivileges=true' '${PROJECT_ROOT}/systemd/user/conductor.service'"
+assert_check "Conductor Rust crate tests pass" "cargo test --manifest-path '${PROJECT_ROOT}/packages/conductor/Cargo.toml'"
+assert_check "Conductor runtime test suite passes" "python3 -m unittest tests/test_conductor_runtime.py"
+assert_check "Conductor MCP test suite passes" "python3 -m unittest tests/test_conductor_mcp.py"
+assert_check "Conductor control protocol suite passes" "python3 -m unittest tests/test_control_protocol.py"
+
+# ------------------------------------------------------------------------------
 # Summary & Certification Banner
 # ------------------------------------------------------------------------------
 echo -e "\n${BOLD}═══════════════════════════════════════════════════════════════════${RESET}"

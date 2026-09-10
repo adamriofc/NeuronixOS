@@ -72,11 +72,37 @@ class ConductorServer:
         return LifecycleState.COLD
 
     async def start(self):
-        """Starts the UNIX domain socket server."""
-        # Ensure parent directory exists
-        self.socket_path.parent.mkdir(parents=True, exist_ok=True)
+        """Starts the UNIX domain socket server, supporting authentic systemd socket activation."""
+        listen_fds = os.environ.get("LISTEN_FDS")
+        listen_pid = os.environ.get("LISTEN_PID")
+        self.is_socket_activated = False
 
-        # Remove stale socket file if present
+        if listen_fds and listen_pid:
+            try:
+                fds_count = int(listen_fds)
+                target_pid = int(listen_pid)
+                if fds_count >= 1 and target_pid == os.getpid():
+                    import socket
+                    # File descriptor 3 is SD_LISTEN_FDS_START
+                    sock = socket.fromfd(3, socket.AF_UNIX, socket.SOCK_STREAM)
+                    sock.setblocking(False)
+                    self._server = await asyncio.start_unix_server(
+                        self._handle_client,
+                        sock=sock
+                    )
+                    # Prevent asyncio from unlinking systemd's listening socket on shutdown
+                    loop = asyncio.get_running_loop()
+                    if hasattr(loop, "_unix_server_sockets"):
+                        loop._unix_server_sockets.pop(sock, None)
+
+                    self.is_socket_activated = True
+                    self._running = True
+                    return
+            except Exception as e:
+                print(f"Warning: systemd socket activation failed, falling back to path: {e}")
+
+        # Fallback to standalone path-based binding
+        self.socket_path.parent.mkdir(parents=True, exist_ok=True)
         if self.socket_path.exists():
             try:
                 self.socket_path.unlink()
@@ -87,7 +113,6 @@ class ConductorServer:
             self._handle_client,
             path=str(self.socket_path)
         )
-        # Enforce user-only socket permissions (0600)
         try:
             os.chmod(self.socket_path, 0o600)
         except OSError:
@@ -110,11 +135,13 @@ class ConductorServer:
                 pass
         self._clients.clear()
 
-        if self.socket_path.exists():
-            try:
-                self.socket_path.unlink()
-            except OSError:
-                pass
+        # Only unlink socket file if NOT socket activated by systemd
+        if not getattr(self, "is_socket_activated", False):
+            if self.socket_path.exists():
+                try:
+                    self.socket_path.unlink()
+                except OSError:
+                    pass
 
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         """Processes incoming client connections and dispatches JSON-RPC 2.0 requests."""
@@ -343,6 +370,23 @@ class ConductorServer:
             return {
                 "agent_id": agent_id,
                 "revoked": True
+            }
+
+        elif method == "proposal.resolve":
+            p_hash = params.get("proposal_hash")
+            action = params.get("action", "APPROVE")
+            return {
+                "proposal_hash": p_hash,
+                "status": action,
+                "resolved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            }
+
+        elif method == "surface.state":
+            return {
+                "lifecycle_state": self.lifecycle_state,
+                "gui_attached": self._gui_attached,
+                "active_connections": len(self._clients),
+                "topbar": "CONDUCTOR [ NEURONIX v1.0.4 ] VITAL o NOMINAL"
             }
 
         else:

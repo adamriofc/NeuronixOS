@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (1299 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (1353 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -37,6 +37,8 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           cargo build --release --manifest-path packages/neuronix-daemon/Cargo.toml
           ln -sf "$PWD/packages/neuronix-daemon/target/release/neuronix-daemon" ~/.local/bin/neuronix-daemon
+          cargo build --release --manifest-path packages/conductor/Cargo.toml
+          ln -sf "$PWD/packages/conductor/target/release/conductor" ~/.local/bin/conductor
           if ! command -v age >/dev/null 2>&1; then
             cargo install rage --locked
             ln -sf "$HOME/.cargo/bin/rage" ~/.local/bin/age
@@ -66,9 +68,13 @@ jobs:
           nix-instantiate --parse modules/core/sentinel.nix
           nix-instantiate --parse modules/platform.nix
           nix-instantiate --parse modules/services/daemon.nix
+          nix-instantiate --parse modules/services/conductor.nix
           nix-instantiate --parse modules/security/ebpf-lsm.nix
           nix-instantiate --parse modules/security/lanzaboote.nix
           nix-instantiate --parse packages/neuronix-daemon/default.nix
+          nix-instantiate --parse packages/conductor/default.nix
+          nix-instantiate --parse packages/conductor-runtime/default.nix
+          nix-instantiate --parse packages/conductor-mcp/default.nix
 
       - name: Execute Distro Verification Suite (209 Tests)
         run: |
@@ -143,7 +149,7 @@ jobs:
         run: |
           bash tests/test_reproducible_iso.sh
 
-      - name: Verify Single Source of Truth Test Manifest (1299 Assertions)
+      - name: Verify Single Source of Truth Test Manifest (1353 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json
@@ -163,6 +169,34 @@ jobs:
       - name: Execute Semantic Closure & Subsystem Invariants Gate (37 Tests)
         run: |
           python3 -m unittest tests/test_semantic_closure.py
+
+      - name: Execute Conductor Native Surface & Rust Crate Gate (9 Tests)
+        run: |
+          cargo test --manifest-path packages/conductor/Cargo.toml
+
+      - name: Execute Conductor Runtime & Socket Activation Gate (10 Tests)
+        run: |
+          python3 -m unittest tests/test_conductor_runtime.py
+
+      - name: Execute Conductor MCP 2026-07-28 & Authenticated Delegation Gate (8 Tests)
+        run: |
+          python3 -m unittest tests/test_conductor_mcp.py
+
+      - name: Execute Conductor Control Protocol & RPC Validation Gate (6 Tests)
+        run: |
+          python3 -m unittest tests/test_control_protocol.py
+
+      - name: Execute Vital Observation Contract & Domain Boundary Gate (4 Tests)
+        run: |
+          python3 -m unittest tests/test_observation_contract.py
+
+      - name: Execute Vital 16 Collectors & Skills Integration Gate (9 Tests)
+        run: |
+          python3 -m unittest tests/test_vital_and_skills.py
+
+      - name: Execute Universal Skill System & Delegation Registry Gate (5 Tests)
+        run: |
+          python3 -m unittest tests/test_skill_system.py
 
       - name: Execute Negative Reproducibility & Mutation Sensitivity Gate (6 Mutants)
         run: |
@@ -188,6 +222,7 @@ jobs:
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }} \
-            -d "{\"state\":\"success\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"description\":\"1299/1299 Assertions Verified 100% Green\",\"context\":\"continuous-integration/github-actions\"}"
+            -d "{\"state\":\"success\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"description\":\"1353/1353 Assertions Verified 100% Green\",\"context\":\"continuous-integration/github-actions\"}"
+
 
 

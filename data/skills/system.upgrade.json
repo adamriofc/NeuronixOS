@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "system.upgrade",
+  "version": "1.0.0",
+  "category": "MUTATE",
+  "title": "System Upgrade and Generation Transition",
+  "description": "Evaluate and execute transactional NixOS system upgrades with atomic generation transition.",
+  "invariants_required": [
+    "INV-SEC-001",
+    "INV-SEC-004",
+    "INV-SEC-015"
+  ],
+  "approval_gate_required": true,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "dry_run": {
+        "type": "boolean",
+        "default": true,
+        "description": "Perform preflight evaluation without switching generation."
+      },
+      "target_profile": {
+        "type": "string",
+        "default": "system",
+        "description": "Target profile to upgrade."
+      }
+    },
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "UPGRADE_READY",
+          "SUCCESS",
+          "FAILED"
+        ]
+      },
+      "dry_run": {
+        "type": "boolean"
+      },
+      "flake_locked": {
+        "type": "boolean"
+      },
+      "channel_revision": {
+        "type": "string"
+      },
+      "target_generation": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "status",
+      "dry_run",
+      "flake_locked",
+      "target_generation"
+    ],
+    "additionalProperties": false
+  }
+}

@@ -56,6 +56,7 @@
         tuning = import ./modules/hardware/tuning.nix;
         mesh = import ./modules/services/mesh.nix;
         daemon = import ./modules/services/daemon.nix;
+        conductor = import ./modules/services/conductor.nix;
         ebpfLsm = import ./modules/security/ebpf-lsm.nix;
         lanzaboote = import ./modules/security/lanzaboote.nix;
       };
@@ -106,6 +107,16 @@
           neuronix-cli = pkgs.callPackage ./packages/neuronix-cli { };
           neuronix-daemon = pkgs.callPackage ./packages/neuronix-daemon { };
           opencode = pkgs.callPackage ./packages/opencode { };
+          conductor = pkgs.callPackage ./packages/conductor { };
+          conductor-runtime = pkgs.python3.pkgs.callPackage ./packages/conductor-runtime {
+            neuronix-core = pkgs.python3.pkgs.callPackage ./packages/neuronix-core { };
+          };
+          conductor-mcp = pkgs.python3.pkgs.callPackage ./packages/conductor-mcp {
+            neuronix-core = pkgs.python3.pkgs.callPackage ./packages/neuronix-core { };
+            conductor-runtime = pkgs.python3.pkgs.callPackage ./packages/conductor-runtime {
+              neuronix-core = pkgs.python3.pkgs.callPackage ./packages/neuronix-core { };
+            };
+          };
         } // (nixpkgs.lib.optionalAttrs (system == primarySystem) {
           iso = self.nixosConfigurations."neuronix-iso".config.system.build.isoImage;
         })

@@ -522,7 +522,7 @@ class TestStandaloneVerifierClosure(unittest.TestCase):
         self.assertTrue(valid, f"Passport verification failed: {msg}")
 
         manifest_path = os.path.join(PROJECT_ROOT, "data/test_manifest.json")
-        expected_assertions = summary.get("catalog_assertions", 1299)
+        expected_assertions = summary.get("catalog_assertions", 1353)
         if os.path.exists(manifest_path):
             try:
                 with open(manifest_path, "r", encoding="utf-8") as mf:

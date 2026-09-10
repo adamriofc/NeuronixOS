@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "daemon.status",
+  "version": "1.0.0",
+  "category": "READ",
+  "title": "Systems Daemon Control Plane Status",
+  "description": "Inspect micro-Rust systems daemon status, SO_PEERCRED enforcement, and control plane channels.",
+  "invariants_required": [
+    "INV-SEC-004"
+  ],
+  "approval_gate_required": false,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "active": {
+        "type": "boolean"
+      },
+      "protocol": {
+        "type": "string"
+      },
+      "peer_cred_enforced": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "active",
+      "protocol",
+      "peer_cred_enforced"
+    ],
+    "additionalProperties": false
+  }
+}

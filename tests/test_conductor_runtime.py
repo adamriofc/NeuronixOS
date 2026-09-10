@@ -232,6 +232,86 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
         })
         self.assertEqual(resp_malformed["error"]["code"], -32600)
 
+    async def test_proposal_resolve_and_surface_state(self):
+        """Test proposal.resolve and surface.state RPCs."""
+        resp_prop = await self._send_rpc({
+            "jsonrpc": "2.0",
+            "id": 13,
+            "method": "proposal.resolve",
+            "params": {"proposal_hash": "sha256:abcd1234", "action": "APPROVE"}
+        })
+        self.assertEqual(resp_prop["result"]["status"], "APPROVE")
+        self.assertEqual(resp_prop["result"]["proposal_hash"], "sha256:abcd1234")
+
+        resp_surface = await self._send_rpc({
+            "jsonrpc": "2.0",
+            "id": 14,
+            "method": "surface.state"
+        })
+        self.assertIn("topbar", resp_surface["result"])
+        self.assertEqual(resp_surface["result"]["lifecycle_state"], LifecycleState.WARM)
+
+    async def test_socket_activation_fd3(self):
+        """Test authentic systemd socket activation inheriting file descriptor 3."""
+        import socket
+        sock_tmp = tempfile.NamedTemporaryFile(delete=False)
+        sock_path = sock_tmp.name + ".sock"
+        sock_tmp.close()
+        os.unlink(sock_tmp.name)
+
+        parent_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        parent_sock.bind(sock_path)
+        parent_sock.listen(1)
+
+        # Duplicate parent_sock to FD 3
+        orig_fd3 = None
+        try:
+            # Check if FD 3 is already open
+            try:
+                orig_fd3 = os.dup(3)
+            except OSError:
+                pass
+            os.dup2(parent_sock.fileno(), 3)
+
+            os.environ["LISTEN_FDS"] = "1"
+            os.environ["LISTEN_PID"] = str(os.getpid())
+
+            activated_server = ConductorServer(socket_path=Path(sock_path))
+            await activated_server.start()
+
+            self.assertTrue(activated_server.is_socket_activated)
+
+            # Test RPC over activated socket
+            reader, writer = await asyncio.open_unix_connection(path=sock_path)
+            writer.write(b'{"jsonrpc": "2.0", "id": 99, "method": "conductor.ping"}\n')
+            await writer.drain()
+            line = await reader.readline()
+            resp = json.loads(line.decode("utf-8"))
+            self.assertEqual(resp["result"]["status"], "PONG")
+            writer.close()
+            await writer.wait_closed()
+
+            # Stopping activated server must NOT unlink the socket file
+            await activated_server.stop()
+            self.assertTrue(os.path.exists(sock_path))
+
+        finally:
+            if "LISTEN_FDS" in os.environ:
+                del os.environ["LISTEN_FDS"]
+            if "LISTEN_PID" in os.environ:
+                del os.environ["LISTEN_PID"]
+            parent_sock.close()
+            try:
+                os.close(3)
+            except OSError:
+                pass
+            if orig_fd3 is not None:
+                os.dup2(orig_fd3, 3)
+                os.close(orig_fd3)
+            if os.path.exists(sock_path):
+                os.unlink(sock_path)
+
 
 if __name__ == "__main__":
     unittest.main()
+

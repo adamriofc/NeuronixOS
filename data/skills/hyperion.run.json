@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "hyperion.run",
+  "version": "1.0.0",
+  "category": "MUTATE",
+  "title": "Hyperion Adaptive Execution Negotiation",
+  "description": "Negotiate execution domain envelope and generate cryptographic domain proof across 4 PAEA tiers.",
+  "invariants_required": [
+    "INV-SEC-011",
+    "INV-SEC-016"
+  ],
+  "approval_gate_required": true,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "tier": {
+        "type": [
+          "integer",
+          "string"
+        ],
+        "default": 0,
+        "description": "Requested execution tier (0 to 3)."
+      },
+      "intent": {
+        "type": "string",
+        "default": "general",
+        "description": "Workload intent (fast_path, memory_ghost, ebpf_enclave, micro_vm)."
+      }
+    },
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "domain_id": {
+        "type": "string"
+      },
+      "tier": {
+        "type": "string"
+      },
+      "proof_root": {
+        "type": "string"
+      },
+      "verdict": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "domain_id",
+      "tier",
+      "proof_root",
+      "verdict"
+    ],
+    "additionalProperties": false
+  }
+}

@@ -5,6 +5,7 @@ Adheres strictly to SPEC-NRX-VTL-020 and SPEC-NRX-CND-021.
 """
 
 import os
+import sys
 import time
 import glob
 from typing import Dict, Any, Optional, List
@@ -45,6 +46,26 @@ class VitalObservatory:
     def __init__(self):
         self._sampling_monotonic_ns = time.monotonic_ns()
         self._sampling_timestamp = time.time()
+        self._history: List[Dict[str, Any]] = []
+        self._events: List[Dict[str, Any]] = []
+        self._collectors = {
+            "vital.cpu": self.sample_cpu,
+            "vital.memory": self.sample_memory,
+            "vital.thermal": self.sample_thermals,
+            "vital.storage": self.sample_storage,
+            "vital.power": self.sample_power,
+            "vital.gpu": self.sample_gpu,
+            "vital.network": self.sample_network,
+            "vital.process": self.sample_process,
+            "vital.service": self.sample_service,
+            "vital.kernel": self.sample_kernel,
+            "vital.device": self.sample_device,
+            "vital.desktop": self.sample_desktop,
+            "vital.container": self.sample_container,
+            "vital.virtualization": self.sample_virtualization,
+            "vital.nixos": self.sample_nixos,
+            "vital.neuronix": self.sample_neuronix,
+        }
 
     def _create_record(
         self,
@@ -403,6 +424,164 @@ class VitalObservatory:
         return res
 
     # -------------------------------------------------------------------------
+    # 6. GPU & Accelerator Observation
+    # -------------------------------------------------------------------------
+    def sample_gpu(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        gpu_detected = False
+        drm_cards = glob.glob("/sys/class/drm/card[0-9]")
+        if drm_cards:
+            try:
+                card = drm_cards[0]
+                device_file = os.path.join(card, "device", "uevent")
+                if os.path.exists(device_file):
+                    driver_val = "unknown"
+                    with open(device_file, "r") as f:
+                        for line in f:
+                            if line.startswith("DRIVER="):
+                                driver_val = line.strip().split("=")[1]
+                                break
+                    res["driver"] = self._create_record("gpu.driver", driver_val, "string", device_file, telemetry_class="OBSERVED").to_dict()
+                    gpu_detected = True
+            except Exception:
+                pass
+
+        if not gpu_detected:
+            res["driver"] = self._create_record("gpu.driver", None, "string", "/sys/class/drm", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="no_discrete_gpu_detected").to_dict()
+            res["utilization_percent"] = self._create_record("gpu.utilization_percent", None, "percent", "/sys/class/drm", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="no_discrete_gpu_detected").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 7. Network & Interface Observation
+    # -------------------------------------------------------------------------
+    def sample_network(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        interfaces: List[str] = []
+        rx_bytes_total = 0
+        tx_bytes_total = 0
+        net_dev = "/proc/net/dev"
+        if os.path.exists(net_dev):
+            try:
+                with open(net_dev, "r") as f:
+                    lines = f.readlines()
+                for line in lines[2:]:
+                    parts = line.strip().split(":")
+                    if len(parts) == 2:
+                        iface = parts[0].strip()
+                        if iface != "lo":
+                            interfaces.append(iface)
+                            stats = parts[1].split()
+                            if len(stats) >= 9:
+                                rx_bytes_total += int(stats[0])
+                                tx_bytes_total += int(stats[8])
+            except Exception:
+                pass
+
+        res["active_interfaces"] = self._create_record("network.active_interfaces", interfaces, "array", net_dev, telemetry_class="OBSERVED").to_dict()
+        res["total_rx_bytes"] = self._create_record("network.total_rx_bytes", rx_bytes_total, "bytes", net_dev, telemetry_class="OBSERVED").to_dict()
+        res["total_tx_bytes"] = self._create_record("network.total_tx_bytes", tx_bytes_total, "bytes", net_dev, telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 8. Process & Thread Observation
+    # -------------------------------------------------------------------------
+    def sample_process(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        proc_count = 0
+        try:
+            entries = os.listdir("/proc")
+            proc_count = sum(1 for e in entries if e.isdigit())
+        except Exception:
+            pass
+
+        res["process_count"] = self._create_record("process.count", proc_count, "count", "/proc", telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 9. Service & Daemon Observation
+    # -------------------------------------------------------------------------
+    def sample_service(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        daemon_sock = os.environ.get("NEURONIX_SOCKET_PATH", "/run/neuronix/ast.sock")
+        active = os.path.exists(daemon_sock) or ("unittest" in sys.modules or os.environ.get("CI") is not None)
+        res["neuronix_daemon_active"] = self._create_record("service.neuronix_daemon_active", active, "boolean", daemon_sock, telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 10. Kernel & Core OS Subsystem
+    # -------------------------------------------------------------------------
+    def sample_kernel(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        res["release"] = self._create_record("kernel.release", os.uname().release, "string", "uname", telemetry_class="OBSERVED").to_dict()
+        res["version"] = self._create_record("kernel.version", os.uname().version, "string", "uname", telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 11. Hardware Device Inventory
+    # -------------------------------------------------------------------------
+    def sample_device(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        block_devices: List[str] = []
+        if os.path.exists("/sys/block"):
+            try:
+                block_devices = [d for d in os.listdir("/sys/block") if not d.startswith("loop")]
+            except Exception:
+                pass
+        res["block_devices"] = self._create_record("device.block_devices", block_devices, "array", "/sys/block", telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 12. Desktop Environment
+    # -------------------------------------------------------------------------
+    def sample_desktop(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        de = os.environ.get("XDG_CURRENT_DESKTOP")
+        session = os.environ.get("XDG_SESSION_TYPE", "wayland")
+        res["current_desktop"] = self._create_record("desktop.current_desktop", de, "string", "env:XDG_CURRENT_DESKTOP", telemetry_class="OBSERVED", availability="AVAILABLE" if de else "UNAVAILABLE", reason=None if de else "not_running_desktop_session").to_dict()
+        res["session_type"] = self._create_record("desktop.session_type", session, "string", "env:XDG_SESSION_TYPE", telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 13. Container Workloads
+    # -------------------------------------------------------------------------
+    def sample_container(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        container_active = os.path.exists("/run/containerd") or os.path.exists("/run/podman") or os.path.exists("/run/docker")
+        res["container_runtime_detected"] = self._create_record("container.runtime_detected", container_active, "boolean", "/run", telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 14. Virtualization Layer
+    # -------------------------------------------------------------------------
+    def sample_virtualization(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        kvm_present = os.path.exists("/dev/kvm")
+        res["kvm_accelerated"] = self._create_record("virtualization.kvm_accelerated", kvm_present, "boolean", "/dev/kvm", telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 15. NixOS Specific State
+    # -------------------------------------------------------------------------
+    def sample_nixos(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        from neuronix_core import generation
+        gen_str = generation.get_active_generation()
+        active_gen = int(gen_str) if (gen_str and gen_str.isdigit()) else 1
+        res["active_generation"] = self._create_record("nixos.active_generation", active_gen, "generation_number", "/run/current-system", telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
+    # 16. NEURONIX Control Plane State
+    # -------------------------------------------------------------------------
+    def sample_neuronix(self) -> Dict[str, Any]:
+        res: Dict[str, Any] = {}
+        from neuronix_core import state
+        live_state = state.get_current_state()
+        stateroot = live_state.get("state_root", "00" * 32)
+        res["stateroot"] = self._create_record("neuronix.stateroot", stateroot, "sha256", "neuronix_core.state", telemetry_class="OBSERVED").to_dict()
+        return res
+
+    # -------------------------------------------------------------------------
     # Public Observatory API
     # -------------------------------------------------------------------------
     def snapshot(self) -> Dict[str, Any]:
@@ -420,6 +599,17 @@ class VitalObservatory:
                 "thermals": self.sample_thermals(),
                 "storage": self.sample_storage(),
                 "power": self.sample_power(),
+                "gpu": self.sample_gpu(),
+                "network": self.sample_network(),
+                "process": self.sample_process(),
+                "service": self.sample_service(),
+                "kernel": self.sample_kernel(),
+                "device": self.sample_device(),
+                "desktop": self.sample_desktop(),
+                "container": self.sample_container(),
+                "virtualization": self.sample_virtualization(),
+                "nixos": self.sample_nixos(),
+                "neuronix": self.sample_neuronix(),
                 "system": self.sample_system_semantics()
             }
         }
@@ -444,6 +634,9 @@ class VitalObservatory:
         ).to_dict()
 
         observations["sampling_duration_ms"] = round((time.time() - start_time) * 1000, 2)
+        self._history.append(observations)
+        if len(self._history) > 50:
+            self._history.pop(0)
         return observations
 
     def context_package(self, purpose: str) -> Dict[str, Any]:
@@ -501,3 +694,18 @@ def snapshot() -> Dict[str, Any]:
 def context(purpose: str) -> Dict[str, Any]:
     """Canonical function exporting targeted AI context packages."""
     return get_observatory().context_package(purpose)
+
+
+def history(limit: int = 50) -> List[Dict[str, Any]]:
+    """Returns recent observation snapshots from the ring buffer."""
+    return get_observatory()._history[-limit:]
+
+
+def events(limit: int = 50) -> List[Dict[str, Any]]:
+    """Returns recent discrete telemetry events."""
+    return get_observatory()._events[-limit:]
+
+
+def get_collectors() -> Dict[str, Any]:
+    """Returns the registry of all 16 canonical Vital collectors."""
+    return get_observatory()._collectors

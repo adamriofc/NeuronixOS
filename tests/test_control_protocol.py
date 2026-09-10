@@ -48,7 +48,9 @@ class TestControlProtocolV1(unittest.TestCase):
             "skills.invoke",
             "identity.resolve",
             "authority.grant",
-            "authority.revoke"
+            "authority.revoke",
+            "proposal.resolve",
+            "surface.state"
         ]
         for em in expected_methods:
             self.assertIn(em, methods, f"Missing canonical RPC method '{em}'")

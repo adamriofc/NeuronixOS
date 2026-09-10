@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "package.verify",
+  "version": "1.0.0",
+  "category": "READ",
+  "title": "Declarative Package Verification",
+  "description": "Verify declarative package integrity against the Nixpkgs closure and local Nix store.",
+  "invariants_required": [
+    "INV-SEC-002"
+  ],
+  "approval_gate_required": false,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "package_name": {
+        "type": "string",
+        "description": "Name of the package to verify."
+      }
+    },
+    "required": [
+      "package_name"
+    ],
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "package_name": {
+        "type": "string"
+      },
+      "valid": {
+        "type": "boolean"
+      },
+      "store_path": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "package_name",
+      "valid",
+      "store_path"
+    ],
+    "additionalProperties": false
+  }
+}

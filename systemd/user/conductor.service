@@ -6,8 +6,7 @@ After=conductor.socket
 
 [Service]
 Type=simple
-ExecStart=%h/.nix-profile/bin/conductor-runtime --socket %t/conductor.sock
-StandardInput=socket
+ExecStart=%h/.nix-profile/bin/conductor-runtime
 Restart=on-failure
 RestartSec=2s
 TimeoutStopSec=5s

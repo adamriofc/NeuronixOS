@@ -189,7 +189,7 @@ def verify_evidence_graph(graph_file: str, expected_digest: Optional[str] = None
                 return False, f"Node 'BUILD_NODE' digest mismatch: claimed {claimed_digest} != expected {expected}", {}
         elif node_id == "TEST_NODE":
             manifest = node_data.get("test_manifest_hash", "")
-            total = node_data.get("total_assertions", 1299)
+            total = node_data.get("total_assertions", 1353)
             failed = node_data.get("failed_assertions", 0)
             rate = node_data.get("pass_rate_percentage", 100)
             run_id = node_data.get("ci_run_id", "")

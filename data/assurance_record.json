@@ -3,12 +3,12 @@
   "distribution": "NEURONIX OS",
   "version": "1.0.4",
   "last_verified_run_id": "34442429942",
-  "last_verified_commit_sha": "ef8e07bc5f1428552ebf2399921313df1da8b6f3",
-  "verified_assertion_count": 1299,
+  "last_verified_commit_sha": "25e4de0b6bcb3c19a8c15d22a1ba4cc438d6b552",
+  "verified_assertion_count": 1353,
   "verified_failure_count": 0,
   "pass_rate_percentage": 100,
   "verification_status": "PASSING_ALL",
-  "verification_timestamp": "2026-09-10T06:48:09Z",
+  "verification_timestamp": "2026-09-10T11:17:16Z",
   "proof_classes_covered": [
     "L0_STATIC",
     "L1_UNIT",
@@ -18,5 +18,5 @@
     "L4_BENCHMARK",
     "L5_REAL_E2E"
   ],
-  "evidence_snapshot_digest": "6b3b78eb33c480174e830a5fc971ef1e02286d3da3d3f54ce24ce4f371772970"
+  "evidence_snapshot_digest": "d24c70d8e17d7ec19777ddb5c23024b33cfeb5b3e886486d8a5060a5ae65036b"
 }

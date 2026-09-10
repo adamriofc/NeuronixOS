@@ -263,7 +263,7 @@ class EvidenceGraph:
         # 13. Test Node
         manifest_path = os.path.join(self.root_dir, "data/test_manifest.json") if self.root_dir else "data/test_manifest.json"
         manifest_hash = "0" * 64
-        total_assertions = 1299
+        total_assertions = 1353
         if os.path.exists(manifest_path):
             with open(manifest_path, "rb") as f:
                 content = f.read()

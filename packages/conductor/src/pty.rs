@@ -9,11 +9,13 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::io::{FromRawFd, RawFd};
+use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 
 const O_RDWR: i32 = 0o2;
 const O_NOCTTY: i32 = 0o400;
 const TIOCSWINSZ: u64 = 0x5414;
+const TIOCSCTTY: u64 = 0x540E;
 
 #[repr(C)]
 struct Winsize {
@@ -30,6 +32,7 @@ extern "C" {
     fn ptsname(fd: i32) -> *const i8;
     fn ioctl(fd: i32, request: u64, ...) -> i32;
     fn close(fd: i32) -> i32;
+    fn setsid() -> i32;
 }
 
 pub struct PtySession {
@@ -113,12 +116,23 @@ impl PtySession {
         let slave_out = slave_file.try_clone().map_err(|e| e.to_string())?;
         let slave_err = slave_file.try_clone().map_err(|e| e.to_string())?;
 
-        let child = Command::new(program)
-            .args(args)
+        let mut cmd = Command::new(program);
+        cmd.args(args)
             .stdin(Stdio::from(slave_file))
             .stdout(Stdio::from(slave_out))
-            .stderr(Stdio::from(slave_err))
-            .spawn()
+            .stderr(Stdio::from(slave_err));
+
+        unsafe {
+            cmd.pre_exec(|| {
+                if setsid() < 0 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                let _ = ioctl(0, TIOCSCTTY, 0);
+                Ok(())
+            });
+        }
+
+        let child = cmd.spawn()
             .map_err(|e| format!("Failed to spawn process in PTY: {}", e))?;
 
         Ok(child)
@@ -158,5 +172,18 @@ mod tests {
         let pty = PtySession::open(80, 24).expect("PTY open must succeed on Linux host");
         assert!(pty.slave_name().starts_with("/dev/pts/"));
         pty.resize(120, 40).expect("PTY resize must succeed");
+    }
+
+    #[test]
+    fn test_pty_spawn_and_read() {
+        let mut pty = PtySession::open(80, 24).expect("PTY open must succeed on Linux host");
+        let mut child = pty.spawn_process("echo", &["conductor-pty-test-ok"]).expect("spawn echo in PTY");
+        let status = child.wait().expect("wait child");
+        assert!(status.success());
+
+        let mut buf = [0u8; 256];
+        let n = pty.read(&mut buf).expect("read from pty master");
+        let output = String::from_utf8_lossy(&buf[..n]);
+        assert!(output.contains("conductor-pty-test-ok"));
     }
 }
