@@ -41,7 +41,8 @@ docs/specifications/
 ├── 17_failure_containment_taxonomy.md   # 5-Tier Failure Taxonomy & Epistemic Containment
 ├── 18_conductor_runtime_and_surface_specification.md # Conductor Runtime, Unified Surface & Zero-Idle Lifecycle
 ├── 19_neuronix_skill_system_specification.md # NEURONIX Skill System & Deterministic Machine Contracts
-└── 20_vital_telemetry_and_observer_specification.md # Vital Machine Telemetry & Zero-Idle Observer
+├── 20_vital_telemetry_and_observer_specification.md # Vital Machine Telemetry & Zero-Idle Observer
+└── 21_conductor_master_architecture_charter.md # Conductor Master Architecture Charter & Definitive Doctrine
 ```
 
 ---
@@ -66,6 +67,7 @@ docs/specifications/
 | **`18_CONDUCTOR`**| [Conductor Runtime & Surface](18_conductor_runtime_and_surface_specification.md) | Terminal canvas, dormant capability broker, systemd socket activation, and COLD/WARM/HOT lifecycle. | UI/UX, Core Team, AI Engineers |
 | **`19_SKILL`** | [NEURONIX Skill System](19_neuronix_skill_system_specification.md) | Deterministic machine contracts, READ/PROPOSE/MUTATE taxonomy, human approval gates, and adapters. | AI Engineers, Systems Developers |
 | **`20_VITAL`** | [Vital Telemetry & Observer](20_vital_telemetry_and_observer_specification.md) | Pull-based zero-idle telemetry, adaptive sampling streams, hardware metrics, and redaction boundaries. | Systems Engineers, AI Engineers |
+| **`21_CHARTER`**| [Conductor Master Charter](21_conductor_master_architecture_charter.md) | Definitive doctrine, 5 core signatures, negative architecture, and closed-loop system intelligence. | Systems Architects, UI/UX, AI Engineers |
 
 ---
 
