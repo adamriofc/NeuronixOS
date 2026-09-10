@@ -84,10 +84,11 @@ class ConductorServer:
             try:
                 fds_count = int(listen_fds)
                 target_pid = int(listen_pid)
+                target_fd = int(os.environ.get("CONDUCTOR_LISTEN_FD", "3"))
                 if fds_count >= 1 and target_pid == os.getpid():
                     import socket
-                    # File descriptor 3 is SD_LISTEN_FDS_START
-                    sock = socket.fromfd(3, socket.AF_UNIX, socket.SOCK_STREAM)
+                    # File descriptor is SD_LISTEN_FDS_START (3) or CONDUCTOR_LISTEN_FD
+                    sock = socket.fromfd(target_fd, socket.AF_UNIX, socket.SOCK_STREAM)
                     sock.setblocking(False)
                     server_kwargs = {"sock": sock}
                     if sys.version_info >= (3, 13):

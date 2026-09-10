@@ -273,7 +273,7 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resp_surface["result"]["lifecycle_state"], LifecycleState.WARM)
 
     async def test_socket_activation_fd3(self):
-        """Test authentic systemd socket activation inheriting file descriptor 3."""
+        """Test authentic systemd socket activation inheriting file descriptor."""
         import socket
         sock_tmp = tempfile.NamedTemporaryFile(delete=False)
         sock_path = sock_tmp.name + ".sock"
@@ -284,18 +284,10 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
         parent_sock.bind(sock_path)
         parent_sock.listen(1)
 
-        # Duplicate parent_sock to FD 3
-        orig_fd3 = None
         try:
-            # Check if FD 3 is already open
-            try:
-                orig_fd3 = os.dup(3)
-            except OSError:
-                pass
-            os.dup2(parent_sock.fileno(), 3)
-
             os.environ["LISTEN_FDS"] = "1"
             os.environ["LISTEN_PID"] = str(os.getpid())
+            os.environ["CONDUCTOR_LISTEN_FD"] = str(parent_sock.fileno())
 
             activated_server = ConductorServer(socket_path=Path(sock_path))
             await activated_server.start()
@@ -321,14 +313,9 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
                 del os.environ["LISTEN_FDS"]
             if "LISTEN_PID" in os.environ:
                 del os.environ["LISTEN_PID"]
+            if "CONDUCTOR_LISTEN_FD" in os.environ:
+                del os.environ["CONDUCTOR_LISTEN_FD"]
             parent_sock.close()
-            try:
-                os.close(3)
-            except OSError:
-                pass
-            if orig_fd3 is not None:
-                os.dup2(orig_fd3, 3)
-                os.close(orig_fd3)
             if os.path.exists(sock_path):
                 os.unlink(sock_path)
 
