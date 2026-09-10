@@ -9,14 +9,14 @@
     "target_architecture": "x86_64-linux"
   },
   "cryptographic_commitments": {
-    "merkle_state_root": "dcedba981ffb11d2fef5216dbf5c0e1d2a6eff2b4896113f3f3c4cf2d36aa69a",
-    "verification_passport_sha256": "bef0d8392df38f7bf3cafee6bb7675ace38b5908dff621032b0b851cd7d7c93d",
-    "evidence_graph_sha256": "c12993ab9069cb47eb9e9fdbf9cb235e7de59d1781041de0ea4c5ff18a43d175",
+    "merkle_state_root": "caf3b28f3e447de583221b8acf477f69f040cf4dd84f5a0b342ef28f6d07dc5f",
+    "verification_passport_sha256": "ddeb83bc4f0786c99c4c98f0c61b947c55885327f6ebfd5349089d59c532696d",
+    "evidence_graph_sha256": "27646a37ecc34b57022d741d9597ea978e18f5ae68c793f27a057fc2846d3bef",
     "iso_checksums_sha256": "4a24065718d8269ea318bb15b073b9c9f0df3c9927bcef6b99dba08f2ebb04f9",
     "sbom_spdx_sha256": "de889c7126352fcf756b3b1485aaf55eb52280f93e0f015f39b72b0a56011ae3",
     "reproducibility_evidence_sha256": "9c86e5330a64f976095e778da21befae1309bb6daab48970ba6f1ea16e488c46"
   },
   "verification_status": "CERTIFIED_PROVABLE_RELEASE",
-  "timestamp": "2026-09-09T04:00:31Z",
-  "release_proof_digest": "3eed58a2dcdc3b1e507586cda7b62a38ff672c8f994735846cbd74b30b381763"
+  "timestamp": "2026-09-10T02:34:58Z",
+  "release_proof_digest": "bafa84432ba693ecaad5957e89e885a41ca5af9972f1c853163394448ad710a8"
 }

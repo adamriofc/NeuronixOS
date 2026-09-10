@@ -24,11 +24,11 @@
     "HARDWARE_NODE": {
       "node_id": "HARDWARE_NODE",
       "type": "HARDWARE_INTELLIGENCE",
-      "hardware_root": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d",
+      "hardware_root": "807eb61883c70c11e2dc9ba2b4bab910abab353e478910333eb508b94fb3a77a",
       "cpu_cores": 16,
       "kvm_available": true,
       "tpm_present": true,
-      "digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d"
+      "digest": "807eb61883c70c11e2dc9ba2b4bab910abab353e478910333eb508b94fb3a77a"
     },
     "TOPOLOGY_NODE": {
       "node_id": "TOPOLOGY_NODE",
@@ -78,10 +78,10 @@
     "BOOT_NODE": {
       "node_id": "BOOT_NODE",
       "type": "MEASURED_BOOT_TRUST",
-      "boot_trust_root": "f569cd653e1cbba6f2844709c1e6d4dca6df318d1fc523b2dfec53108440e5e1",
+      "boot_trust_root": "0631a1055a2f44247ecbda72c210236c9ec6d0cbff31e907b8c2289dcaf98fd2",
       "secure_boot_enabled": false,
       "health_status": "TRIGGER_ROLLBACK: Missing required stages ['KERNEL_REACH', 'MOUNTS_HEALTHY', 'DAEMON_READY', 'STATE_VERIFIED', 'DESKTOP_TARGET']",
-      "digest": "f569cd653e1cbba6f2844709c1e6d4dca6df318d1fc523b2dfec53108440e5e1"
+      "digest": "0631a1055a2f44247ecbda72c210236c9ec6d0cbff31e907b8c2289dcaf98fd2"
     },
     "SECRETS_NODE": {
       "node_id": "SECRETS_NODE",
@@ -108,14 +108,14 @@
     "STATE_NODE": {
       "node_id": "STATE_NODE",
       "type": "MERKLE_STATE_COMMITMENT",
-      "state_root": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e",
+      "state_root": "5231db217222951c9fd903df32bfc27264a2642c3254c51dde7fc008312fb1ef",
       "parent_build_digest": "74ac0182ca923612e78489f95674b235adf685033dd6f29dba50d79ac255505d",
-      "parent_hardware_digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d",
+      "parent_hardware_digest": "807eb61883c70c11e2dc9ba2b4bab910abab353e478910333eb508b94fb3a77a",
       "parent_policy_digest": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
       "parent_storage_digest": "aefd61691edb1f7f3420ec759ac825b5313e9f6ae23c86d31a2be6ed6806bbf5",
-      "parent_boot_digest": "f569cd653e1cbba6f2844709c1e6d4dca6df318d1fc523b2dfec53108440e5e1",
+      "parent_boot_digest": "0631a1055a2f44247ecbda72c210236c9ec6d0cbff31e907b8c2289dcaf98fd2",
       "trust_status": "TRUSTED",
-      "digest": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e"
+      "digest": "5231db217222951c9fd903df32bfc27264a2642c3254c51dde7fc008312fb1ef"
     },
     "RUNTIME_NODE": {
       "node_id": "RUNTIME_NODE",
@@ -146,17 +146,17 @@
       "ci_run_id": "34299671795",
       "parent_test_digest": "0d415a85817a30d72f127fcd0d5629ceabc264975b3460a4ad7684006b335e6d",
       "parent_build_digest": "74ac0182ca923612e78489f95674b235adf685033dd6f29dba50d79ac255505d",
-      "parent_state_root": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e",
-      "digest": "234abbfe2850a514392ab50751802689e8d4787390c66ffef372da336421c489"
+      "parent_state_root": "5231db217222951c9fd903df32bfc27264a2642c3254c51dde7fc008312fb1ef",
+      "digest": "bdf371a391f47d32d65e26744f555c22d8b0526ff3db9372947ee6af6eb074e5"
     },
     "HOST_NODE": {
       "node_id": "HOST_NODE",
       "type": "HARDWARE_ATTESTATION",
-      "hardware_root": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d",
+      "hardware_root": "807eb61883c70c11e2dc9ba2b4bab910abab353e478910333eb508b94fb3a77a",
       "cpu_cores": 16,
       "kvm_available": true,
       "tpm_present": true,
-      "digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d"
+      "digest": "807eb61883c70c11e2dc9ba2b4bab910abab353e478910333eb508b94fb3a77a"
     },
     "HDS_NODE": {
       "node_id": "HDS_NODE",
@@ -175,10 +175,10 @@
     "PROOF_NODE": {
       "node_id": "PROOF_NODE",
       "type": "DOMAIN_PROOF_V1",
-      "proof_root": "d2c2af3a53e6c789ee4cbbb6a67f94c19277afb67ca3a90efec63a1fd58ef5f8",
-      "parent_state_root": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e",
+      "proof_root": "1592f5678cfb9857a36003f03fe0b0f2a0591b37fc07af54462530cedb8b39a9",
+      "parent_state_root": "5231db217222951c9fd903df32bfc27264a2642c3254c51dde7fc008312fb1ef",
       "trust_verdict": "VERIFIED_TRUSTED",
-      "digest": "d2c2af3a53e6c789ee4cbbb6a67f94c19277afb67ca3a90efec63a1fd58ef5f8"
+      "digest": "1592f5678cfb9857a36003f03fe0b0f2a0591b37fc07af54462530cedb8b39a9"
     }
   },
   "edges": [
@@ -198,7 +198,7 @@
       "from": "STATE_NODE",
       "to": "RUNTIME_NODE",
       "edge_type": "host_state_root",
-      "digest": "698f73a3cee168dd48dbde9a613db290f1721ba8663289e8f3c77d2b0b951d2e"
+      "digest": "5231db217222951c9fd903df32bfc27264a2642c3254c51dde7fc008312fb1ef"
     },
     {
       "from": "BUILD_NODE",
@@ -216,7 +216,7 @@
       "from": "HARDWARE_NODE",
       "to": "STATE_NODE",
       "edge_type": "hardware_leaf",
-      "digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d"
+      "digest": "807eb61883c70c11e2dc9ba2b4bab910abab353e478910333eb508b94fb3a77a"
     },
     {
       "from": "TOPOLOGY_NODE",
@@ -246,7 +246,7 @@
       "from": "BOOT_NODE",
       "to": "STATE_NODE",
       "edge_type": "boot_leaf",
-      "digest": "f569cd653e1cbba6f2844709c1e6d4dca6df318d1fc523b2dfec53108440e5e1"
+      "digest": "0631a1055a2f44247ecbda72c210236c9ec6d0cbff31e907b8c2289dcaf98fd2"
     },
     {
       "from": "SECRETS_NODE",
@@ -264,7 +264,7 @@
       "from": "HARDWARE_NODE",
       "to": "CAPABILITY_NODE",
       "edge_type": "hardware_facts",
-      "digest": "ab31fc490473fe58a7d8e654c8ca167500a5bfba36078ff12818629c30734e8d"
+      "digest": "807eb61883c70c11e2dc9ba2b4bab910abab353e478910333eb508b94fb3a77a"
     },
     {
       "from": "CAPABILITY_NODE",
@@ -282,8 +282,8 @@
       "from": "PROOF_NODE",
       "to": "RELEASE_NODE",
       "edge_type": "parent_proof_root",
-      "digest": "d2c2af3a53e6c789ee4cbbb6a67f94c19277afb67ca3a90efec63a1fd58ef5f8"
+      "digest": "1592f5678cfb9857a36003f03fe0b0f2a0591b37fc07af54462530cedb8b39a9"
     }
   ],
-  "graph_digest": "234abbfe2850a514392ab50751802689e8d4787390c66ffef372da336421c489"
+  "graph_digest": "bdf371a391f47d32d65e26744f555c22d8b0526ff3db9372947ee6af6eb074e5"
 }

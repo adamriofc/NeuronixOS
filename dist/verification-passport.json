@@ -10,10 +10,10 @@
     "proof_engine_version": "1.1.0"
   },
   "cryptographic_commitments": {
-    "state_root": "dcedba981ffb11d2fef5216dbf5c0e1d2a6eff2b4896113f3f3c4cf2d36aa69a",
+    "state_root": "caf3b28f3e447de583221b8acf477f69f040cf4dd84f5a0b342ef28f6d07dc5f",
     "policy_hash": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
     "flake_lock_hash": "06135d460eb72c7dcb846ac22cab8cee65f9acea9f3b285a9adb9d27de876981",
-    "evidence_graph_digest": "c12993ab9069cb47eb9e9fdbf9cb235e7de59d1781041de0ea4c5ff18a43d175",
+    "evidence_graph_digest": "27646a37ecc34b57022d741d9597ea978e18f5ae68c793f27a057fc2846d3bef",
     "trust_status": "TRUSTED",
     "trust_vector": {
       "posture": "VERIFIED",
@@ -33,7 +33,7 @@
     "verified_failure_count": 0,
     "verified_pass_rate_percentage": 100,
     "verification_status": "PASSING_ALL",
-    "evidence_snapshot_digest": "a137586927cfa3d8ffff958a3fcd2b2ba7ac098d2ccf8fa0eb79f34e3cb13217"
+    "evidence_snapshot_digest": "18c7410e787bf9e9b1716832d9de0cb8a843b004a07ee63deeb8d8cda83650e5"
   },
   "ci_attestation": {
     "ci_workflow_id": "ci.yml",
@@ -46,7 +46,7 @@
     "iso_checksums_sha256": "4a24065718d8269ea318bb15b073b9c9f0df3c9927bcef6b99dba08f2ebb04f9",
     "sbom_spdx_sha256": "de889c7126352fcf756b3b1485aaf55eb52280f93e0f015f39b72b0a56011ae3",
     "jcs_conformance_sha256": "ed15c5cf7cb07f2a4bf516610f28928a2d36d200dff9b65efecbe49d37d1c6de",
-    "evidence_graph_sha256": "c12993ab9069cb47eb9e9fdbf9cb235e7de59d1781041de0ea4c5ff18a43d175"
+    "evidence_graph_sha256": "27646a37ecc34b57022d741d9597ea978e18f5ae68c793f27a057fc2846d3bef"
   },
   "hardware_profiles": [
     "thinkpad_t14_gen3",
@@ -58,6 +58,6 @@
     "apple_silicon_m_series",
     "generic_uefi_hardware"
   ],
-  "verification_timestamp": "2026-09-09T04:00:31Z",
-  "passport_digest": "c1dfdac824c70af5f59c0506861dcf93519e731e49787f2942dbcd136bf31d4d"
+  "verification_timestamp": "2026-09-10T02:34:58Z",
+  "passport_digest": "d3890879ce6033ec0d31c08b84d1b585b46fb2f21d5307da4c4d8e65864e48e4"
 }

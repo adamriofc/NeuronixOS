@@ -20,8 +20,8 @@
     "confidence_score_percentage": 100
   },
   "verification_status": "PASSING_ALL",
-  "verification_timestamp": "2026-09-09T04:00:31Z",
-  "freshness_epoch": 1788926431,
+  "verification_timestamp": "2026-09-10T02:34:58Z",
+  "freshness_epoch": 1789007698,
   "proof_classes_covered": [
     "L0_STATIC",
     "L1_UNIT",
@@ -31,5 +31,5 @@
     "L4_BENCHMARK",
     "L5_REAL_E2E"
   ],
-  "compiler_digest": "44df2d5c4b19e2588ea022302e865ca74b72d2ef9331a6bbf6a6b605841923a5"
+  "compiler_digest": "ea402b338d6820242c8d94d3d630eecf49b0620a224100b1256ac8daf8b71b0f"
 }

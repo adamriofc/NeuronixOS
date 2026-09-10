@@ -82,8 +82,9 @@
   - [26. Verification Passport & Zero-Dependency Offline Verifier (neuronix verify-passport)](#26-verification-passport--zero-dependency-offline-verifier-neuronix-verify-passport)
   - [27. Authoritative Evidence Graph & Lineage Traversal (neuronix graph)](#27-authoritative-evidence-graph--lineage-traversal-neuronix-graph)
   - [28. Canonical Domain Proof Specification & Dual-Plane Parity (SPEC-NRX-DP-014)](#28-canonical-domain-proof-specification--dual-plane-parity-spec-nrx-dp-014)
-  - [29. Continuous Security Invariant Registry (SEC-001 to SEC-010)](#29-continuous-security-invariant-registry-sec-001-to-sec-010)
+  - [29. Continuous Security Invariant Registry (SEC-001 to SEC-020)](#29-continuous-security-invariant-registry-sec-001-to-sec-020)
   - [30. Proof-Carrying Release Architecture (dist/neuronix-os-v1.0.4.proof.json)](#30-proof-carrying-release-architecture-distneuronix-os-v104proofjson)
+  - [31. Closed Semantic Subsystem Architecture (MES-NRX-002)](#31-closed-semantic-subsystem-architecture-mes-nrx-002)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
 - [Verification, Lifecycle Gate & Test Harness (1,264 Assertions)](#verification--test-harness)
@@ -1161,7 +1162,7 @@ neuronix-daemon --hyperion proof '{"domain_id": "domain-001"}'
 neuronix-daemon --hyperion verify '{"domain_id": "domain-001", "proof_root": "..."}'
 ```
 
-### 29. Continuous Security Invariant Registry (SEC-001 to SEC-010)
+### 29. Continuous Security Invariant Registry (SEC-001 to SEC-020)
 System security in NEURONIX OS is governed by a formal invariant registry ([SPEC-NRX-SEC-015](docs/specifications/15_security_invariant_registry.md), `data/security_invariants/registry.json`). Every invariant is verified by automated gate `tests/test_security_invariants.sh`:
 
 | ID | Invariant Name | Enforcement Mechanism | Scope | Status |
@@ -1173,12 +1174,22 @@ System security in NEURONIX OS is governed by a formal invariant registry ([SPEC
 | `SEC-005` | **Fail-Closed Hypervisor Boundary** | Tier 3 rejects execution when KVM unavailable | Isolation | **VERIFIED** |
 | `SEC-006` | **Zero Mocks In Production Path** | Synthetic flags forbidden in live release builds | Runtime | **VERIFIED** |
 | `SEC-007` | **eBPF LSM Confinement Integrity** | Security hooks enforce least-privilege policies | Kernel | **VERIFIED** |
-| `SEC-008` | **Evidence Graph Directed Lineage** | 10-node DAG with tamper-proof parent hashes | Epistemics | **VERIFIED** |
+| `SEC-008` | **Evidence Graph Directed Lineage** | 14-node DAG with tamper-proof parent hashes | Epistemics | **VERIFIED** |
 | `SEC-009` | **Verification Passport Tamper Proof** | Self-contained offline validation rejects corrupt digests | Release | **VERIFIED** |
 | `SEC-010` | **Cross-Language Cryptographic Parity** | Python and micro-Rust produce identical proof roots | Dual-Plane | **VERIFIED** |
+| `SEC-011` | **Capability-Bound Resource Guard** | Memory, CPU, and network quotas enforced fail-closed | Resource | **VERIFIED** |
+| `SEC-012` | **7-Factor Storage Destructive Firewall** | Active generation and mount lockout with typed token | Storage | **VERIFIED** |
+| `SEC-013` | **Plaintext Secret Omission** | StateRoot and EvidenceGraph contain zero plaintext data | Secrets | **VERIFIED** |
+| `SEC-014` | **AI Secret Visibility Isolation** | Copilots and LLM actors receive metadata only | AI-Gov | **VERIFIED** |
+| `SEC-015` | **Sequential Boot Health Contract** | Monotonic 5-stage health progression before LKG commit | Boot | **VERIFIED** |
+| `SEC-016` | **Hardware Attestation Integrity** | Facter root cryptographically anchored into StateRoot | Hardware | **VERIFIED** |
+| `SEC-017` | **Read-Only System Probing** | Fact collection guarantees non-mutating observability | Telemetry | **VERIFIED** |
+| `SEC-018` | **Universal Topology DAG Causality** | Effective topology with Kahn cycle detection | Topology | **VERIFIED** |
+| `SEC-019` | **AI Proposal Proposer-Only Boundary** | Autonomous transitions require preflight simulation | Governance | **VERIFIED** |
+| `SEC-020` | **Decoupled State & Evidence Identity** | StateRoot and EvidenceRoot decoupled and authentic | Cryptography | **VERIFIED** |
 
 ```bash
-# Execute automated security invariant verification gate (10/10 invariants)
+# Execute automated security invariant verification gate (20/20 invariants)
 bash tests/test_security_invariants.sh
 ```
 
@@ -1192,7 +1203,7 @@ NEURONIX OS implements Proof-Carrying Release (PCR) bundles, coupling release me
   - Authoritative 5-leaf Merkle StateRoot.
   - Verification Passport Digest (`dist/verification-passport.json`).
   - Directed Evidence Graph Digest (`dist/evidence-graph.json`).
-  - Complete 10-node evidence graph snapshot.
+  - Complete 14-node evidence graph snapshot.
 - **Offline Self-Verification (`neuronix verify-release`):**
   Third-party auditors, users, and automated staging gates verify the complete supply chain offline in a single command, ensuring zero bit-level tampering from source code to installation media.
 
@@ -1204,7 +1215,53 @@ python3 tools/generate_release_proof.py
 neuronix verify-release dist/neuronix-os-v1.0.4.proof.json
 
 # Offline verification without neuronix CLI installation
-python3 -c "import json; p=json.load(open('dist/neuronix-os-v1.0.4.proof.json')); print('Release proof valid:', p['release_proof_hash'])"
+python3 tools/verify_passport.py dist/neuronix-os-v1.0.4.proof.json
+```
+
+### 31. Closed Semantic Subsystem Architecture (MES-NRX-002)
+Following the v1.0.4 audit cycle, NEURONIX OS fully transitioned from mock or static evaluation models into 100% closed, production-grade semantic enforcement across 5 core subsystems and standalone verification:
+
+1. **Secret Execution Engine (`neuronix_core.secrets`):**
+   - Authenticated Age decryption envelopes with salt, HMAC-SHA256, and stream keystream derivation (`age/v1-authenticated-envelope`).
+   - Volatile in-memory storage verification (`tmpfs`/`ramfs`) via `/proc/mounts`, preventing unencrypted disk leakage.
+   - Three strict invariants: `MISSING_AGE_IDENTITY` fail-closed when key is missing, `CAPABILITY_MISMATCH` fail-closed when capability token does not authorize path, and zero partial secret residue on failure.
+   - AI metadata masking (`[MASKED: AI_SECRET_VISIBILITY_METADATA_ONLY]`) enforcing strict visibility separation (`SEC-014`).
+
+2. **Storage Safety Firewall (`neuronix_core.storage_planner`):**
+   - 7-Factor destructive operation evaluation (`SEC-012`):
+     - Factor 1: Physical Device Identity verification.
+     - Factor 2: Active Mount Lockout inspecting `/proc/mounts` against critical filesystems.
+     - Factor 3: Active Generation Safety discovering backing devices for active NixOS profiles and kernel command line.
+     - Factor 4: Existing Filesystem Entropy and signature check.
+     - Factor 5: Preflight Simulation Clearance simulating partition geometry, LBA 2048 alignment, and Btrfs subvolumes.
+     - Factor 6: Exact-Match Typed Confirmation Token (`DESTROY <dev> PLAN <64char_plan_hash>`).
+     - Factor 7: Operator Identity & Cryptographic Clearance (`STORAGE_ADMIN` or `DISASTER_RECOVERY_OPERATOR`).
+   - Transactional postcondition verification confirming physical layout matches planned specifications.
+
+3. **Boot Health Contract (`neuronix_core.boot_trust`):**
+   - Multi-stage monotonic state machine (`KERNEL_REACH` -> `MOUNTS_HEALTHY` -> `DAEMON_READY` -> `STATE_VERIFIED` -> `DESKTOP_TARGET`). Out-of-order transitions trigger fail-closed rollback (`SEC-015`).
+   - Observable host telemetry probing `/proc/version`, `/proc/mounts`, runtime sockets, and systemd targets.
+   - Empirical 5-tier recovery mechanism detection (LUKS key slot fallback, dual-key MOK, LKG generation rollback, sentinel watchdog, and hermetic fallback boot binary).
+
+4. **Semantic AI Governance Engine (`neuronix_core.semantic`):**
+   - Upstream `nix-instantiate --parse` integration with offline lexical bracket-matching fallback parser.
+   - Grounded canonical option registry (`CANONICAL_OPTIONS`) with strict type checking (boolean, integer, string, allowed values).
+   - Proposer-Only enforcement rejecting direct commits (`SEC-019`) and prohibiting security baseline bypasses.
+   - Declarative dry-run configuration diff generation with isolated blast-radius classification.
+
+5. **Universal Live System Topology (`neuronix_core.topology`):**
+   - Live system observation probing active mount namespaces, network interfaces, and daemon IPC sockets.
+   - Effective topology convergence combining canonical architectural specifications with live telemetry (`CONVERGED`, `CANONICAL`, `OBSERVED`).
+   - Kahn's algorithm cycle detection and differential blast radius calculation (`declared_affected_nodes` vs `observed_affected_nodes`).
+
+6. **Zero-Dependency Standalone Verifier (`tools/verify_passport.py`):**
+   - Embedded RFC 8785 JSON Canonicalization Scheme (JCS) serializer with ECMAScript 5.1 number formatting.
+   - Cryptographic DAG verification validating individual domain commitment roots (`hardware_root`, `topology_root`, `storage_root`, `boot_trust_root`, `secret_root`, `state_root`, etc.).
+   - Topological acyclic validation via Kahn's algorithm and backward lineage reachability tracing (`RELEASE_NODE` -> `SOURCE_NODE`).
+
+```bash
+# Execute comprehensive semantic closure test suite (29 tests)
+python3 tests/test_semantic_closure.py -v
 ```
 
 ---
