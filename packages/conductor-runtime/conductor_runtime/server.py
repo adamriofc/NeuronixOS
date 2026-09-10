@@ -89,10 +89,12 @@ class ConductorServer:
                     # File descriptor 3 is SD_LISTEN_FDS_START
                     sock = socket.fromfd(3, socket.AF_UNIX, socket.SOCK_STREAM)
                     sock.setblocking(False)
+                    server_kwargs = {"sock": sock}
+                    if sys.version_info >= (3, 13):
+                        server_kwargs["cleanup_socket"] = False
                     self._server = await asyncio.start_unix_server(
                         self._handle_client,
-                        sock=sock,
-                        cleanup_socket=False
+                        **server_kwargs
                     )
                     self.is_socket_activated = True
                     self._running = True

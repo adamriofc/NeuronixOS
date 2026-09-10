@@ -5,12 +5,15 @@ that unknown/unexposed sensors strictly evaluate to null.
 Adheres to SPEC-NRX-VTL-020 and SPEC-NRX-CND-021.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import json
 import re
 import unittest
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCHEMAS_DIR = PROJECT_ROOT / "data" / "schemas"
