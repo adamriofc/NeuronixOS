@@ -130,6 +130,17 @@ assert_check "Installer rejects invalid desktop enum" "! SELECTED_DESKTOP='unsup
 assert_check "CLI rejects shell injection in dev stacks" "! ${TARGET_BIN} dev 'python;whoami'"
 
 # ------------------------------------------------------------------------------
+# 8. Release Gate Certification & Exact Commit Lineage Assurance
+# ------------------------------------------------------------------------------
+echo -e "\n${BOLD}Phase 8: Release Gate Certification & Exact Lineage Assurance${RESET}"
+assert_check "Verification passport offline validity" "python3 '${PROJECT_ROOT}/tools/verify_passport.py' '${PROJECT_ROOT}/dist/verification-passport.json'"
+assert_check "Release proof offline validity" "python3 '${PROJECT_ROOT}/tools/verify_passport.py' '${PROJECT_ROOT}/dist/neuronix-os-v1.0.4.proof.json'"
+assert_check "Cross-artifact exact commit lineage coherence" "python3 '${PROJECT_ROOT}/tools/verify_passport.py' '${PROJECT_ROOT}/dist/verification-passport.json' --lineage"
+assert_check "Zero occurrences of corrupted SHA 90b764811a2f across all dist and data artifacts" "! grep -rq '90b764811a2f' '${PROJECT_ROOT}/dist' '${PROJECT_ROOT}/data'"
+assert_check "Release proof binds verification passport file hash" "python3 -c \"import json, hashlib; proof=json.load(open('${PROJECT_ROOT}/dist/neuronix-os-v1.0.4.proof.json')); h=hashlib.sha256(open('${PROJECT_ROOT}/dist/verification-passport.json', 'rb').read()).hexdigest(); assert proof['cryptographic_commitments']['verification_passport_sha256'] == h\""
+assert_check "Release proof binds evidence graph file hash" "python3 -c \"import json, hashlib; proof=json.load(open('${PROJECT_ROOT}/dist/neuronix-os-v1.0.4.proof.json')); h=hashlib.sha256(open('${PROJECT_ROOT}/dist/evidence-graph.json', 'rb').read()).hexdigest(); assert proof['cryptographic_commitments']['evidence_graph_sha256'] == h\""
+
+# ------------------------------------------------------------------------------
 # Summary & Certification Banner
 # ------------------------------------------------------------------------------
 echo -e "\n${BOLD}═══════════════════════════════════════════════════════════════════${RESET}"

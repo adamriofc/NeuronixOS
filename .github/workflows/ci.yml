@@ -160,7 +160,7 @@ jobs:
         run: |
           python3 -m unittest tests/test_storage_planner.py
 
-      - name: Execute Semantic Closure & Subsystem Invariants Gate (35 Tests)
+      - name: Execute Semantic Closure & Subsystem Invariants Gate (37 Tests)
         run: |
           python3 -m unittest tests/test_semantic_closure.py
 
@@ -178,7 +178,7 @@ jobs:
           python3 tools/generate_evidence_graph.py
           python3 tools/generate_verification_passport.py
           python3 tools/generate_release_proof.py
-          python3 tools/verify_passport.py dist/verification-passport.json --graph --trace release
+          python3 tools/verify_passport.py dist/verification-passport.json --graph --lineage --trace release
           python3 tools/verify_passport.py dist/neuronix-os-v1.0.4.proof.json
 
       - name: Publish Verified Commit Status to GitHub API

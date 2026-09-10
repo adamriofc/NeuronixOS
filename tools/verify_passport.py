@@ -402,9 +402,74 @@ def verify_release_proof(proof_file: str) -> Tuple[bool, str, Dict[str, Any]]:
         "timestamp": data.get("timestamp", "unknown")
     }
 
+def verify_exact_lineage(passport_path: str) -> Tuple[bool, str, Dict[str, Any]]:
+    """
+    Validates mathematical cross-artifact commit lineage across all release and assurance documents:
+      1. dist/verification-passport.json (release_metadata.commit_sha)
+      2. dist/neuronix-os-v1.0.4.proof.json (release_metadata.commit_sha)
+      3. dist/evidence-graph.json (nodes.SOURCE_NODE.git_commit_sha and nodes.RELEASE_NODE.commit_sha)
+      4. data/assurance_record.json (last_verified_commit_sha)
+      5. data/assurance_evidence_snapshot.json (last_verified_commit_sha)
+    Ensures zero SHA discrepancies, valid 40-hex SHA format, and zero occurrence of corrupt historical SHAs.
+    """
+    passport_file = os.path.abspath(passport_path)
+    dist_dir = os.path.dirname(passport_file)
+    project_root = os.path.abspath(os.path.join(dist_dir, ".."))
+    data_dir = os.path.join(project_root, "data")
+
+    proof_file = os.path.join(dist_dir, "neuronix-os-v1.0.4.proof.json")
+    graph_file = os.path.join(dist_dir, "evidence-graph.json")
+    record_file = os.path.join(data_dir, "assurance_record.json")
+    snapshot_file = os.path.join(data_dir, "assurance_evidence_snapshot.json")
+
+    targets = {
+        "passport": (passport_file, lambda d: d.get("release_metadata", {}).get("commit_sha")),
+        "proof": (proof_file, lambda d: d.get("release_metadata", {}).get("commit_sha")),
+        "graph_source": (graph_file, lambda d: d.get("nodes", {}).get("SOURCE_NODE", {}).get("git_commit_sha")),
+        "graph_release": (graph_file, lambda d: d.get("nodes", {}).get("RELEASE_NODE", {}).get("commit_sha")),
+        "assurance_record": (record_file, lambda d: d.get("last_verified_commit_sha")),
+        "evidence_snapshot": (snapshot_file, lambda d: d.get("last_verified_commit_sha")),
+    }
+
+    extracted_shas = {}
+    for name, (path, extractor) in targets.items():
+        if not os.path.exists(path):
+            return False, f"Lineage artifact missing: {path}", {}
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                content = json.load(f)
+            sha = extractor(content)
+            if not sha or not isinstance(sha, str):
+                return False, f"Lineage target '{name}' has missing or non-string commit SHA in {path}", {}
+            sha = sha.strip()
+            if len(sha) != 40 or any(c not in "0123456789abcdefABCDEF" for c in sha):
+                return False, f"Lineage target '{name}' has invalid 40-hex commit SHA '{sha}' in {path}", {}
+            if "90b764811a2f" in sha.lower():
+                return False, f"Lineage target '{name}' contains corrupt historical SHA string '{sha}' in {path}", {}
+            extracted_shas[name] = sha.lower()
+        except Exception as e:
+            return False, f"Failed to parse lineage target '{name}' from {path}: {e}", {}
+
+    reference_sha = extracted_shas["passport"]
+    mismatches = []
+    for name, sha in extracted_shas.items():
+        if sha != reference_sha:
+            mismatches.append(f"{name} ({sha}) != passport ({reference_sha})")
+
+    if mismatches:
+        return False, f"Lineage SHA mismatch detected: {'; '.join(mismatches)}", {}
+
+    return True, "Strict cross-artifact commit lineage verified 100% coherent across all release and assurance documents", {
+        "verified_lineage_sha": reference_sha,
+        "artifact_count": len(extracted_shas),
+        "artifacts_checked": list(extracted_shas.keys())
+    }
+
+
 def main():
     args = sys.argv[1:]
     check_graph = "--graph" in args
+    check_lineage = "--lineage" in args or "--check-lineage" in args
     trace_target = None
 
     if "--trace" in args:
@@ -412,7 +477,12 @@ def main():
         if idx + 1 < len(args):
             trace_target = args[idx + 1]
 
-    filtered_args = [a for a in args if a not in ("--graph",) and a != trace_target and a != "--trace"]
+    filtered_args = [
+        a for a in args
+        if a not in ("--graph", "--lineage", "--check-lineage")
+        and a != trace_target
+        and a != "--trace"
+    ]
     target_path = filtered_args[0] if filtered_args else os.path.join(
         os.path.dirname(__file__), "../dist/verification-passport.json"
     )
@@ -450,6 +520,18 @@ def main():
         print(f"  ISO Checksums Digest  : {summary['iso_sums_sha256']}")
         print(f"  Release Status        : {summary['status']}")
         print(f"  Timestamp             : {summary['timestamp']}")
+
+        if check_lineage:
+            pass_candidate = os.path.join(os.path.dirname(target_path), "verification-passport.json")
+            valid_lin, lin_msg, lin_sum = verify_exact_lineage(pass_candidate)
+            if not valid_lin:
+                print("\n[CRITICAL LINEAGE FAILURE]")
+                print(f"  Reason: {lin_msg}\n")
+                sys.exit(1)
+            print("\n[CROSS-ARTIFACT LINEAGE GATE: SUCCESS]")
+            print(f"  Exact Lineage Commit SHA : {lin_sum['verified_lineage_sha']}")
+            print(f"  Artifacts Coherent Gate  : {lin_sum['artifact_count']} artifacts verified without drift")
+
         print("\n✔ PROOF-CARRYING RELEASE VERIFIED: Cryptographically bound to StateRoot and Evidence Graph.\n")
         sys.exit(0)
 
@@ -481,6 +563,16 @@ def main():
         lineage = trace_graph_lineage(graph_path, start_node=start_node)
         for step, n in enumerate(lineage, 1):
             print(f"  {step}. {n['node_id']} [{n['type']}] -> Digest: {n['digest']}")
+
+    if check_lineage:
+        valid_lin, lin_msg, lin_sum = verify_exact_lineage(target_path)
+        if not valid_lin:
+            print("\n[CRITICAL LINEAGE FAILURE]")
+            print(f"  Reason: {lin_msg}\n")
+            sys.exit(1)
+        print("\n[CROSS-ARTIFACT LINEAGE GATE: SUCCESS]")
+        print(f"  Exact Lineage Commit SHA : {lin_sum['verified_lineage_sha']}")
+        print(f"  Artifacts Coherent Gate  : {lin_sum['artifact_count']} artifacts verified without drift")
 
     print("\n✔ PASSPORT VERIFIED: Cryptographically authentic, tamper-free, and independently audited.\n")
     sys.exit(0)
