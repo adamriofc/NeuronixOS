@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/control_protocol_v1.json",
+  "title": "NEURONIX Conductor Control Protocol Schema v1",
+  "description": "Wire format schema for the Conductor Control Protocol (JSON-RPC 2.0) over UNIX domain socket ($XDG_RUNTIME_DIR/conductor.sock).",
+  "oneOf": [
+    { "$ref": "#/$defs/RequestFrame" },
+    { "$ref": "#/$defs/ResponseFrame" },
+    { "$ref": "#/$defs/ErrorFrame" },
+    { "$ref": "#/$defs/NotificationFrame" }
+  ],
+  "$defs": {
+    "RequestId": {
+      "type": ["string", "integer"]
+    },
+    "RpcMethod": {
+      "type": "string",
+      "enum": [
+        "conductor.ping",
+        "conductor.version",
+        "vital.snapshot",
+        "vital.subscribe",
+        "vital.unsubscribe",
+        "skills.list",
+        "skills.describe",
+        "skills.invoke",
+        "identity.resolve",
+        "authority.grant",
+        "authority.revoke"
+      ]
+    },
+    "RequestFrame": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "method"],
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/RequestId"
+        },
+        "method": {
+          "$ref": "#/$defs/RpcMethod"
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ResponseFrame": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "const": "2.0"
+        },
+        "id": {
+          "type": ["string", "integer", "null"]
+        },
+        "result": {
+          "type": ["object", "array", "string", "number", "boolean", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ErrorObject": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {
+          "type": ["object", "array", "string", "number", "boolean", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ErrorFrame": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "error"],
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "const": "2.0"
+        },
+        "id": {
+          "type": ["string", "integer", "null"]
+        },
+        "error": {
+          "$ref": "#/$defs/ErrorObject"
+        }
+      },
+      "additionalProperties": false
+    },
+    "NotificationFrame": {
+      "type": "object",
+      "required": ["jsonrpc", "method"],
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "const": "2.0"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "not": {
+        "required": ["id"]
+      },
+      "additionalProperties": false
+    }
+  }
+}

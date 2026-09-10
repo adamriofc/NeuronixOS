@@ -85,6 +85,9 @@
   - [29. Continuous Security Invariant Registry (SEC-001 to SEC-020)](#29-continuous-security-invariant-registry-sec-001-to-sec-020)
   - [30. Proof-Carrying Release Architecture (dist/neuronix-os-v1.0.4.proof.json)](#30-proof-carrying-release-architecture-distneuronix-os-v104proofjson)
   - [31. Closed Semantic Subsystem Architecture (MES-NRX-002)](#31-closed-semantic-subsystem-architecture-mes-nrx-002)
+  - [32. Conductor Operating Surface & Zero-Idle Capability Runtime (SPEC-NRX-CND-018, SPEC-NRX-CND-021)](#32-conductor-operating-surface--zero-idle-capability-runtime-spec-nrx-cnd-018-spec-nrx-cnd-021)
+  - [33. Vital Laboratory Observation Substrate & Machine Contracts (SPEC-NRX-VTL-020)](#33-vital-laboratory-observation-substrate--machine-contracts-spec-nrx-vtl-020)
+  - [34. NEURONIX Skill System & Delegated Authority Engine (SPEC-NRX-SKL-019)](#34-neuronix-skill-system--delegated-authority-engine-spec-nrx-skl-019)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
 - [Verification, Lifecycle Gate & Test Harness (1,299 Assertions)](#verification--test-harness)
@@ -1263,6 +1266,39 @@ Following the v1.0.4 audit cycle, NEURONIX OS fully transitioned from mock or st
 # Execute comprehensive semantic closure test suite (37 tests)
 python3 tests/test_semantic_closure.py -v
 ```
+
+### 32. Conductor Operating Surface & Zero-Idle Capability Runtime (SPEC-NRX-CND-018, SPEC-NRX-CND-021)
+NEURONIX Conductor is the native operating surface and local agent substrate for the NEURONIX platform. Conductor replaces visual complexity with a single, terminal-first window offering maximum capability and zero permanent clutter:
+
+- **Surface Architecture:** One unified window featuring a 95% workspace canvas dedicated to an ultra-fast, native Rust terminal subsystem (`packages/conductor`). A subtle topbar displays `CONDUCTOR [ NEURONIX v1.0.4:gen-X ]` alongside live Vital health status (`VITAL o NOMINAL`).
+- **Terminal Emulator Subsystem:** High-performance VT100/ANSI state machine featuring full SGR color styling, cursor tracking, scrollback history, alternate screen buffer support, and POSIX PTY process management via `pty.rs` (`TIOCSWINSZ` window resizing and signal propagation).
+- **Zero-Idle Runtime Broker (`packages/conductor-runtime`):** Operates on an on-demand socket activation lifecycle (`systemd/user/conductor.socket` listening on `$XDG_RUNTIME_DIR/conductor.sock` with `0600` permissions):
+  - `COLD`: 0 connected clients, 0% CPU overhead, near-zero RAM footprint.
+  - `WARM`: External agents, MCP servers, or CLI tools connected via socket, executing capabilities with zero GUI process overhead.
+  - `HOT`: Visual desktop surface attached with interactive rendering overlays.
+- **Ephemeral Proposal Overlays:** When an operation requires human review, Conductor slides in a non-disruptive, structured proposal card displaying the title, risk tier, parameter diff, and cryptographic proposal hash without breaking terminal workflow.
+
+### 33. Vital Laboratory Observation Substrate & Machine Contracts (SPEC-NRX-VTL-020)
+Vital is the high-fidelity machine observation and telemetry substrate for humans and AI agents, adhering to the fundamental doctrine: **"No Consumer, No Work"**.
+
+- **Four Telemetry Classes:**
+  - `OBSERVED`: Ground-truth hardware and kernel metrics sampled directly from `/proc`, `/sys`, `hwmon`, and `statvfs`.
+  - `DERIVED`: Deterministic calculations (such as memory pressure or filesystem utilization percentages) tagged with explicit confidence scores (0.0 to 1.0).
+  - `EVENT`: Discrete state transitions, lifecycle events, and audit logs bound to monotonic time.
+  - `DIAGNOSTIC`: Anomaly detections, throttling alerts, and degraded posture indicators.
+- **The Invariant "Unknown Must Remain Unknown":** Vital strictly prohibits synthetic heuristic fallbacks (such as guessing missing temperatures as 45.0 degrees Celsius). If a sensor is unexposed or unreadable, the metric evaluates strictly to `null` with `availability="UNAVAILABLE"` and an explicit audit reason.
+- **Laboratory-Grade Precision:** Every telemetry record carries UTC ISO 8601 timestamps, monotonic nanosecond clock readings (`monotonic_at`), data currency ratings (`freshness_ms`), and cryptographic provenance tags (`nrx-vtl:...`).
+
+### 34. NEURONIX Skill System & Delegated Authority Engine (SPEC-NRX-SKL-019)
+The NEURONIX Skill System establishes a single, authoritative machine-readable operating manual for every system capability across CLI, Conductor GUI, and MCP interfaces:
+
+- **Canonical Skill Contracts:** All system capabilities (`system.status`, `vital.snapshot`, `system.rollback`, `storage.plan`, `state.verify`) are formalized as declarative contracts in `data/skills/*.json` validated against `data/schemas/skill_contract.schema.json`.
+- **User Sovereignty & Delegated Authority:**
+  - The human owner retains supreme sovereign authority over the system. Guardrails inform of blast radius and recovery paths rather than paternalistically blocking the owner.
+  - `sudo` is explicitly recognized as a valid privileged capability under human ownership.
+  - 5-Tier Delegated Authority for AI agents: `OBSERVE_ONLY`, `PROPOSE_ONLY`, `USERSPACE_EXECUTE`, `PRIVILEGED_EXECUTE`, and `FULL_DELEGATED_CONTROL`. When granted mutation authority by the owner, AI agents execute capabilities without artificial confirmation friction.
+- **Unbypassable Audit Trail:** Every skill execution generates an immutable cryptographic execution receipt (`RCP-...`) recording SHA-256 input digests, output digests, caller principal, delegation tier, duration, and execution timestamp.
+- **Model Context Protocol (MCP) Adapter (`packages/conductor-mcp`):** Native compatibility adapter supporting both modern MCP 2026-07-28 and legacy 2024-11-05 specifications, translating external agent tool calls directly into verified NEURONIX skills and exposing Vital telemetry as laboratory resources (`vital://snapshot`).
 
 ---
 

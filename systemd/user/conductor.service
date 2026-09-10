@@ -1,0 +1,22 @@
+[Unit]
+Description=NEURONIX Conductor Capability Runtime Broker
+Documentation=https://github.com/adamriofc/NeuronixOS
+Requires=conductor.socket
+After=conductor.socket
+
+[Service]
+Type=simple
+ExecStart=%h/.nix-profile/bin/conductor-runtime --socket %t/conductor.sock
+StandardInput=socket
+Restart=on-failure
+RestartSec=2s
+TimeoutStopSec=5s
+
+# Security Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/observation_contract.schema.json",
+  "title": "NEURONIX Vital Observation Contract Schema",
+  "description": "Laboratory-grade machine observation contract for Vital telemetry records. Enforces telemetry classification, explicit nulls for unexposed sensors, and provenance tracking.",
+  "type": "object",
+  "required": [
+    "metric",
+    "telemetry_class",
+    "value",
+    "unit",
+    "observed_at",
+    "monotonic_at",
+    "source",
+    "freshness_ms",
+    "quality",
+    "confidence",
+    "provenance",
+    "availability"
+  ],
+  "properties": {
+    "metric": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)+$",
+      "description": "Namespaced metric identifier (e.g. cpu.load_1m, thermal.cpu_package_celsius)."
+    },
+    "telemetry_class": {
+      "type": "string",
+      "enum": ["OBSERVED", "DERIVED", "EVENT", "DIAGNOSTIC"],
+      "description": "Telemetry classification separating raw machine observation from derived computation and diagnostic reasoning."
+    },
+    "value": {
+      "type": ["number", "string", "boolean", "array", "object", "null"],
+      "description": "The observed or derived value. Must be null if availability is not AVAILABLE."
+    },
+    "unit": {
+      "type": "string",
+      "description": "Physical or logical unit of measurement (e.g. celsius, percent, bytes, mhz, load, count, enum, string)."
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC ISO 8601 timestamp of observation collection."
+    },
+    "monotonic_at": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic clock value in nanoseconds at the time of observation."
+    },
+    "source": {
+      "type": "string",
+      "description": "Kernel, hardware, or sysfs subsystem providing the observation (e.g. hwmon, /proc/loadavg, statvfs:/)."
+    },
+    "freshness_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Elapsed time in milliseconds since the observation was sampled."
+    },
+    "quality": {
+      "type": "string",
+      "enum": ["FRESH", "RECENT", "STALE", "UNAVAILABLE"],
+      "description": "Assessment of data currency and sensor liveness."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Statistical or deterministic confidence score (1.0 for direct hardware measurement)."
+    },
+    "provenance": {
+      "type": "string",
+      "description": "Cryptographic or subsystem origin identifier establishing data lineage."
+    },
+    "availability": {
+      "type": "string",
+      "enum": ["AVAILABLE", "UNAVAILABLE", "RESTRICTED", "DEGRADED"],
+      "description": "Sensor exposure and availability status. Mandates null value when UNAVAILABLE."
+    },
+    "reason": {
+      "type": ["string", "null"],
+      "description": "Optional explanation for unavailable, restricted, or degraded sensors."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "availability": { "const": "UNAVAILABLE" }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": { "type": "null" }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

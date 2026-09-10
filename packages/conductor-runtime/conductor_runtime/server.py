@@ -1,0 +1,349 @@
+"""
+Asynchronous Socket Broker and JSON-RPC 2.0 Dispatcher for Conductor Runtime.
+Implements the Zero-Idle COLD/WARM/HOT lifecycle and delegated authority routing.
+Adheres strictly to SPEC-NRX-CND-018, SPEC-NRX-SKL-019, and SPEC-NRX-CND-021.
+"""
+
+import os
+import sys
+import json
+import time
+import asyncio
+from pathlib import Path
+from typing import Dict, Any, Optional, Set
+
+from neuronix_core import skills
+from neuronix_core import vital
+
+
+def resolve_socket_path(override: Optional[str] = None) -> Path:
+    """
+    Determines the canonical Conductor control socket path.
+    Prioritizes explicit arguments, environment variables, XDG runtime dir,
+    and user-specific runtime fallbacks.
+    """
+    if override:
+        return Path(override)
+
+    env_path = os.environ.get("CONDUCTOR_SOCKET_PATH")
+    if env_path:
+        return Path(env_path)
+
+    xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if xdg_runtime and os.path.exists(xdg_runtime):
+        return Path(xdg_runtime) / "conductor.sock"
+
+    uid = os.getuid()
+    standard_user_run = Path(f"/run/user/{uid}")
+    if standard_user_run.exists():
+        return standard_user_run / "conductor.sock"
+
+    return Path(f"/tmp/conductor-{uid}.sock")
+
+
+class LifecycleState:
+    COLD = "COLD"
+    WARM = "WARM"
+    HOT = "HOT"
+
+
+class ConductorServer:
+    """
+    Lightweight, zero-idle control broker listening on a UNIX domain socket.
+    Exposes canonical NEURONIX capabilities via JSON-RPC 2.0.
+    """
+
+    def __init__(self, socket_path: Optional[Path] = None):
+        self.socket_path = socket_path or resolve_socket_path()
+        self.start_time = time.time()
+        self.start_monotonic = time.monotonic_ns()
+        self._clients: Set[asyncio.StreamWriter] = set()
+        self._gui_attached = False
+        self._delegated_authorities: Dict[str, str] = {}
+        self._server: Optional[asyncio.AbstractServer] = None
+        self._running = False
+
+    @property
+    def lifecycle_state(self) -> str:
+        if self._gui_attached:
+            return LifecycleState.HOT
+        if len(self._clients) > 0:
+            return LifecycleState.WARM
+        return LifecycleState.COLD
+
+    async def start(self):
+        """Starts the UNIX domain socket server."""
+        # Ensure parent directory exists
+        self.socket_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Remove stale socket file if present
+        if self.socket_path.exists():
+            try:
+                self.socket_path.unlink()
+            except OSError:
+                pass
+
+        self._server = await asyncio.start_unix_server(
+            self._handle_client,
+            path=str(self.socket_path)
+        )
+        # Enforce user-only socket permissions (0600)
+        try:
+            os.chmod(self.socket_path, 0o600)
+        except OSError:
+            pass
+
+        self._running = True
+
+    async def stop(self):
+        """Stops the socket server and disconnects active clients."""
+        self._running = False
+        if self._server:
+            self._server.close()
+            await self._server.wait_closed()
+
+        for writer in list(self._clients):
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+        self._clients.clear()
+
+        if self.socket_path.exists():
+            try:
+                self.socket_path.unlink()
+            except OSError:
+                pass
+
+    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        """Processes incoming client connections and dispatches JSON-RPC 2.0 requests."""
+        self._clients.add(writer)
+        buffer = ""
+
+        try:
+            while self._running:
+                data = await reader.read(65536)
+                if not data:
+                    break
+
+                buffer += data.decode("utf-8", errors="replace")
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    response = await self._process_raw_message(line)
+                    if response is not None:
+                        response_bytes = (json.dumps(response) + "\n").encode("utf-8")
+                        writer.write(response_bytes)
+                        await writer.drain()
+
+        except (asyncio.CancelledError, ConnectionResetError, BrokenPipeError):
+            pass
+        finally:
+            self._clients.discard(writer)
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+
+    async def _process_raw_message(self, raw_line: str) -> Optional[Dict[str, Any]]:
+        """Parses and dispatches a single JSON-RPC line."""
+        try:
+            req = json.loads(raw_line)
+        except Exception as e:
+            return {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {
+                    "code": -32700,
+                    "message": f"Parse error: {str(e)}"
+                }
+            }
+
+        if not isinstance(req, dict) or req.get("jsonrpc") != "2.0" or "method" not in req:
+            return {
+                "jsonrpc": "2.0",
+                "id": req.get("id") if isinstance(req, dict) else None,
+                "error": {
+                    "code": -32600,
+                    "message": "Invalid Request: missing jsonrpc 2.0 frame or method"
+                }
+            }
+
+        req_id = req.get("id")
+        method = req.get("method")
+        params = req.get("params", {})
+        if not isinstance(params, dict):
+            params = {}
+
+        # Notification handling (no id)
+        is_notification = ("id" not in req)
+
+        try:
+            result = await self._dispatch_method(method, params)
+            if is_notification:
+                return None
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": result
+            }
+        except skills.SkillApprovalRequired as approval_err:
+            if is_notification:
+                return None
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {
+                    "code": -32002,
+                    "message": "Human approval gate required under active delegation policy",
+                    "data": approval_err.proposal
+                }
+            }
+        except skills.SkillExecutionError as exec_err:
+            if is_notification:
+                return None
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {
+                    "code": -32003,
+                    "message": str(exec_err)
+                }
+            }
+        except NotImplementedError:
+            if is_notification:
+                return None
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {
+                    "code": -32601,
+                    "message": f"Method not found: {method}"
+                }
+            }
+        except Exception as ex:
+            if is_notification:
+                return None
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {
+                    "code": -32603,
+                    "message": f"Internal error: {str(ex)}"
+                }
+            }
+
+    async def _dispatch_method(self, method: str, params: Dict[str, Any]) -> Any:
+        """Route method execution to specialized subsystem handlers."""
+        if method == "conductor.ping":
+            return {
+                "status": "PONG",
+                "lifecycle_state": self.lifecycle_state,
+                "active_connections": len(self._clients),
+                "uptime_seconds": round(time.time() - self.start_time, 2),
+                "monotonic_timestamp_ns": time.monotonic_ns()
+            }
+
+        elif method == "conductor.version":
+            return {
+                "distribution": "NEURONIX OS",
+                "version": "1.0.4",
+                "protocol_version": "1.0.0",
+                "control_socket": str(self.socket_path),
+                "capabilities_registered": len(skills.list_skills()),
+                "zero_idle_enabled": True
+            }
+
+        elif method == "vital.snapshot":
+            return vital.snapshot()
+
+        elif method == "vital.subscribe":
+            frequency_ms = params.get("frequency_ms", 1000)
+            return {
+                "subscribed": True,
+                "frequency_ms": frequency_ms,
+                "stream_id": f"vtl-stream-{time.monotonic_ns()}"
+            }
+
+        elif method == "vital.unsubscribe":
+            return {"unsubscribed": True}
+
+        elif method == "skills.list":
+            return skills.list_skills()
+
+        elif method == "skills.describe":
+            skill_id = params.get("skill_id")
+            if not skill_id:
+                raise skills.SkillExecutionError("Missing 'skill_id' parameter in skills.describe")
+            return skills.describe(skill_id)
+
+        elif method == "skills.invoke":
+            skill_id = params.get("skill_id")
+            if not skill_id:
+                raise skills.SkillExecutionError("Missing 'skill_id' parameter in skills.invoke")
+
+            inputs = params.get("inputs", {})
+            caller = params.get("caller", "AI_AGENT")
+            token = params.get("authorization_token")
+            sovereign_override = bool(params.get("sovereign_override", False))
+
+            # Resolve delegated authority for agent
+            delegated_authority = params.get("delegated_authority")
+            if not delegated_authority and caller in self._delegated_authorities:
+                delegated_authority = self._delegated_authorities[caller]
+
+            return skills.execute(
+                skill_id=skill_id,
+                inputs=inputs,
+                caller=caller,
+                authorization_token=token,
+                delegated_authority=delegated_authority,
+                sovereign_override=sovereign_override
+            )
+
+        elif method == "identity.resolve":
+            caller = params.get("caller", "HUMAN_OWNER")
+            delegated = self._delegated_authorities.get(caller)
+            return {
+                "caller": caller,
+                "principal": caller.upper(),
+                "delegated_tier": delegated or "UNASSIGNED",
+                "user_sovereignty_active": True
+            }
+
+        elif method == "authority.grant":
+            agent_id = params.get("agent_id")
+            tier = params.get("tier")
+            valid_tiers = [
+                skills.DelegatedAuthorityTier.OBSERVE_ONLY,
+                skills.DelegatedAuthorityTier.PROPOSE_ONLY,
+                skills.DelegatedAuthorityTier.USERSPACE_EXECUTE,
+                skills.DelegatedAuthorityTier.PRIVILEGED_EXECUTE,
+                skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL
+            ]
+            if not agent_id or tier not in valid_tiers:
+                raise skills.SkillExecutionError(f"Invalid grant: agent_id='{agent_id}', tier='{tier}'")
+
+            self._delegated_authorities[agent_id] = tier
+            return {
+                "agent_id": agent_id,
+                "granted_tier": tier,
+                "granted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            }
+
+        elif method == "authority.revoke":
+            agent_id = params.get("agent_id")
+            if agent_id in self._delegated_authorities:
+                del self._delegated_authorities[agent_id]
+            return {
+                "agent_id": agent_id,
+                "revoked": True
+            }
+
+        else:
+            raise NotImplementedError(f"Method '{method}' not implemented")

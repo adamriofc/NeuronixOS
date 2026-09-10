@@ -1,13 +1,12 @@
 """
 Vital Observability and Sensing Substrate for NEURONIX OS.
 Implements the high-fidelity laboratory observatory model for humans and AI agents.
-Adheres strictly to SPEC-NRX-VTL-020.
+Adheres strictly to SPEC-NRX-VTL-020 and SPEC-NRX-CND-021.
 """
 
 import os
 import time
 import glob
-import json
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, asdict
 
@@ -15,13 +14,19 @@ from dataclasses import dataclass, asdict
 @dataclass
 class ObservationRecord:
     metric: str
+    telemetry_class: str  # "OBSERVED", "DERIVED", "EVENT", "DIAGNOSTIC"
     value: Any
     unit: str
-    timestamp: float
+    observed_at: str
+    monotonic_at: int
     source: str
-    age_ms: int
+    freshness_ms: int
     quality: str  # "fresh", "recent", "stale", "unavailable"
-    confidence: str  # "measured", "derived", "unverified"
+    confidence: float  # 0.0 to 1.0 (1.0 for measured facts)
+    provenance: str
+    availability: str  # "AVAILABLE", "UNAVAILABLE", "RESTRICTED", "DEGRADED"
+    timestamp: float  # legacy compatibility timestamp
+    age_ms: int  # legacy compatibility age
     reason: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -38,6 +43,7 @@ class VitalObservatory:
     """
 
     def __init__(self):
+        self._sampling_monotonic_ns = time.monotonic_ns()
         self._sampling_timestamp = time.time()
 
     def _create_record(
@@ -46,33 +52,53 @@ class VitalObservatory:
         value: Any,
         unit: str,
         source: str,
-        confidence: str = "measured",
+        telemetry_class: str = "OBSERVED",
+        confidence: float = 1.0,
+        availability: Optional[str] = None,
         reason: Optional[str] = None
     ) -> ObservationRecord:
-        now = time.time()
-        age_ms = int((now - self._sampling_timestamp) * 1000)
-        quality = "fresh" if value is not None else "unavailable"
+        now_ts = time.time()
+        now_monotonic_ns = time.monotonic_ns()
+        freshness_ms = max(0, int((now_monotonic_ns - self._sampling_monotonic_ns) / 1_000_000))
+        iso_now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now_ts))
+
+        if value is None:
+            actual_availability = availability or "UNAVAILABLE"
+            quality = "unavailable"
+            actual_reason = reason or "sensor_not_exposed"
+        else:
+            actual_availability = availability or "AVAILABLE"
+            quality = "fresh"
+            actual_reason = reason
+
         return ObservationRecord(
             metric=metric,
+            telemetry_class=telemetry_class,
             value=value,
             unit=unit,
-            timestamp=now,
+            observed_at=iso_now,
+            monotonic_at=now_monotonic_ns,
             source=source,
-            age_ms=max(0, age_ms),
+            freshness_ms=freshness_ms,
             quality=quality,
             confidence=confidence,
-            reason=reason
+            provenance=f"nrx-vtl:{source}",
+            availability=actual_availability,
+            timestamp=now_ts,
+            age_ms=freshness_ms,
+            reason=actual_reason
         )
 
     # -------------------------------------------------------------------------
     # 1. CPU & Compute Observation
     # -------------------------------------------------------------------------
     def sample_cpu(self) -> Dict[str, Any]:
+        self._sampling_monotonic_ns = time.monotonic_ns()
         self._sampling_timestamp = time.time()
         res: Dict[str, Any] = {}
 
         # Architecture & Model
-        model = "Unknown Processor"
+        model = None
         core_count = os.cpu_count() or 1
         if os.path.exists("/proc/cpuinfo"):
             try:
@@ -82,18 +108,29 @@ class VitalObservatory:
                             model = line.split(":", 1)[1].strip()
                             break
             except Exception as e:
-                res["model_name"] = self._create_record("cpu.model_name", None, "string", "/proc/cpuinfo", reason=str(e)).to_dict()
+                res["model_name"] = self._create_record(
+                    "cpu.model_name", None, "string", "/proc/cpuinfo",
+                    telemetry_class="OBSERVED", reason=str(e)
+                ).to_dict()
 
-        res["model_name"] = self._create_record("cpu.model_name", model, "string", "/proc/cpuinfo").to_dict()
-        res["core_count"] = self._create_record("cpu.core_count", core_count, "count", "kernel").to_dict()
+        if model is not None:
+            res["model_name"] = self._create_record("cpu.model_name", model, "string", "/proc/cpuinfo", telemetry_class="OBSERVED").to_dict()
+        else:
+            res["model_name"] = self._create_record("cpu.model_name", None, "string", "/proc/cpuinfo", telemetry_class="OBSERVED", reason="cpu_model_unreadable").to_dict()
+
+        res["core_count"] = self._create_record("cpu.core_count", core_count, "count", "kernel", telemetry_class="OBSERVED").to_dict()
 
         # Load averages
         try:
             load1, load5, load15 = os.getloadavg()
-            res["load_average"] = self._create_record("cpu.load_average", [round(load1, 2), round(load5, 2), round(load15, 2)], "load", "/proc/loadavg").to_dict()
-            res["load_1m"] = self._create_record("cpu.load_1m", round(load1, 2), "load", "/proc/loadavg").to_dict()
+            res["load_average"] = self._create_record(
+                "cpu.load_average", [round(load1, 2), round(load5, 2), round(load15, 2)],
+                "load", "/proc/loadavg", telemetry_class="OBSERVED"
+            ).to_dict()
+            res["load_1m"] = self._create_record("cpu.load_1m", round(load1, 2), "load", "/proc/loadavg", telemetry_class="OBSERVED").to_dict()
         except Exception as e:
-            res["load_average"] = self._create_record("cpu.load_average", None, "load", "/proc/loadavg", reason=str(e)).to_dict()
+            res["load_average"] = self._create_record("cpu.load_average", None, "load", "/proc/loadavg", telemetry_class="OBSERVED", reason=str(e)).to_dict()
+            res["load_1m"] = self._create_record("cpu.load_1m", None, "load", "/proc/loadavg", telemetry_class="OBSERVED", reason=str(e)).to_dict()
 
         # Frequencies
         freqs = []
@@ -105,9 +142,9 @@ class VitalObservatory:
                 pass
         if freqs:
             avg_freq = sum(freqs) / len(freqs)
-            res["frequency_mhz"] = self._create_record("cpu.frequency_mhz", round(avg_freq, 1), "mhz", "cpufreq").to_dict()
+            res["frequency_mhz"] = self._create_record("cpu.frequency_mhz", round(avg_freq, 1), "mhz", "cpufreq", telemetry_class="OBSERVED").to_dict()
         else:
-            res["frequency_mhz"] = self._create_record("cpu.frequency_mhz", None, "mhz", "cpufreq", reason="cpufreq_scaling_unavailable").to_dict()
+            res["frequency_mhz"] = self._create_record("cpu.frequency_mhz", None, "mhz", "cpufreq", telemetry_class="OBSERVED", reason="cpufreq_scaling_unavailable").to_dict()
 
         return res
 
@@ -138,20 +175,20 @@ class VitalObservatory:
                         elif key == "SwapFree":
                             swap_free_kb = int(parts[1])
             except Exception as e:
-                res["memory.status"] = self._create_record("memory.status", None, "status", "/proc/meminfo", reason=str(e)).to_dict()
+                res["memory.status"] = self._create_record("memory.status", None, "status", "/proc/meminfo", telemetry_class="OBSERVED", reason=str(e)).to_dict()
 
         total_bytes = total_kb * 1024
         avail_bytes = avail_kb * 1024
         used_bytes = max(0, total_bytes - avail_bytes)
         used_pct = round((used_bytes / total_bytes) * 100, 1) if total_bytes > 0 else 0.0
 
-        res["total_bytes"] = self._create_record("memory.total_bytes", total_bytes, "bytes", "/proc/meminfo").to_dict()
-        res["available_bytes"] = self._create_record("memory.available_bytes", avail_bytes, "bytes", "/proc/meminfo").to_dict()
-        res["used_bytes"] = self._create_record("memory.used_bytes", used_bytes, "bytes", "/proc/meminfo").to_dict()
-        res["used_percent"] = self._create_record("memory.used_percent", used_pct, "percent", "/proc/meminfo", confidence="derived").to_dict()
+        res["total_bytes"] = self._create_record("memory.total_bytes", total_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
+        res["available_bytes"] = self._create_record("memory.available_bytes", avail_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
+        res["used_bytes"] = self._create_record("memory.used_bytes", used_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
+        res["used_percent"] = self._create_record("memory.used_percent", used_pct, "percent", "/proc/meminfo", telemetry_class="DERIVED", confidence=0.99).to_dict()
 
         swap_used_bytes = max(0, (swap_total_kb - swap_free_kb) * 1024)
-        res["swap_used_bytes"] = self._create_record("memory.swap_used_bytes", swap_used_bytes, "bytes", "/proc/meminfo").to_dict()
+        res["swap_used_bytes"] = self._create_record("memory.swap_used_bytes", swap_used_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
 
         # Derived memory pressure
         pressure = "NOMINAL"
@@ -162,7 +199,7 @@ class VitalObservatory:
         elif used_pct >= 65.0:
             pressure = "MODERATE"
 
-        res["pressure"] = self._create_record("memory.pressure", pressure, "enum", "deterministic_rule_engine", confidence="derived").to_dict()
+        res["pressure"] = self._create_record("memory.pressure", pressure, "enum", "deterministic_rule_engine", telemetry_class="DERIVED", confidence=0.95).to_dict()
         return res
 
     # -------------------------------------------------------------------------
@@ -201,17 +238,30 @@ class VitalObservatory:
                 pass
 
         if cpu_temp is not None:
-            res["cpu_package_celsius"] = self._create_record("thermal.cpu_package_celsius", cpu_temp, "celsius", "hwmon").to_dict()
+            res["cpu_package_celsius"] = self._create_record(
+                "thermal.cpu_package_celsius", cpu_temp, "celsius", "hwmon",
+                telemetry_class="OBSERVED", availability="AVAILABLE"
+            ).to_dict()
             # Derived Thermal Status
             thermal_status = "NORMAL"
             if cpu_temp >= 90.0:
                 thermal_status = "CRITICAL_THROTTLING"
             elif cpu_temp >= 80.0:
                 thermal_status = "ELEVATED"
-            res["thermal_status"] = self._create_record("thermal.status", thermal_status, "enum", "deterministic_rule_engine", confidence="derived").to_dict()
+            res["thermal_status"] = self._create_record(
+                "thermal.status", thermal_status, "enum", "deterministic_rule_engine",
+                telemetry_class="DERIVED", confidence=0.95
+            ).to_dict()
         else:
-            res["cpu_package_celsius"] = self._create_record("thermal.cpu_package_celsius", None, "celsius", "hwmon", reason="thermal_sensor_unreadable").to_dict()
-            res["thermal_status"] = self._create_record("thermal.status", "UNKNOWN", "enum", "deterministic_rule_engine", confidence="derived").to_dict()
+            # Unknown must remain unknown: strictly return None/null with UNAVAILABLE
+            res["cpu_package_celsius"] = self._create_record(
+                "thermal.cpu_package_celsius", None, "celsius", "hwmon",
+                telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="thermal_sensor_unreadable"
+            ).to_dict()
+            res["thermal_status"] = self._create_record(
+                "thermal.status", "UNKNOWN", "enum", "deterministic_rule_engine",
+                telemetry_class="DERIVED", confidence=0.5
+            ).to_dict()
 
         return res
 
@@ -227,11 +277,11 @@ class VitalObservatory:
             used_bytes = total_bytes - free_bytes
             used_pct = round((used_bytes / total_bytes) * 100, 1) if total_bytes > 0 else 0.0
 
-            res["root_total_bytes"] = self._create_record("storage.root_total_bytes", total_bytes, "bytes", "statvfs:/").to_dict()
-            res["root_available_bytes"] = self._create_record("storage.root_available_bytes", free_bytes, "bytes", "statvfs:/").to_dict()
-            res["root_used_percent"] = self._create_record("storage.root_used_percent", used_pct, "percent", "statvfs:/", confidence="derived").to_dict()
+            res["root_total_bytes"] = self._create_record("storage.root_total_bytes", total_bytes, "bytes", "statvfs:/", telemetry_class="OBSERVED").to_dict()
+            res["root_available_bytes"] = self._create_record("storage.root_available_bytes", free_bytes, "bytes", "statvfs:/", telemetry_class="OBSERVED").to_dict()
+            res["root_used_percent"] = self._create_record("storage.root_used_percent", used_pct, "percent", "statvfs:/", telemetry_class="DERIVED", confidence=0.99).to_dict()
         except Exception as e:
-            res["root_total_bytes"] = self._create_record("storage.root_total_bytes", None, "bytes", "statvfs:/", reason=str(e)).to_dict()
+            res["root_total_bytes"] = self._create_record("storage.root_total_bytes", None, "bytes", "statvfs:/", telemetry_class="OBSERVED", reason=str(e)).to_dict()
 
         # Nix Store awareness
         nix_store_bytes = None
@@ -243,9 +293,9 @@ class VitalObservatory:
                 pass
 
         if nix_store_bytes is not None:
-            res["nix_store_estimated_bytes"] = self._create_record("storage.nix_store_bytes", nix_store_bytes, "bytes", "statvfs:/nix/store").to_dict()
+            res["nix_store_estimated_bytes"] = self._create_record("storage.nix_store_bytes", nix_store_bytes, "bytes", "statvfs:/nix/store", telemetry_class="OBSERVED").to_dict()
         else:
-            res["nix_store_estimated_bytes"] = self._create_record("storage.nix_store_bytes", None, "bytes", "statvfs:/nix/store", reason="nix_store_not_mounted").to_dict()
+            res["nix_store_estimated_bytes"] = self._create_record("storage.nix_store_bytes", None, "bytes", "statvfs:/nix/store", telemetry_class="OBSERVED", reason="nix_store_not_mounted").to_dict()
 
         return res
 
@@ -277,12 +327,12 @@ class VitalObservatory:
                                 status_val = sf.read().strip()
                         except Exception:
                             pass
-                    res["battery_capacity_percent"] = self._create_record(f"power.{entry}.capacity", cap_val, "percent", cap_file).to_dict()
-                    res["battery_status"] = self._create_record(f"power.{entry}.status", status_val, "string", status_file).to_dict()
+                    res["battery_capacity_percent"] = self._create_record(f"power.{entry.lower()}.capacity", cap_val, "percent", cap_file, telemetry_class="OBSERVED").to_dict()
+                    res["battery_status"] = self._create_record(f"power.{entry.lower()}.status", status_val, "string", status_file, telemetry_class="OBSERVED").to_dict()
                     break
 
         if not battery_found:
-            res["power_source"] = self._create_record("power.source", "AC_MAINS", "enum", "sysfs_power_supply", reason="no_battery_detected").to_dict()
+            res["power_source"] = self._create_record("power.source", "AC_MAINS", "enum", "sysfs_power_supply", telemetry_class="OBSERVED", reason="no_battery_detected").to_dict()
 
         return res
 
@@ -316,12 +366,21 @@ class VitalObservatory:
                 pass
 
         if active_gen is not None:
-            res["active_nixos_generation"] = self._create_record("nixos.active_generation", active_gen, "generation_number", "/run/current-system").to_dict()
+            res["active_nixos_generation"] = self._create_record("nixos.active_generation", active_gen, "generation_number", "/run/current-system", telemetry_class="OBSERVED").to_dict()
         else:
-            res["active_nixos_generation"] = self._create_record("nixos.active_generation", 1, "generation_number", "fallback_evaluation", confidence="derived").to_dict()
+            # Fallback to generation module inspection
+            from neuronix_core import generation
+            gen_str = generation.get_active_generation()
+            if gen_str and gen_str.isdigit():
+                res["active_nixos_generation"] = self._create_record("nixos.active_generation", int(gen_str), "generation_number", "generation_registry", telemetry_class="OBSERVED").to_dict()
+            else:
+                res["active_nixos_generation"] = self._create_record(
+                    "nixos.active_generation", None, "generation_number", "/run/current-system",
+                    telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="current_system_profile_unavailable"
+                ).to_dict()
 
         # Kernel release
-        res["kernel_release"] = self._create_record("kernel.release", os.uname().release, "string", "uname").to_dict()
+        res["kernel_release"] = self._create_record("kernel.release", os.uname().release, "string", "uname", telemetry_class="OBSERVED").to_dict()
 
         # NEURONIX StateRoot
         stateroot_file = "/run/neuronix/stateroot.current"
@@ -334,9 +393,12 @@ class VitalObservatory:
                 pass
 
         if stateroot:
-            res["stateroot"] = self._create_record("neuronix.stateroot", stateroot, "sha256", stateroot_file).to_dict()
+            res["stateroot"] = self._create_record("neuronix.stateroot", stateroot, "sha256", stateroot_file, telemetry_class="OBSERVED").to_dict()
         else:
-            res["stateroot"] = self._create_record("neuronix.stateroot", None, "sha256", stateroot_file, reason="stateroot_socket_inactive").to_dict()
+            res["stateroot"] = self._create_record(
+                "neuronix.stateroot", None, "sha256", stateroot_file,
+                telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="stateroot_socket_inactive"
+            ).to_dict()
 
         return res
 
@@ -377,7 +439,8 @@ class VitalObservatory:
             overall_health,
             "enum",
             "deterministic_health_rules",
-            confidence="derived"
+            telemetry_class="DERIVED",
+            confidence=0.98
         ).to_dict()
 
         observations["sampling_duration_ms"] = round((time.time() - start_time) * 1000, 2)

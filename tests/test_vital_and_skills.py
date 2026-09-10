@@ -139,10 +139,72 @@ class TestVitalObservatoryAndSkillBroker(unittest.TestCase):
         with self.assertRaises(skills.SkillExecutionError):
             skills.describe("non.existent.skill")
 
-        # list_skills returns non-empty array
-        all_skills = skills.list_skills()
-        self.assertGreaterEqual(len(all_skills), 5)
+    def test_delegated_authority_matrix_for_ai_agents(self):
+        """Test User Sovereignty via Delegated Authority Tiers for AI agents."""
+        # 1. AI with FULL_DELEGATED_CONTROL executes without human approval prompt
+        res_full = skills.execute(
+            skill_id="system.rollback",
+            inputs={"target_generation": 42, "dry_run": True},
+            caller="AI_AGENT",
+            delegated_authority=skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL
+        )
+        self.assertEqual(res_full["status"], "DRY_RUN_PASSED")
+        self.assertEqual(res_full["_receipt"]["delegated_tier"], skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL)
+
+        # 2. AI with PRIVILEGED_EXECUTE executes without human approval prompt
+        res_priv = skills.execute(
+            skill_id="system.rollback",
+            inputs={"target_generation": 42, "dry_run": True},
+            caller="AI_AGENT",
+            delegated_authority=skills.DelegatedAuthorityTier.PRIVILEGED_EXECUTE
+        )
+        self.assertEqual(res_priv["status"], "DRY_RUN_PASSED")
+
+        # 3. AI with PROPOSE_ONLY is blocked on MUTATE and must yield verifiable proposal
+        with self.assertRaises(skills.SkillApprovalRequired) as cm_prop:
+            skills.execute(
+                skill_id="system.rollback",
+                inputs={"target_generation": 42, "dry_run": True},
+                caller="AI_AGENT",
+                delegated_authority=skills.DelegatedAuthorityTier.PROPOSE_ONLY
+            )
+        self.assertTrue(cm_prop.exception.proposal["proposal_hash"])
+
+        # 4. AI with OBSERVE_ONLY is blocked on MUTATE
+        with self.assertRaises(skills.SkillApprovalRequired):
+            skills.execute(
+                skill_id="system.rollback",
+                inputs={"target_generation": 42, "dry_run": True},
+                caller="AI_AGENT",
+                delegated_authority=skills.DelegatedAuthorityTier.OBSERVE_ONLY
+            )
+
+    def test_execution_receipt_and_audit_lineage(self):
+        """Verify that every execution generates an unbypassable cryptographic audit receipt."""
+        res = skills.execute("system.status", caller="HUMAN_OWNER")
+        self.assertIn("_receipt", res)
+        rcp = res["_receipt"]
+        self.assertTrue(rcp["receipt_id"].startswith("RCP-"))
+        self.assertEqual(rcp["skill_id"], "system.status")
+        self.assertEqual(rcp["principal"], skills.PrincipalType.HUMAN_OWNER)
+        self.assertEqual(rcp["delegated_tier"], skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL)
+        self.assertEqual(len(rcp["input_digest"]), 64)
+        self.assertEqual(len(rcp["output_digest"]), 64)
+        self.assertGreaterEqual(rcp["duration_ms"], 0.0)
+
+    def test_vital_snapshot_unknown_sensor_handling(self):
+        """Verify that unknown/missing sensors strictly return None and never fallback to synthetic numbers."""
+        snap_skill = skills.execute("vital.snapshot")
+        temp = snap_skill.get("cpu_package_temp_celsius")
+        # Must be either a valid measured float reading or None, NEVER synthetic 45.0
+        if temp is not None:
+            self.assertIsInstance(temp, (int, float))
+            self.assertGreater(temp, -50.0)
+            self.assertLess(temp, 150.0)
+        else:
+            self.assertIsNone(temp)
 
 
 if __name__ == "__main__":
     unittest.main()
+

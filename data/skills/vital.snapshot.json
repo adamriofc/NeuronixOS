@@ -47,7 +47,8 @@
         "type": "integer"
       },
       "cpu_package_temp_celsius": {
-        "type": "number"
+        "type": ["number", "null"],
+        "description": "Observed CPU package thermal reading in degrees Celsius, or null if sensor is unavailable."
       },
       "storage_root_used_percent": {
         "type": "number"
@@ -65,6 +66,6 @@
       "storage_root_used_percent",
       "status"
     ],
-    "additionalProperties": false
+    "additionalProperties": true
   }
 }

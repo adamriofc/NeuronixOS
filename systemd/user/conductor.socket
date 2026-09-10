@@ -1,0 +1,13 @@
+[Unit]
+Description=NEURONIX Conductor Capability Runtime Activation Socket
+Documentation=https://github.com/adamriofc/NeuronixOS
+PartOf=conductor.service
+
+[Socket]
+ListenStream=%t/conductor.sock
+SocketMode=0600
+RemoveOnStop=true
+Service=conductor.service
+
+[Install]
+WantedBy=sockets.target
