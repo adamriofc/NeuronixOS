@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/skill_contract.schema.json",
+  "title": "NEURONIX Skill Contract Schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "skill_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$",
+      "description": "Unique namespaced identifier for the skill (e.g. system.status, storage.plan)."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of the skill contract."
+    },
+    "category": {
+      "type": "string",
+      "enum": ["READ", "PROPOSE", "MUTATE"],
+      "description": "Execution classification: READ (side-effect free), PROPOSE (dry-run simulation producing plan hash), MUTATE (state-altering/destructive requiring approval)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable title of the skill."
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of what the skill evaluates or mutates."
+    },
+    "invariants_required": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^INV-SEC-[0-9]{3}$"
+      },
+      "description": "List of formal security invariants required before this skill may execute."
+    },
+    "approval_gate_required": {
+      "type": "boolean",
+      "description": "Whether execution by an AI agent requires human engineer approval."
+    },
+    "inputs_schema": {
+      "type": "object",
+      "description": "JSON Schema validating all input parameters."
+    },
+    "outputs_schema": {
+      "type": "object",
+      "description": "JSON Schema validating all output fields."
+    }
+  },
+  "required": [
+    "skill_id",
+    "version",
+    "category",
+    "title",
+    "description",
+    "invariants_required",
+    "approval_gate_required",
+    "inputs_schema",
+    "outputs_schema"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "system.status",
+  "version": "1.0.0",
+  "category": "READ",
+  "title": "System Health and Lifecycle Status",
+  "description": "Inspect core NEURONIX system health, active generation, daemon IPC readiness, and cryptographic StateRoot.",
+  "invariants_required": [
+    "INV-SEC-002",
+    "INV-SEC-004"
+  ],
+  "approval_gate_required": false,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "include_security_invariants": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to include security invariant health evaluation."
+      }
+    },
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "active_generation": {
+        "type": "integer",
+        "description": "Currently running NixOS system generation number."
+      },
+      "kernel_release": {
+        "type": "string",
+        "description": "Active Linux kernel release string."
+      },
+      "daemon_status": {
+        "type": "string",
+        "enum": ["READY", "DEGRADED", "OFFLINE"]
+      },
+      "state_root_digest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$",
+        "description": "Cryptographic SHA-256 StateRoot commitment."
+      },
+      "security_invariants_pass": {
+        "type": "boolean",
+        "description": "Whether all active security invariants evaluate green."
+      }
+    },
+    "required": [
+      "active_generation",
+      "kernel_release",
+      "daemon_status",
+      "state_root_digest",
+      "security_invariants_pass"
+    ],
+    "additionalProperties": false
+  }
+}

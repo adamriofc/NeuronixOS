@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "storage.plan",
+  "version": "1.0.0",
+  "category": "PROPOSE",
+  "title": "Declarative Storage Layout Planner",
+  "description": "Simulate and synthesize declarative storage partitioning plans with 7-factor safety evaluation, producing a cryptographically verified plan hash.",
+  "invariants_required": [
+    "INV-SEC-009",
+    "INV-SEC-010"
+  ],
+  "approval_gate_required": false,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "target_device": {
+        "type": "string",
+        "description": "Target block device path (e.g. /dev/nvme0n1, /dev/sda)."
+      },
+      "filesystem": {
+        "type": "string",
+        "enum": ["btrfs", "ext4", "zfs"],
+        "default": "btrfs"
+      },
+      "compression": {
+        "type": "string",
+        "enum": ["zstd:1", "zstd:3", "none"],
+        "default": "zstd:3"
+      },
+      "subvolumes": {
+        "type": "array",
+        "items": {"type": "string"},
+        "default": ["@", "@home", "@nix", "@snapshots", "@log"]
+      }
+    },
+    "required": ["target_device"],
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "plan_hash": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$",
+        "description": "SHA-256 digest of the canonical RFC 8785 storage plan."
+      },
+      "target_device": {
+        "type": "string"
+      },
+      "active_generation_protected": {
+        "type": "boolean"
+      },
+      "estimated_capacity_bytes": {
+        "type": "integer"
+      },
+      "simulated_subvolumes": {
+        "type": "array",
+        "items": {"type": "string"}
+      },
+      "required_confirmation_token": {
+        "type": "string",
+        "description": "Exact typed token required if this plan is subsequently executed via storage.execute."
+      },
+      "safety_firewall_verdict": {
+        "type": "string",
+        "enum": ["PERMITTED_TO_PROPOSE", "REJECTED_ACTIVE_GENERATION", "REJECTED_INVALID_DEVICE"]
+      }
+    },
+    "required": [
+      "plan_hash",
+      "target_device",
+      "active_generation_protected",
+      "required_confirmation_token",
+      "safety_firewall_verdict"
+    ],
+    "additionalProperties": false
+  }
+}

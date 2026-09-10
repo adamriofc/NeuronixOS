@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "system.rollback",
+  "version": "1.0.0",
+  "category": "MUTATE",
+  "title": "System Generation Rollback",
+  "description": "Atomically roll back the active NixOS operating system generation to a verified prior generation with preflight health validation.",
+  "invariants_required": [
+    "INV-SEC-002",
+    "INV-SEC-007"
+  ],
+  "approval_gate_required": true,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "target_generation": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "The exact NixOS generation number to activate."
+      },
+      "dry_run": {
+        "type": "boolean",
+        "default": false,
+        "description": "If true, validates target generation bootability without switching the active system profile."
+      },
+      "authorization_token": {
+        "type": "string",
+        "description": "Cryptographic authorization token from human engineer if invoked by an autonomous agent."
+      }
+    },
+    "required": ["target_generation"],
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": ["SUCCESS", "DRY_RUN_PASSED", "REJECTED_UNAUTHORIZED", "FAILED"]
+      },
+      "previous_generation": {
+        "type": "integer"
+      },
+      "active_generation": {
+        "type": "integer"
+      },
+      "kernel_version": {
+        "type": "string"
+      },
+      "state_root_digest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "switched_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": ["status", "active_generation"],
+    "additionalProperties": false
+  }
+}

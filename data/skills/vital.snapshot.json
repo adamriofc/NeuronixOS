@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "vital.snapshot",
+  "version": "1.0.0",
+  "category": "READ",
+  "title": "Machine Telemetry Snapshot",
+  "description": "Sample host hardware metrics, thermal status, CPU load, memory utilization, and storage I/O on demand with zero background idle overhead.",
+  "invariants_required": [
+    "INV-SEC-014"
+  ],
+  "approval_gate_required": false,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "include_thermals": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to probe hwmon thermal sensors."
+      },
+      "include_gpu": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to probe dedicated GPU status if available."
+      }
+    },
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "timestamp": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "cpu_load_average": {
+        "type": "array",
+        "items": {"type": "number"},
+        "minItems": 3,
+        "maxItems": 3
+      },
+      "memory_used_percent": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 100.0
+      },
+      "memory_available_bytes": {
+        "type": "integer"
+      },
+      "cpu_package_temp_celsius": {
+        "type": "number"
+      },
+      "storage_root_used_percent": {
+        "type": "number"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["NOMINAL", "DEGRADED", "CRITICAL"]
+      }
+    },
+    "required": [
+      "timestamp",
+      "cpu_load_average",
+      "memory_used_percent",
+      "memory_available_bytes",
+      "storage_root_used_percent",
+      "status"
+    ],
+    "additionalProperties": false
+  }
+}

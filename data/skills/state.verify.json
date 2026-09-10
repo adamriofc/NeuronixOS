@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "skill_id": "state.verify",
+  "version": "1.0.0",
+  "category": "READ",
+  "title": "Cryptographic State Verification",
+  "description": "Perform offline cryptographic StateRoot verification, evidence DAG validation, and lineage consistency checks.",
+  "invariants_required": [
+    "INV-SEC-004",
+    "INV-SEC-005"
+  ],
+  "approval_gate_required": false,
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "deep_lineage_check": {
+        "type": "boolean",
+        "default": true,
+        "description": "Whether to verify backward Merkle DAG lineage against the verification passport."
+      }
+    },
+    "additionalProperties": false
+  },
+  "outputs_schema": {
+    "type": "object",
+    "properties": {
+      "verified": {
+        "type": "boolean",
+        "description": "True if StateRoot and all Merkle DAG evidence nodes are cryptographically valid."
+      },
+      "computed_state_root": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "expected_state_root": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "total_assertions_checked": {
+        "type": "integer"
+      },
+      "dag_cycles_detected": {
+        "type": "boolean"
+      },
+      "verdict": {
+        "type": "string",
+        "enum": ["VALID", "STALE_OR_CORRUPT", "CYCLE_DETECTED"]
+      }
+    },
+    "required": [
+      "verified",
+      "computed_state_root",
+      "total_assertions_checked",
+      "dag_cycles_detected",
+      "verdict"
+    ],
+    "additionalProperties": false
+  }
+}

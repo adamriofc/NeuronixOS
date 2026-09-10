@@ -33,7 +33,15 @@ docs/specifications/
 ├── 05_QUALITY_GATES_AND_VALIDATION.md   # Quality Metrics, Testing Matrix, & Definition of Done (DoD)
 ├── 06_STANDALONE_DISTRIBUTION_SPECIFICATION.md # Live ISO, Calamares Engine, & Desktop Environment Specs
 ├── 07_UPDATE_AND_STORAGE_LIFECYCLE.md    # Autonomous Update System, Desktop Notifier & Storage Diet
-└── 08_ONBOARDING_AND_DISTRO_EXPERIENCE.md # First-Boot Welcome, Doctor, Quickstart & Kernel Manager
+├── 08_ONBOARDING_AND_DISTRO_EXPERIENCE.md # First-Boot Welcome, Doctor, Quickstart & Kernel Manager
+├── 13_verification_passport_specification.md # Verification Passport, Merkle DAG & Evidence Lineage
+├── 14_canonical_domain_proof_specification.md # Canonical Domain Proof & Cryptographic Commitments
+├── 15_security_invariant_registry.md    # 20 Canonical Security Invariants & Fail-Closed Gates
+├── 16_universal_control_plane_schemas.md # Universal Control Plane Schemas & JCS Commitments
+├── 17_failure_containment_taxonomy.md   # 5-Tier Failure Taxonomy & Epistemic Containment
+├── 18_conductor_runtime_and_surface_specification.md # Conductor Runtime, Unified Surface & Zero-Idle Lifecycle
+├── 19_neuronix_skill_system_specification.md # NEURONIX Skill System & Deterministic Machine Contracts
+└── 20_vital_telemetry_and_observer_specification.md # Vital Machine Telemetry & Zero-Idle Observer
 ```
 
 ---
@@ -50,6 +58,14 @@ docs/specifications/
 | **`06_DISTRO`**| [Standalone Distro Spec](06_STANDALONE_DISTRIBUTION_SPECIFICATION.md) | Bootable ISO, Calamares engine, Btrfs ZSTD:3, Wayland suites (KDE 6/GNOME/Hyprland), and Control Center. | Maintainers, UI/UX, Core Team |
 | **`07_UPD`**   | [Update & Storage Lifecycle](07_UPDATE_AND_STORAGE_LIFECYCLE.md) | Autonomous update checking, desktop notification, staged background upgrades, and storage diet. | Systems Engineers, Maintainers |
 | **`08_ONB`**   | [Onboarding & Distro Polish](08_ONBOARDING_AND_DISTRO_EXPERIENCE.md) | Welcome hub, doctor issue reporting, Flathub quickstart app hub, and declarative kernel management. | UI/UX Leads, Community, End-Users |
+| **`13_PASSPORT`**| [Verification Passport](13_verification_passport_specification.md) | Cryptographic verification passport, Merkle DAG node digests, and backward lineage tracing. | Release Engineers, Auditors |
+| **`14_PROOF`** | [Canonical Proof Spec](14_canonical_domain_proof_specification.md) | Multi-domain proof generation, RFC 8785 canonical serialization, and falsifiable root synthesis. | Cryptographers, Systems Engineers |
+| **`15_INVAR`** | [Security Invariant Registry](15_security_invariant_registry.md) | Catalog of 20 formal security invariants, fault injection tests, and mutation validation rules. | Security Engineers, QA |
+| **`16_UCP`**   | [Universal Control Plane](16_universal_control_plane_schemas.md) | Typed commitment schemas, StateRoot, CapabilityRoot, PolicyRoot, and EvidenceRoot contracts. | Core Developers, Architects |
+| **`17_FAIL`**  | [Failure Containment Taxonomy](17_failure_containment_taxonomy.md) | 5-tier failure containment classification, blast radius bounds, and recovery mechanisms. | SRE, Infrastructure Leads |
+| **`18_CONDUCTOR`**| [Conductor Runtime & Surface](18_conductor_runtime_and_surface_specification.md) | Terminal canvas, dormant capability broker, systemd socket activation, and COLD/WARM/HOT lifecycle. | UI/UX, Core Team, AI Engineers |
+| **`19_SKILL`** | [NEURONIX Skill System](19_neuronix_skill_system_specification.md) | Deterministic machine contracts, READ/PROPOSE/MUTATE taxonomy, human approval gates, and adapters. | AI Engineers, Systems Developers |
+| **`20_VITAL`** | [Vital Telemetry & Observer](20_vital_telemetry_and_observer_specification.md) | Pull-based zero-idle telemetry, adaptive sampling streams, hardware metrics, and redaction boundaries. | Systems Engineers, AI Engineers |
 
 ---
 
