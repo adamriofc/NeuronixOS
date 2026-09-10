@@ -75,12 +75,12 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
     "distribution": "NEURONIX OS",
     "release_version": "1.0.4",
     "release_tag": "v1.0.4",
-    "commit_sha": "60f8652ba75d8fd27d95f23a74bff7414b65f590",
+    "commit_sha": "ef8e07bc5f1428552ebf2399921313df1da8b6f3",
     "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
     "proof_engine_version": "1.1.0"
   },
   "cryptographic_commitments": {
-    "state_root": "928bdd610efdc068b7e097031201faf5dffd908a1f0917e0bb45d144c2a06917",
+    "state_root": "dad96456f439cfb5c6f157c051d5599cec239159a3c7f2ad12f773788981e8f2",
     "policy_hash": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
     "flake_lock_hash": "06135d460eb72c7dcb846ac22cab8cee65f9acea9f3b285a9adb9d27de876981",
     "trust_status": "TRUSTED",
@@ -106,9 +106,9 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
   },
   "ci_attestation": {
     "ci_workflow_id": "ci.yml",
-    "ci_run_id": "34306803041",
+    "ci_run_id": "34442429942",
     "ci_run_status": "success",
-    "ci_commit_sha": "60f8652ba75d8fd27d95f23a74bff7414b65f590"
+    "ci_commit_sha": "ef8e07bc5f1428552ebf2399921313df1da8b6f3"
   },
   "supply_chain_digests": {
     "reproducibility_evidence_sha256": "4b91...",
