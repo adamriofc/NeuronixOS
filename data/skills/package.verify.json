@@ -32,13 +32,17 @@
         "type": "boolean"
       },
       "store_path": {
+        "type": ["string", "null"]
+      },
+      "availability": {
         "type": "string"
       }
     },
     "required": [
       "package_name",
       "valid",
-      "store_path"
+      "store_path",
+      "availability"
     ],
     "additionalProperties": false
   }

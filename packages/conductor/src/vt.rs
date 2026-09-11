@@ -15,6 +15,15 @@ pub enum Color {
     Magenta,
     Cyan,
     White,
+    BrightBlack,
+    BrightRed,
+    BrightGreen,
+    BrightYellow,
+    BrightBlue,
+    BrightMagenta,
+    BrightCyan,
+    BrightWhite,
+    Indexed(u8),
     Rgb(u8, u8, u8),
 }
 
@@ -195,27 +204,46 @@ impl TerminalBuffer {
         self.write_str(&text);
     }
 
+    pub fn save_cursor(&mut self) {
+        self.saved_cursor = (self.cursor_row, self.cursor_col);
+    }
+
+    pub fn restore_cursor(&mut self) {
+        self.cursor_row = self.saved_cursor.0.min(self.rows - 1);
+        self.cursor_col = self.saved_cursor.1.min(self.cols - 1);
+    }
+
     pub fn write_str(&mut self, s: &str) {
         let mut chars = s.chars().peekable();
         while let Some(ch) = chars.next() {
             if ch == '\x1b' {
-                if let Some(&'[') = chars.peek() {
-                    chars.next(); // Consume '['
-                    let mut seq = String::new();
-                    while let Some(&next_c) = chars.peek() {
-                        if next_c.is_ascii_alphabetic() || next_c == '?' {
-                            seq.push(chars.next().unwrap());
-                            if next_c.is_ascii_alphabetic() {
+                if let Some(&next_c) = chars.peek() {
+                    if next_c == '[' {
+                        chars.next(); // Consume '['
+                        let mut seq = String::new();
+                        while let Some(&cmd_c) = chars.peek() {
+                            if cmd_c.is_ascii_alphabetic() || cmd_c == '?' || cmd_c == '@' {
+                                seq.push(chars.next().unwrap());
+                                if cmd_c.is_ascii_alphabetic() || cmd_c == '@' {
+                                    break;
+                                }
+                            } else if cmd_c.is_ascii_digit() || cmd_c == ';' {
+                                seq.push(chars.next().unwrap());
+                            } else {
                                 break;
                             }
-                        } else if next_c.is_ascii_digit() || next_c == ';' {
-                            seq.push(chars.next().unwrap());
-                        } else {
-                            break;
                         }
+                        self.handle_csi(&seq);
+                        continue;
+                    } else if next_c == '7' {
+                        chars.next(); // Consume '7' (DECSC)
+                        self.save_cursor();
+                        continue;
+                    } else if next_c == '8' {
+                        chars.next(); // Consume '8' (DECRC)
+                        self.restore_cursor();
+                        continue;
                     }
-                    self.handle_csi(&seq);
-                    continue;
                 }
             }
             self.put_char(ch);
@@ -230,8 +258,11 @@ impl TerminalBuffer {
                 self.reset_attributes();
                 return;
             }
-            for part in params.split(';') {
-                match part.parse::<u16>().unwrap_or(0) {
+            let tokens: Vec<&str> = params.split(';').collect();
+            let mut i = 0;
+            while i < tokens.len() {
+                let code = tokens[i].parse::<u16>().unwrap_or(0);
+                match code {
                     0 => self.reset_attributes(),
                     1 => self.current_bold = true,
                     4 => self.current_underline = true,
@@ -247,6 +278,24 @@ impl TerminalBuffer {
                     35 => self.current_fg = Color::Magenta,
                     36 => self.current_fg = Color::Cyan,
                     37 => self.current_fg = Color::White,
+                    38 => {
+                        // Extended foreground: 38;5;n or 38;2;r;g;b
+                        if i + 2 < tokens.len() && tokens[i + 1] == "5" {
+                            if let Ok(n) = tokens[i + 2].parse::<u8>() {
+                                self.current_fg = Color::Indexed(n);
+                            }
+                            i += 2;
+                        } else if i + 4 < tokens.len() && tokens[i + 1] == "2" {
+                            if let (Ok(r), Ok(g), Ok(b)) = (
+                                tokens[i + 2].parse::<u8>(),
+                                tokens[i + 3].parse::<u8>(),
+                                tokens[i + 4].parse::<u8>(),
+                            ) {
+                                self.current_fg = Color::Rgb(r, g, b);
+                            }
+                            i += 4;
+                        }
+                    }
                     39 => self.current_fg = Color::Default,
                     40 => self.current_bg = Color::Black,
                     41 => self.current_bg = Color::Red,
@@ -256,9 +305,44 @@ impl TerminalBuffer {
                     45 => self.current_bg = Color::Magenta,
                     46 => self.current_bg = Color::Cyan,
                     47 => self.current_bg = Color::White,
+                    48 => {
+                        // Extended background: 48;5;n or 48;2;r;g;b
+                        if i + 2 < tokens.len() && tokens[i + 1] == "5" {
+                            if let Ok(n) = tokens[i + 2].parse::<u8>() {
+                                self.current_bg = Color::Indexed(n);
+                            }
+                            i += 2;
+                        } else if i + 4 < tokens.len() && tokens[i + 1] == "2" {
+                            if let (Ok(r), Ok(g), Ok(b)) = (
+                                tokens[i + 2].parse::<u8>(),
+                                tokens[i + 3].parse::<u8>(),
+                                tokens[i + 4].parse::<u8>(),
+                            ) {
+                                self.current_bg = Color::Rgb(r, g, b);
+                            }
+                            i += 4;
+                        }
+                    }
                     49 => self.current_bg = Color::Default,
+                    90 => self.current_fg = Color::BrightBlack,
+                    91 => self.current_fg = Color::BrightRed,
+                    92 => self.current_fg = Color::BrightGreen,
+                    93 => self.current_fg = Color::BrightYellow,
+                    94 => self.current_fg = Color::BrightBlue,
+                    95 => self.current_fg = Color::BrightMagenta,
+                    96 => self.current_fg = Color::BrightCyan,
+                    97 => self.current_fg = Color::BrightWhite,
+                    100 => self.current_bg = Color::BrightBlack,
+                    101 => self.current_bg = Color::BrightRed,
+                    102 => self.current_bg = Color::BrightGreen,
+                    103 => self.current_bg = Color::BrightYellow,
+                    104 => self.current_bg = Color::BrightBlue,
+                    105 => self.current_bg = Color::BrightMagenta,
+                    106 => self.current_bg = Color::BrightCyan,
+                    107 => self.current_bg = Color::BrightWhite,
                     _ => {}
                 }
+                i += 1;
             }
         } else if seq.ends_with('H') || seq.ends_with('f') {
             // Cursor position
@@ -276,6 +360,72 @@ impl TerminalBuffer {
         } else if seq.ends_with('K') {
             let mode = seq[..seq.len() - 1].parse::<u8>().unwrap_or(0);
             self.clear_line(mode);
+        } else if seq.ends_with('A') {
+            // Cursor Up
+            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            self.cursor_row = self.cursor_row.saturating_sub(n);
+        } else if seq.ends_with('B') {
+            // Cursor Down
+            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            self.cursor_row = (self.cursor_row + n).min(self.rows - 1);
+        } else if seq.ends_with('C') {
+            // Cursor Forward
+            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            self.cursor_col = (self.cursor_col + n).min(self.cols - 1);
+        } else if seq.ends_with('D') {
+            // Cursor Backward
+            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            self.cursor_col = self.cursor_col.saturating_sub(n);
+        } else if seq.ends_with('G') {
+            // Cursor Horizontal Absolute
+            let col = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1);
+            self.cursor_col = (col.saturating_sub(1)).min(self.cols - 1);
+        } else if seq.ends_with('L') {
+            // Insert Line
+            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            for _ in 0..n {
+                if self.cursor_row < self.rows {
+                    self.grid.insert(self.cursor_row, vec![Cell::default(); self.cols]);
+                    self.grid.truncate(self.rows);
+                }
+            }
+        } else if seq.ends_with('M') {
+            // Delete Line
+            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            for _ in 0..n {
+                if self.cursor_row < self.rows {
+                    self.grid.remove(self.cursor_row);
+                    self.grid.push(vec![Cell::default(); self.cols]);
+                }
+            }
+        } else if seq.ends_with('@') {
+            // Insert Characters
+            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            if self.cursor_row < self.rows {
+                for _ in 0..n {
+                    if self.cursor_col < self.cols {
+                        self.grid[self.cursor_row].insert(self.cursor_col, Cell::default());
+                        self.grid[self.cursor_row].truncate(self.cols);
+                    }
+                }
+            }
+        } else if seq.ends_with('P') {
+            // Delete Characters
+            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            if self.cursor_row < self.rows {
+                for _ in 0..n {
+                    if self.cursor_col < self.cols {
+                        self.grid[self.cursor_row].remove(self.cursor_col);
+                        self.grid[self.cursor_row].push(Cell::default());
+                    }
+                }
+            }
+        } else if seq == "s" || (seq.ends_with('s') && !seq.starts_with('?')) {
+            // Cursor Save (ANSI.SYS)
+            self.save_cursor();
+        } else if seq == "u" || (seq.ends_with('u') && !seq.starts_with('?')) {
+            // Cursor Restore (ANSI.SYS)
+            self.restore_cursor();
         } else if seq == "?1049h" {
             self.in_alternate_screen = true;
             self.saved_cursor = (self.cursor_row, self.cursor_col);
@@ -344,5 +494,92 @@ mod tests {
         // Erase line from cursor
         term.write_str("\x1b[K");
         assert_eq!(term.grid[4][15].ch, ' ');
+    }
+
+    #[test]
+    fn test_extended_256_and_truecolor() {
+        let mut term = TerminalBuffer::new(40, 10);
+        // 256-color foreground (color 208: orange) and background (color 236: dark grey)
+        term.write_str("\x1b[38;5;208;48;5;236m256Color\x1b[0m");
+        assert_eq!(term.grid[0][0].fg, Color::Indexed(208));
+        assert_eq!(term.grid[0][0].bg, Color::Indexed(236));
+
+        // TrueColor foreground (r:123, g:45, b:67) and background (r:10, g:20, b:30)
+        term.write_str("\x1b[38;2;123;45;67;48;2;10;20;30mTrueColor\x1b[0m");
+        assert_eq!(term.grid[0][8].fg, Color::Rgb(123, 45, 67));
+        assert_eq!(term.grid[0][8].bg, Color::Rgb(10, 20, 30));
+    }
+
+    #[test]
+    fn test_relative_cursor_movement() {
+        let mut term = TerminalBuffer::new(40, 10);
+        term.write_str("\x1b[5;5H"); // row 4, col 4
+        assert_eq!(term.cursor_row, 4);
+        assert_eq!(term.cursor_col, 4);
+
+        term.write_str("\x1b[2A"); // Up 2 -> row 2
+        assert_eq!(term.cursor_row, 2);
+
+        term.write_str("\x1b[3B"); // Down 3 -> row 5
+        assert_eq!(term.cursor_row, 5);
+
+        term.write_str("\x1b[4C"); // Right 4 -> col 8
+        assert_eq!(term.cursor_col, 8);
+
+        term.write_str("\x1b[2D"); // Left 2 -> col 6
+        assert_eq!(term.cursor_col, 6);
+
+        term.write_str("\x1b[10G"); // Col 10 (1-based, index 9)
+        assert_eq!(term.cursor_col, 9);
+    }
+
+    #[test]
+    fn test_cursor_save_and_restore() {
+        let mut term = TerminalBuffer::new(40, 10);
+        term.write_str("\x1b[3;7H\x1b7"); // Save at (2, 6) with ESC 7
+        assert_eq!(term.cursor_row, 2);
+        assert_eq!(term.cursor_col, 6);
+
+        term.write_str("\x1b[8;20H"); // Move to (7, 19)
+        assert_eq!(term.cursor_row, 7);
+        assert_eq!(term.cursor_col, 19);
+
+        term.write_str("\x1b8"); // Restore with ESC 8
+        assert_eq!(term.cursor_row, 2);
+        assert_eq!(term.cursor_col, 6);
+
+        // Also test CSI s / CSI u
+        term.write_str("\x1b[s\x1b[1;1H\x1b[u");
+        assert_eq!(term.cursor_row, 2);
+        assert_eq!(term.cursor_col, 6);
+    }
+
+    #[test]
+    fn test_line_insert_delete() {
+        let mut term = TerminalBuffer::new(40, 5);
+        term.write_str("Line0\nLine1\nLine2\nLine3\nLine4");
+        assert_eq!(term.line_to_string(1), "Line1");
+
+        // Move to line 1 and insert a blank line
+        term.write_str("\x1b[2;1H\x1b[1L");
+        assert_eq!(term.line_to_string(1), "");
+        assert_eq!(term.line_to_string(2), "Line1");
+
+        // Delete that inserted blank line
+        term.write_str("\x1b[2;1H\x1b[1M");
+        assert_eq!(term.line_to_string(1), "Line1");
+    }
+
+    #[test]
+    fn test_char_insert_delete() {
+        let mut term = TerminalBuffer::new(40, 5);
+        term.write_str("ABCD");
+        // Move to col 2 ('B') and insert 2 blank chars
+        term.write_str("\x1b[1;2H\x1b[2@");
+        assert_eq!(term.line_to_string(0), "A  BCD");
+
+        // Delete the 2 blank chars
+        term.write_str("\x1b[1;2H\x1b[2P");
+        assert_eq!(term.line_to_string(0), "ABCD");
     }
 }

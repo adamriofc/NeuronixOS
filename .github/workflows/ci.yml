@@ -143,7 +143,7 @@ jobs:
         run: |
           bash tests/e2e/real/test_real_os_install_boot.sh
 
-      - name: Execute End-to-End Release Lifecycle Gate (34 Tests)
+      - name: Execute End-to-End Release Lifecycle Gate (48 Checks)
         run: |
           bash tests/test_release_lifecycle.sh
 

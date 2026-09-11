@@ -44,11 +44,13 @@ pub struct ProposalCard {
 
 #[derive(Debug, Clone)]
 pub struct VitalGlanceData {
-    pub cpu_load: String,
-    pub memory_used_pct: f32,
+    pub cpu_load: Option<String>,
+    pub memory_info: Option<String>,
     pub cpu_temp_celsius: Option<f32>,
-    pub nixos_generation: u32,
-    pub state_root_valid: bool,
+    pub nixos_generation: Option<u32>,
+    pub state_root_digest: Option<String>,
+    pub daemon_status: Option<String>,
+    pub virtualization: Option<String>,
 }
 
 impl SurfaceLayout {
@@ -230,20 +232,67 @@ impl SurfaceLayout {
         lines.push(self.format_line("  NEURONIX VITAL: Machine Observation Laboratory"));
         lines.push(self.format_line("  ================================================================"));
         lines.push(self.format_line(""));
-        lines.push(self.format_line(&format!("    System Generation:     NixOS Gen #{}", self.active_generation)));
-        lines.push(self.format_line(&format!("    Health Status:         {}", self.vital_health_status)));
-        lines.push(self.format_line("    StateRoot Commitment:  VALID (RFC 8785 canonical verification passed)"));
-        lines.push(self.format_line("    AST Socket:            /run/neuronix/ast.sock [CONNECTED]"));
-        lines.push(self.format_line("    Conductor Broker:      Active (Zero-Idle Socket-Activated)"));
-        lines.push(self.format_line(""));
-        lines.push(self.format_line("  [ Subsystems & Sensors ]"));
-        lines.push(self.format_line("    CPU Load:              0.22, 0.18, 0.12 (8 cores online)"));
-        lines.push(self.format_line("    Memory Usage:          3.8 GiB / 15.6 GiB (24% utilized)"));
-        lines.push(self.format_line("    Storage Mounts:        / (btrfs: subvol=@, rw, noatime, compress=zstd)"));
-        lines.push(self.format_line("                           /nix (btrfs: subvol=@nix, rw, noatime)"));
-        lines.push(self.format_line("                           /home (btrfs: subvol=@home, rw, noatime)"));
-        lines.push(self.format_line("    Thermal Sensor:        42.0 C [NORMAL]"));
-        lines.push(self.format_line("    Virtualization:        KVM / QEMU Standard PC (i440FX + PIIX, 1996)"));
+
+        let gen_str = if let Some(ref data) = self.vital_data {
+            if let Some(gen) = data.nixos_generation {
+                format!("NixOS Gen #{} [OBSERVED]", gen)
+            } else {
+                format!("NixOS Gen #{} [DEFAULT]", self.active_generation)
+            }
+        } else {
+            format!("NixOS Gen #{} [DEFAULT]", self.active_generation)
+        };
+        lines.push(self.format_line(&format!("    System Generation:     {}", gen_str)));
+        lines.push(self.format_line(&format!("    Health Status:         {} [OBSERVED]", self.vital_health_status)));
+
+        if let Some(ref data) = self.vital_data {
+            if let Some(ref sr) = data.state_root_digest {
+                lines.push(self.format_line(&format!("    StateRoot Commitment:  VALID [OBSERVED: {}..]", &sr[..8.min(sr.len())])));
+            } else {
+                lines.push(self.format_line("    StateRoot Commitment:  UNAVAILABLE (State engine offline)"));
+            }
+
+            let d_stat = data.daemon_status.as_deref().unwrap_or("OFFLINE");
+            lines.push(self.format_line(&format!("    AST Socket:            /run/neuronix/ast.sock [{}]", d_stat)));
+            lines.push(self.format_line("    Conductor Broker:      Active (Zero-Idle Socket-Activated)"));
+            lines.push(self.format_line(""));
+            lines.push(self.format_line("  [ Subsystems & Sensors: Live Telemetry ]"));
+
+            if let Some(ref load) = data.cpu_load {
+                lines.push(self.format_line(&format!("    CPU Load:              {} [OBSERVED]", load)));
+            } else {
+                lines.push(self.format_line("    CPU Load:              UNAVAILABLE (Sensor offline)"));
+            }
+
+            if let Some(ref mem) = data.memory_info {
+                lines.push(self.format_line(&format!("    Memory Usage:          {} [OBSERVED]", mem)));
+            } else {
+                lines.push(self.format_line("    Memory Usage:          UNAVAILABLE (Sensor offline)"));
+            }
+
+            if let Some(temp) = data.cpu_temp_celsius {
+                lines.push(self.format_line(&format!("    Thermal Sensor:        {:.1} C [OBSERVED]", temp)));
+            } else {
+                lines.push(self.format_line("    Thermal Sensor:        UNAVAILABLE (Sensor offline)"));
+            }
+
+            if let Some(ref virt) = data.virtualization {
+                lines.push(self.format_line(&format!("    Virtualization:        {} [OBSERVED]", virt)));
+            } else {
+                lines.push(self.format_line("    Virtualization:        UNAVAILABLE (DMI offline)"));
+            }
+        } else {
+            lines.push(self.format_line("    StateRoot Commitment:  UNAVAILABLE (Control socket not connected)"));
+            lines.push(self.format_line("    AST Socket:            /run/neuronix/ast.sock [DISCONNECTED]"));
+            lines.push(self.format_line("    Conductor Broker:      Active (Zero-Idle Socket-Activated)"));
+            lines.push(self.format_line(""));
+            lines.push(self.format_line("  [ Subsystems & Sensors: Live Telemetry ]"));
+            lines.push(self.format_line("    CPU Load:              UNAVAILABLE (Awaiting runtime telemetry)"));
+            lines.push(self.format_line("    Memory Usage:          UNAVAILABLE (Awaiting runtime telemetry)"));
+            lines.push(self.format_line("    Thermal Sensor:        UNAVAILABLE (Awaiting runtime telemetry)"));
+            lines.push(self.format_line("    Virtualization:        UNAVAILABLE (Awaiting runtime telemetry)"));
+        }
+
         lines.push(self.format_line(""));
         lines.push(self.format_line("  Press [1] to return to Terminal Canvas"));
 
@@ -301,7 +350,7 @@ impl SurfaceLayout {
         lines.push(self.format_line("    - storage.plan       Deterministic btrfs subvolume layout"));
         lines.push(self.format_line(""));
         lines.push(self.format_line("  [ Inspection & Execution Skills: Read-Only / Controlled ]"));
-        lines.push(self.format_line("    - system.info        Comprehensive host platform metadata"));
+        lines.push(self.format_line("    - system.status      Comprehensive host platform metadata"));
         lines.push(self.format_line("    - state.verify       Cryptographic StateRoot & passport verification"));
         lines.push(self.format_line("    - boot.verify        Measured boot & UKI tamper attestation"));
         lines.push(self.format_line("    - hyperion.run       Deterministic workload sandboxing (Tier 0-3)"));

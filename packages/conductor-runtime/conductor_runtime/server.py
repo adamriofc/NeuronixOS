@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import time
+import datetime
 import asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional, Set
@@ -350,6 +351,11 @@ class ConductorServer:
             }
 
         elif method == "authority.grant":
+            caller = params.get("caller", "HUMAN_OWNER")
+            caller_upper = caller.upper()
+            if caller_upper not in ["HUMAN", "OWNER", "HUMAN_OWNER"]:
+                raise skills.SkillExecutionError(f"Unauthorized caller '{caller}': authority.grant may only be executed by authenticated human owner")
+
             agent_id = params.get("agent_id")
             tier = params.get("tier")
             valid_tiers = [
@@ -367,7 +373,7 @@ class ConductorServer:
                 principal_id=agent_id,
                 tier=tier,
                 duration_seconds=86400,
-                granted_by="HUMAN_OWNER"
+                granted_by=caller_upper
             )
             self._delegated_authorities[agent_id] = tier
             self._delegated_tokens[agent_id] = grant["token"]
@@ -401,43 +407,20 @@ class ConductorServer:
             caller = params.get("caller", "HUMAN_OPERATOR")
             caller_upper = caller.upper()
 
-            if caller_upper in ["AI_AGENT", "AGENT"]:
-                raise skills.SkillExecutionError("Unauthorized: AI agents cannot resolve mutation proposals")
+            if caller_upper not in ["HUMAN", "OWNER", "HUMAN_OWNER", "OPERATOR", "HUMAN_OPERATOR"]:
+                raise skills.SkillExecutionError(f"Unauthorized principal '{caller}': only human owner or operator can resolve proposals")
 
             if p_hash in self._resolved_proposals:
                 prev_status = self._resolved_proposals[p_hash].get("status", "RESOLVED")
                 raise skills.SkillExecutionError(f"Proposal '{p_hash}' has already been resolved ({prev_status})")
 
-            # Look up proposal in server or global skill store
-            proposal = self._pending_proposals.pop(p_hash, None)
-            if not proposal and p_hash in skills.get_pending_proposals():
-                res_record = skills.resolve_proposal(p_hash, action=action, caller=caller_upper)
-                self._resolved_proposals[p_hash] = res_record
-                return res_record
+            # Pop from server pending store if present
+            self._pending_proposals.pop(p_hash, None)
 
-            now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            resolved_rec = {
-                "proposal_hash": p_hash,
-                "status": action,
-                "resolved_by": caller_upper,
-                "resolved_at": now_iso,
-                "skill_id": proposal.get("skill_id") if proposal else "system.custom",
-                "inputs": proposal.get("inputs", {}) if proposal else {}
-            }
-
-            if action == "APPROVE":
-                skill_target = proposal.get("skill_id", "*") if proposal else "*"
-                exec_grant = skills.grant_delegation(
-                    principal_id=f"OPERATOR_APPROVAL_{caller_upper}",
-                    tier=skills.DelegatedAuthorityTier.PRIVILEGED_EXECUTE,
-                    scope=[skill_target],
-                    duration_seconds=300,
-                    granted_by=caller_upper
-                )
-                resolved_rec["execution_token"] = exec_grant.get("token")
-
-            self._resolved_proposals[p_hash] = resolved_rec
-            return resolved_rec
+            # Delegate canonical resolution to skills module
+            res_record = skills.resolve_proposal(p_hash, action=action, caller=caller_upper)
+            self._resolved_proposals[p_hash] = res_record
+            return res_record
 
         elif method == "surface.state":
             pending_count = len(self._pending_proposals) + len(skills.get_pending_proposals())

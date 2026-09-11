@@ -65,22 +65,22 @@ class McpServer:
 
     def _dispatch(self, method: str, params: Dict[str, Any]) -> Any:
         if method == "initialize":
-            client_version = params.get("protocolVersion", "2026-07-28")
-            if client_version in ["2024-11-05", "2025-03-26", "2026-07-28"]:
+            client_version = params.get("protocolVersion")
+            if client_version == "2026-07-28":
+                raise ValueError("MCP 2026-07-28 is stateless and does not support initialize. Use server/discover and self-describing per-request _meta.")
+            if client_version in ["2024-11-05", "2025-03-26"]:
                 self.negotiated_version = client_version
-            else:
-                self.negotiated_version = "2026-07-28"
-
-            return {
-                "protocolVersion": self.negotiated_version,
-                "capabilities": {
-                    "tools": {"listChanged": False},
-                    "resources": {"subscribe": False, "listChanged": False},
-                    "logging": {},
-                    "tasks": {}
-                },
-                "serverInfo": self.server_info
-            }
+                return {
+                    "protocolVersion": self.negotiated_version,
+                    "capabilities": {
+                        "tools": {"listChanged": False},
+                        "resources": {"subscribe": False, "listChanged": False},
+                        "logging": {},
+                        "tasks": {}
+                    },
+                    "serverInfo": self.server_info
+                }
+            raise ValueError(f"Unsupported legacy protocolVersion '{client_version}'")
 
         elif method == "ping":
             return {}
@@ -117,9 +117,28 @@ class McpServer:
             arguments = params.get("arguments", {})
             meta = params.get("_meta", {})
 
+            if "protocolVersion" in meta:
+                proto = meta["protocolVersion"]
+                if proto not in ["2024-11-05", "2025-03-26", "2026-07-28"]:
+                    raise ValueError(f"Invalid or unsupported protocolVersion in _meta: '{proto}'")
+
             # Enforce caller="AI_AGENT" and sovereign authorization token validation.
             # Never trust caller-asserted delegated_authority from unauthenticated agent payload.
             token = meta.get("authorization_token")
+            caller_id = meta.get("caller_id")
+
+            if token and caller_id:
+                grant = skills.delegation_registry.validate_token(token, tool_name)
+                if grant and grant.principal_id != caller_id:
+                    return {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"SKILL_EXECUTION_ERROR: Caller identity mismatch: token issued to '{grant.principal_id}', but caller claimed '{caller_id}'"
+                            }
+                        ],
+                        "isError": True
+                    }
 
             try:
                 res = skills.execute(

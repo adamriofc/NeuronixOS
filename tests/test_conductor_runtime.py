@@ -178,7 +178,7 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
 
     async def test_identity_and_authority_management(self):
         """Test identity resolution and authority revocation."""
-        # Grant authority
+        # Grant authority by authenticated owner succeeds
         await self._send_rpc({
             "jsonrpc": "2.0",
             "id": 8,
@@ -188,6 +188,20 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
                 "tier": skills.DelegatedAuthorityTier.USERSPACE_EXECUTE
             }
         })
+
+        # Unauthorized caller (AI_AGENT) attempting authority.grant fails closed
+        unauth_grant = await self._send_rpc({
+            "jsonrpc": "2.0",
+            "id": 81,
+            "method": "authority.grant",
+            "params": {
+                "agent_id": "malicious-agent",
+                "tier": skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL,
+                "caller": "AI_AGENT"
+            }
+        })
+        self.assertIn("error", unauth_grant)
+        self.assertIn("Unauthorized caller", unauth_grant["error"]["message"])
 
         # Resolve identity
         id_resp = await self._send_rpc({
@@ -234,35 +248,92 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
 
     async def test_proposal_resolve_and_surface_state(self):
         """Test proposal.resolve and surface.state RPCs."""
-        resp_prop = await self._send_rpc({
+        # 1. Unknown proposal hash fails closed
+        resp_unknown = await self._send_rpc({
+            "jsonrpc": "2.0",
+            "id": 130,
+            "method": "proposal.resolve",
+            "params": {"proposal_hash": "sha256:unknown1234", "action": "APPROVE", "caller": "HUMAN_OPERATOR"}
+        })
+        self.assertIn("error", resp_unknown)
+        self.assertIn("not found", resp_unknown["error"]["message"])
+
+        # 2. Trigger real proposal through approval gate
+        resp_trigger = await self._send_rpc({
             "jsonrpc": "2.0",
             "id": 13,
-            "method": "proposal.resolve",
-            "params": {"proposal_hash": "sha256:abcd1234", "action": "APPROVE", "caller": "HUMAN_OPERATOR"}
+            "method": "skills.invoke",
+            "params": {
+                "skill_id": "system.rollback",
+                "inputs": {"target_generation": 42, "dry_run": True},
+                "caller": "AI_AGENT"
+            }
         })
-        self.assertEqual(resp_prop["result"]["status"], "APPROVE")
-        self.assertEqual(resp_prop["result"]["proposal_hash"], "sha256:abcd1234")
-        self.assertIn("execution_token", resp_prop["result"])
+        self.assertEqual(resp_trigger["error"]["code"], -32002)
+        real_p_hash = resp_trigger["error"]["data"]["proposal_hash"]
+        self.assertTrue(real_p_hash)
 
-        # Anti-replay protection: resolving again fails
-        resp_replay = await self._send_rpc({
+        # 3. Approve real pending proposal
+        resp_prop = await self._send_rpc({
             "jsonrpc": "2.0",
             "id": 131,
             "method": "proposal.resolve",
-            "params": {"proposal_hash": "sha256:abcd1234", "action": "APPROVE", "caller": "HUMAN_OPERATOR"}
+            "params": {"proposal_hash": real_p_hash, "action": "APPROVE", "caller": "HUMAN_OPERATOR"}
+        })
+        self.assertEqual(resp_prop["result"]["status"], "APPROVE")
+        self.assertEqual(resp_prop["result"]["proposal_hash"], real_p_hash)
+        self.assertIn("execution_token", resp_prop["result"])
+
+        # 4. Anti-replay protection: resolving again fails
+        resp_replay = await self._send_rpc({
+            "jsonrpc": "2.0",
+            "id": 132,
+            "method": "proposal.resolve",
+            "params": {"proposal_hash": real_p_hash, "action": "APPROVE", "caller": "HUMAN_OPERATOR"}
         })
         self.assertIn("error", resp_replay)
         self.assertIn("already been resolved", resp_replay["error"]["message"])
 
-        # Unauthorized caller (AI_AGENT) rejected
+        # 5. Unauthorized caller (AI_AGENT) rejected
         resp_unauth = await self._send_rpc({
             "jsonrpc": "2.0",
-            "id": 132,
+            "id": 133,
             "method": "proposal.resolve",
-            "params": {"proposal_hash": "sha256:ef5678", "action": "APPROVE", "caller": "AI_AGENT"}
+            "params": {"proposal_hash": real_p_hash, "action": "APPROVE", "caller": "AI_AGENT"}
         })
         self.assertIn("error", resp_unauth)
-        self.assertIn("cannot resolve", resp_unauth["error"]["message"])
+        self.assertTrue("only human" in resp_unauth["error"]["message"].lower() or "cannot resolve" in resp_unauth["error"]["message"].lower())
+
+        # 6. Execute with single-use execution token: matching inputs succeed
+        exec_token = resp_prop["result"]["execution_token"]
+        resp_exec = await self._send_rpc({
+            "jsonrpc": "2.0",
+            "id": 134,
+            "method": "skills.invoke",
+            "params": {
+                "skill_id": "system.rollback",
+                "inputs": {"target_generation": 42, "dry_run": True},
+                "caller": "AI_AGENT",
+                "authorization_token": exec_token
+            }
+        })
+        self.assertIn("result", resp_exec)
+        self.assertEqual(resp_exec["result"]["status"], "DRY_RUN_PASSED")
+
+        # 7. Replayed token is consumed and rejected fail-closed
+        resp_replayed_token = await self._send_rpc({
+            "jsonrpc": "2.0",
+            "id": 135,
+            "method": "skills.invoke",
+            "params": {
+                "skill_id": "system.rollback",
+                "inputs": {"target_generation": 42, "dry_run": True},
+                "caller": "AI_AGENT",
+                "authorization_token": exec_token
+            }
+        })
+        self.assertIn("error", resp_replayed_token)
+        self.assertIn("replay protection", resp_replayed_token["error"]["message"])
 
         resp_surface = await self._send_rpc({
             "jsonrpc": "2.0",

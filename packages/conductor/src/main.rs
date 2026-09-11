@@ -157,6 +157,14 @@ fn run_interactive_surface(socket_arg: Option<PathBuf>) -> Result<(), String> {
         }
     }
 
+    // Populate live vital telemetry on startup
+    if let Ok(v_data) = client.get_vital_snapshot() {
+        if let Some(gen) = v_data.nixos_generation {
+            layout.active_generation = gen;
+        }
+        layout.vital_data = Some(v_data);
+    }
+
     let pty_rows = (rows.saturating_sub(1)).max(1) as u16;
     let mut pty = PtySession::open(cols as u16, pty_rows)
         .map_err(|e| format!("PTY allocation failed: {}", e))?;
@@ -216,6 +224,12 @@ fn run_interactive_surface(socket_arg: Option<PathBuf>) -> Result<(), String> {
                             needs_render = true;
                         }
                         b'2' => {
+                            if let Ok(v_data) = client.get_vital_snapshot() {
+                                if let Some(gen) = v_data.nixos_generation {
+                                    layout.active_generation = gen;
+                                }
+                                layout.vital_data = Some(v_data);
+                            }
                             layout.set_tab(WorkspaceTab::Vital);
                             needs_render = true;
                         }
@@ -280,6 +294,12 @@ fn run_interactive_surface(socket_arg: Option<PathBuf>) -> Result<(), String> {
                             layout.set_tab(WorkspaceTab::Terminal);
                             needs_render = true;
                         } else if b == b'2' {
+                            if let Ok(v_data) = client.get_vital_snapshot() {
+                                if let Some(gen) = v_data.nixos_generation {
+                                    layout.active_generation = gen;
+                                }
+                                layout.vital_data = Some(v_data);
+                            }
                             layout.set_tab(WorkspaceTab::Vital);
                             needs_render = true;
                         } else if b == b'3' {
@@ -345,6 +365,21 @@ fn main() {
                     println!("  - Pending Proposals:  {}", state.pending_proposals);
                     println!("  - Topbar Banner:      {}", state.topbar);
                 }
+                if let Ok(v_data) = client.get_vital_snapshot() {
+                    println!("  - Vital Telemetry:    Live Observation Connected");
+                    if let Some(ref load) = v_data.cpu_load {
+                        println!("    * CPU Load:         {}", load);
+                    }
+                    if let Some(ref mem) = v_data.memory_info {
+                        println!("    * Memory:           {}", mem);
+                    }
+                    if let Some(gen) = v_data.nixos_generation {
+                        println!("    * Generation:       NixOS #{}", gen);
+                    }
+                    if let Some(ref sr) = v_data.state_root_digest {
+                        println!("    * StateRoot:        {}", sr);
+                    }
+                }
             }
             Ok(false) => println!("[WARN] Conductor Runtime responded with non-PONG status."),
             Err(e) => eprintln!("[OFFLINE] Conductor Runtime not reachable: {}", e),
@@ -369,6 +404,15 @@ fn main() {
         }
 
         println!("\n--- FRAME 2: VITAL LABORATORY VIEW ---");
+        layout.vital_data = Some(surface::VitalGlanceData {
+            cpu_load: Some("0.18, 0.14, 0.10 (8 cores online)".to_string()),
+            memory_info: Some("4.2 GiB / 16.0 GiB (26% utilized)".to_string()),
+            cpu_temp_celsius: Some(41.5),
+            nixos_generation: Some(42),
+            state_root_digest: Some("18ba70f4da0b170ef1d9db4a82641befe842b74625086aa8ea17cfb06ad2e284".to_string()),
+            daemon_status: Some("READY".to_string()),
+            virtualization: Some("KVM_QEMU".to_string()),
+        });
         layout.set_tab(WorkspaceTab::Vital);
         for line in layout.render_frame() {
             println!("{}", line);

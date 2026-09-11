@@ -4,12 +4,47 @@
 // Adheres strictly to SPEC-NRX-CND-018.
 // ==============================================================================
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
+
+use crate::surface::VitalGlanceData;
+
+pub const MAX_FRAME_SIZE: usize = 1024 * 1024;
+pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
 
 static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RpcRequest<T: std::fmt::Display = String> {
+    pub jsonrpc: String,
+    pub id: u64,
+    pub method: String,
+    pub params: T,
+}
+
+impl<T: std::fmt::Display> RpcRequest<T> {
+    pub fn new(id: u64, method: impl Into<String>, params: T) -> Self {
+        RpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id,
+            method: method.into(),
+            params,
+        }
+    }
+
+    pub fn to_frame(&self) -> String {
+        format!(
+            "{{\"jsonrpc\":\"{}\",\"id\":{},\"method\":\"{}\",\"params\":{}}}\n",
+            escape_json_str(&self.jsonrpc),
+            self.id,
+            escape_json_str(&self.method),
+            self.params
+        )
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RpcResponse {
@@ -47,6 +82,40 @@ pub struct ProposalData {
 // -----------------------------------------------------------------------------
 // Zero-Dependency Pure Rust JSON Extractors
 // -----------------------------------------------------------------------------
+
+pub fn escape_json_str(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 16);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\x08' => out.push_str("\\b"),
+            '\x0c' => out.push_str("\\f"),
+            c if (c as u32) < 0x20 => {
+                use std::fmt::Write;
+                let _ = write!(out, "\\u{:04x}", c as u32);
+            }
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+pub fn extract_f32_field(json: &str, field: &str) -> Option<f32> {
+    let key_pattern = format!("\"{}\"", field);
+    let key_pos = json.find(&key_pattern)?;
+    let after_key = &json[key_pos + key_pattern.len()..];
+    let colon_pos = after_key.find(':')?;
+    let after_colon = after_key[colon_pos + 1..].trim_start();
+    let num_str: String = after_colon
+        .chars()
+        .take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
+        .collect();
+    num_str.parse::<f32>().ok()
+}
 
 pub fn extract_str_field(json: &str, field: &str) -> Option<String> {
     let key_pattern = format!("\"{}\"", field);
@@ -220,21 +289,29 @@ impl ConductorClient {
         let mut stream = UnixStream::connect(&self.socket_path)
             .map_err(|e| format!("Failed to connect to Conductor socket at {}: {}", self.socket_path.display(), e))?;
 
+        stream.set_read_timeout(Some(DEFAULT_TIMEOUT))
+            .map_err(|e| format!("Failed to set read timeout: {}", e))?;
+        stream.set_write_timeout(Some(DEFAULT_TIMEOUT))
+            .map_err(|e| format!("Failed to set write timeout: {}", e))?;
+
         let request_id = REQUEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let frame = format!(
-            "{{\"jsonrpc\":\"2.0\",\"id\":{},\"method\":\"{}\",\"params\":{}}}\n",
-            request_id, method, params_json
-        );
+        let req = RpcRequest::new(request_id, method, params_json);
+        let frame = req.to_frame();
 
         stream.write_all(frame.as_bytes())
             .map_err(|e| format!("Failed to write to socket: {}", e))?;
         stream.flush()
             .map_err(|e| format!("Failed to flush socket: {}", e))?;
 
-        let mut reader = BufReader::new(stream);
+        let mut reader = BufReader::new(stream).take(MAX_FRAME_SIZE as u64);
         let mut line = String::new();
         reader.read_line(&mut line)
             .map_err(|e| format!("Failed to read response from socket: {}", e))?;
+
+        let resp = parse_rpc_response(&line)?;
+        if resp.id != request_id {
+            return Err(format!("Mismatched RPC response id: expected {}, got {}", request_id, resp.id));
+        }
 
         Ok(line)
     }
@@ -270,13 +347,102 @@ impl ConductorClient {
     }
 
     pub fn resolve_proposal(&self, proposal_hash: &str, action: &str) -> Result<String, String> {
-        let params = format!("{{\"proposal_hash\":\"{}\",\"action\":\"{}\"}}", proposal_hash, action);
+        let params = format!(
+            "{{\"proposal_hash\":\"{}\",\"action\":\"{}\"}}",
+            escape_json_str(proposal_hash),
+            escape_json_str(action)
+        );
         let raw = self.call("proposal.resolve", &params)?;
         let resp = parse_rpc_response(&raw)?;
         if let Some(ref err) = resp.error {
             return Err(format!("RPC error {}: {}", err.code, err.message));
         }
         resp.result.ok_or_else(|| "Missing result in proposal.resolve response".to_string())
+    }
+
+    pub fn get_vital_snapshot(&self) -> Result<VitalGlanceData, String> {
+        let raw = self.call("vital.snapshot", "{}")?;
+        let resp = parse_rpc_response(&raw)?;
+        if let Some(ref err) = resp.error {
+            return Err(format!("RPC error {}: {}", err.code, err.message));
+        }
+        let res_obj = resp.result.ok_or_else(|| "Missing result in vital.snapshot response".to_string())?;
+        let metrics = extract_object_field(&res_obj, "metrics").unwrap_or_else(|| res_obj.clone());
+
+        let cpu = extract_object_field(&metrics, "cpu");
+        let cpu_load = if let Some(ref c) = cpu {
+            let l1 = extract_object_field(c, "load_average_1m").and_then(|o| extract_f32_field(&o, "value"));
+            let l5 = extract_object_field(c, "load_average_5m").and_then(|o| extract_f32_field(&o, "value"));
+            let l15 = extract_object_field(c, "load_average_15m").and_then(|o| extract_f32_field(&o, "value"));
+            let cores = extract_object_field(c, "core_count").and_then(|o| extract_u64_field(&o, "value"));
+            if let (Some(one), Some(five), Some(fifteen)) = (l1, l5, l15) {
+                if let Some(cr) = cores {
+                    Some(format!("{:.2}, {:.2}, {:.2} ({} cores online)", one, five, fifteen, cr))
+                } else {
+                    Some(format!("{:.2}, {:.2}, {:.2}", one, five, fifteen))
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let memory = extract_object_field(&metrics, "memory");
+        let memory_info = if let Some(ref m) = memory {
+            let total = extract_object_field(m, "total_bytes").and_then(|o| extract_u64_field(&o, "value"));
+            let avail = extract_object_field(m, "available_bytes").and_then(|o| extract_u64_field(&o, "value"));
+            if let (Some(tot), Some(av)) = (total, avail) {
+                let used = tot.saturating_sub(av);
+                let used_gib = used as f64 / (1024.0 * 1024.0 * 1024.0);
+                let tot_gib = tot as f64 / (1024.0 * 1024.0 * 1024.0);
+                let pct = if tot > 0 { (used as f64 / tot as f64 * 100.0) as u32 } else { 0 };
+                Some(format!("{:.1} GiB / {:.1} GiB ({}% utilized)", used_gib, tot_gib, pct))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let thermal = extract_object_field(&metrics, "thermal");
+        let cpu_temp_celsius = thermal.as_ref().and_then(|t| {
+            extract_object_field(t, "cpu_temperature").and_then(|o| extract_f32_field(&o, "value"))
+        });
+
+        let nixos = extract_object_field(&metrics, "nixos");
+        let nixos_generation = nixos.as_ref().and_then(|n| {
+            extract_object_field(n, "active_generation").and_then(|o| extract_u64_field(&o, "value")).map(|g| g as u32)
+        });
+
+        let neuronix = extract_object_field(&metrics, "neuronix");
+        let state_root_digest = neuronix.as_ref().and_then(|nrx| {
+            extract_object_field(nrx, "stateroot").and_then(|o| extract_str_field(&o, "value"))
+        });
+
+        let service = extract_object_field(&metrics, "service");
+        let daemon_status = service.as_ref().and_then(|s| {
+            extract_object_field(s, "daemon_status").and_then(|o| extract_str_field(&o, "value"))
+                .or_else(|| {
+                    extract_object_field(s, "daemon_online").and_then(|o| extract_bool_field(&o, "value"))
+                        .map(|on| if on { "READY".to_string() } else { "OFFLINE".to_string() })
+                })
+        });
+
+        let virt = extract_object_field(&metrics, "virtualization");
+        let virtualization = virt.as_ref().and_then(|v| {
+            extract_object_field(v, "hypervisor_type").and_then(|o| extract_str_field(&o, "value"))
+        });
+
+        Ok(VitalGlanceData {
+            cpu_load,
+            memory_info,
+            cpu_temp_celsius,
+            nixos_generation,
+            state_root_digest,
+            daemon_status,
+            virtualization,
+        })
     }
 }
 
@@ -331,6 +497,20 @@ mod tests {
     }
 
     #[test]
+    fn test_escape_json_str() {
+        assert_eq!(escape_json_str("normal_str"), "normal_str");
+        assert_eq!(escape_json_str("hello \"world\" \n\t\\"), "hello \\\"world\\\" \\n\\t\\\\");
+    }
+
+    #[test]
+    fn test_extract_f32_field() {
+        let json = r#"{"cpu_load": 0.42, "negative": -12.5}"#;
+        assert_eq!(extract_f32_field(json, "cpu_load"), Some(0.42));
+        assert_eq!(extract_f32_field(json, "negative"), Some(-12.5));
+        assert_eq!(extract_f32_field(json, "missing"), None);
+    }
+
+    #[test]
     fn test_client_call_mock_server() {
         let temp_sock = format!("/tmp/conductor-test-mock-{}.sock", std::process::id());
         let _ = std::fs::remove_file(&temp_sock);
@@ -342,7 +522,8 @@ mod tests {
                 let mut reader = BufReader::new(stream.try_clone().unwrap());
                 let mut line = String::new();
                 if reader.read_line(&mut line).is_ok() {
-                    let resp = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"status\":\"PONG\"}}\n";
+                    let req_id = extract_u64_field(&line, "id").unwrap_or(1);
+                    let resp = format!("{{\"jsonrpc\":\"2.0\",\"id\":{},\"result\":{{\"status\":\"PONG\"}}}}\n", req_id);
                     let _ = stream.write_all(resp.as_bytes());
                 }
             }
@@ -351,6 +532,87 @@ mod tests {
         let client = ConductorClient::new(Some(PathBuf::from(&temp_sock)));
         let is_pong = client.ping().expect("ping mock server");
         assert!(is_pong);
+
+        let _ = handle.join();
+        let _ = std::fs::remove_file(&temp_sock);
+    }
+
+    #[test]
+    fn test_get_vital_snapshot_mock() {
+        let temp_sock = format!("/tmp/conductor-test-vital-{}.sock", std::process::id());
+        let _ = std::fs::remove_file(&temp_sock);
+
+        let listener = UnixListener::bind(&temp_sock).expect("bind mock unix socket");
+
+        let handle = thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut line = String::new();
+                if reader.read_line(&mut line).is_ok() {
+                    let req_id = extract_u64_field(&line, "id").unwrap_or(1);
+                    let resp = format!(
+                        concat!(
+                            "{{\"jsonrpc\":\"2.0\",\"id\":{},\"result\":{{\"metrics\":{{",
+                            "\"cpu\":{{\"load_average_1m\":{{\"value\":0.25}},\"load_average_5m\":{{\"value\":0.15}},\"load_average_15m\":{{\"value\":0.10}},\"core_count\":{{\"value\":8}}}},",
+                            "\"memory\":{{\"total_bytes\":{{\"value\":17179869184}},\"available_bytes\":{{\"value\":8589934592}}}},",
+                            "\"thermal\":{{\"cpu_temperature\":{{\"value\":44.5}}}},",
+                            "\"nixos\":{{\"active_generation\":{{\"value\":42}}}},",
+                            "\"neuronix\":{{\"stateroot\":{{\"value\":\"deadbeef01234567\"}}}},",
+                            "\"service\":{{\"daemon_status\":{{\"value\":\"READY\"}}}},",
+                            "\"virtualization\":{{\"hypervisor_type\":{{\"value\":\"KVM_QEMU\"}}}}",
+                            "}}}}}}\n"
+                        ),
+                        req_id
+                    );
+                    let _ = stream.write_all(resp.as_bytes());
+                }
+            }
+        });
+
+        let client = ConductorClient::new(Some(PathBuf::from(&temp_sock)));
+        let vital = client.get_vital_snapshot().expect("snapshot success");
+        assert_eq!(vital.cpu_load.as_deref(), Some("0.25, 0.15, 0.10 (8 cores online)"));
+        assert!(vital.memory_info.as_ref().unwrap().contains("8.0 GiB / 16.0 GiB (50% utilized)"));
+        assert_eq!(vital.cpu_temp_celsius, Some(44.5));
+        assert_eq!(vital.nixos_generation, Some(42));
+        assert_eq!(vital.state_root_digest.as_deref(), Some("deadbeef01234567"));
+        assert_eq!(vital.daemon_status.as_deref(), Some("READY"));
+        assert_eq!(vital.virtualization.as_deref(), Some("KVM_QEMU"));
+
+        let _ = handle.join();
+        let _ = std::fs::remove_file(&temp_sock);
+    }
+
+    #[test]
+    fn test_rpc_request_to_frame() {
+        let req = RpcRequest::new(42, "skills.list", "{}");
+        assert_eq!(req.id, 42);
+        assert_eq!(req.method, "skills.list");
+        assert_eq!(req.to_frame(), "{\"jsonrpc\":\"2.0\",\"id\":42,\"method\":\"skills.list\",\"params\":{}}\n");
+    }
+
+    #[test]
+    fn test_rpc_mismatched_id_rejection() {
+        let temp_sock = format!("/tmp/conductor-test-mismatch-{}.sock", std::process::id());
+        let _ = std::fs::remove_file(&temp_sock);
+
+        let listener = UnixListener::bind(&temp_sock).expect("bind mock unix socket");
+
+        let handle = thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut reader = BufReader::new(stream.try_clone().unwrap());
+                let mut line = String::new();
+                if reader.read_line(&mut line).is_ok() {
+                    // Deliberately return wrong ID 99999
+                    let resp = "{\"jsonrpc\":\"2.0\",\"id\":99999,\"result\":{\"status\":\"PONG\"}}\n";
+                    let _ = stream.write_all(resp.as_bytes());
+                }
+            }
+        });
+
+        let client = ConductorClient::new(Some(PathBuf::from(&temp_sock)));
+        let err = client.call("conductor.ping", "{}").expect_err("must reject mismatched id");
+        assert!(err.contains("Mismatched RPC response id"));
 
         let _ = handle.join();
         let _ = std::fs::remove_file(&temp_sock);

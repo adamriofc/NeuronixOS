@@ -198,29 +198,37 @@ class VitalObservatory:
             except Exception as e:
                 res["memory.status"] = self._create_record("memory.status", None, "status", "/proc/meminfo", telemetry_class="OBSERVED", reason=str(e)).to_dict()
 
-        total_bytes = total_kb * 1024
-        avail_bytes = avail_kb * 1024
-        used_bytes = max(0, total_bytes - avail_bytes)
-        used_pct = round((used_bytes / total_bytes) * 100, 1) if total_bytes > 0 else 0.0
+        if total_kb > 0:
+            total_bytes = total_kb * 1024
+            avail_bytes = avail_kb * 1024
+            used_bytes = max(0, total_bytes - avail_bytes)
+            used_pct = round((used_bytes / total_bytes) * 100, 1)
 
-        res["total_bytes"] = self._create_record("memory.total_bytes", total_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
-        res["available_bytes"] = self._create_record("memory.available_bytes", avail_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
-        res["used_bytes"] = self._create_record("memory.used_bytes", used_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
-        res["used_percent"] = self._create_record("memory.used_percent", used_pct, "percent", "/proc/meminfo", telemetry_class="DERIVED", confidence=0.99).to_dict()
+            res["total_bytes"] = self._create_record("memory.total_bytes", total_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
+            res["available_bytes"] = self._create_record("memory.available_bytes", avail_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
+            res["used_bytes"] = self._create_record("memory.used_bytes", used_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
+            res["used_percent"] = self._create_record("memory.used_percent", used_pct, "percent", "/proc/meminfo", telemetry_class="DERIVED", confidence=0.99).to_dict()
 
-        swap_used_bytes = max(0, (swap_total_kb - swap_free_kb) * 1024)
-        res["swap_used_bytes"] = self._create_record("memory.swap_used_bytes", swap_used_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
+            swap_used_bytes = max(0, (swap_total_kb - swap_free_kb) * 1024)
+            res["swap_used_bytes"] = self._create_record("memory.swap_used_bytes", swap_used_bytes, "bytes", "/proc/meminfo", telemetry_class="OBSERVED").to_dict()
 
-        # Derived memory pressure
-        pressure = "NOMINAL"
-        if used_pct >= 90.0:
-            pressure = "CRITICAL"
-        elif used_pct >= 80.0:
-            pressure = "HIGH"
-        elif used_pct >= 65.0:
-            pressure = "MODERATE"
+            # Derived memory pressure
+            pressure = "NOMINAL"
+            if used_pct >= 90.0:
+                pressure = "CRITICAL"
+            elif used_pct >= 80.0:
+                pressure = "HIGH"
+            elif used_pct >= 65.0:
+                pressure = "MODERATE"
 
-        res["pressure"] = self._create_record("memory.pressure", pressure, "enum", "deterministic_rule_engine", telemetry_class="DERIVED", confidence=0.95).to_dict()
+            res["pressure"] = self._create_record("memory.pressure", pressure, "enum", "deterministic_rule_engine", telemetry_class="DERIVED", confidence=0.95).to_dict()
+        else:
+            res["total_bytes"] = self._create_record("memory.total_bytes", None, "bytes", "/proc/meminfo", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_meminfo_unavailable").to_dict()
+            res["available_bytes"] = self._create_record("memory.available_bytes", None, "bytes", "/proc/meminfo", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_meminfo_unavailable").to_dict()
+            res["used_bytes"] = self._create_record("memory.used_bytes", None, "bytes", "/proc/meminfo", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_meminfo_unavailable").to_dict()
+            res["used_percent"] = self._create_record("memory.used_percent", None, "percent", "/proc/meminfo", telemetry_class="DERIVED", availability="UNAVAILABLE", reason="proc_meminfo_unavailable").to_dict()
+            res["swap_used_bytes"] = self._create_record("memory.swap_used_bytes", None, "bytes", "/proc/meminfo", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_meminfo_unavailable").to_dict()
+            res["pressure"] = self._create_record("memory.pressure", "UNKNOWN", "enum", "deterministic_rule_engine", telemetry_class="DERIVED", availability="UNAVAILABLE", reason="proc_meminfo_unavailable").to_dict()
         return res
 
     # -------------------------------------------------------------------------
@@ -302,7 +310,9 @@ class VitalObservatory:
             res["root_available_bytes"] = self._create_record("storage.root_available_bytes", free_bytes, "bytes", "statvfs:/", telemetry_class="OBSERVED").to_dict()
             res["root_used_percent"] = self._create_record("storage.root_used_percent", used_pct, "percent", "statvfs:/", telemetry_class="DERIVED", confidence=0.99).to_dict()
         except Exception as e:
-            res["root_total_bytes"] = self._create_record("storage.root_total_bytes", None, "bytes", "statvfs:/", telemetry_class="OBSERVED", reason=str(e)).to_dict()
+            res["root_total_bytes"] = self._create_record("storage.root_total_bytes", None, "bytes", "statvfs:/", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason=str(e)).to_dict()
+            res["root_available_bytes"] = self._create_record("storage.root_available_bytes", None, "bytes", "statvfs:/", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason=str(e)).to_dict()
+            res["root_used_percent"] = self._create_record("storage.root_used_percent", None, "percent", "statvfs:/", telemetry_class="DERIVED", availability="UNAVAILABLE", reason=str(e)).to_dict()
 
         # Nix Store awareness
         nix_store_bytes = None
@@ -316,7 +326,7 @@ class VitalObservatory:
         if nix_store_bytes is not None:
             res["nix_store_estimated_bytes"] = self._create_record("storage.nix_store_bytes", nix_store_bytes, "bytes", "statvfs:/nix/store", telemetry_class="OBSERVED").to_dict()
         else:
-            res["nix_store_estimated_bytes"] = self._create_record("storage.nix_store_bytes", None, "bytes", "statvfs:/nix/store", telemetry_class="OBSERVED", reason="nix_store_not_mounted").to_dict()
+            res["nix_store_estimated_bytes"] = self._create_record("storage.nix_store_bytes", None, "bytes", "statvfs:/nix/store", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="nix_store_not_mounted").to_dict()
 
         return res
 
@@ -352,8 +362,10 @@ class VitalObservatory:
                     res["battery_status"] = self._create_record(f"power.{entry.lower()}.status", status_val, "string", status_file, telemetry_class="OBSERVED").to_dict()
                     break
 
-        if not battery_found:
-            res["power_source"] = self._create_record("power.source", "AC_MAINS", "enum", "sysfs_power_supply", telemetry_class="OBSERVED", reason="no_battery_detected").to_dict()
+            if not battery_found:
+                res["power_source"] = self._create_record("power.source", "AC_MAINS", "enum", "sysfs_power_supply", telemetry_class="OBSERVED", reason="no_battery_detected").to_dict()
+        else:
+            res["power_source"] = self._create_record("power.source", None, "enum", "sysfs_power_supply", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="power_supply_sysfs_unavailable").to_dict()
 
         return res
 
@@ -456,12 +468,16 @@ class VitalObservatory:
     # -------------------------------------------------------------------------
     def sample_network(self) -> Dict[str, Any]:
         res: Dict[str, Any] = {}
-        interfaces: List[str] = []
-        rx_bytes_total = 0
-        tx_bytes_total = 0
         net_dev = "/proc/net/dev"
+        interfaces: Optional[List[str]] = None
+        rx_bytes_total: Optional[int] = None
+        tx_bytes_total: Optional[int] = None
+
         if os.path.exists(net_dev):
             try:
+                iface_list = []
+                rx_sum = 0
+                tx_sum = 0
                 with open(net_dev, "r") as f:
                     lines = f.readlines()
                 for line in lines[2:]:
@@ -469,17 +485,25 @@ class VitalObservatory:
                     if len(parts) == 2:
                         iface = parts[0].strip()
                         if iface != "lo":
-                            interfaces.append(iface)
+                            iface_list.append(iface)
                             stats = parts[1].split()
                             if len(stats) >= 9:
-                                rx_bytes_total += int(stats[0])
-                                tx_bytes_total += int(stats[8])
+                                rx_sum += int(stats[0])
+                                tx_sum += int(stats[8])
+                interfaces = iface_list
+                rx_bytes_total = rx_sum
+                tx_bytes_total = tx_sum
             except Exception:
                 pass
 
-        res["active_interfaces"] = self._create_record("network.active_interfaces", interfaces, "array", net_dev, telemetry_class="OBSERVED").to_dict()
-        res["total_rx_bytes"] = self._create_record("network.total_rx_bytes", rx_bytes_total, "bytes", net_dev, telemetry_class="OBSERVED").to_dict()
-        res["total_tx_bytes"] = self._create_record("network.total_tx_bytes", tx_bytes_total, "bytes", net_dev, telemetry_class="OBSERVED").to_dict()
+        if interfaces is not None:
+            res["active_interfaces"] = self._create_record("network.active_interfaces", interfaces, "array", net_dev, telemetry_class="OBSERVED").to_dict()
+            res["total_rx_bytes"] = self._create_record("network.total_rx_bytes", rx_bytes_total, "bytes", net_dev, telemetry_class="OBSERVED").to_dict()
+            res["total_tx_bytes"] = self._create_record("network.total_tx_bytes", tx_bytes_total, "bytes", net_dev, telemetry_class="OBSERVED").to_dict()
+        else:
+            res["active_interfaces"] = self._create_record("network.active_interfaces", None, "array", net_dev, telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_net_dev_unavailable").to_dict()
+            res["total_rx_bytes"] = self._create_record("network.total_rx_bytes", None, "bytes", net_dev, telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_net_dev_unavailable").to_dict()
+            res["total_tx_bytes"] = self._create_record("network.total_tx_bytes", None, "bytes", net_dev, telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_net_dev_unavailable").to_dict()
         return res
 
     # -------------------------------------------------------------------------
@@ -487,7 +511,7 @@ class VitalObservatory:
     # -------------------------------------------------------------------------
     def sample_process(self) -> Dict[str, Any]:
         res: Dict[str, Any] = {}
-        proc_count = 0
+        proc_count: Optional[int] = None
         try:
             entries = os.listdir("/proc")
             proc_pids = [e for e in entries if e.isdigit()]
@@ -495,7 +519,12 @@ class VitalObservatory:
         except Exception:
             pass
 
-        res["process_count"] = self._create_record("process.count", proc_count, "count", "/proc", telemetry_class="OBSERVED").to_dict()
+        if proc_count is not None:
+            res["process_count"] = self._create_record("process.count", proc_count, "count", "/proc", telemetry_class="OBSERVED").to_dict()
+        else:
+            res["process_count"] = self._create_record("process.count", None, "count", "/proc", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_unavailable").to_dict()
+
+        loadavg_read = False
         try:
             with open("/proc/loadavg", "r") as f:
                 parts = f.read().strip().split()
@@ -504,8 +533,13 @@ class VitalObservatory:
                     total_threads = int(parts[3].split("/")[1])
                     res["running_threads"] = self._create_record("process.running_threads", running_threads, "count", "/proc/loadavg", telemetry_class="OBSERVED").to_dict()
                     res["total_threads"] = self._create_record("process.total_threads", total_threads, "count", "/proc/loadavg", telemetry_class="OBSERVED").to_dict()
+                    loadavg_read = True
         except Exception:
             pass
+
+        if not loadavg_read:
+            res["running_threads"] = self._create_record("process.running_threads", None, "count", "/proc/loadavg", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_loadavg_unavailable").to_dict()
+            res["total_threads"] = self._create_record("process.total_threads", None, "count", "/proc/loadavg", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="proc_loadavg_unavailable").to_dict()
         return res
 
     # -------------------------------------------------------------------------
@@ -514,7 +548,7 @@ class VitalObservatory:
     def sample_service(self) -> Dict[str, Any]:
         res: Dict[str, Any] = {}
         daemon_sock = os.environ.get("NEURONIX_SOCKET_PATH", "/run/neuronix/ast.sock")
-        active = os.path.exists(daemon_sock) or ("unittest" in sys.modules or os.environ.get("CI") is not None)
+        active = os.path.exists(daemon_sock)
         res["neuronix_daemon_active"] = self._create_record("service.neuronix_daemon_active", active, "boolean", daemon_sock, telemetry_class="OBSERVED").to_dict()
         return res
 
@@ -532,13 +566,16 @@ class VitalObservatory:
     # -------------------------------------------------------------------------
     def sample_device(self) -> Dict[str, Any]:
         res: Dict[str, Any] = {}
-        block_devices: List[str] = []
+        block_devices: Optional[List[str]] = None
         if os.path.exists("/sys/block"):
             try:
                 block_devices = [d for d in os.listdir("/sys/block") if not d.startswith("loop")]
             except Exception:
                 pass
-        res["block_devices"] = self._create_record("device.block_devices", block_devices, "array", "/sys/block", telemetry_class="OBSERVED").to_dict()
+        if block_devices is not None:
+            res["block_devices"] = self._create_record("device.block_devices", block_devices, "array", "/sys/block", telemetry_class="OBSERVED").to_dict()
+        else:
+            res["block_devices"] = self._create_record("device.block_devices", None, "array", "/sys/block", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="sys_block_unavailable").to_dict()
         return res
 
     # -------------------------------------------------------------------------
@@ -547,9 +584,12 @@ class VitalObservatory:
     def sample_desktop(self) -> Dict[str, Any]:
         res: Dict[str, Any] = {}
         de = os.environ.get("XDG_CURRENT_DESKTOP")
-        session = os.environ.get("XDG_SESSION_TYPE", "wayland")
+        session = os.environ.get("XDG_SESSION_TYPE")
         res["current_desktop"] = self._create_record("desktop.current_desktop", de, "string", "env:XDG_CURRENT_DESKTOP", telemetry_class="OBSERVED", availability="AVAILABLE" if de else "UNAVAILABLE", reason=None if de else "not_running_desktop_session").to_dict()
-        res["session_type"] = self._create_record("desktop.session_type", session, "string", "env:XDG_SESSION_TYPE", telemetry_class="OBSERVED").to_dict()
+        if session:
+            res["session_type"] = self._create_record("desktop.session_type", session, "string", "env:XDG_SESSION_TYPE", telemetry_class="OBSERVED").to_dict()
+        else:
+            res["session_type"] = self._create_record("desktop.session_type", None, "string", "env:XDG_SESSION_TYPE", telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="not_running_desktop_session").to_dict()
         return res
 
     # -------------------------------------------------------------------------
@@ -569,10 +609,11 @@ class VitalObservatory:
         kvm_present = os.path.exists("/dev/kvm")
         res["kvm_accelerated"] = self._create_record("virtualization.kvm_accelerated", kvm_present, "boolean", "/dev/kvm", telemetry_class="OBSERVED").to_dict()
 
-        hypervisor_type = "NONE_BARE_METAL"
-        if os.path.exists("/sys/class/dmi/id/product_name"):
+        hypervisor_type: Optional[str] = None
+        dmi_file = "/sys/class/dmi/id/product_name"
+        if os.path.exists(dmi_file):
             try:
-                with open("/sys/class/dmi/id/product_name", "r") as f:
+                with open(dmi_file, "r") as f:
                     prod = f.read().strip().lower()
                     if any(vm in prod for vm in ["qemu", "kvm", "standard pc", "bochs"]):
                         hypervisor_type = "KVM_QEMU"
@@ -580,9 +621,15 @@ class VitalObservatory:
                         hypervisor_type = "VMWARE"
                     elif "virtualbox" in prod:
                         hypervisor_type = "VIRTUALBOX"
+                    else:
+                        hypervisor_type = "NONE_BARE_METAL"
             except Exception:
                 pass
-        res["hypervisor_type"] = self._create_record("virtualization.hypervisor", hypervisor_type, "enum", "/sys/class/dmi/id/product_name", telemetry_class="OBSERVED").to_dict()
+
+        if hypervisor_type is not None:
+            res["hypervisor_type"] = self._create_record("virtualization.hypervisor", hypervisor_type, "enum", dmi_file, telemetry_class="OBSERVED").to_dict()
+        else:
+            res["hypervisor_type"] = self._create_record("virtualization.hypervisor", None, "enum", dmi_file, telemetry_class="OBSERVED", availability="UNAVAILABLE", reason="dmi_product_name_unavailable").to_dict()
         return res
 
     # -------------------------------------------------------------------------

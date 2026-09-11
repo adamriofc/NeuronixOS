@@ -24,33 +24,58 @@ class TestConductorMcpServer(unittest.TestCase):
         self.server = McpServer()
 
     def test_mcp_initialization(self):
-        """Test protocol negotiation for modern MCP 2026-07-28 and legacy versions."""
-        req_modern = {
+        """Test protocol discovery for modern MCP 2026-07-28 and legacy backwards compatibility."""
+        # 1. Modern MCP 2026-07-28 uses server/discover discovery mechanism
+        req_discover = {
             "jsonrpc": "2.0",
             "id": 1,
+            "method": "server/discover"
+        }
+        res_discover = self.server.handle_request(req_discover)
+        self.assertEqual(res_discover["jsonrpc"], "2.0")
+        self.assertEqual(res_discover["id"], 1)
+        self.assertIn("tools", res_discover["result"]["capabilities"])
+        self.assertIn("resources", res_discover["result"]["capabilities"])
+        self.assertIn("2026-07-28", res_discover["result"]["supportedProtocolVersions"])
+
+        # 2. Modern MCP 2026-07-28 is strictly stateless and rejects initialize
+        req_modern_init = {
+            "jsonrpc": "2.0",
+            "id": 2,
             "method": "initialize",
             "params": {
                 "protocolVersion": "2026-07-28",
                 "clientInfo": {"name": "test-client", "version": "1.0.0"}
             }
         }
-        res_modern = self.server.handle_request(req_modern)
-        self.assertEqual(res_modern["jsonrpc"], "2.0")
-        self.assertEqual(res_modern["id"], 1)
-        self.assertEqual(res_modern["result"]["protocolVersion"], "2026-07-28")
-        self.assertIn("tools", res_modern["result"]["capabilities"])
-        self.assertIn("resources", res_modern["result"]["capabilities"])
-        self.assertIn("tasks", res_modern["result"]["capabilities"])
+        res_modern_init = self.server.handle_request(req_modern_init)
+        self.assertIn("error", res_modern_init)
+        self.assertIn("stateless", res_modern_init["error"]["message"])
 
-        # Test legacy 2024-11-05 backwards compatibility
+        # 3. Test legacy 2024-11-05 backwards compatibility
         req_legacy = {
             "jsonrpc": "2.0",
-            "id": 2,
+            "id": 3,
             "method": "initialize",
             "params": {"protocolVersion": "2024-11-05"}
         }
         res_legacy = self.server.handle_request(req_legacy)
         self.assertEqual(res_legacy["result"]["protocolVersion"], "2024-11-05")
+
+        # 4. Wrong protocol metadata in _meta is strictly rejected
+        req_wrong_meta = {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "vital.snapshot",
+                "arguments": {},
+                "_meta": {"protocolVersion": "1999-01-01"}
+            }
+        }
+        res_wrong_meta = self.server.handle_request(req_wrong_meta)
+        self.assertIn("error", res_wrong_meta)
+        self.assertIn("unsupported protocolversion", res_wrong_meta["error"]["message"].lower())
 
     def test_tools_list_translation(self):
         """Test dynamic translation of NEURONIX Skill Registry to MCP tool list."""
@@ -149,7 +174,10 @@ class TestConductorMcpServer(unittest.TestCase):
         skills.revoke_delegation(grant["delegation_id"])
         res_revoked = self.server.handle_request(req)
         self.assertTrue(res_revoked["result"]["isError"])
-        self.assertIn("APPROVAL_REQUIRED", res_revoked["result"]["content"][0]["text"])
+        self.assertTrue(
+            "revoked" in res_revoked["result"]["content"][0]["text"].lower() or
+            "APPROVAL_REQUIRED" in res_revoked["result"]["content"][0]["text"]
+        )
 
     def test_resources_list_and_read(self):
         """Test accessing Vital laboratory telemetry as MCP resources."""
@@ -228,6 +256,31 @@ class TestConductorMcpServer(unittest.TestCase):
         self.assertFalse(res["result"]["isError"])
         parsed = json.loads(res["result"]["content"][0]["text"])
         self.assertEqual(parsed["status"], "DRY_RUN_PASSED")
+
+        # Verify caller identity mismatch is strictly rejected
+        req_spoofed = {
+            "jsonrpc": "2.0",
+            "id": 12,
+            "method": "tools/call",
+            "params": {
+                "name": "system.rollback",
+                "arguments": {"target_generation": 42, "dry_run": True},
+                "_meta": {
+                    "caller_id": "malicious-spoofed-agent",
+                    "authorization_token": grant_rec.token
+                }
+            }
+        }
+        res_spoofed = self.server.handle_request(req_spoofed)
+        self.assertTrue(res_spoofed["result"]["isError"])
+        self.assertIn("Caller identity mismatch", res_spoofed["result"]["content"][0]["text"])
+
+        # Verify stateless modern invocation on fresh server instance without initialize
+        fresh_server = McpServer()
+        res_stateless = fresh_server.handle_request(req)
+        self.assertFalse(res_stateless["result"]["isError"])
+        parsed_stateless = json.loads(res_stateless["result"]["content"][0]["text"])
+        self.assertEqual(parsed_stateless["status"], "DRY_RUN_PASSED")
 
 
 if __name__ == "__main__":

@@ -23,6 +23,12 @@
   "outputs_schema": {
     "type": "object",
     "properties": {
+      "mode": {
+        "type": "string"
+      },
+      "is_measured": {
+        "type": "boolean"
+      },
       "current_stage": {
         "type": "string"
       },
@@ -43,6 +49,8 @@
       }
     },
     "required": [
+      "mode",
+      "is_measured",
       "current_stage",
       "stages_completed",
       "contract_valid",

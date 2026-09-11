@@ -71,9 +71,9 @@ class TestVitalObservatoryAndSkillBroker(unittest.TestCase):
         self.assertIn("timestamp", res_vital)
         self.assertIn("memory_available_bytes", res_vital)
 
-        # 2. READ: system.status
+        # 2. READ: system.status (truthful status: OFFLINE or READY)
         res_status = skills.execute("system.status")
-        self.assertEqual(res_status["daemon_status"], "READY")
+        self.assertIn(res_status["daemon_status"], ["READY", "OFFLINE"])
         self.assertGreaterEqual(res_status["active_generation"], 1)
 
         # 3. PROPOSE: storage.plan
@@ -107,14 +107,28 @@ class TestVitalObservatoryAndSkillBroker(unittest.TestCase):
         self.assertEqual(res_human["status"], "DRY_RUN_PASSED")
         self.assertEqual(res_human["active_generation"], 42)
 
-        # AI caller with authorization token can execute
+        # AI caller with authentic cryptographic delegation token can execute
+        grant = skills.grant_delegation(
+            principal_id="test-operator-agent",
+            tier=skills.DelegatedAuthorityTier.PRIVILEGED_EXECUTE,
+            scope=["system.rollback"]
+        )
         res_ai_authorized = skills.execute(
             skill_id="system.rollback",
             inputs={"target_generation": 42, "dry_run": True},
             caller="AI_AGENT",
-            authorization_token="AUTH-ED25519-OPERATOR-VALID"
+            authorization_token=grant["token"]
         )
         self.assertEqual(res_ai_authorized["status"], "DRY_RUN_PASSED")
+
+        # Fake/magic tokens are strictly rejected and trigger approval gate
+        with self.assertRaises(skills.SkillApprovalRequired):
+            skills.execute(
+                skill_id="system.rollback",
+                inputs={"target_generation": 42, "dry_run": True},
+                caller="AI_AGENT",
+                authorization_token="AUTH-ED25519-OPERATOR-VALID"
+            )
 
         # HUMAN_OWNER sovereign execution
         res_owner = skills.execute(
@@ -216,6 +230,78 @@ class TestVitalObservatoryAndSkillBroker(unittest.TestCase):
             self.assertLess(temp, 150.0)
         else:
             self.assertIsNone(temp)
+
+    def test_proposal_execution_token_binding_and_single_use(self):
+        """Verify proposal execution token is strictly bound to inputs and single-use."""
+        # 1. Trigger proposal
+        with self.assertRaises(skills.SkillApprovalRequired) as cm:
+            skills.execute(
+                skill_id="system.rollback",
+                inputs={"target_generation": 42, "dry_run": True},
+                caller="AI_AGENT"
+            )
+        prop = cm.exception.proposal
+        p_hash = prop["proposal_hash"]
+
+        # 2. Resolve proposal as operator
+        resolved = skills.resolve_proposal(p_hash, action="APPROVE", caller="HUMAN_OPERATOR")
+        token = resolved["execution_token"]
+        self.assertTrue(token.startswith("DEL-"))
+
+        # 3. Tampered inputs must fail closed
+        with self.assertRaises(skills.SkillExecutionError) as cm_tamper:
+            skills.execute(
+                skill_id="system.rollback",
+                inputs={"target_generation": 99, "dry_run": True},
+                caller="AI_AGENT",
+                authorization_token=token
+            )
+        self.assertIn("input digest mismatch", str(cm_tamper.exception))
+
+        # 4. Correct inputs succeed
+        res = skills.execute(
+            skill_id="system.rollback",
+            inputs={"target_generation": 42, "dry_run": True},
+            caller="AI_AGENT",
+            authorization_token=token
+        )
+        self.assertEqual(res["status"], "DRY_RUN_PASSED")
+
+        # 5. Replay attempt fails closed
+        with self.assertRaises(skills.SkillExecutionError) as cm_replay:
+            skills.execute(
+                skill_id="system.rollback",
+                inputs={"target_generation": 42, "dry_run": True},
+                caller="AI_AGENT",
+                authorization_token=token
+            )
+        self.assertIn("replay protection", str(cm_replay.exception))
+
+    def test_truthful_skills_execution(self):
+        """Verify boot.verify, package.verify, and hyperion.run return truthful execution facts."""
+        # boot.verify
+        boot_res = skills.execute("boot.verify")
+        self.assertIn(boot_res["mode"], ["MEASURED", "EMULATED"])
+        self.assertIsInstance(boot_res["is_measured"], bool)
+        if boot_res["is_measured"]:
+            self.assertEqual(boot_res["mode"], "MEASURED")
+            self.assertIn("PCR7", boot_res["pcr_binding"])
+        else:
+            self.assertEqual(boot_res["mode"], "EMULATED")
+            self.assertEqual(boot_res["pcr_binding"], [])
+
+        # package.verify with absent package
+        pkg_res = skills.execute("package.verify", {"package_name": "totally_absent_package_99999"})
+        self.assertFalse(pkg_res["valid"])
+        self.assertIsNone(pkg_res["store_path"])
+        self.assertEqual(pkg_res["availability"], "UNAVAILABLE")
+
+        # hyperion.run
+        hyp_res = skills.execute("hyperion.run", {"tier": 0, "workload_name": "test_wl"})
+        self.assertIn(hyp_res["verdict"], ["DOMAIN_VERIFIED", "UNAVAILABLE_ON_HOST"])
+        if hyp_res["verdict"] == "DOMAIN_VERIFIED":
+            self.assertTrue(hyp_res["proof_root"])
+            self.assertTrue(hyp_res["domain_id"].startswith("DOM-"))
 
 
 if __name__ == "__main__":

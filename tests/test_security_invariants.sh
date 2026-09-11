@@ -198,39 +198,143 @@ fi
 
 # SEC-011: Capability-Bound Resource Consumption
 "$PYTHON_BIN" -c "
-import json
+import sys, json, asyncio
+sys.path.insert(0, '${PROJECT_ROOT}/packages/neuronix-core')
+sys.path.insert(0, '${PROJECT_ROOT}/packages/conductor-runtime')
+from neuronix_core import skills
+from conductor_runtime.server import ConductorServer
+
+# 1. Verify schema definition
 with open('${PROJECT_ROOT}/data/schemas/capability_commitment.schema.json') as f:
     schema = json.load(f)
 assert schema['title'] == 'CapabilityCommitmentSpecification'
 assert 'hardware_capabilities' in schema['required']
 assert 'storage_capabilities' in schema['required']
 
-# Simulate capability enforcement: requesting ungranted tier fails closed
-granted_tiers = ['TIER_0_FAST_PATH', 'TIER_1_RAM_GHOST']
-requested_tier = 'TIER_3_MICRO_VM'
-assert requested_tier not in granted_tiers, 'Workload must not exceed granted capability tiers'
+# 2. Real skills invocation: ungranted mutation triggers SkillApprovalRequired
+try:
+    skills.execute('system.rollback', {'target_generation': 42, 'dry_run': True}, caller='AI_AGENT')
+    assert False, 'Ungranted mutation executed without approval'
+except skills.SkillApprovalRequired as e:
+    assert e.proposal['skill_id'] == 'system.rollback'
+
+# Scenario 1: Fake/magic authority token is rejected fail-closed
+try:
+    skills.execute('system.rollback', {'target_generation': 42, 'dry_run': True}, caller='AI_AGENT', authorization_token='AUTH-ED25519-OPERATOR-VALID')
+    assert False, 'Magic token was accepted'
+except skills.SkillApprovalRequired:
+    pass
+
+# Scenario 2: Spoofed agent id in authority.grant rejected fail-closed
+server = ConductorServer()
+try:
+    asyncio.run(server._dispatch_method('authority.grant', {'agent_id': 'malicious-agent', 'tier': 'FULL_DELEGATED_CONTROL', 'caller': 'AI_AGENT'}))
+    assert False, 'Spoofed caller in authority.grant was accepted'
+except skills.SkillExecutionError as e:
+    assert 'unauthorized caller' in str(e).lower()
+
+# Scenario 3: Unknown proposal hash rejected fail-closed
+try:
+    skills.resolve_proposal('unknown_proposal_hash_12345', action='APPROVE', caller='HUMAN_OPERATOR')
+    assert False, 'Unknown proposal hash was accepted'
+except skills.SkillExecutionError as e:
+    assert 'not found' in str(e).lower()
+
+# Scenario 4: Expired proposal rejected fail-closed
+disp = skills.get_dispatcher()
+expired_prop = disp._generate_proposal(skills.describe('system.rollback'), {'target_generation': 42, 'dry_run': True})
+expired_prop['expires_at'] = '2020-01-01T00:00:00+00:00'
+try:
+    skills.resolve_proposal(expired_prop['proposal_hash'], action='APPROVE', caller='HUMAN_OPERATOR')
+    assert False, 'Expired proposal was approved'
+except skills.SkillExecutionError as e:
+    assert 'expired' in str(e).lower()
+
+# Scenario 5: Tampered proposal input rejected fail-closed
+fresh_prop = disp._generate_proposal(skills.describe('system.rollback'), {'target_generation': 42, 'dry_run': True})
+res_prop = skills.resolve_proposal(fresh_prop['proposal_hash'], action='APPROVE', caller='HUMAN_OPERATOR')
+exec_token = res_prop['execution_token']
+try:
+    skills.execute('system.rollback', {'target_generation': 99, 'dry_run': True}, caller='AI_AGENT', authorization_token=exec_token)
+    assert False, 'Tampered proposal input was executed'
+except skills.SkillExecutionError as e:
+    assert 'input digest mismatch' in str(e).lower()
+
+# Scenario 6: Replayed approval rejected fail-closed
+# 6a: Valid execution consumes token
+res_valid = skills.execute('system.rollback', {'target_generation': 42, 'dry_run': True}, caller='AI_AGENT', authorization_token=exec_token)
+assert res_valid['status'] == 'DRY_RUN_PASSED'
+# 6b: Token replay rejected
+try:
+    skills.execute('system.rollback', {'target_generation': 42, 'dry_run': True}, caller='AI_AGENT', authorization_token=exec_token)
+    assert False, 'Replayed execution token was accepted'
+except skills.SkillExecutionError as e:
+    assert 'replay protection' in str(e).lower()
+# 6c: Proposal re-resolve rejected
+try:
+    skills.resolve_proposal(fresh_prop['proposal_hash'], action='APPROVE', caller='HUMAN_OPERATOR')
+    assert False, 'Re-resolving proposal was accepted'
+except skills.SkillExecutionError as e:
+    assert 'already been resolved' in str(e).lower()
+
+# Real skills invocation: PROPOSE_ONLY grant cannot execute MUTATE skill
+grant = skills.grant_delegation(
+    principal_id='test-sec011-agent',
+    tier=skills.DelegatedAuthorityTier.PROPOSE_ONLY,
+    scope=['system.rollback']
+)
+try:
+    skills.execute('system.rollback', {'target_generation': 42, 'dry_run': True}, caller='AI_AGENT', authorization_token=grant['token'])
+    assert False, 'PROPOSE_ONLY grant executed mutation'
+except skills.SkillApprovalRequired:
+    pass
 "
 assert_pass "SEC-011: Capability-bound resource consumption enforced fail-closed"
 
 # SEC-012: 7-Factor Destructive Storage Authorization
 "$PYTHON_BIN" -c "
-# Simulate 7-factor destructive storage firewall
-def validate_storage_mutation(target_disk, active_mounts, has_entropy, token, plan_hash, expected_hash):
-    if target_disk in active_mounts:
-        return False, 'MOUNT_ACTIVE_FIREWALL_TRIGGERED'
-    if has_entropy and not token.startswith('DESTROY '):
-        return False, 'MISSING_TYPED_CONFIRMATION_TOKEN'
-    if plan_hash != expected_hash:
-        return False, 'PLAN_HASH_MISMATCH'
-    return True, 'AUTHORIZED'
+import sys
+sys.path.insert(0, '${PROJECT_ROOT}/packages/neuronix-core')
+from neuronix_core.storage_planner import StorageFirewall
 
 # Case 1: Active root mount must fail closed immediately
-ok, reason = validate_storage_mutation('/dev/nvme0n1p2', ['/', '/dev/nvme0n1p2'], True, 'DESTROY X PLAN Y', 'h1', 'h1')
-assert not ok and reason == 'MOUNT_ACTIVE_FIREWALL_TRIGGERED'
+ok, reason, factors = StorageFirewall.evaluate_7_factors(
+    target_device='/dev/nvme0n1p2',
+    plan_hash='a'*64,
+    expected_plan_hash='a'*64,
+    active_mounts_override=[{'device': '/dev/nvme0n1p2', 'mountpoint': '/'}]
+)
+assert not ok and 'Factor 2 failed' in reason
 
-# Case 2: Missing confirmation token on disk with entropy fails closed
-ok, reason = validate_storage_mutation('/dev/sdb', [], True, 'INVALID_TOKEN', 'h1', 'h1')
-assert not ok and reason == 'MISSING_TYPED_CONFIRMATION_TOKEN'
+# Case 2: Target device hosting active generation fails closed
+ok, reason, factors = StorageFirewall.evaluate_7_factors(
+    target_device='/dev/sda1',
+    plan_hash='a'*64,
+    expected_plan_hash='a'*64,
+    active_devices_override={'/dev/sda1'}
+)
+assert not ok and 'Factor 3 failed' in reason
+
+# Case 3: Plan hash mismatch fails closed
+ok, reason, factors = StorageFirewall.evaluate_7_factors(
+    target_device='/dev/sdb',
+    plan_hash='a'*64,
+    expected_plan_hash='b'*64,
+    active_mounts_override=[],
+    active_devices_override=set()
+)
+assert not ok and 'Factor 5 failed' in reason
+
+# Case 4: Missing or invalid confirmation token fails closed
+ok, reason, factors = StorageFirewall.evaluate_7_factors(
+    target_device='/dev/sdb',
+    plan_hash='a'*64,
+    expected_plan_hash='a'*64,
+    confirmation_token='INVALID_TOKEN',
+    active_mounts_override=[],
+    active_devices_override=set()
+)
+assert not ok and 'Factor 6 failed' in reason
 "
 assert_pass "SEC-012: 7-Factor destructive storage authorization enforced"
 
@@ -248,53 +352,123 @@ assert_pass "SEC-013: Plaintext secret omission from StateRoot and evidence guar
 
 # SEC-014: AI Secret Visibility Masking
 "$PYTHON_BIN" -c "
-# Verify AI masking contract: secret payload must be masked to metadata only
-def filter_secret_for_actor(secret_dict, actor_role):
-    if actor_role in ('ai_agent', 'copilot', 'mcp_client'):
-        return {
-            'secret_name': secret_dict['secret_name'],
-            'path': secret_dict['path'],
-            'ciphertext_hash': secret_dict['ciphertext_hash'],
-            'value': '[MASKED: METADATA_ONLY]'
-        }
-    return secret_dict
+import sys
+sys.path.insert(0, '${PROJECT_ROOT}/packages/neuronix-core')
+from neuronix_core.secrets import SecretFabricEngine
 
-secret = {'secret_name': 'api_key', 'path': '/run/neuronix/secrets/key', 'ciphertext_hash': 'abc123', 'value': 'SUPER_SECRET_KEY_123'}
-ai_view = filter_secret_for_actor(secret, 'ai_agent')
-assert ai_view['value'] == '[MASKED: METADATA_ONLY]'
+engine = SecretFabricEngine()
+engine.register_secret('api_key', 'SUPER_SECRET_KEY_123', 'test_provider', 'SYSTEM_ADMIN')
+
+# AI view must be strictly masked to metadata only
+ai_view = engine.filter_secret_for_actor('api_key', 'ai_agent')
+assert ai_view['value'] == '[MASKED: AI_SECRET_VISIBILITY_METADATA_ONLY]'
+assert ai_view['plaintext_visibility'] == 'METADATA_ONLY'
 assert 'SUPER_SECRET' not in str(ai_view)
+assert ai_view['ciphertext_hash']
+assert ai_view['ramfs_path']
 "
 assert_pass "SEC-014: AI secret visibility masking (METADATA_ONLY) verified"
 
 # SEC-015: Multi-Stage Boot Health Contract
 "$PYTHON_BIN" -c "
-# Verify 5-stage boot health contract progression
-STAGES = ['KERNEL_REACH', 'MOUNTS_HEALTHY', 'DAEMON_READY', 'STATE_VERIFIED', 'DESKTOP_TARGET']
+import sys
+sys.path.insert(0, '${PROJECT_ROOT}/packages/neuronix-core')
+from neuronix_core.boot_trust import BootHealthContract, CONTRACT_STAGES
 
-def evaluate_boot_health(completed_stages):
-    if all(s in completed_stages for s in STAGES):
-        return 'COMMIT_LKG'
-    return 'TRIGGER_ROLLBACK'
+# 1. Incomplete stage contract triggers rollback
+c = BootHealthContract()
+c.advance_stage('KERNEL_REACH')
+c.advance_stage('MOUNTS_HEALTHY')
+ok, verdict = c.evaluate_contract()
+assert not ok and 'TRIGGER_ROLLBACK' in verdict
 
-# Incomplete stages must fail closed and trigger rollback
-assert evaluate_boot_health(['KERNEL_REACH', 'MOUNTS_HEALTHY']) == 'TRIGGER_ROLLBACK'
-# Complete stages allow LKG commitment
-assert evaluate_boot_health(STAGES) == 'COMMIT_LKG'
+# 2. Out-of-order transition fails closed
+assert not c.advance_stage('DESKTOP_TARGET'), 'Out-of-order stage accepted'
+
+# 3. Complete stages allow LKG commitment
+c_full = BootHealthContract()
+for s in CONTRACT_STAGES:
+    assert c_full.advance_stage(s)
+ok, verdict = c_full.evaluate_contract()
+assert ok and verdict == 'COMMIT_LKG'
 "
 assert_pass "SEC-015: Multi-stage Boot Health Contract verification verified"
 
 # SEC-016: Actual KVM Hypervisor Boundary Proof
 "$PYTHON_BIN" -c "
-# Tier 3 receipts must bind to actual KVM backend
-def verify_tier3_receipt(receipt):
-    if receipt.get('requested_tier') == 'TIER_3_MICRO_VM':
-        backend = receipt.get('execution_backend', '')
-        if backend != 'kvm_qemu_v1':
-            return False, 'ISOLATION_EVIDENCE_MISMATCH'
-    return True, 'VALID'
+import sys
+sys.path.insert(0, '${PROJECT_ROOT}/packages/neuronix-core')
+sys.path.insert(0, '${PROJECT_ROOT}/packages/conductor-mcp')
+from neuronix_core.hyperion import HyperionExecutionEngine, IsolationTier
+from neuronix_core.boot_trust import MeasuredBootVerifier
+from neuronix_core import skills
+from conductor_mcp.server import McpServer
 
-assert not verify_tier3_receipt({'requested_tier': 'TIER_3_MICRO_VM', 'execution_backend': 'host_direct'})[0]
-assert verify_tier3_receipt({'requested_tier': 'TIER_3_MICRO_VM', 'execution_backend': 'kvm_qemu_v1'})[0]
+# 1. Non-KVM backend receipt claiming TIER_3_MICRO_VM fails closed
+engine = HyperionExecutionEngine()
+spec = engine.create_domain_spec('tier3_kvm_verification', tier=IsolationTier.TIER_3_MICRO_VM)
+receipt_fake = {
+    'requested_tier': 'TIER_3_MICRO_VM',
+    'execution_backend': 'host_direct',
+    'runtime_mode': 'real_host',
+    'execution_nonce': 'nrx_nonce_1234567890123456'
+}
+proof = engine.calculate_domain_proof(spec, runtime_evidence=receipt_fake)
+valid, msg = engine.verify_domain_proof(proof)
+assert not valid, 'Fake Tier 3 backend accepted'
+assert 'Tier 3 requires real micro-VM execution' in msg or 'micro-vm' in msg.lower()
+
+# Scenario 7: Synthetic package result rejected fail-closed
+res_pkg = skills.execute('package.verify', {'package_name': 'absent_pkg_12345'})
+assert not res_pkg['valid'], 'Absent package was verified valid'
+assert res_pkg['availability'] == 'UNAVAILABLE'
+
+# Scenario 8: Impossible fake boot attestation rejected fail-closed
+verifier_prod = MeasuredBootVerifier(sysfs_root='/nonexistent_sys', mode='PRODUCTION')
+try:
+    verifier_prod.read_pcr(7)
+    assert False, 'Synthetic PCR reading permitted in PRODUCTION mode'
+except RuntimeError as e:
+    assert 'PRODUCTION_MODE_VIOLATION' in str(e)
+
+# Scenario 9: MCP wrong protocol metadata rejected fail-closed
+mcp = McpServer()
+wrong_meta_req = {
+    'jsonrpc': '2.0',
+    'id': 901,
+    'method': 'tools/call',
+    'params': {
+        'name': 'vital.snapshot',
+        'arguments': {},
+        '_meta': {'protocolVersion': '1999-01-01'}
+    }
+}
+res_wrong_meta = mcp.handle_request(wrong_meta_req)
+assert 'error' in res_wrong_meta
+assert 'unsupported protocolversion' in res_wrong_meta['error']['message'].lower()
+
+# Scenario 10: MCP identity mismatch rejected fail-closed
+grant_auth = skills.grant_delegation(
+    principal_id='agent-identity-actual',
+    tier=skills.DelegatedAuthorityTier.FULL_DELEGATED_CONTROL,
+    scope=['system.rollback']
+)
+mismatch_req = {
+    'jsonrpc': '2.0',
+    'id': 902,
+    'method': 'tools/call',
+    'params': {
+        'name': 'system.rollback',
+        'arguments': {'target_generation': 42, 'dry_run': True},
+        '_meta': {
+            'caller_id': 'agent-identity-impostor',
+            'authorization_token': grant_auth['token']
+        }
+    }
+}
+res_mismatch = mcp.handle_request(mismatch_req)
+assert res_mismatch['result']['isError'] == True
+assert 'Caller identity mismatch' in res_mismatch['result']['content'][0]['text']
 "
 assert_pass "SEC-016: Actual KVM hypervisor boundary proof verified"
 
