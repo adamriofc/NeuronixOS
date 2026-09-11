@@ -885,3 +885,70 @@ def get_pending_proposals() -> Dict[str, Dict[str, Any]]:
 delegation_registry = get_dispatcher().delegations
 
 
+def create_operational_envelope(
+    skill_id: str,
+    inputs: Optional[Dict[str, Any]] = None,
+    principal_id: str = "operator-01",
+    principal_type: str = PrincipalType.HUMAN_OPERATOR,
+    delegation_token: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Bridges a SkillContract to an Operational Contract Envelope (OCE)."""
+    dispatcher = get_dispatcher()
+    desc = dispatcher.registry.describe(skill_id)
+    inputs = inputs or {}
+    category = desc.get("category", "READ")
+    invariants = desc.get("invariants_required", ["INV-SEC-001"])
+    state_root = state.compute_state_root()
+
+    input_bytes = canonical_json_bytes(inputs)
+    input_digest = hashlib.sha256(input_bytes).hexdigest()
+    env_id = f"oce-{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')}-{input_digest[:8]}"
+
+    tier = "OBSERVE_ONLY"
+    if principal_type in [PrincipalType.HUMAN_OWNER, PrincipalType.HUMAN_OPERATOR]:
+        tier = "FULL_OPERATOR"
+    elif delegation_token:
+        tier = "DELEGATED_SCOPED"
+
+    return {
+        "envelope_id": env_id,
+        "created_at_ms": int(time.time() * 1000),
+        "intent": {
+            "action": skill_id,
+            "category": category,
+            "description": desc.get("description", f"Execution of skill {skill_id}"),
+            "target_resource_uri": f"neuronix://skills/{skill_id}",
+        },
+        "actor": {
+            "principal_id": principal_id,
+            "principal_type": principal_type,
+            "session_nonce": secrets.token_hex(8),
+        },
+        "authority": {
+            "tier": tier,
+            "token": delegation_token or "",
+        },
+        "environment": {
+            "target_substrate": "NIXOS_HOST",
+            "isolation_tier": "TIER_0_HOST",
+            "provider_preference": ["native.linux"],
+        },
+        "preconditions": {
+            "required_state_root": state_root,
+            "required_invariants": invariants,
+        },
+        "expected_effects": {
+            "declared_diff": f"Execute skill {skill_id}",
+            "destructive": category == "MUTATE",
+        },
+        "invariants": invariants,
+        "evidence": {
+            "input_digest": input_digest,
+            "prior_receipts": [],
+        },
+        "outcome": {
+            "status": "PENDING_EVALUATION",
+        },
+    }
+
+
