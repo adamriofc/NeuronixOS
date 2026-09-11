@@ -169,24 +169,24 @@ Document the complete UOE architecture in the repository specifications and upda
 - Consumes: JSON Schema Draft 2020-12 specifications.
 - Produces: Formal validation schemas for envelopes, capability declarations, and receipts.
 
-- [ ] **Step 1: Write the failing test for UOE schemas**
+- [x] **Step 1: Write the failing test for UOE schemas**
 Create `tests/test_uoe_schemas.py` validating schema syntax, required fields, and sample valid/invalid payloads.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python3 -m unittest tests/test_uoe_schemas.py -v`
 Expected: FAIL with missing schema files or import errors.
 
-- [ ] **Step 3: Implement the three JSON schemas**
+- [x] **Step 3: Implement the three JSON schemas**
 Write `operational_contract_envelope.schema.json`, `compatibility_contract.schema.json`, and `execution_receipt.schema.json`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python3 -m unittest tests/test_uoe_schemas.py -v`
 Expected: PASS with 100% assertions green.
 
-- [ ] **Step 5: Verify zero Unicode dashes**
+- [x] **Step 5: Verify zero Unicode dashes**
 Run: `python3 -c "for f in ['data/schemas/operational_contract_envelope.schema.json', 'data/schemas/compatibility_contract.schema.json', 'data/schemas/execution_receipt.schema.json', 'tests/test_uoe_schemas.py']: text=open(f).read(); assert '\u2014' not in text and '\u2013' not in text, f"`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 ```bash
 git add data/schemas/ tests/test_uoe_schemas.py
 git commit -m "feat(schema): add canonical schemas for UOE operational contract envelopes and execution receipts"
@@ -206,21 +206,21 @@ git commit -m "feat(schema): add canonical schemas for UOE operational contract 
 - Consumes: Python dataclasses, typing protocols, RFC 8785 canonicalization.
 - Produces: `ExecutionProvider`, `WorkloadSpec`, `ProviderCapability`, `PreparedEnvironment`, `ExecutionReceipt`.
 
-- [ ] **Step 1: Write the failing test for ExecutionProvider interfaces**
+- [x] **Step 1: Write the failing test for ExecutionProvider interfaces**
 Write tests asserting that subclasses implement all lifecycle methods (`discover`, `inspect`, `score`, `prepare`, `execute`, `cleanup`) and handle failures cleanly.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python3 -m unittest tests/test_uef_provider_interface.py -v`
 Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement data models and abstract provider class**
+- [x] **Step 3: Implement data models and abstract provider class**
 Write `models.py` and `provider.py` with full type annotations, docstrings, and invariant checks.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python3 -m unittest tests/test_uef_provider_interface.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add packages/neuronix-core/neuronix_core/uef/ tests/test_uef_provider_interface.py
 git commit -m "feat(uef): implement abstract ExecutionProvider lifecycle and data models"
@@ -238,21 +238,21 @@ git commit -m "feat(uef): implement abstract ExecutionProvider lifecycle and dat
 - Consumes: `ExecutionProvider`, `subprocess`, `os`, `shutil`.
 - Produces: `NativeLinuxProvider` with host execution and resource tracking.
 
-- [ ] **Step 1: Write the failing test for NativeLinuxProvider**
+- [x] **Step 1: Write the failing test for NativeLinuxProvider**
 Test execution of system binaries, argument passing, environment variable propagation, exit code handling, and zero-tax execution.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python3 -m unittest tests/test_uef_native_provider.py -v`
 Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement NativeLinuxProvider**
+- [x] **Step 3: Implement NativeLinuxProvider**
 Write `native_provider.py` ensuring non-blocking execution options, timeout enforcement, and memory cleanup.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python3 -m unittest tests/test_uef_native_provider.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add packages/neuronix-core/neuronix_core/uef/native_provider.py tests/test_uef_native_provider.py
 git commit -m "feat(uef): implement NativeLinuxProvider with zero-overhead execution"
@@ -270,21 +270,21 @@ git commit -m "feat(uef): implement NativeLinuxProvider with zero-overhead execu
 - Consumes: `ExecutionProvider`, Bubblewrap binary discovery, user namespaces.
 - Produces: `RootfsBwrapProvider` executing binaries inside isolated rootfs trees.
 
-- [ ] **Step 1: Write the failing test for RootfsBwrapProvider**
+- [x] **Step 1: Write the failing test for RootfsBwrapProvider**
 Test capability discovery (bwrap check), mount table preparation, mock bwrap invocation, sandbox boundary enforcement, and cleanup.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python3 -m unittest tests/test_uef_rootfs_provider.py -v`
 Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement RootfsBwrapProvider**
+- [x] **Step 3: Implement RootfsBwrapProvider**
 Write `rootfs_provider.py` with sandboxed filesystem isolation, tmpfs mounts, read-only system binding, and signal handling.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python3 -m unittest tests/test_uef_rootfs_provider.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add packages/neuronix-core/neuronix_core/uef/rootfs_provider.py tests/test_uef_rootfs_provider.py
 git commit -m "feat(uef): implement RootfsBwrapProvider for unprivileged foreign rootfs isolation"
@@ -302,21 +302,21 @@ git commit -m "feat(uef): implement RootfsBwrapProvider for unprivileged foreign
 - Consumes: `ExecutionProvider`, OCI runtime (`crun`/`runc`/`podman`) detection.
 - Produces: `OciContainerProvider` for running containerized application workloads.
 
-- [ ] **Step 1: Write the failing test for OciContainerProvider**
+- [x] **Step 1: Write the failing test for OciContainerProvider**
 Test container image specification parsing, command generation, runtime inspection, and lifecycle isolation.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python3 -m unittest tests/test_uef_oci_provider.py -v`
 Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement OciContainerProvider**
+- [x] **Step 3: Implement OciContainerProvider**
 Write `oci_provider.py` ensuring fallback detection, network namespace restriction, and proper container teardown.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python3 -m unittest tests/test_uef_oci_provider.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add packages/neuronix-core/neuronix_core/uef/oci_provider.py tests/test_uef_oci_provider.py
 git commit -m "feat(uef): implement OciContainerProvider for portable container execution"
@@ -334,25 +334,25 @@ git commit -m "feat(uef): implement OciContainerProvider for portable container 
 - Consumes: All registered providers, `WorkloadSpec`, `OperationalContext`.
 - Produces: `ProviderResolver.resolve(workload, context) -> ExecutionProvider`.
 
-- [ ] **Step 1: Write the failing test for dynamic scoring resolver**
+- [x] **Step 1: Write the failing test for dynamic scoring resolver**
 Test mathematical scoring calculation across different workload requirements:
 - Native workload -> NativeLinuxProvider scores highest.
 - Foreign rootfs workload -> RootfsBwrapProvider selected.
 - OCI container workload -> OciContainerProvider selected.
 - Incompatible requirements -> Graceful rejection with diagnostic explanation.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python3 -m unittest tests/test_uef_resolver.py -v`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement ProviderResolver**
+- [x] **Step 3: Implement ProviderResolver**
 Write `resolver.py` implementing the normalized scoring formula with customizable weights and validation gates.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python3 -m unittest tests/test_uef_resolver.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add packages/neuronix-core/neuronix_core/uef/resolver.py tests/test_uef_resolver.py
 git commit -m "feat(uef): implement dynamic multi-factor provider scoring resolver"
@@ -372,24 +372,24 @@ git commit -m "feat(uef): implement dynamic multi-factor provider scoring resolv
 - Consumes: `StateCommitment`, `OperationalContractEnvelope`, `ProviderResolver`.
 - Produces: `CoherenceEngine.evaluate(envelope) -> CoherenceVerdict`.
 
-- [ ] **Step 1: Write the failing test for CoherenceEngine**
+- [x] **Step 1: Write the failing test for CoherenceEngine**
 Test 3 tiers of selective semanticization:
 - Tier 0: Passthrough verification (latency < 1ms, zero state mutation).
 - Tier 1: Lightweight receipt emission.
 - Tier 2: Full preflight, invariant verification, rejection of missing authority.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python3 -m unittest tests/test_osl_coherence.py -v`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement CoherenceEngine and skill integration**
+- [x] **Step 3: Implement CoherenceEngine and skill integration**
 Write `coherence.py` and connect envelope evaluation to `SkillDispatcher`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python3 -m unittest tests/test_osl_coherence.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add packages/neuronix-core/neuronix_core/osl/ packages/neuronix-core/neuronix_core/skills.py tests/test_osl_coherence.py
 git commit -m "feat(osl): implement CoherenceEngine with selective semanticization and invariant validation"
@@ -409,24 +409,24 @@ git commit -m "feat(osl): implement CoherenceEngine with selective semanticizati
 - Consumes: All completed UOE components.
 - Produces: Master architecture documentation, latency benchmark proofs, and clean assertion validation.
 
-- [ ] **Step 1: Write comprehensive architecture document**
+- [x] **Step 1: Write comprehensive architecture document**
 Create `docs/architecture/universal-operational-environment.md` explaining UOE, UEF, OSL, dynamic scoring, lean resource economics, and security guarantees.
 
-- [ ] **Step 2: Implement latency benchmarking script**
+- [x] **Step 2: Implement latency benchmarking script**
 Write `tests/benchmarks/benchmark_uef_latency.py` measuring resolver scoring latency, native execution overhead, and envelope validation time.
 
-- [ ] **Step 3: Update README.md**
+- [x] **Step 3: Update README.md**
 Update `README.md` to introduce the Universal Operational Environment architecture while preserving all v1.0.4 certified qualifications.
 
-- [ ] **Step 4: Execute entire test suite and verify zero regressions**
+- [x] **Step 4: Execute entire test suite and verify zero regressions**
 Run: `./tests/run_all_tests.sh`
 Run: `pytest tests/test_uoe_*.py tests/test_uef_*.py tests/test_osl_*.py`
 Expected: 100% green across all existing and new tests.
 
-- [ ] **Step 5: Strictly verify zero Unicode dashes in repository**
+- [x] **Step 5: Strictly verify zero Unicode dashes in repository**
 Run: `python3 -c "import os; bad=['\u2014', '\u2013']; [([print(f, line) for line in open(os.path.join(r, f), errors='ignore') if any(b in line for b in bad)]) for r, d, files in os.walk('.') if not '.git' in r for f in files if f.endswith(('.md', '.py', '.json', '.sh', '.rs', '.nix'))]"`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 ```bash
 git add docs/architecture/ tests/benchmarks/ README.md
 git commit -m "docs(architecture): specify Universal Operational Environment (UOE) and add empirical benchmarks"
