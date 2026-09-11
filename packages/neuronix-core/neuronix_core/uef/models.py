@@ -49,6 +49,18 @@ class CompatibilityReport:
 
 
 @dataclass(frozen=True)
+class CapabilityVector:
+    """Multi-factor metrics vector evaluated for a workload under operational context."""
+
+    compatible: bool
+    policy_fit: float  # 0.0 to 1.0 (satisfies security policy and requested tier)
+    isolation_fit: float  # 0.0 to 1.0 (isolation strength matching request)
+    resource_cost: float  # 0.0 to 1.0 (efficiency: 1.0 = zero overhead, 0.0 = heavy)
+    startup_latency: float  # 0.0 to 1.0 (speed: 1.0 = sub-millisecond, 0.0 = cold heavy)
+    provenance: float  # 0.0 to 1.0 (trust / verification guarantee)
+
+
+@dataclass(frozen=True)
 class OperationalContext:
     """Runtime constraints, security posture, and resource limits for execution."""
 

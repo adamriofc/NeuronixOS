@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
 from .models import (
+    CapabilityVector,
     CompatibilityReport,
     ExecutionReceiptData,
     OperationalContext,
@@ -45,6 +46,36 @@ class ExecutionProvider(ABC):
         Returns 0.0 if incompatible, or a normalized float in (0.0, 1.0].
         """
         pass
+
+    def evaluate_capabilities(
+        self,
+        workload: WorkloadSpec,
+        context: OperationalContext,
+    ) -> CapabilityVector:
+        """Evaluate factual capability vector for this workload under given context.
+
+        Subclasses should provide empirical metrics. Default implementation
+        derives vector from inspect and score.
+        """
+        report = self.inspect(workload)
+        if not report.compatible:
+            return CapabilityVector(
+                compatible=False,
+                policy_fit=0.0,
+                isolation_fit=0.0,
+                resource_cost=0.0,
+                startup_latency=0.0,
+                provenance=0.0,
+            )
+        s = self.score(workload, context)
+        return CapabilityVector(
+            compatible=True,
+            policy_fit=s,
+            isolation_fit=s,
+            resource_cost=s,
+            startup_latency=s,
+            provenance=s,
+        )
 
     @abstractmethod
     def prepare(self, workload: WorkloadSpec) -> PreparedEnvironment:

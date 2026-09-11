@@ -641,3 +641,9 @@ def get_current_state(root_dir: Optional[str] = None) -> Dict[str, Any]:
 def verify_current_state(root_dir: Optional[str] = None) -> Dict[str, Any]:
     engine = ProvableStateEngine(root_dir=root_dir)
     return engine.verify_state()
+
+def compute_state_root(root_dir: Optional[str] = None) -> str:
+    """Convenience helper to compute and return current 5-leaf system StateRoot."""
+    engine = ProvableStateEngine(root_dir=root_dir)
+    st = engine.build_state()
+    return st.get("state_root", NULL_SENTINEL_SHA256)

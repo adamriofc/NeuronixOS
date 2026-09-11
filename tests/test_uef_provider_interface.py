@@ -13,7 +13,9 @@ from typing import Any, Dict, List
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "packages" / "neuronix-core"))
 
+from neuronix_core import state
 from neuronix_core.uef.models import (
+    CapabilityVector,
     CompatibilityReport,
     ExecutionReceiptData,
     OperationalContext,
@@ -131,6 +133,36 @@ class TestUefProviderInterface(unittest.TestCase):
         report = provider.inspect(workload)
         self.assertFalse(report.compatible)
         self.assertIn("oci-image", report.missing_features)
+
+    def test_capability_vector_evaluation(self) -> None:
+        """ExecutionProvider can evaluate factual CapabilityVector."""
+        provider = MockProvider()
+        workload_compat = WorkloadSpec(
+            workload_id="wl-compat",
+            format="elf-binary",
+            entrypoint=["/bin/echo"],
+        )
+        ctx = OperationalContext(requested_isolation_tier="TIER_0_HOST")
+        vec = provider.evaluate_capabilities(workload_compat, ctx)
+        self.assertTrue(vec.compatible)
+        self.assertEqual(vec.policy_fit, 1.0)
+        self.assertEqual(vec.resource_cost, 1.0)
+
+        workload_incompat = WorkloadSpec(
+            workload_id="wl-incompat",
+            format="wasm-module",
+            entrypoint=["test.wasm"],
+        )
+        vec_incompat = provider.evaluate_capabilities(workload_incompat, ctx)
+        self.assertFalse(vec_incompat.compatible)
+        self.assertEqual(vec_incompat.policy_fit, 0.0)
+
+    def test_compute_state_root_helper(self) -> None:
+        """state.compute_state_root returns a valid 64-character hex digest."""
+        root = state.compute_state_root()
+        self.assertIsInstance(root, str)
+        self.assertEqual(len(root), 64)
+        int(root, 16)  # Verify hex encoding
 
 
 if __name__ == "__main__":
