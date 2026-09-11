@@ -6,6 +6,7 @@ Executes standard OCI container images and bundles with micro-container isolatio
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import resource
 import shutil
@@ -14,7 +15,10 @@ import tempfile
 import time
 from typing import Any, Dict, List, Optional
 
+from neuronix_core.state import canonical_json_bytes, compute_state_root
+
 from .models import (
+    CapabilityVector,
     CompatibilityReport,
     ExecutionReceiptData,
     OperationalContext,
@@ -64,9 +68,10 @@ class OciContainerProvider(ExecutionProvider):
         runtime = self._detect_runtime_binary()
         if not runtime:
             return CompatibilityReport(
-                compatible=True,  # Fallback to simulated/daemon container runtime
-                reason="OCI execution supported via platform container engine or emulation.",
-                estimated_startup_latency_ms=25.0,
+                compatible=False,
+                reason="No compatible OCI runtime (crun, runc, podman, docker) detected on host.",
+                missing_features=["oci_runtime"],
+                estimated_startup_latency_ms=0.0,
             )
 
         return CompatibilityReport(
@@ -75,9 +80,44 @@ class OciContainerProvider(ExecutionProvider):
             estimated_startup_latency_ms=15.0,
         )
 
-    def score(self, workload: WorkloadSpec, context: OperationalContext) -> float:
+    def evaluate_capabilities(
+        self,
+        workload: WorkloadSpec,
+        context: OperationalContext,
+    ) -> CapabilityVector:
         report = self.inspect(workload)
         if not report.compatible:
+            return CapabilityVector(
+                compatible=False,
+                policy_fit=0.0,
+                isolation_fit=0.0,
+                resource_cost=0.0,
+                startup_latency=0.0,
+                provenance=0.0,
+            )
+
+        policy_fit = 0.95 if workload.format == "oci-image" else 0.70
+        isolation_fit = (
+            0.85
+            if context.requested_isolation_tier in ["TIER_1_SANDBOX", "TIER_2_MICROVM"]
+            else 0.50
+        )
+        resource_cost = 0.75
+        startup_latency = 0.70
+        provenance = 0.95
+
+        return CapabilityVector(
+            compatible=True,
+            policy_fit=policy_fit,
+            isolation_fit=isolation_fit,
+            resource_cost=resource_cost,
+            startup_latency=startup_latency,
+            provenance=provenance,
+        )
+
+    def score(self, workload: WorkloadSpec, context: OperationalContext) -> float:
+        vec = self.evaluate_capabilities(workload, context)
+        if not vec.compatible:
             return 0.0
 
         if workload.format == "oci-image":
@@ -96,6 +136,36 @@ class OciContainerProvider(ExecutionProvider):
 
         def cleanup_workspace():
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+        # Write standard OCI bundle specification config.json for low-level runtimes
+        config_path = os.path.join(temp_dir, "config.json")
+        rootfs_dir = os.path.join(temp_dir, "rootfs")
+        os.makedirs(rootfs_dir, exist_ok=True)
+
+        args = list(workload.entrypoint) + list(workload.arguments)
+        oci_spec = {
+            "ociVersion": "1.0.2",
+            "process": {
+                "terminal": False,
+                "user": {"uid": 0, "gid": 0},
+                "args": args,
+                "env": [f"{k}={v}" for k, v in workload.env.items()],
+                "cwd": workload.working_dir or "/",
+            },
+            "root": {
+                "path": "rootfs",
+                "readonly": True,
+            },
+            "mounts": [
+                {
+                    "destination": "/proc",
+                    "type": "proc",
+                    "source": "proc",
+                }
+            ],
+        }
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(oci_spec, f, indent=2)
 
         prep = PreparedEnvironment(
             prepared_id=prepared_id,
@@ -117,8 +187,26 @@ class OciContainerProvider(ExecutionProvider):
         if not workload:
             raise RuntimeError("PreparedEnvironment missing associated WorkloadSpec.")
 
-        runtime = self._detect_runtime_binary() or "crun"
-        cmd = [runtime] + list(workload.entrypoint) + list(workload.arguments)
+        runtime = self._detect_runtime_binary()
+        if not runtime:
+            raise RuntimeError(
+                "No compatible OCI runtime (crun, runc, podman, docker) detected on host."
+            )
+
+        runtime_name = os.path.basename(runtime)
+        if runtime_name in ["podman", "docker"]:
+            cmd = [runtime, "run", "--rm"]
+            if workload.working_dir and workload.working_dir != "/":
+                cmd.extend(["-w", workload.working_dir])
+            for k, v in prepared.env_vars.items():
+                cmd.extend(["-e", f"{k}={v}"])
+            cmd.extend(workload.entrypoint)
+            cmd.extend(workload.arguments)
+        else:
+            # Low-level OCI runtime (crun / runc) with standard bundle directory
+            container_id = f"nrx-{int(time.time() * 1000) % 1000000:06d}"
+            cmd = [runtime, "run", "-b", prepared.temp_dir or ".", container_id]
+
         start_mono = time.monotonic()
         usage_start = resource.getrusage(resource.RUSAGE_CHILDREN)
 
@@ -136,10 +224,14 @@ class OciContainerProvider(ExecutionProvider):
             exit_code = 124
             stdout_bytes = b""
             stderr_bytes = b"Container execution timed out."
+        except FileNotFoundError as exc:
+            exit_code = 127
+            stdout_bytes = b""
+            stderr_bytes = f"OCI runtime binary not found: {exc}".encode("utf-8")
         except Exception as exc:
-            exit_code = 0
-            stdout_bytes = b"OCI_CONTAINER_OUTPUT\n"
-            stderr_bytes = f"OCI container handled: {exc}".encode("utf-8")
+            exit_code = 1
+            stdout_bytes = b""
+            stderr_bytes = f"OCI container execution failed: {exc}".encode("utf-8")
 
         duration_ms = (time.monotonic() - start_mono) * 1000.0
         usage_end = resource.getrusage(resource.RUSAGE_CHILDREN)
@@ -154,14 +246,31 @@ class OciContainerProvider(ExecutionProvider):
         evidence_input = f"{envelope.get('envelope_id', '')}:{exit_code}:{stdout_hash}:{stderr_hash}"
         evidence_digest = hashlib.sha256(evidence_input.encode("utf-8")).hexdigest()
         receipt_id = f"rcpt-{int(time.time()):08d}-{evidence_digest[:8]}"
-        state_root = envelope.get("preconditions", {}).get("required_state_root", "0" * 64)
+
+        try:
+            state_root_after = compute_state_root()
+        except Exception:
+            state_root_after = envelope.get("preconditions", {}).get("required_state_root", "0" * 64)
+
+        envelope_bytes = canonical_json_bytes(envelope)
+        envelope_hash = hashlib.sha256(envelope_bytes).hexdigest()
+
+        invariants_verified = (
+            [
+                inv
+                for inv in ["INV-SEC-008", "INV-SEC-012"]
+                if inv in envelope.get("invariants", ["INV-SEC-008", "INV-SEC-012"])
+            ]
+            if exit_code == 0
+            else []
+        )
 
         return ExecutionReceiptData(
             receipt_id=receipt_id,
-            envelope_hash=hashlib.sha256(str(envelope).encode("utf-8")).hexdigest(),
+            envelope_hash=envelope_hash,
             provider_id=self.provider_id,
             exit_code=exit_code,
-            state_root_after=state_root,
+            state_root_after=state_root_after,
             duration_ms=round(duration_ms, 3),
             resource_usage={
                 "peak_rss_bytes": usage_end.ru_maxrss * 1024,
@@ -172,7 +281,7 @@ class OciContainerProvider(ExecutionProvider):
             stderr_hash=stderr_hash,
             stdout_preview=stdout_bytes[:512].decode("utf-8", errors="replace"),
             stderr_preview=stderr_bytes[:512].decode("utf-8", errors="replace"),
-            invariants_verified=["INV-SEC-008", "INV-SEC-012"],
+            invariants_verified=invariants_verified,
         )
 
     def cleanup(self, prepared: PreparedEnvironment) -> ResourceReleaseProof:
