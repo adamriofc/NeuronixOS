@@ -74,7 +74,7 @@ class TestUefResolver(unittest.TestCase):
         provider, score, breakdown = self.resolver.resolve(workload, ctx)
 
         self.assertEqual(provider.provider_id, "oci.crun")
-        self.assertGreaterEqual(score, 0.85)
+        self.assertGreaterEqual(score, 0.80)
 
     def test_incompatible_workload_raises_typed_error(self) -> None:
         """Workload with unsupported format raises NoCompatibleProviderError with reports."""
@@ -90,6 +90,46 @@ class TestUefResolver(unittest.TestCase):
         err_msg = str(cm.exception)
         self.assertIn("quantum-qasm-bytecode", err_msg)
         self.assertIn("diagnostic_reports", dir(cm.exception))
+
+    def test_compute_score_formula_and_weights(self) -> None:
+        """Verifies mathematical vector scoring and weight customization."""
+        from neuronix_core.uef.models import CapabilityVector
+
+        vec = CapabilityVector(
+            compatible=True,
+            policy_fit=1.0,
+            isolation_fit=0.8,
+            resource_cost=0.6,
+            startup_latency=0.4,
+            provenance=0.2,
+        )
+        # Default weights: 0.25, 0.25, 0.20, 0.20, 0.10
+        # Expected: 0.25*1.0 + 0.25*0.8 + 0.20*0.6 + 0.20*0.4 + 0.10*0.2
+        # = 0.25 + 0.20 + 0.12 + 0.08 + 0.02 = 0.67
+        score = self.resolver.compute_score(vec)
+        self.assertAlmostEqual(score, 0.67, places=3)
+
+        # Incompatible vector returns 0.0
+        vec_incompat = CapabilityVector(
+            compatible=False,
+            policy_fit=1.0,
+            isolation_fit=1.0,
+            resource_cost=1.0,
+            startup_latency=1.0,
+            provenance=1.0,
+        )
+        self.assertEqual(self.resolver.compute_score(vec_incompat), 0.0)
+
+        # Custom weights validation
+        self.resolver.set_weights(
+            policy=0.50, isolation=0.20, resource=0.10, latency=0.10, provenance=0.10
+        )
+        score_custom = self.resolver.compute_score(vec)
+        # Expected: 0.5*1.0 + 0.2*0.8 + 0.1*0.6 + 0.1*0.4 + 0.1*0.2 = 0.5 + 0.16 + 0.06 + 0.04 + 0.02 = 0.78
+        self.assertAlmostEqual(score_custom, 0.78, places=3)
+
+        with self.assertRaises(ValueError):
+            self.resolver.set_weights(0.5, 0.5, 0.5, 0.5, 0.5)  # Sums to 2.5
 
 
 if __name__ == "__main__":

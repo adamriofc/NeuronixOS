@@ -13,7 +13,10 @@ import subprocess
 import time
 from typing import Any, Dict, List, Optional
 
+from neuronix_core.state import canonical_json_bytes, compute_state_root
+
 from .models import (
+    CapabilityVector,
     CompatibilityReport,
     ExecutionReceiptData,
     OperationalContext,
@@ -80,22 +83,57 @@ class NativeLinuxProvider(ExecutionProvider):
             estimated_startup_latency_ms=0.5,
         )
 
-    def score(self, workload: WorkloadSpec, context: OperationalContext) -> float:
+    def evaluate_capabilities(
+        self,
+        workload: WorkloadSpec,
+        context: OperationalContext,
+    ) -> CapabilityVector:
         report = self.inspect(workload)
         if not report.compatible:
+            return CapabilityVector(
+                compatible=False,
+                policy_fit=0.0,
+                isolation_fit=0.0,
+                resource_cost=0.0,
+                startup_latency=0.0,
+                provenance=0.0,
+            )
+
+        # Host execution:
+        # High resource efficiency (1.0 = zero overhead)
+        # High startup speed (0.99 = sub-millisecond)
+        # Provenance: 0.95 (direct signed/nix host store binaries)
+        if context.requested_isolation_tier == "TIER_0_HOST":
+            policy_fit = 0.99
+            isolation_fit = 0.95
+        elif context.requested_isolation_tier == "TIER_1_SANDBOX":
+            policy_fit = 0.50
+            isolation_fit = 0.20
+        else:
+            policy_fit = 0.20
+            isolation_fit = 0.05
+
+        return CapabilityVector(
+            compatible=True,
+            policy_fit=policy_fit,
+            isolation_fit=isolation_fit,
+            resource_cost=1.0,
+            startup_latency=0.99,
+            provenance=0.95,
+        )
+
+    def score(self, workload: WorkloadSpec, context: OperationalContext) -> float:
+        vec = self.evaluate_capabilities(workload, context)
+        if not vec.compatible:
             return 0.0
 
-        # Multi-factor weights:
-        # Host execution:
-        # High score for low latency and zero overhead.
-        # Penalty if high isolation tier was requested.
         base_score = 0.95
         if context.requested_isolation_tier == "TIER_0_HOST":
             return base_score + 0.04
         elif context.requested_isolation_tier == "TIER_1_SANDBOX":
-            return 0.40  # Can run, but lacks sandbox isolation
+            return 0.40
         elif context.requested_isolation_tier in ["TIER_2_MICROVM", "TIER_3_FORMAL"]:
-            return 0.10  # Very low score if strong VM isolation requested
+            return 0.10
         return base_score
 
     def prepare(self, workload: WorkloadSpec) -> PreparedEnvironment:
@@ -161,14 +199,31 @@ class NativeLinuxProvider(ExecutionProvider):
         evidence_digest = hashlib.sha256(evidence_input.encode("utf-8")).hexdigest()
 
         receipt_id = f"rcpt-{int(time.time()):08d}-{evidence_digest[:8]}"
-        state_root = envelope.get("preconditions", {}).get("required_state_root", "0" * 64)
+
+        try:
+            state_root_after = compute_state_root()
+        except Exception:
+            state_root_after = envelope.get("preconditions", {}).get("required_state_root", "0" * 64)
+
+        envelope_bytes = canonical_json_bytes(envelope)
+        envelope_hash = hashlib.sha256(envelope_bytes).hexdigest()
+
+        invariants_verified = (
+            [
+                inv
+                for inv in ["INV-SEC-001"]
+                if inv in envelope.get("invariants", ["INV-SEC-001"])
+            ]
+            if exit_code == 0
+            else []
+        )
 
         return ExecutionReceiptData(
             receipt_id=receipt_id,
-            envelope_hash=hashlib.sha256(str(envelope).encode("utf-8")).hexdigest(),
+            envelope_hash=envelope_hash,
             provider_id=self.provider_id,
             exit_code=exit_code,
-            state_root_after=state_root,
+            state_root_after=state_root_after,
             duration_ms=round(duration_ms, 3),
             resource_usage={
                 "peak_rss_bytes": usage_end.ru_maxrss * 1024,
@@ -179,7 +234,7 @@ class NativeLinuxProvider(ExecutionProvider):
             stderr_hash=stderr_hash,
             stdout_preview=stdout_bytes[:512].decode("utf-8", errors="replace"),
             stderr_preview=stderr_bytes[:512].decode("utf-8", errors="replace"),
-            invariants_verified=["INV-SEC-001"],
+            invariants_verified=invariants_verified,
         )
 
     def cleanup(self, prepared: PreparedEnvironment) -> ResourceReleaseProof:

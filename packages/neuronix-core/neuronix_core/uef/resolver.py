@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 from .models import (
+    CapabilityVector,
     CompatibilityReport,
     OperationalContext,
     WorkloadSpec,
@@ -48,6 +49,39 @@ class ProviderResolver:
         self.w_latency = 0.20
         self.w_provenance = 0.10
 
+    def set_weights(
+        self,
+        policy: float,
+        isolation: float,
+        resource: float,
+        latency: float,
+        provenance: float,
+    ) -> None:
+        """Configure custom scoring weights. Must sum to 1.0."""
+        total = policy + isolation + resource + latency + provenance
+        if abs(total - 1.0) > 1e-4:
+            raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
+        self.w_policy = policy
+        self.w_isolation = isolation
+        self.w_resource = resource
+        self.w_latency = latency
+        self.w_provenance = provenance
+
+    def compute_score(self, vector: CapabilityVector) -> float:
+        """Compute scalar score using the formal multi-factor formula:
+        Score = C_compat * (w_policy * P + w_isolation * I + w_resource * R + w_latency * L + w_provenance * Q)
+        """
+        if not vector.compatible:
+            return 0.0
+        raw = (
+            self.w_policy * vector.policy_fit
+            + self.w_isolation * vector.isolation_fit
+            + self.w_resource * vector.resource_cost
+            + self.w_latency * vector.startup_latency
+            + self.w_provenance * vector.provenance
+        )
+        return round(raw, 4)
+
     def register(self, provider: ExecutionProvider) -> None:
         """Register an execution provider with the resolver."""
         self._providers[provider.provider_id] = provider
@@ -83,8 +117,9 @@ class ProviderResolver:
                 scores[pid] = 0.0
                 continue
 
-            score = provider.score(workload, context)
-            scores[pid] = round(score, 4)
+            vector = provider.evaluate_capabilities(workload, context)
+            score = self.compute_score(vector)
+            scores[pid] = score
 
         best_score = -1.0
         best_provider: Optional[ExecutionProvider] = None

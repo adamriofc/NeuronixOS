@@ -102,8 +102,8 @@ class OciContainerProvider(ExecutionProvider):
             if context.requested_isolation_tier in ["TIER_1_SANDBOX", "TIER_2_MICROVM"]
             else 0.50
         )
-        resource_cost = 0.75
-        startup_latency = 0.70
+        resource_cost = 0.80
+        startup_latency = 0.75
         provenance = 0.95
 
         return CapabilityVector(
