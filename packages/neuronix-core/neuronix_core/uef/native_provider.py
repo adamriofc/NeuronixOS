@@ -11,6 +11,7 @@ import resource
 import shutil
 import subprocess
 import time
+from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from neuronix_core.state import canonical_json_bytes, compute_state_root
@@ -26,6 +27,11 @@ from .models import (
     WorkloadSpec,
 )
 from .provider import ExecutionProvider
+
+
+@lru_cache(maxsize=64)
+def _find_binary(name: str) -> Optional[str]:
+    return shutil.which(name)
 
 
 class NativeLinuxProvider(ExecutionProvider):
@@ -63,7 +69,7 @@ class NativeLinuxProvider(ExecutionProvider):
 
         binary = workload.entrypoint[0]
         if not os.path.isabs(binary):
-            resolved = shutil.which(binary)
+            resolved = _find_binary(binary)
             if not resolved:
                 return CompatibilityReport(
                     compatible=False,
@@ -87,8 +93,10 @@ class NativeLinuxProvider(ExecutionProvider):
         self,
         workload: WorkloadSpec,
         context: OperationalContext,
+        report: Optional[CompatibilityReport] = None,
     ) -> CapabilityVector:
-        report = self.inspect(workload)
+        if report is None:
+            report = self.inspect(workload)
         if not report.compatible:
             return CapabilityVector(
                 compatible=False,
@@ -203,7 +211,7 @@ class NativeLinuxProvider(ExecutionProvider):
         try:
             state_root_after = compute_state_root()
         except Exception:
-            state_root_after = envelope.get("preconditions", {}).get("required_state_root", "0" * 64)
+            state_root_after = "UNVERIFIED"
 
         envelope_bytes = canonical_json_bytes(envelope)
         envelope_hash = hashlib.sha256(envelope_bytes).hexdigest()

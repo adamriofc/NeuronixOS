@@ -292,12 +292,86 @@ def benchmark_endurance_1000_cycles(total_cycles: int = 1000) -> Dict[str, Any]:
     }
 
 
+def benchmark_oci_endurance_100_cycles(total_cycles: int = 100) -> Dict[str, Any]:
+    """
+    Execute 100 full OCI container lifecycle and bundle preparation/cleanup cycles,
+    verifying strict zero-leak invariants (zero FD leaks, zero mount leaks, zero temp dirs).
+    """
+    oci_provider = OciContainerProvider()
+    wl_oci = WorkloadSpec(
+        workload_id="bench-oci-cycle",
+        format="oci-bundle",
+        entrypoint=["/bin/true"],
+    )
+
+    # Baseline snapshot
+    gc.collect()
+    start_rss = get_current_rss_mb()
+    start_fds = count_open_fds()
+    start_mounts = count_active_mounts()
+    start_temp_dirs = count_neuronix_temp_dirs()
+
+    t_start = time.perf_counter()
+    for i in range(total_cycles):
+        prep = oci_provider.prepare(wl_oci)
+        proof = oci_provider.cleanup(prep)
+        assert proof.clean, f"OCI lifecycle {i} cleanup was not clean"
+
+    t_end = time.perf_counter()
+    duration_total_s = t_end - t_start
+
+    # Post-execution snapshot
+    gc.collect()
+    end_rss = get_current_rss_mb()
+    end_fds = count_open_fds()
+    end_mounts = count_active_mounts()
+    end_temp_dirs = count_neuronix_temp_dirs()
+
+    fd_delta = end_fds - start_fds
+    mount_delta = end_mounts - start_mounts
+    temp_dir_delta = end_temp_dirs - start_temp_dirs
+    rss_delta_mb = round(end_rss - start_rss, 2)
+
+    # Verification assertions
+    assert fd_delta == 0, f"OCI FD leak detected: delta={fd_delta} (start={start_fds}, end={end_fds})"
+    assert mount_delta == 0, f"OCI Mount leak detected: delta={mount_delta} (start={start_mounts}, end={end_mounts})"
+    assert temp_dir_delta == 0, f"OCI Temp dir leak detected: delta={temp_dir_delta} (start={start_temp_dirs}, end={end_temp_dirs})"
+    assert rss_delta_mb < 20.0, f"OCI Memory leak detected: RSS growth={rss_delta_mb} MB exceeds 20.0 MB threshold"
+
+    return {
+        "total_cycles": total_cycles,
+        "total_duration_s": round(duration_total_s, 2),
+        "mean_cycle_latency_ms": round((duration_total_s / total_cycles) * 1000.0, 3),
+        "resource_deltas": {
+            "fd_start": start_fds,
+            "fd_end": end_fds,
+            "fd_delta": fd_delta,
+            "mount_start": start_mounts,
+            "mount_end": end_mounts,
+            "mount_delta": mount_delta,
+            "temp_dir_start": start_temp_dirs,
+            "temp_dir_end": end_temp_dirs,
+            "temp_dir_delta": temp_dir_delta,
+            "rss_start_mb": round(start_rss, 2),
+            "rss_end_mb": round(end_rss, 2),
+            "rss_delta_mb": rss_delta_mb,
+        },
+        "invariants_passed": {
+            "INV-RES-001_ZERO_FD_LEAK": (fd_delta == 0),
+            "INV-RES-002_ZERO_MOUNT_LEAK": (mount_delta == 0),
+            "INV-RES-003_ZERO_TEMP_DIR_LEAK": (temp_dir_delta == 0),
+            "INV-RES-004_BOUNDED_RSS_GROWTH": (rss_delta_mb < 20.0),
+        },
+    }
+
+
 def main() -> None:
     print("Executing UEF Resource Qualification & Endurance Benchmark...")
 
     baseline = benchmark_idle_core_baseline()
     lifecycle = benchmark_provider_lifecycles()
     endurance = benchmark_endurance_1000_cycles(1000)
+    oci_endurance = benchmark_oci_endurance_100_cycles(100)
 
     report = {
         "benchmark": "UEF Resource Qualification Profile",
@@ -305,6 +379,7 @@ def main() -> None:
         "idle_core_baseline": baseline,
         "provider_lifecycles": lifecycle,
         "endurance_qualification": endurance,
+        "oci_endurance_qualification": oci_endurance,
     }
 
     print(json.dumps(report, indent=2))

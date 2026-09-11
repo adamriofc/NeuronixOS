@@ -58,6 +58,8 @@ class DelegatedAuthorityTier:
     FULL_DELEGATED_CONTROL = "FULL_DELEGATED_CONTROL"
 
 
+from neuronix_core import crypto
+
 class DelegationRecord:
     def __init__(
         self,
@@ -69,7 +71,10 @@ class DelegationRecord:
         expires_at: Optional[float] = None,
         revoked: bool = False,
         input_digest: Optional[str] = None,
-        single_use: bool = False
+        single_use: bool = False,
+        nonce: Optional[str] = None,
+        signature_hex: Optional[str] = None,
+        issuer_public_key_hex: Optional[str] = None,
     ):
         self.delegation_id = delegation_id
         self.principal_id = principal_id
@@ -81,8 +86,29 @@ class DelegationRecord:
         self.input_digest = input_digest
         self.single_use = single_use
         self.consumed = False
+        self.nonce = nonce or uuid.uuid4().hex
+        self.signature_hex = signature_hex or ""
+        self.issuer_public_key_hex = issuer_public_key_hex or ""
 
-    def is_valid_for(self, skill_id: str, input_digest: Optional[str] = None) -> bool:
+    def canonical_payload(self) -> Dict[str, Any]:
+        """Emit deterministic canonical payload for RFC 8032 Ed25519 signing and verification."""
+        return {
+            "delegation_id": self.delegation_id,
+            "principal_id": self.principal_id,
+            "granted_tier": self.granted_tier,
+            "scope_skills": sorted(self.scope_skills),
+            "granted_by": self.granted_by,
+            "expires_at": int(self.expires_at),
+            "input_digest": self.input_digest or "",
+            "nonce": self.nonce,
+        }
+
+    def is_valid_for(
+        self,
+        skill_id: str,
+        input_digest: Optional[str] = None,
+        provided_signature: Optional[str] = None,
+    ) -> bool:
         if self.revoked or self.consumed:
             return False
         if time.time() > self.expires_at:
@@ -90,6 +116,14 @@ class DelegationRecord:
         if self.input_digest is not None and input_digest is not None:
             if input_digest != self.input_digest:
                 return False
+
+        # Ed25519 cryptographic signature verification
+        sig_to_verify = provided_signature or self.signature_hex
+        if sig_to_verify and self.issuer_public_key_hex:
+            payload = self.canonical_payload()
+            if not crypto.verify_canonical(payload, sig_to_verify, self.issuer_public_key_hex):
+                return False
+
         if "*" in self.scope_skills:
             return True
         for pattern in self.scope_skills:
@@ -114,13 +148,29 @@ class DelegationRecord:
             "expires_at": self.expires_at,
             "revoked": self.revoked or self.consumed,
             "input_digest": self.input_digest,
-            "single_use": self.single_use
+            "single_use": self.single_use,
+            "nonce": self.nonce,
+            "signature_hex": self.signature_hex,
+            "issuer_public_key_hex": self.issuer_public_key_hex,
         }
 
 
 class DelegationRegistry:
-    def __init__(self):
+    def __init__(
+        self,
+        owner_private_key_hex: Optional[str] = None,
+        owner_public_key_hex: Optional[str] = None,
+    ):
+        if owner_private_key_hex and owner_public_key_hex:
+            self._owner_priv_hex = owner_private_key_hex
+            self._owner_pub_hex = owner_public_key_hex
+        else:
+            self._owner_priv_hex, self._owner_pub_hex = crypto.generate_keypair()
         self._grants: Dict[str, DelegationRecord] = {}
+
+    @property
+    def owner_public_key_hex(self) -> str:
+        return self._owner_pub_hex
 
     def grant(
         self,
@@ -130,11 +180,33 @@ class DelegationRegistry:
         duration_seconds: int = 86400,
         granted_by: str = "HUMAN_OWNER",
         input_digest: Optional[str] = None,
-        single_use: bool = False
+        single_use: bool = False,
+        signing_key_hex: Optional[str] = None,
     ) -> DelegationRecord:
         delegation_id = f"DEL-{uuid.uuid4().hex[:12].upper()}"
         scope = scope or ["*"]
         expires_at = time.time() + duration_seconds
+        nonce = uuid.uuid4().hex
+
+        priv_key = signing_key_hex or self._owner_priv_hex
+        pub_key = (
+            self._owner_pub_hex
+            if not signing_key_hex
+            else crypto._ed25519_publickey(bytes.fromhex(signing_key_hex)).hex()
+        )
+
+        payload = {
+            "delegation_id": delegation_id,
+            "principal_id": principal_id,
+            "granted_tier": tier,
+            "scope_skills": sorted(scope),
+            "granted_by": granted_by,
+            "expires_at": int(expires_at),
+            "input_digest": input_digest or "",
+            "nonce": nonce,
+        }
+        signature_hex = crypto.sign_canonical(payload, priv_key)
+
         record = DelegationRecord(
             delegation_id=delegation_id,
             principal_id=principal_id,
@@ -143,7 +215,10 @@ class DelegationRegistry:
             granted_by=granted_by,
             expires_at=expires_at,
             input_digest=input_digest,
-            single_use=single_use
+            single_use=single_use,
+            nonce=nonce,
+            signature_hex=signature_hex,
+            issuer_public_key_hex=pub_key,
         )
         self._grants[delegation_id] = record
         return record
@@ -165,9 +240,27 @@ class DelegationRegistry:
     def get(self, delegation_id: str) -> Optional[DelegationRecord]:
         return self._grants.get(delegation_id)
 
-    def validate_token(self, token: str, skill_id: str, input_digest: Optional[str] = None) -> Optional[DelegationRecord]:
-        record = self._grants.get(token)
-        if record and record.is_valid_for(skill_id, input_digest=input_digest):
+    def validate_token(
+        self,
+        token: str,
+        skill_id: str,
+        input_digest: Optional[str] = None,
+        signature: Optional[str] = None,
+    ) -> Optional[DelegationRecord]:
+        # Support direct token ID or composite token DEL-<id>.<sig>.<pubkey>
+        delegation_id = token.split(".")[0] if "." in token else token
+        record = self._grants.get(delegation_id)
+        provided_sig = signature
+        if "." in token:
+            parts = token.split(".")
+            if len(parts) >= 2:
+                provided_sig = parts[1]
+
+        if record and record.is_valid_for(
+            skill_id,
+            input_digest=input_digest,
+            provided_signature=provided_sig,
+        ):
             return record
         return None
 

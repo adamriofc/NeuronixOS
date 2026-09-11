@@ -1316,11 +1316,13 @@ NEURONIX OS evolves from traditional operating system assumptions into a **Unive
 - **Hardened Fail-Closed Execution Providers:**
   - `native.linux`: 0% overhead host POSIX execution with direct syscall performance.
   - `rootfs.bwrap`: Unprivileged Bubblewrap sandbox for foreign rootfs directories. Fails closed (`compatible = False`) when `bwrap` is missing; captures authentic stderr and non-zero exit codes.
-  - `oci.crun`: Standard OCI container runtime (`crun`/`runc`/`podman`) generating valid OCI bundle `config.json` specifications and eliminating synthetic mock receipts.
-- **Authoritative Cryptographic Delegation Verification:** AI agent mutations require valid delegation tokens verified against `DelegationRegistry.validate_token()` across principal identity, scope, delegation tier, expiration timestamp, and anti-replay input digest. Unexecutable actions fail closed with `CoherenceUnexecutableError`.
-- **Empirical Latency & Zero-Leak Qualification:**
+  - `oci.crun`: Two-mode OCI container provider enforcing strict runtime compatibility. Mode A (`oci-image`) requires high-level runtimes (`podman`/`docker`) and rejects low-level runners; Mode B (`rootfs-dir`) wires compliant `config.json` bundle specifications to verified rootfs paths for `crun`/`runc`.
+- **Pure-Python Ed25519 Cryptographic Delegation:** AI agent mutations require valid delegation tokens digitally signed and verified via pure-Python RFC 8032 Ed25519 cryptography across principal identity, action scope, delegation tier, expiration timestamp, and anti-replay input digest. Unexecutable actions fail closed with `CoherenceUnexecutableError`.
+- **Fail-Closed StateRoot Post-State Verification:** All provider receipts record live state root queries. Failed state computations emit `"UNVERIFIED"`, causing Tier 2 mutations to abort with `CoherenceStateRootError`.
+- **Empirical Latency & Zero-Leak Multi-Provider Endurance:**
   - *Resolver & Coherence Latency:* Median 269 us dynamic resolution scoring; median 3.04 us envelope policy evaluation.
-  - *1,000-Cycle Endurance Qualification:* 1,000 full execution lifecycles verified in 13.7 s with **0 FD leaks**, **0 mount leaks**, **0 leftover temporary directories**, and **0.33 MB bounded RSS delta**.
+  - *1,000-Cycle Endurance Qualification (Native + Rootfs):* 1,000 full execution lifecycles verified with **0 FD leaks**, **0 mount leaks**, **0 leftover temporary directories**, and **0.31 MB bounded RSS delta**.
+  - *100-Cycle OCI Container Qualification:* 100 full container bundle preparation and cleanup lifecycles verified with **0 FD leaks**, **0 mount leaks**, **0 leftover temporary directories**, and **0.01 MB RSS delta** (1.05 ms/cycle).
 - **The 8 Lean Architecture Rules:** Zero idle execution daemons, no unnecessary virtual machines, ephemeral memory cleanup on exit, lean ISO distribution footprint, and native path preservation.
 
 ---

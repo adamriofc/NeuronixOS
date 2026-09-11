@@ -18,6 +18,7 @@ from neuronix_core.osl.coherence import (
     CoherenceApprovalRequired,
     CoherenceEngine,
     CoherenceInvariantViolation,
+    CoherenceStateRootError,
     CoherenceStateRootMismatch,
     CoherenceUnexecutableError,
     CoherenceVerdict,
@@ -296,6 +297,97 @@ class TestOslCoherence(unittest.TestCase):
         self.assertEqual(len(receipt.envelope_hash), 64)
         self.assertEqual(len(receipt.state_root_after), 64)
         self.assertIn("INV-SEC-001", receipt.invariants_verified)
+
+    def test_ed25519_cryptographic_delegation_signature_verified(self) -> None:
+        """Authentic Ed25519 digital signature on delegation grant is verified successfully."""
+        dispatcher = skills.get_dispatcher()
+        grant = dispatcher.delegations.grant(
+            principal_id="ai-agent-crypto-valid",
+            tier="DELEGATED_SCOPED",
+            scope=["network.configure"],
+            input_digest="hash-crypto-01",
+        )
+        self.assertTrue(len(grant.signature_hex) > 0, "Delegation record must carry Ed25519 signature")
+        self.assertTrue(len(grant.issuer_public_key_hex) > 0, "Delegation record must carry issuer public key")
+
+        envelope = {
+            "envelope_id": "oce-crypto-001",
+            "intent": {
+                "action": "network.configure",
+                "category": "MUTATE",
+            },
+            "actor": {
+                "principal_id": "ai-agent-crypto-valid",
+                "principal_type": "AI_AGENT",
+                "session_nonce": "nonce-crypto-01",
+            },
+            "authority": {
+                "tier": "DELEGATED_SCOPED",
+                "token": grant.token,
+                "signature": grant.signature_hex,
+            },
+            "environment": {
+                "target_substrate": "NIXOS_HOST",
+                "isolation_tier": "TIER_0_HOST",
+            },
+            "evidence": {"input_digest": "hash-crypto-01"},
+        }
+        verdict = self.engine.evaluate_envelope(envelope)
+        self.assertTrue(verdict.authorized)
+        self.assertEqual(verdict.semantic_tier, "TIER_2_FULL_CONTRACT")
+
+    def test_forged_delegation_signature_rejected(self) -> None:
+        """Forged or tampered Ed25519 signature fails validation closed."""
+        dispatcher = skills.get_dispatcher()
+        grant = dispatcher.delegations.grant(
+            principal_id="ai-agent-crypto-tamper",
+            tier="DELEGATED_SCOPED",
+            scope=["storage.wipe"],
+            input_digest="hash-crypto-02",
+        )
+        forged_sig = "ba" * 64  # Invalid 64-byte hex signature
+
+        envelope = {
+            "envelope_id": "oce-crypto-tamper",
+            "intent": {
+                "action": "storage.wipe",
+                "category": "MUTATE",
+            },
+            "actor": {
+                "principal_id": "ai-agent-crypto-tamper",
+                "principal_type": "AI_AGENT",
+                "session_nonce": "nonce-crypto-02",
+            },
+            "authority": {
+                "tier": "DELEGATED_SCOPED",
+                "token": grant.token,
+                "signature": forged_sig,
+            },
+            "evidence": {"input_digest": "hash-crypto-02"},
+        }
+        with self.assertRaises(CoherenceApprovalRequired):
+            self.engine.evaluate_envelope(envelope)
+
+    def test_tier_2_unverified_stateroot_fails_closed(self) -> None:
+        """Tier 2 mutation fails closed with CoherenceStateRootError if post-state root is UNVERIFIED."""
+        from unittest.mock import patch
+        envelope = {
+            "envelope_id": "oce-exec-unverified",
+            "intent": {
+                "action": "system.test_unverified",
+                "category": "MUTATE",
+                "entrypoint": ["/bin/true"],
+            },
+            "actor": {
+                "principal_id": "operator-01",
+                "principal_type": "HUMAN_OPERATOR",
+            },
+            "authority": {"tier": "FULL_OPERATOR"},
+        }
+
+        with patch("neuronix_core.uef.native_provider.compute_state_root", side_effect=RuntimeError("Store unavailable")):
+            with self.assertRaises(CoherenceStateRootError):
+                self.engine.execute_envelope(envelope)
 
 
 if __name__ == "__main__":

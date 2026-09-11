@@ -117,7 +117,7 @@ class ProviderResolver:
                 scores[pid] = 0.0
                 continue
 
-            vector = provider.evaluate_capabilities(workload, context)
+            vector = provider.evaluate_capabilities(workload, context, report=report)
             score = self.compute_score(vector)
             scores[pid] = score
 

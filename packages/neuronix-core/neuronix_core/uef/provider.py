@@ -51,13 +51,15 @@ class ExecutionProvider(ABC):
         self,
         workload: WorkloadSpec,
         context: OperationalContext,
+        report: Optional[CompatibilityReport] = None,
     ) -> CapabilityVector:
         """Evaluate factual capability vector for this workload under given context.
 
         Subclasses should provide empirical metrics. Default implementation
         derives vector from inspect and score.
         """
-        report = self.inspect(workload)
+        if report is None:
+            report = self.inspect(workload)
         if not report.compatible:
             return CapabilityVector(
                 compatible=False,

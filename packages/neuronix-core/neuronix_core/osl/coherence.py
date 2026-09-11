@@ -43,6 +43,16 @@ class CoherenceStateRootMismatch(Exception):
         )
 
 
+class CoherenceStateRootError(Exception):
+    """Raised when post-mutation StateRoot computation fails or cannot be verified."""
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(
+            f"Post-mutation StateRoot verification failed closed: {reason}"
+        )
+
+
 class CoherenceInvariantViolation(Exception):
     """Raised when an enforced security or operational invariant is violated."""
 
@@ -147,6 +157,7 @@ class CoherenceEngine:
             # Human sovereignty gate: AI agents require authentic, unrevoked delegation
             if principal_type == "AI_AGENT":
                 token = authority.get("token", "")
+                signature = authority.get("signature")
                 if not token:
                     raise CoherenceApprovalRequired(envelope)
 
@@ -157,6 +168,7 @@ class CoherenceEngine:
                     token=token,
                     skill_id=action,
                     input_digest=input_digest,
+                    signature=signature,
                 )
                 if not grant:
                     raise CoherenceApprovalRequired(envelope)
@@ -235,5 +247,11 @@ class CoherenceEngine:
             receipt = provider.execute(prepared, envelope)
         finally:
             provider.cleanup(prepared)
+
+        # Tier 2 StateRoot fail-closed verification
+        if verdict.semantic_tier == "TIER_2_FULL_CONTRACT" and receipt.state_root_after == "UNVERIFIED":
+            raise CoherenceStateRootError(
+                "Post-execution StateRoot is UNVERIFIED; mutation cannot be certified."
+            )
 
         return receipt

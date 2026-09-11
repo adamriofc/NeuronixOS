@@ -85,9 +85,11 @@ The Universal Execution Fabric resolves workloads across three canonical provide
 | `oci.crun` | OCI standard container runtime | `oci-image`, `rootfs-dir` | 0.85 (Container) | Moderate (15-25ms) | Moderate container |
 
 ### Fail-Closed Execution Hardening
-1. **Missing Runtime Rejection:**
+1. **Missing Runtime Rejection & Two-Mode OCI Contract:**
    - `RootfsBwrapProvider`: When the `bwrap` binary is absent, `inspect()` marks `compatible = False`, immediately preventing invalid dispatch.
-   - `OciContainerProvider`: When no OCI runtime (`crun`, `runc`, `podman`, `docker`) is installed on the host, `inspect()` marks `compatible = False`.
+   - `OciContainerProvider`: Enforces a strict two-mode execution contract:
+     - **Mode A (High-Level Container Image):** Workloads with `format="oci-image"` require high-level container runtimes (`podman` or `docker`). If only low-level bundle runners (`crun` or `runc`) are present on the host, `inspect()` fails closed with `compatible = False` and `missing_features = ["podman", "docker"]`.
+     - **Mode B (Low-Level Rootfs Bundle):** Workloads with `format="rootfs-dir"` require a valid, existing host directory path in `rootfs_path`. It generates a compliant OCI `config.json` specification with `root.path` wired directly to the verified rootfs, runnable via `crun` or `runc`. Missing all runtimes causes `inspect()` to fail closed.
 2. **Authentic Subprocess Execution:**
    - Providers execute authentic host binaries or sandboxed processes via real subprocess pipelines.
    - Exit codes, real `stdout`, and real `stderr` are preserved verifiably. Synthetic success strings (e.g. `ROOTFS_EXEC_SUCCESS`, `OCI_CONTAINER_OUTPUT`) are strictly prohibited.
@@ -123,19 +125,21 @@ Where:
 
 ## 6. Coherence Engine Enforcement & Human Sovereignty
 
-1. **Authoritative Delegation Registry Verification:**
+1. **Authoritative Cryptographic Delegation Verification (Pure-Python Ed25519):**
    - Naive token prefix matching (e.g. `DEL-`) is strictly forbidden.
-   - Delegation tokens presented by `AI_AGENT` principals are verified authoritatively against `DelegationRegistry.validate_token()`:
+   - Delegation tokens presented by `AI_AGENT` principals are cryptographically signed and verified via pure-Python RFC 8032 Ed25519 digital signatures (`neuronix_core.crypto`):
+     - Cryptographic signature check (`_ed25519_verify`) over canonical JCS token payload using issuer public key.
      - Principal identity match (`agent_id == token.principal_id`).
      - Scope conformance (`action` matching declared `scope` pattern).
      - Delegation tier sufficiency (`DELEGATED_SCOPED` or `FULL_OPERATOR`).
      - Cryptographic expiration timestamp (`valid_until_utc > now`).
      - Anti-replay input digest binding (`evidence.input_digest == token.input_digest`).
-   - Tokens failing any check trigger `CoherenceApprovalRequired`, forcing interactive human operator review in Conductor.
-2. **Security Invariant Validation Gates:**
-   - Formal invariants (`INV-SEC-001` through `INV-SEC-020`) are checked against strict regex syntax (`^INV-SEC-[0-9]{3}$`).
-   - `INV-SEC-002`: Enforces verified host KVM hardware virtualization availability.
-   - `INV-SEC-014`: Enforces secret leakage prevention by inspecting envelope diffs for raw private keys or plain secrets.
+   - Tokens failing signature or validation checks trigger `CoherenceApprovalRequired`, forcing interactive human operator review in Conductor.
+2. **Security Invariant Semantic Routing & In-Engine Gates:**
+   - The full catalog of 20 formal invariants (`INV-SEC-001` through `INV-SEC-020`) has structured semantic routing across the architecture (e.g. LSM sandboxing in `INV-SEC-001`, container isolation in `INV-SEC-008`, StateRoot tracking in `INV-SEC-012`).
+   - Specific critical runtime gates are strictly enforced in-engine:
+     - `INV-SEC-002`: Enforces verified host KVM hardware virtualization availability via `/dev/kvm`.
+     - `INV-SEC-014`: Enforces secret leakage prevention by inspecting envelope diffs for raw private keys or plain secrets.
 3. **Zero-Simulation Execution Rejection:**
    - The Coherence Engine rejects synthetic execution fallbacks (e.g. `/bin/echo "Executed: ..."`).
    - If an operational action is not mapped to an active executable skill, execution raises `CoherenceUnexecutableError`, ensuring unexecutable actions fail closed.
@@ -147,8 +151,10 @@ Where:
 1. **Bit-Level Canonical Envelope Hashing:**
    - Envelope digests are calculated strictly via `canonical_json_bytes(envelope)` adhering to RFC 8785 JSON Canonicalization Scheme (JCS).
    - Naive `str(dict)` approximations and unescaped serializations are eliminated.
-2. **Truthful StateRoot Lineage:**
+2. **Truthful StateRoot Lineage & Fail-Closed Mutation:**
    - All execution receipts query the live Git commit and NixOS generational state root via `compute_state_root()`.
+   - If state root computation fails post-execution, receipts emit `"UNVERIFIED"`.
+   - In `CoherenceEngine.execute_envelope()`, any Tier 2 mutation (`TIER_2_FULL_CONTRACT`) with an `"UNVERIFIED"` state root strictly fails closed and raises `CoherenceStateRootError`, never committing unverified mutations.
    - Receipts record the verified `state_root_after`, enabling offline falsifiable lineage traversal via `verify_passport.py`.
 3. **Truthful Invariant Accounting:**
    - Receipts only report security invariants that were genuinely verified during that specific execution cycle.
@@ -163,15 +169,20 @@ The UOE architecture has been qualified through empirical latency and resource e
 - **Resolver Scoring Latency:** Median 269 us (p99 477 us, mean 283 us), confirming sub-millisecond dynamic routing.
 - **Coherence Evaluation Latency:** Median 3.04 us (p99 3.45 us, mean 3.21 us), confirming microsecond-level policy evaluation.
 
-### B. Resource Qualification & 1,000-Cycle Endurance (`benchmark_uef_resources.py`)
-- **Idle Core Baseline:** Memory footprint of 26.7 MB RSS, background CPU idle consumption of 0.05 ms / 50 ms window, initial StateRoot computation in 11.8 ms.
+### B. Resource Qualification & Multi-Provider Endurance (`benchmark_uef_resources.py`)
+- **Idle Core Baseline:** Memory footprint of 26.9 MB RSS, background CPU idle consumption of 0.05 ms / 50 ms window, initial StateRoot computation in 14.8 ms.
 - **Single Lifecycle Latencies:**
-  - `native.linux`: Prepare 0.12 ms, Execute 8.97 ms, Cleanup 0.01 ms (Total 9.09 ms).
-  - `rootfs.bwrap`: Prepare 0.21 ms, Execute 15.56 ms, Cleanup 0.09 ms (Total 15.85 ms).
-  - `oci.bundle`: Prepare 0.22 ms, Cleanup 0.12 ms (Total 0.34 ms).
-- **1,000-Cycle Continuous Stress Qualification:**
-  - Total Duration: 13.7 s (mean 13.7 ms/cycle across 1,000 interleaved native and container sandboxes).
+  - `native.linux`: Prepare 0.24 ms, Execute 11.3 ms, Cleanup 0.01 ms (Total 11.6 ms).
+  - `rootfs.bwrap`: Prepare 0.31 ms, Execute 17.2 ms, Cleanup 0.12 ms (Total 17.7 ms).
+  - `oci.bundle`: Prepare 0.69 ms, Cleanup 0.17 ms (Total 0.86 ms).
+- **1,000-Cycle Continuous Stress Qualification (Native + Rootfs):**
+  - Continuous stress qualification alternating between `NativeLinuxProvider` and `RootfsBwrapProvider` (1,000 full lifecycles).
+  - Duration: 18.05 s (mean 18.05 ms/cycle).
   - `INV-RES-001_ZERO_FD_LEAK`: 0 file descriptor leaks (`fd_delta == 0`, initial 57 -> final 57).
   - `INV-RES-002_ZERO_MOUNT_LEAK`: 0 mount leaks (`mount_delta == 0`, initial 31 -> final 31).
-  - `INV-RES-003_ZERO_TEMP_DIR_LEAK`: 0 leftover temporary directories (`temp_dir_delta == 0`, initial 6 -> final 6).
-  - `INV-RES-004_BOUNDED_RSS_GROWTH`: 0.33 MB RSS growth over 1,000 cycles (< 20.0 MB threshold).
+  - `INV-RES-003_ZERO_TEMP_DIR_LEAK`: 0 leftover temporary directories (`temp_dir_delta == 0`, initial 9 -> final 9).
+  - `INV-RES-004_BOUNDED_RSS_GROWTH`: 0.31 MB RSS growth over 1,000 cycles (< 20.0 MB threshold).
+- **100-Cycle OCI Container Qualification (`OciContainerProvider`):**
+  - 100 continuous cycles of OCI bundle specification and lifecycle cleanup.
+  - Duration: 0.11 s (mean 1.05 ms/cycle).
+  - Zero FD leaks (`fd_delta == 0`), zero mount leaks (`mount_delta == 0`), zero temp dir leaks (`temp_dir_delta == 0`), and 0.01 MB RSS delta.

@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from neuronix_core.state import canonical_json_bytes, compute_state_root
@@ -29,6 +30,11 @@ from .models import (
 from .provider import ExecutionProvider
 
 
+@lru_cache(maxsize=32)
+def _find_binary(name: str) -> Optional[str]:
+    return shutil.which(name)
+
+
 class RootfsBwrapProvider(ExecutionProvider):
     """Executes workloads inside unprivileged Bubblewrap sandboxes."""
 
@@ -37,7 +43,7 @@ class RootfsBwrapProvider(ExecutionProvider):
         return "rootfs.bwrap"
 
     def _get_bwrap_binary(self) -> Optional[str]:
-        return shutil.which("bwrap")
+        return _find_binary("bwrap")
 
     def discover(self) -> ProviderCapability:
         bwrap_path = self._get_bwrap_binary()
@@ -87,8 +93,10 @@ class RootfsBwrapProvider(ExecutionProvider):
         self,
         workload: WorkloadSpec,
         context: OperationalContext,
+        report: Optional[CompatibilityReport] = None,
     ) -> CapabilityVector:
-        report = self.inspect(workload)
+        if report is None:
+            report = self.inspect(workload)
         if not report.compatible:
             return CapabilityVector(
                 compatible=False,
@@ -247,7 +255,7 @@ class RootfsBwrapProvider(ExecutionProvider):
         try:
             state_root_after = compute_state_root()
         except Exception:
-            state_root_after = envelope.get("preconditions", {}).get("required_state_root", "0" * 64)
+            state_root_after = "UNVERIFIED"
 
         envelope_bytes = canonical_json_bytes(envelope)
         envelope_hash = hashlib.sha256(envelope_bytes).hexdigest()

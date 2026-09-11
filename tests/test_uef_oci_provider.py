@@ -1,12 +1,14 @@
 """
 Unit tests for OciContainerProvider (UEF OCI Container Standard Runtime Provider).
-Validates OCI image format inspection, runtime detection (crun/runc/podman),
-dynamic scoring prioritization, and ephemeral container lifecycle cleanup.
+Validates Mode A (high-level image -> podman/docker) and Mode B (low-level bundle -> crun/runc),
+dynamic scoring prioritization, fail-closed contracts, and ephemeral container lifecycle cleanup.
 """
 
 from __future__ import annotations
 
+import json
 import os
+import shutil
 import sys
 import unittest
 from pathlib import Path
@@ -28,20 +30,21 @@ class TestUefOciProvider(unittest.TestCase):
         cap = self.provider.discover()
         self.assertEqual(cap.provider_id, "oci.crun")
         self.assertEqual(cap.provider_type, "OCI_CONTAINER")
-        self.assertIn("oci-image", cap.supported_formats)
         self.assertGreaterEqual(cap.isolation_level, 0.80)
         self.assertEqual(cap.resource_overhead_class, "MODERATE_CONTAINER")
 
     def test_inspect_oci_image_format(self) -> None:
-        """Inspect accepts oci-image format."""
+        """Inspect accepts oci-image format when high-level runtime is present."""
         workload = WorkloadSpec(
             workload_id="wl-oci",
             format="oci-image",
             entrypoint=["alpine:latest", "sh", "-c", "echo hello"],
         )
-        report = self.provider.inspect(workload)
-        self.assertTrue(report.compatible)
-        self.assertGreater(report.estimated_startup_latency_ms, 0.0)
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value="/usr/bin/podman"):
+            report = self.provider.inspect(workload)
+            self.assertTrue(report.compatible)
+            self.assertIn("Mode A", report.reason)
+            self.assertGreater(report.estimated_startup_latency_ms, 0.0)
 
     def test_inspect_incompatible_format(self) -> None:
         """Inspect rejects pure elf-binary or wasm formats."""
@@ -54,6 +57,32 @@ class TestUefOciProvider(unittest.TestCase):
         self.assertFalse(report.compatible)
         self.assertIn("wasm-module", report.missing_features)
 
+    def test_mode_a_oci_image_without_high_level_runtime_fails_closed(self) -> None:
+        """OCI image format strictly requires podman/docker; crun/runc alone cannot execute it."""
+        workload = WorkloadSpec(
+            workload_id="wl-oci-nohigh",
+            format="oci-image",
+            entrypoint=["alpine:latest"],
+        )
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value=None):
+            with patch.object(self.provider, "_detect_low_level_runtime", return_value="/usr/bin/runc"):
+                report = self.provider.inspect(workload)
+                self.assertFalse(report.compatible)
+                self.assertIn("podman", report.missing_features)
+                self.assertEqual(self.provider.score(workload, OperationalContext()), 0.0)
+
+    def test_mode_b_rootfs_dir_without_valid_path_fails_closed(self) -> None:
+        """Mode B requires a valid populated rootfs directory."""
+        workload = WorkloadSpec(
+            workload_id="wl-rootfs-invalid",
+            format="rootfs-dir",
+            entrypoint=["/bin/sh"],
+            rootfs_path="/nonexistent/rootfs/path/dir",
+        )
+        report = self.provider.inspect(workload)
+        self.assertFalse(report.compatible)
+        self.assertIn("valid_rootfs_path", report.missing_features)
+
     def test_scoring_prioritizes_oci_images(self) -> None:
         """Scoring rates oci-image format highest for container provider."""
         workload_oci = WorkloadSpec(
@@ -62,8 +91,9 @@ class TestUefOciProvider(unittest.TestCase):
             entrypoint=["debian:stable-slim"],
         )
         ctx = OperationalContext(requested_isolation_tier="TIER_1_SANDBOX")
-        score = self.provider.score(workload_oci, ctx)
-        self.assertGreaterEqual(score, 0.90)
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value="/usr/bin/podman"):
+            score = self.provider.score(workload_oci, ctx)
+            self.assertGreaterEqual(score, 0.90)
 
     @patch("subprocess.run")
     def test_container_execution_and_cleanup(self, mock_run: MagicMock) -> None:
@@ -83,26 +113,29 @@ class TestUefOciProvider(unittest.TestCase):
             "envelope_id": "oce-oci-001",
             "intent": {"action": "container.execute"},
         }
-        receipt = self.provider.execute(prep, envelope)
-        self.assertEqual(receipt.exit_code, 0)
-        self.assertEqual(receipt.provider_id, "oci.crun")
-        self.assertIn("INV-SEC-008", receipt.invariants_verified)
+        with patch.object(self.provider, "_detect_runtime_for_workload", return_value="/usr/bin/podman"):
+            receipt = self.provider.execute(prep, envelope)
+            self.assertEqual(receipt.exit_code, 0)
+            self.assertEqual(receipt.provider_id, "oci.crun")
+            self.assertIn("INV-SEC-008", receipt.invariants_verified)
 
         proof = self.provider.cleanup(prep)
         self.assertTrue(proof.clean)
 
     def test_missing_runtime_inspect_fails_closed(self) -> None:
-        """Missing OCI runtime binary must report compatible=False (fail-closed)."""
+        """Missing all OCI runtime binaries must report compatible=False (fail-closed)."""
         workload = WorkloadSpec(
             workload_id="wl-oci",
-            format="oci-image",
-            entrypoint=["alpine:latest"],
+            format="rootfs-dir",
+            entrypoint=["/bin/sh"],
+            rootfs_path="/",
         )
-        with patch.object(self.provider, "_detect_runtime_binary", return_value=None):
-            report = self.provider.inspect(workload)
-            self.assertFalse(report.compatible)
-            self.assertIn("oci_runtime", report.missing_features)
-            self.assertEqual(self.provider.score(workload, OperationalContext()), 0.0)
+        with patch.object(self.provider, "_detect_low_level_runtime", return_value=None):
+            with patch.object(self.provider, "_detect_high_level_runtime", return_value=None):
+                report = self.provider.inspect(workload)
+                self.assertFalse(report.compatible)
+                self.assertIn("oci_runtime", report.missing_features)
+                self.assertEqual(self.provider.score(workload, OperationalContext()), 0.0)
 
     @patch("subprocess.run")
     def test_execution_failure_fails_closed_no_synthetic_success(
@@ -120,7 +153,7 @@ class TestUefOciProvider(unittest.TestCase):
             "envelope_id": "oce-fail-oci-001",
             "intent": {"action": "container.run"},
         }
-        with patch.object(self.provider, "_detect_runtime_binary", return_value="/usr/bin/crun"):
+        with patch.object(self.provider, "_detect_runtime_for_workload", return_value="/usr/bin/podman"):
             receipt = self.provider.execute(prep, envelope)
             self.assertNotEqual(receipt.exit_code, 0)
             self.assertNotIn("OCI_CONTAINER_OUTPUT", receipt.stdout_preview)
@@ -134,9 +167,10 @@ class TestUefOciProvider(unittest.TestCase):
         """Verifies that prepare() generates a valid OCI bundle specification (config.json)."""
         workload = WorkloadSpec(
             workload_id="wl-bundle",
-            format="oci-image",
+            format="rootfs-dir",
             entrypoint=["/bin/sh"],
             arguments=["-c", "uptime"],
+            rootfs_path="/",
             env={"PORT": "8080"},
         )
         prep = self.provider.prepare(workload)
@@ -144,13 +178,13 @@ class TestUefOciProvider(unittest.TestCase):
         config_path = os.path.join(prep.temp_dir, "config.json")
         self.assertTrue(os.path.isfile(config_path))
 
-        import json
         with open(config_path, "r", encoding="utf-8") as f:
             spec = json.load(f)
 
         self.assertEqual(spec.get("ociVersion"), "1.0.2")
         self.assertEqual(spec["process"]["args"], ["/bin/sh", "-c", "uptime"])
         self.assertIn("PORT=8080", spec["process"]["env"])
+        self.assertEqual(spec["root"]["path"], "/")
 
         proof = self.provider.cleanup(prep)
         self.assertTrue(proof.clean)
@@ -173,7 +207,7 @@ class TestUefOciProvider(unittest.TestCase):
             "intent": {"action": "container.run"},
             "invariants": ["INV-SEC-008"],
         }
-        with patch.object(self.provider, "_detect_runtime_binary", return_value="/usr/bin/podman"):
+        with patch.object(self.provider, "_detect_runtime_for_workload", return_value="/usr/bin/podman"):
             receipt = self.provider.execute(prep, envelope)
             self.assertEqual(receipt.exit_code, 0)
             podman_calls = [
@@ -188,6 +222,30 @@ class TestUefOciProvider(unittest.TestCase):
             self.assertIn("/app", cmd)
             self.assertIn("alpine:latest", cmd)
 
+        proof = self.provider.cleanup(prep)
+        self.assertTrue(proof.clean)
+
+    def test_real_oci_runtime_discovery_and_integration(self) -> None:
+        """Integration check: validates detection of real host OCI container runtime (runc or podman)."""
+        has_runc = bool(shutil.which("runc"))
+        has_podman = bool(shutil.which("podman"))
+        if not (has_runc or has_podman):
+            self.skipTest("Neither runc nor podman is available on host.")
+
+        # Real Mode B inspection with host rootfs
+        workload = WorkloadSpec(
+            workload_id="wl-real-oci-test",
+            format="rootfs-dir",
+            entrypoint=["/bin/true"],
+            rootfs_path="/",
+        )
+        report = self.provider.inspect(workload)
+        self.assertTrue(report.compatible)
+        self.assertIn("Mode B", report.reason)
+
+        prep = self.provider.prepare(workload)
+        config_path = os.path.join(prep.temp_dir, "config.json")
+        self.assertTrue(os.path.exists(config_path))
         proof = self.provider.cleanup(prep)
         self.assertTrue(proof.clean)
 
