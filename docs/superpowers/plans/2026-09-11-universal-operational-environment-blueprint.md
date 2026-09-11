@@ -38,7 +38,7 @@
 
 Deliver Draft 2020-12 JSON schemas canonicalized via RFC 8785 for the core UOE primitives.
 
-#### [NEW] [operational_contract_envelope.schema.json](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/data/schemas/operational_contract_envelope.schema.json)
+#### [NEW] [operational_contract_envelope.schema.json](data/schemas/operational_contract_envelope.schema.json)
 - Define the canonical schema for the Operational Contract Envelope (`OCE`):
   - `intent`: Unique action identifier, category (`READ`, `PROPOSE`, `MUTATE`), description, target resource URI.
   - `actor`: Principal identifier, principal type (`HUMAN_OWNER`, `HUMAN_OPERATOR`, `AI_AGENT`, `SYSTEM_DAEMON`), session nonce.
@@ -50,7 +50,7 @@ Deliver Draft 2020-12 JSON schemas canonicalized via RFC 8785 for the core UOE p
   - `evidence`: Proof hashes, input digests, previous execution receipts.
   - `outcome`: Execution receipt binding, exit status, actual state diff, verification signature.
 
-#### [NEW] [compatibility_contract.schema.json](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/data/schemas/compatibility_contract.schema.json)
+#### [NEW] [compatibility_contract.schema.json](data/schemas/compatibility_contract.schema.json)
 - Define the schema for execution provider capability registration:
   - `provider_id`: Unique provider identifier (`native.linux`, `rootfs.bwrap`, `oci.crun`).
   - `provider_type`: Enum (`NATIVE_LINUX`, `ROOTFS_BWRAP`, `OCI_CONTAINER`, `WASM_SANDBOX`, `MICRO_VM`).
@@ -60,7 +60,7 @@ Deliver Draft 2020-12 JSON schemas canonicalized via RFC 8785 for the core UOE p
   - `resource_overhead_class`: Memory/CPU footprint (`ZERO_OVERHEAD`, `MINIMAL_NAMESPACES`, `HEAVY_ISOLATION`).
   - `hardware_requirements`: KVM flags, rootless namespace requirements, GPU access requirements.
 
-#### [NEW] [execution_receipt.schema.json](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/data/schemas/execution_receipt.schema.json)
+#### [NEW] [execution_receipt.schema.json](data/schemas/execution_receipt.schema.json)
 - Define the execution receipt schema binding execution results to cryptographic evidence roots.
 
 ---
@@ -69,7 +69,7 @@ Deliver Draft 2020-12 JSON schemas canonicalized via RFC 8785 for the core UOE p
 
 Implement the core execution fabric provider interfaces and lifecycle contracts in `neuronix-core`.
 
-#### [NEW] [provider.py](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/packages/neuronix-core/neuronix_core/uef/provider.py)
+#### [NEW] [provider.py](packages/neuronix-core/neuronix_core/uef/provider.py)
 - Define abstract base class `ExecutionProvider`:
   - `provider_id`: Read-only property returning unique provider identifier.
   - `discover() -> ProviderCapability`: Probe system support (e.g. check `/dev/kvm`, bubblewrap binary, binfmt_misc).
@@ -79,17 +79,17 @@ Implement the core execution fabric provider interfaces and lifecycle contracts 
   - `execute(prepared: PreparedEnvironment, envelope: OperationalContractEnvelope) -> ExecutionReceipt`: Synchronous or asynchronous execution.
   - `cleanup(prepared: PreparedEnvironment) -> ResourceReleaseProof`: Immediate cleanup of namespaces and tmpfs mounts.
 
-#### [NEW] [native_provider.py](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/packages/neuronix-core/neuronix_core/uef/native_provider.py)
+#### [NEW] [native_provider.py](packages/neuronix-core/neuronix_core/uef/native_provider.py)
 - Implement `NativeLinuxProvider`:
   - Direct execution for native ELF binaries and Nix derivations.
   - Zero performance tax; direct POSIX execution with optional Landlock / seccomp policy enforcement.
 
-#### [NEW] [rootfs_provider.py](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/packages/neuronix-core/neuronix_core/uef/rootfs_provider.py)
+#### [NEW] [rootfs_provider.py](packages/neuronix-core/neuronix_core/uef/rootfs_provider.py)
 - Implement `RootfsBwrapProvider`:
   - Unprivileged user namespace execution via `bwrap`.
   - Bind mounts for target rootfs, read-only system protections, isolated volatile `/tmp` and `/home`.
 
-#### [NEW] [oci_provider.py](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/packages/neuronix-core/neuronix_core/uef/oci_provider.py)
+#### [NEW] [oci_provider.py](packages/neuronix-core/neuronix_core/uef/oci_provider.py)
 - Implement `OciContainerProvider`:
   - Standard OCI container runtime integration (`crun` or fallback container engines).
   - Rootless namespace, network policy isolation, and cgroup resource bounding.
@@ -100,7 +100,7 @@ Implement the core execution fabric provider interfaces and lifecycle contracts 
 
 Implement the intelligent resolver selecting the optimal execution provider dynamically.
 
-#### [NEW] [resolver.py](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/packages/neuronix-core/neuronix_core/uef/resolver.py)
+#### [NEW] [resolver.py](packages/neuronix-core/neuronix_core/uef/resolver.py)
 - Implement `ProviderResolver`:
   - Registry of available providers.
   - Mathematical multi-factor evaluation formula:
@@ -114,7 +114,7 @@ Implement the intelligent resolver selecting the optimal execution provider dyna
 
 Implement the semantic evaluation engine wrapping workloads in operational contract envelopes.
 
-#### [NEW] [coherence.py](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/packages/neuronix-core/neuronix_core/osl/coherence.py)
+#### [NEW] [coherence.py](packages/neuronix-core/neuronix_core/osl/coherence.py)
 - Implement `CoherenceEngine`:
   - Validates `OperationalContractEnvelope` against active `StateCommitment` (`StateRoot`).
   - Selective semanticization tiers:
@@ -123,7 +123,7 @@ Implement the semantic evaluation engine wrapping workloads in operational contr
     - `Tier 2 (FULL_CONTRACT)`: Mutations, storage plans, privilege escalations; require preflight dry-run, invariant check, and approval token.
   - Verify security invariants (`INV-SEC-001` through `INV-SEC-020`) before authorizing state mutation.
 
-#### [MODIFY] [skills.py](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/packages/neuronix-core/neuronix_core/skills.py)
+#### [MODIFY] [skills.py](packages/neuronix-core/neuronix_core/skills.py)
 - Bridge existing `SkillDispatcher` to `CoherenceEngine`:
   - Allow skills to emit `OperationalContractEnvelope` instances.
   - Route execution through the resolved UEF provider when cross-environment capabilities are specified.
@@ -134,7 +134,7 @@ Implement the semantic evaluation engine wrapping workloads in operational contr
 
 Enable the Conductor terminal user interface to display OCE proposals and provider scoring details.
 
-#### [MODIFY] [packages/conductor/src/surface.rs](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/packages/conductor/src/surface.rs)
+#### [MODIFY] [packages/conductor/src/surface.rs](packages/conductor/src/surface.rs)
 - Render proposal details in the slide-over overlay:
   - Display resolved provider (`Native`, `Rootfs/bwrap`, `OCI`).
   - Display calculated multi-factor provider score and blast radius.
@@ -146,10 +146,10 @@ Enable the Conductor terminal user interface to display OCE proposals and provid
 
 Document the complete UOE architecture in the repository specifications and update the README.
 
-#### [NEW] [docs/architecture/universal-operational-environment.md](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/docs/architecture/universal-operational-environment.md)
+#### [NEW] [docs/architecture/universal-operational-environment.md](docs/architecture/universal-operational-environment.md)
 - Complete technical specification covering UOE, UEF, OSL, OCE, Dynamic Scoring, and Lean Resource Economics.
 
-#### [MODIFY] [README.md](file:///home/adamrofc/.gemini/antigravity/scratch/NeuronixOS/README.md)
+#### [MODIFY] [README.md](README.md)
 - Update architectural overview to introduce the Universal Operational Environment roadmap.
 - Clarify that Linux/NixOS is the first-class host substrate and all v1.0.4 production guarantees remain certified.
 
