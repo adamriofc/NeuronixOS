@@ -134,7 +134,8 @@ class TestUefOciProvider(unittest.TestCase):
             with patch.object(self.provider, "_detect_high_level_runtime", return_value=None):
                 report = self.provider.inspect(workload)
                 self.assertFalse(report.compatible)
-                self.assertIn("oci_runtime", report.missing_features)
+                self.assertIn("crun", report.missing_features)
+                self.assertIn("runc", report.missing_features)
                 self.assertEqual(self.provider.score(workload, OperationalContext()), 0.0)
 
     @patch("subprocess.run")
@@ -225,29 +226,199 @@ class TestUefOciProvider(unittest.TestCase):
         proof = self.provider.cleanup(prep)
         self.assertTrue(proof.clean)
 
+    def test_mode_b_rootfs_dir_without_low_level_runtime_fails_closed(self) -> None:
+        """Mode B (rootfs-dir) strictly requires low-level runtime (crun/runc); podman alone is rejected."""
+        workload = WorkloadSpec(
+            workload_id="wl-rootfs-nohigh",
+            format="rootfs-dir",
+            entrypoint=["/bin/sh"],
+            rootfs_path="/",
+        )
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value="/usr/bin/podman"):
+            with patch.object(self.provider, "_detect_low_level_runtime", return_value=None):
+                report = self.provider.inspect(workload)
+                self.assertFalse(report.compatible)
+                self.assertIn("crun", report.missing_features)
+                self.assertIn("runc", report.missing_features)
+                self.assertEqual(self.provider.score(workload, OperationalContext()), 0.0)
+
+    def test_mode_b_oci_bundle_without_low_level_runtime_fails_closed(self) -> None:
+        """Mode B (oci-bundle) strictly requires low-level runtime (crun/runc); docker alone is rejected."""
+        workload = WorkloadSpec(
+            workload_id="wl-bundle-nohigh",
+            format="oci-bundle",
+            entrypoint=["/bin/sh"],
+            bundle_path="/tmp/fake-bundle",
+        )
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value="/usr/bin/docker"):
+            with patch.object(self.provider, "_detect_low_level_runtime", return_value=None):
+                report = self.provider.inspect(workload)
+                self.assertFalse(report.compatible)
+                self.assertIn("crun", report.missing_features)
+                self.assertEqual(self.provider.score(workload, OperationalContext()), 0.0)
+
+    def test_mode_b_rootfs_dir_with_crun_accepts(self) -> None:
+        """Mode B accepts rootfs-dir when crun/runc and valid rootfs are present."""
+        workload = WorkloadSpec(
+            workload_id="wl-rootfs-ok",
+            format="rootfs-dir",
+            entrypoint=["/bin/sh"],
+            rootfs_path="/",
+        )
+        with patch.object(self.provider, "_detect_low_level_runtime", return_value="/usr/bin/crun"):
+            with patch.object(self.provider, "_detect_high_level_runtime", return_value=None):
+                report = self.provider.inspect(workload)
+                self.assertTrue(report.compatible)
+                self.assertIn("Mode B", report.reason)
+                self.assertIn("crun", report.reason)
+
+    def test_mode_b_oci_bundle_with_crun_and_valid_bundle_accepts(self) -> None:
+        """Mode B accepts oci-bundle when crun and valid bundle directory with config.json exist."""
+        import tempfile
+        temp_bundle = tempfile.mkdtemp(prefix="test-oci-bundle-")
+        try:
+            rootfs_dir = os.path.join(temp_bundle, "rootfs")
+            os.makedirs(rootfs_dir, exist_ok=True)
+            cfg_path = os.path.join(temp_bundle, "config.json")
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                json.dump({"ociVersion": "1.0.2", "root": {"path": "rootfs"}}, f)
+
+            workload = WorkloadSpec(
+                workload_id="wl-bundle-ok",
+                format="oci-bundle",
+                entrypoint=["/bin/sh"],
+                bundle_path=temp_bundle,
+            )
+            with patch.object(self.provider, "_detect_low_level_runtime", return_value="/usr/bin/crun"):
+                with patch.object(self.provider, "_detect_high_level_runtime", return_value=None):
+                    report = self.provider.inspect(workload)
+                    self.assertTrue(report.compatible)
+                    self.assertIn("Mode B", report.reason)
+        finally:
+            shutil.rmtree(temp_bundle, ignore_errors=True)
+
+    def test_mode_b_oci_bundle_missing_config_json_fails_closed(self) -> None:
+        """Mode B rejects oci-bundle if config.json is absent in bundle directory."""
+        import tempfile
+        temp_bundle = tempfile.mkdtemp(prefix="test-oci-bundle-nocfg-")
+        try:
+            rootfs_dir = os.path.join(temp_bundle, "rootfs")
+            os.makedirs(rootfs_dir, exist_ok=True)
+            workload = WorkloadSpec(
+                workload_id="wl-bundle-nocfg",
+                format="oci-bundle",
+                entrypoint=["/bin/sh"],
+                bundle_path=temp_bundle,
+            )
+            with patch.object(self.provider, "_detect_low_level_runtime", return_value="/usr/bin/crun"):
+                report = self.provider.inspect(workload)
+                self.assertFalse(report.compatible)
+                self.assertIn("oci_config_json", report.missing_features)
+        finally:
+            shutil.rmtree(temp_bundle, ignore_errors=True)
+
+    def test_mode_b_oci_bundle_missing_rootfs_dir_fails_closed(self) -> None:
+        """Mode B rejects oci-bundle if rootfs directory referenced in config.json is missing."""
+        import tempfile
+        temp_bundle = tempfile.mkdtemp(prefix="test-oci-bundle-noroot-")
+        try:
+            cfg_path = os.path.join(temp_bundle, "config.json")
+            with open(cfg_path, "w", encoding="utf-8") as f:
+                json.dump({"ociVersion": "1.0.2", "root": {"path": "rootfs"}}, f)
+
+            workload = WorkloadSpec(
+                workload_id="wl-bundle-noroot",
+                format="oci-bundle",
+                entrypoint=["/bin/sh"],
+                bundle_path=temp_bundle,
+            )
+            with patch.object(self.provider, "_detect_low_level_runtime", return_value="/usr/bin/crun"):
+                report = self.provider.inspect(workload)
+                self.assertFalse(report.compatible)
+                self.assertIn("valid_rootfs_dir", report.missing_features)
+        finally:
+            shutil.rmtree(temp_bundle, ignore_errors=True)
+
+    def test_execute_enforces_strict_runtime_orthogonality(self) -> None:
+        """Execute strictly raises RuntimeError if an incompatible engine is invoked on mismatched format."""
+        # 1. High-level runtime on Mode B format
+        workload_b = WorkloadSpec(
+            workload_id="wl-mismatch-b",
+            format="rootfs-dir",
+            entrypoint=["/bin/sh"],
+            rootfs_path="/",
+        )
+        prep_b = self.provider.prepare(workload_b)
+        setattr(prep_b, "_runtime", "/usr/bin/podman")
+        with self.assertRaises(RuntimeError) as cm_b:
+            self.provider.execute(prep_b, {"envelope_id": "env-b"})
+        self.assertIn("Mode A (oci-image) is strictly required", str(cm_b.exception))
+        self.provider.cleanup(prep_b)
+
+        # 2. Low-level runtime on Mode A format
+        workload_a = WorkloadSpec(
+            workload_id="wl-mismatch-a",
+            format="oci-image",
+            entrypoint=["alpine:latest"],
+        )
+        prep_a = self.provider.prepare(workload_a)
+        setattr(prep_a, "_runtime", "/usr/bin/crun")
+        with self.assertRaises(RuntimeError) as cm_a:
+            self.provider.execute(prep_a, {"envelope_id": "env-a"})
+        self.assertIn("Mode B (rootfs-dir or oci-bundle) is strictly required", str(cm_a.exception))
+        self.provider.cleanup(prep_a)
+
+    def test_discover_reflects_runtime_presence_orthogonally(self) -> None:
+        """Discover lists only supported formats based on orthogonal runtime availability."""
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value="/usr/bin/podman"):
+            with patch.object(self.provider, "_detect_low_level_runtime", return_value=None):
+                cap = self.provider.discover()
+                self.assertIn("oci-image", cap.supported_formats)
+                self.assertNotIn("rootfs-dir", cap.supported_formats)
+                self.assertNotIn("oci-bundle", cap.supported_formats)
+
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value=None):
+            with patch.object(self.provider, "_detect_low_level_runtime", return_value="/usr/bin/crun"):
+                cap = self.provider.discover()
+                self.assertNotIn("oci-image", cap.supported_formats)
+                self.assertIn("rootfs-dir", cap.supported_formats)
+                self.assertIn("oci-bundle", cap.supported_formats)
+
     def test_real_oci_runtime_discovery_and_integration(self) -> None:
-        """Integration check: validates detection of real host OCI container runtime (runc or podman)."""
+        """Integration check: validates detection of real host OCI container runtimes (runc and/or podman)."""
         has_runc = bool(shutil.which("runc"))
         has_podman = bool(shutil.which("podman"))
         if not (has_runc or has_podman):
             self.skipTest("Neither runc nor podman is available on host.")
 
-        # Real Mode B inspection with host rootfs
-        workload = WorkloadSpec(
-            workload_id="wl-real-oci-test",
-            format="rootfs-dir",
-            entrypoint=["/bin/true"],
-            rootfs_path="/",
-        )
-        report = self.provider.inspect(workload)
-        self.assertTrue(report.compatible)
-        self.assertIn("Mode B", report.reason)
+        if has_runc:
+            # Real Mode B inspection with host rootfs
+            workload_b = WorkloadSpec(
+                workload_id="wl-real-oci-test-b",
+                format="rootfs-dir",
+                entrypoint=["/bin/true"],
+                rootfs_path="/",
+            )
+            report_b = self.provider.inspect(workload_b)
+            self.assertTrue(report_b.compatible)
+            self.assertIn("Mode B", report_b.reason)
 
-        prep = self.provider.prepare(workload)
-        config_path = os.path.join(prep.temp_dir, "config.json")
-        self.assertTrue(os.path.exists(config_path))
-        proof = self.provider.cleanup(prep)
-        self.assertTrue(proof.clean)
+            prep = self.provider.prepare(workload_b)
+            config_path = os.path.join(prep.temp_dir, "config.json")
+            self.assertTrue(os.path.exists(config_path))
+            proof = self.provider.cleanup(prep)
+            self.assertTrue(proof.clean)
+
+        if has_podman:
+            # Real Mode A inspection with container image
+            workload_a = WorkloadSpec(
+                workload_id="wl-real-oci-test-a",
+                format="oci-image",
+                entrypoint=["alpine:latest", "/bin/true"],
+            )
+            report_a = self.provider.inspect(workload_a)
+            self.assertTrue(report_a.compatible)
+            self.assertIn("Mode A", report_a.reason)
 
 
 if __name__ == "__main__":

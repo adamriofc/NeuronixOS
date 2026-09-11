@@ -200,6 +200,10 @@ jobs:
         run: |
           python3 -m unittest tests/test_skill_system.py
 
+      - name: Execute Universal Execution Fabric & OCI Orthogonal Gate (44 Tests)
+        run: |
+          python3 -m unittest tests/test_uef_provider_interface.py tests/test_uef_native_provider.py tests/test_uef_rootfs_provider.py tests/test_uef_oci_provider.py tests/test_uef_resolver.py
+
       - name: Execute Negative Reproducibility & Mutation Sensitivity Gate (6 Mutants)
         run: |
           bash tests/test_negative_reproducibility.sh

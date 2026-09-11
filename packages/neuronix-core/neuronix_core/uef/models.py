@@ -19,6 +19,7 @@ class WorkloadSpec:
     entrypoint: List[str]
     env: Dict[str, str] = field(default_factory=dict)
     rootfs_path: Optional[str] = None
+    bundle_path: Optional[str] = None
     image_reference: Optional[str] = None
     working_dir: str = "/"
     timeout_seconds: float = 30.0

@@ -82,14 +82,14 @@ The Universal Execution Fabric resolves workloads across three canonical provide
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `native.linux` | Host Linux POSIX execution | `elf-binary`, `nix-closure`, `posix-script` | 0.00 (Host) | Sub-millisecond (<1ms) | Zero overhead |
 | `rootfs.bwrap` | Unprivileged Bubblewrap sandbox | `rootfs-dir`, `elf-binary`, `posix-script` | 0.70 (Namespace) | Low millisecond (3-5ms) | Minimal namespaces |
-| `oci.crun` | OCI standard container runtime | `oci-image`, `rootfs-dir` | 0.85 (Container) | Moderate (15-25ms) | Moderate container |
+| `oci.crun` | OCI standard container runtime | `oci-image`, `rootfs-dir`, `oci-bundle` | 0.85 (Container) | Moderate (15-25ms) | Moderate container |
 
 ### Fail-Closed Execution Hardening
 1. **Missing Runtime Rejection & Two-Mode OCI Contract:**
    - `RootfsBwrapProvider`: When the `bwrap` binary is absent, `inspect()` marks `compatible = False`, immediately preventing invalid dispatch.
-   - `OciContainerProvider`: Enforces a strict two-mode execution contract:
-     - **Mode A (High-Level Container Image):** Workloads with `format="oci-image"` require high-level container runtimes (`podman` or `docker`). If only low-level bundle runners (`crun` or `runc`) are present on the host, `inspect()` fails closed with `compatible = False` and `missing_features = ["podman", "docker"]`.
-     - **Mode B (Low-Level Rootfs Bundle):** Workloads with `format="rootfs-dir"` require a valid, existing host directory path in `rootfs_path`. It generates a compliant OCI `config.json` specification with `root.path` wired directly to the verified rootfs, runnable via `crun` or `runc`. Missing all runtimes causes `inspect()` to fail closed.
+   - `OciContainerProvider`: Enforces a strict two-mode orthogonal execution contract:
+     - **Mode A (High-Level Container Image):** Workloads with `format="oci-image"` strictly require high-level container runtimes (`podman` or `docker`). Low-level runtimes (`crun`, `runc`) cannot execute container images directly, causing `inspect()` to fail closed with `compatible = False` and `missing_features = ["podman", "docker"]`.
+     - **Mode B (Low-Level Rootfs / OCI Bundle):** Workloads with `format="rootfs-dir"` or `format="oci-bundle"` strictly require low-level OCI runtimes (`crun` or `runc`). High-level container engines (`podman`, `docker`) cannot execute unmanaged bundles directly; absent low-level runtimes trigger immediate fail-closed rejection (`compatible = False`, `missing_features = ["crun", "runc"]`). Workloads with `format="rootfs-dir"` validate that `rootfs_path` exists as a directory. Workloads with `format="oci-bundle"` strictly validate that `bundle_path` (or `rootfs_path`) exists as a directory containing a valid `config.json` specification and resolved root directory. Incompatible execution calls in `execute()` strictly fail with `RuntimeError`.
 2. **Authentic Subprocess Execution:**
    - Providers execute authentic host binaries or sandboxed processes via real subprocess pipelines.
    - Exit codes, real `stdout`, and real `stderr` are preserved verifiably. Synthetic success strings (e.g. `ROOTFS_EXEC_SUCCESS`, `OCI_CONTAINER_OUTPUT`) are strictly prohibited.

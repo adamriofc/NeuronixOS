@@ -63,11 +63,14 @@ class OciContainerProvider(ExecutionProvider):
         return None
 
     def _detect_runtime_for_workload(self, workload: WorkloadSpec) -> Optional[str]:
-        """Resolves optimal runtime binary for workload format."""
+        """Resolves optimal runtime binary for workload format with strict orthogonality.
+        Mode A (oci-image): podman/docker ONLY.
+        Mode B (rootfs-dir, oci-bundle): crun/runc ONLY.
+        """
         if workload.format == "oci-image":
             return self._detect_high_level_runtime()
         elif workload.format in ["rootfs-dir", "oci-bundle"]:
-            return self._detect_low_level_runtime() or self._detect_high_level_runtime()
+            return self._detect_low_level_runtime()
         return None
 
     def _detect_runtime_binary(self) -> Optional[str]:
@@ -80,7 +83,7 @@ class OciContainerProvider(ExecutionProvider):
         supported = []
         if has_high_level:
             supported.append("oci-image")
-        if has_low_level or has_high_level:
+        if has_low_level:
             supported.extend(["rootfs-dir", "oci-bundle"])
 
         return ProviderCapability(
@@ -103,15 +106,15 @@ class OciContainerProvider(ExecutionProvider):
                 estimated_startup_latency_ms=0.0,
             )
 
-        # Mode A: High-level image execution
+        # Mode A: High-level image execution (podman, docker ONLY)
         if workload.format == "oci-image":
             runtime = self._detect_high_level_runtime()
             if not runtime:
                 return CompatibilityReport(
                     compatible=False,
                     reason=(
-                        "OCI image execution requires high-level container engine (podman, docker). "
-                        "Low-level runtimes (crun, runc) require pre-extracted rootfs-dir."
+                        "OCI image execution strictly requires high-level container engine (podman, docker). "
+                        "Low-level runtimes (crun, runc) cannot execute unextracted OCI images directly."
                     ),
                     missing_features=["podman", "docker"],
                     estimated_startup_latency_ms=0.0,
@@ -122,7 +125,19 @@ class OciContainerProvider(ExecutionProvider):
                 estimated_startup_latency_ms=25.0,
             )
 
-        # Mode B: Low-level bundle execution
+        # Mode B: Low-level bundle / rootfs execution (crun, runc ONLY)
+        runtime = self._detect_low_level_runtime()
+        if not runtime:
+            return CompatibilityReport(
+                compatible=False,
+                reason=(
+                    f"Mode B format '{workload.format}' strictly requires low-level OCI runtime (crun, runc). "
+                    "High-level container engines (podman, docker) cannot execute raw bundles directly."
+                ),
+                missing_features=["crun", "runc"],
+                estimated_startup_latency_ms=0.0,
+            )
+
         if workload.format == "rootfs-dir":
             if not workload.rootfs_path or not os.path.isdir(workload.rootfs_path):
                 return CompatibilityReport(
@@ -132,14 +147,50 @@ class OciContainerProvider(ExecutionProvider):
                     estimated_startup_latency_ms=0.0,
                 )
 
-        runtime = self._detect_low_level_runtime() or self._detect_high_level_runtime()
-        if not runtime:
-            return CompatibilityReport(
-                compatible=False,
-                reason="No compatible OCI runtime (crun, runc, podman, docker) detected on host.",
-                missing_features=["oci_runtime"],
-                estimated_startup_latency_ms=0.0,
+        if workload.format == "oci-bundle":
+            bundle_path = getattr(workload, "bundle_path", None) or workload.rootfs_path
+            if not bundle_path or not os.path.isdir(bundle_path):
+                return CompatibilityReport(
+                    compatible=False,
+                    reason=f"OCI bundle path '{bundle_path}' is missing or not a valid directory.",
+                    missing_features=["valid_bundle_dir"],
+                    estimated_startup_latency_ms=0.0,
+                )
+            config_file = os.path.join(bundle_path, "config.json")
+            if not os.path.isfile(config_file):
+                return CompatibilityReport(
+                    compatible=False,
+                    reason=f"OCI bundle at '{bundle_path}' is missing required 'config.json' specification.",
+                    missing_features=["oci_config_json"],
+                    estimated_startup_latency_ms=0.0,
+                )
+            try:
+                with open(config_file, "r", encoding="utf-8") as cf:
+                    cfg_data = json.load(cf)
+                if not isinstance(cfg_data, dict):
+                    raise ValueError("config.json root must be a JSON object.")
+            except Exception as exc:
+                return CompatibilityReport(
+                    compatible=False,
+                    reason=f"OCI bundle 'config.json' at '{bundle_path}' is invalid: {exc}",
+                    missing_features=["oci_config_json"],
+                    estimated_startup_latency_ms=0.0,
+                )
+            root_path_str = "rootfs"
+            if isinstance(cfg_data.get("root"), dict) and cfg_data["root"].get("path"):
+                root_path_str = cfg_data["root"]["path"]
+            resolved_root = (
+                root_path_str
+                if os.path.isabs(root_path_str)
+                else os.path.join(bundle_path, root_path_str)
             )
+            if not os.path.isdir(resolved_root):
+                return CompatibilityReport(
+                    compatible=False,
+                    reason=f"OCI bundle root directory '{resolved_root}' does not exist or is not a directory.",
+                    missing_features=["valid_rootfs_dir"],
+                    estimated_startup_latency_ms=0.0,
+                )
 
         return CompatibilityReport(
             compatible=True,
@@ -212,44 +263,57 @@ class OciContainerProvider(ExecutionProvider):
         # For low-level runtimes or bundle specifications, emit standard config.json
         if runtime_name in ["crun", "runc"] or workload.format in ["rootfs-dir", "oci-bundle"]:
             config_path = os.path.join(temp_dir, "config.json")
-            if workload.rootfs_path and os.path.isdir(workload.rootfs_path):
-                resolved_rootfs = os.path.abspath(workload.rootfs_path)
-            else:
-                resolved_rootfs = os.path.join(temp_dir, "rootfs")
-                os.makedirs(resolved_rootfs, exist_ok=True)
+            if workload.format == "oci-bundle":
+                bundle_path = getattr(workload, "bundle_path", None) or workload.rootfs_path
+                if bundle_path and os.path.isdir(bundle_path):
+                    src_cfg = os.path.join(bundle_path, "config.json")
+                    if os.path.isfile(src_cfg):
+                        shutil.copy2(src_cfg, config_path)
+                    src_rootfs = os.path.join(bundle_path, "rootfs")
+                    if os.path.isdir(src_rootfs):
+                        dst_rootfs = os.path.join(temp_dir, "rootfs")
+                        if not os.path.exists(dst_rootfs):
+                            os.symlink(os.path.abspath(src_rootfs), dst_rootfs)
 
-            args = list(workload.entrypoint) + list(workload.arguments)
-            oci_spec = {
-                "ociVersion": "1.0.2",
-                "process": {
-                    "terminal": False,
-                    "user": {"uid": 0, "gid": 0},
-                    "args": args,
-                    "env": [f"{k}={v}" for k, v in workload.env.items()],
-                    "cwd": workload.working_dir or "/",
-                },
-                "root": {
-                    "path": resolved_rootfs,
-                    "readonly": True,
-                },
-                "mounts": [
-                    {
-                        "destination": "/proc",
-                        "type": "proc",
-                        "source": "proc",
-                    }
-                ],
-                "linux": {
-                    "namespaces": [
-                        {"type": "pid"},
-                        {"type": "ipc"},
-                        {"type": "uts"},
-                        {"type": "mount"},
-                    ]
-                },
-            }
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(oci_spec, f, indent=2)
+            if not os.path.exists(config_path):
+                if workload.rootfs_path and os.path.isdir(workload.rootfs_path):
+                    resolved_rootfs = os.path.abspath(workload.rootfs_path)
+                else:
+                    resolved_rootfs = os.path.join(temp_dir, "rootfs")
+                    os.makedirs(resolved_rootfs, exist_ok=True)
+
+                args = list(workload.entrypoint) + list(workload.arguments)
+                oci_spec = {
+                    "ociVersion": "1.0.2",
+                    "process": {
+                        "terminal": False,
+                        "user": {"uid": 0, "gid": 0},
+                        "args": args,
+                        "env": [f"{k}={v}" for k, v in workload.env.items()],
+                        "cwd": workload.working_dir or "/",
+                    },
+                    "root": {
+                        "path": resolved_rootfs,
+                        "readonly": True,
+                    },
+                    "mounts": [
+                        {
+                            "destination": "/proc",
+                            "type": "proc",
+                            "source": "proc",
+                        }
+                    ],
+                    "linux": {
+                        "namespaces": [
+                            {"type": "pid"},
+                            {"type": "ipc"},
+                            {"type": "uts"},
+                            {"type": "mount"},
+                        ]
+                    },
+                }
+                with open(config_path, "w", encoding="utf-8") as f:
+                    json.dump(oci_spec, f, indent=2)
 
         prep = PreparedEnvironment(
             prepared_id=prepared_id,
@@ -282,6 +346,11 @@ class OciContainerProvider(ExecutionProvider):
 
         runtime_name = os.path.basename(runtime)
         if runtime_name in ["podman", "docker"]:
+            if workload.format != "oci-image":
+                raise RuntimeError(
+                    f"High-level runtime '{runtime_name}' cannot execute workload format '{workload.format}'. "
+                    "Mode A (oci-image) is strictly required."
+                )
             cmd = [runtime, "run", "--rm"]
             if workload.working_dir and workload.working_dir != "/":
                 cmd.extend(["-w", workload.working_dir])
@@ -291,10 +360,17 @@ class OciContainerProvider(ExecutionProvider):
                 cmd.append(workload.image_reference)
             cmd.extend(workload.entrypoint)
             cmd.extend(workload.arguments)
-        else:
+        elif runtime_name in ["crun", "runc"]:
+            if workload.format not in ["rootfs-dir", "oci-bundle"]:
+                raise RuntimeError(
+                    f"Low-level runtime '{runtime_name}' cannot execute workload format '{workload.format}'. "
+                    "Mode B (rootfs-dir or oci-bundle) is strictly required."
+                )
             # Low-level OCI runtime (crun / runc) with standard bundle directory
             container_id = f"nrx-{int(time.time() * 1000) % 1000000:06d}"
             cmd = [runtime, "run", "-b", prepared.temp_dir or ".", container_id]
+        else:
+            raise RuntimeError(f"Unsupported OCI runtime binary '{runtime_name}'.")
 
         start_mono = time.monotonic()
         usage_start = resource.getrusage(resource.RUSAGE_CHILDREN)

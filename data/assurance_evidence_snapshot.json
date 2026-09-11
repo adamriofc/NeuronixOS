@@ -4,7 +4,7 @@
   "version": "1.0.4",
   "release_tag": "v1.0.4",
   "last_verified_run_id": "34576314258",
-  "last_verified_commit_sha": "37ac86cd7f049aabd57012251fca609bf16ddb0c",
+  "last_verified_commit_sha": "3734ee8b9c19c8dd8d04d17c0e115f7be64de554",
   "taxonomy": {
     "CATALOG": 1353,
     "VERIFIED": 1353,
@@ -20,8 +20,8 @@
     "confidence_score_percentage": 100
   },
   "verification_status": "PASSING_ALL",
-  "verification_timestamp": "2026-09-11T08:24:37Z",
-  "freshness_epoch": 1789115077,
+  "verification_timestamp": "2026-09-11T09:43:05Z",
+  "freshness_epoch": 1789119785,
   "proof_classes_covered": [
     "L0_STATIC",
     "L1_UNIT",
@@ -31,5 +31,5 @@
     "L4_BENCHMARK",
     "L5_REAL_E2E"
   ],
-  "compiler_digest": "d536e12f4f8e5b6b63619b2ad04a66b14e5a6f129fe5d5265cc4509f150c0639"
+  "compiler_digest": "0eb40e9e0ea96a6c23dd710a7b2418c09458ca7cb5dbee975e5d1a008fd55460"
 }
