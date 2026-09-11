@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/operational_contract_envelope.schema.json",
+  "title": "NEURONIX Operational Contract Envelope (OCE) Schema",
+  "type": "object",
+  "description": "Formal typed contract defining operational changes in the NEURONIX Universal Operational Environment.",
+  "required": [
+    "envelope_id",
+    "intent",
+    "actor",
+    "authority",
+    "environment",
+    "preconditions",
+    "expected_effects",
+    "invariants",
+    "evidence",
+    "outcome"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "envelope_id": {
+      "type": "string",
+      "pattern": "^oce-[0-9]{8}-[a-zA-Z0-9_-]+$",
+      "description": "Deterministic unique identifier for the operational contract envelope."
+    },
+    "created_at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "POSIX timestamp in milliseconds when the envelope was minted."
+    },
+    "intent": {
+      "type": "object",
+      "description": "Semantic definition of what operational transition is requested.",
+      "required": ["action", "category", "description", "target_resource_uri"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$",
+          "description": "Dot-delimited operational action identifier."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["READ", "PROPOSE", "MUTATE"],
+          "description": "Execution category: READ (side-effect free), PROPOSE (dry-run simulation), MUTATE (state-altering)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the operational goal."
+        },
+        "target_resource_uri": {
+          "type": "string",
+          "description": "Canonical URI for the target operational resource (e.g. neuronix://systemd/service)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "actor": {
+      "type": "object",
+      "description": "Identity of the initiating entity.",
+      "required": ["principal_id", "principal_type", "session_nonce"],
+      "properties": {
+        "principal_id": {
+          "type": "string",
+          "description": "Unique principal identifier."
+        },
+        "principal_type": {
+          "type": "string",
+          "enum": ["HUMAN_OWNER", "HUMAN_OPERATOR", "AI_AGENT", "SYSTEM_DAEMON"],
+          "description": "Classification of the requesting principal."
+        },
+        "session_nonce": {
+          "type": "string",
+          "description": "Cryptographic anti-replay nonce for the session."
+        }
+      },
+      "additionalProperties": false
+    },
+    "authority": {
+      "type": "object",
+      "description": "Cryptographic delegation or approval token authorizing execution.",
+      "required": ["tier"],
+      "properties": {
+        "tier": {
+          "type": "string",
+          "enum": ["OBSERVE_ONLY", "PROPOSE_ONLY", "DELEGATED_SCOPED", "FULL_OPERATOR"],
+          "description": "Authority tier granted to the actor."
+        },
+        "token": {
+          "type": "string",
+          "description": "Cryptographic delegation token ID (e.g. DEL-HUMAN-OPERATOR-VALID) or Ed25519 signature."
+        },
+        "signature": {
+          "type": "string",
+          "description": "Hex-encoded digital signature proving authorization."
+        },
+        "expires_at": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "POSIX timestamp expiry for the authority grant."
+        }
+      },
+      "additionalProperties": false
+    },
+    "environment": {
+      "type": "object",
+      "description": "Target execution environment constraints and provider preferences.",
+      "required": ["target_substrate", "isolation_tier"],
+      "properties": {
+        "target_substrate": {
+          "type": "string",
+          "description": "Target host or container substrate (e.g. NIXOS_HOST, CONTAINER_OCI, ROOTFS_BWRAP)."
+        },
+        "isolation_tier": {
+          "type": "string",
+          "description": "Hyperion isolation tier (e.g. TIER_0_HOST, TIER_1_SANDBOX, TIER_2_MICROVM)."
+        },
+        "provider_preference": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered list of preferred execution provider IDs."
+        }
+      },
+      "additionalProperties": false
+    },
+    "preconditions": {
+      "type": "object",
+      "description": "Required state and hardware invariants before execution begins.",
+      "required": ["required_state_root"],
+      "properties": {
+        "required_state_root": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected SHA-256 StateRoot digest before operation applies."
+        },
+        "required_invariants": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^INV-SEC-[0-9]{3}$"
+          }
+        },
+        "lock_resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "expected_effects": {
+      "type": "object",
+      "description": "Declared diff and side-effects expected from execution.",
+      "required": ["declared_diff", "destructive"],
+      "properties": {
+        "declared_diff": {
+          "type": "string",
+          "description": "Structured diff of expected filesystem, service, or configuration state."
+        },
+        "destructive": {
+          "type": "boolean",
+          "description": "Whether this operation modifies or deletes durable state."
+        },
+        "rollback_recipe": {
+          "type": "string",
+          "description": "Deterministic instruction or command to roll back changes upon failure."
+        }
+      },
+      "additionalProperties": false
+    },
+    "invariants": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^INV-SEC-[0-9]{3}$"
+      },
+      "description": "Security and operational invariants enforced during execution."
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Input cryptographic digests and prior lineage receipts.",
+      "required": ["input_digest"],
+      "properties": {
+        "input_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 digest of input parameters and files."
+        },
+        "prior_receipts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "description": "Lineage hashes of ancestor execution receipts."
+        }
+      },
+      "additionalProperties": false
+    },
+    "outcome": {
+      "type": "object",
+      "description": "Final or intermediate outcome of the operational envelope.",
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "PENDING_EVALUATION",
+            "PENDING_APPROVAL",
+            "EXECUTING",
+            "COMMITTED",
+            "REJECTED",
+            "FAILED",
+            "ROLLED_BACK"
+          ],
+          "description": "Current lifecycle status of the envelope."
+        },
+        "receipt_id": {
+          "type": "string",
+          "description": "ID of the associated ExecutionReceipt once executed."
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Diagnostic error message if rejected or failed."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

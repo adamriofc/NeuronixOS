@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/compatibility_contract.schema.json",
+  "title": "NEURONIX Compatibility & Provider Capability Contract Schema",
+  "type": "object",
+  "description": "Formal schema declaring capabilities, isolation profiles, and requirements for UEF execution providers.",
+  "required": [
+    "provider_id",
+    "provider_type",
+    "supported_formats",
+    "isolation_level",
+    "startup_latency_class",
+    "resource_overhead_class"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "provider_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$",
+      "description": "Unique namespaced identifier for the execution provider (e.g. native.linux, rootfs.bwrap)."
+    },
+    "provider_type": {
+      "type": "string",
+      "enum": [
+        "NATIVE_LINUX",
+        "ROOTFS_BWRAP",
+        "OCI_CONTAINER",
+        "WASM_SANDBOX",
+        "MICRO_VM"
+      ],
+      "description": "Classification of the underlying runtime provider mechanism."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of the provider."
+    },
+    "supported_formats": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "nix-closure",
+          "elf-binary",
+          "posix-script",
+          "rootfs-dir",
+          "oci-image",
+          "wasm-module"
+        ]
+      },
+      "description": "Workload packaging formats supported by this provider."
+    },
+    "isolation_level": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Normalized security isolation score: 0.0 (host namespace) to 1.0 (hardware-isolated microVM)."
+    },
+    "startup_latency_class": {
+      "type": "string",
+      "enum": [
+        "SUB_MILLISECOND",
+        "LOW_MILLISECOND",
+        "COLD_START_MODERATE",
+        "COLD_START_HEAVY"
+      ],
+      "description": "Classification of initialization overhead and cold-start latency."
+    },
+    "resource_overhead_class": {
+      "type": "string",
+      "enum": [
+        "ZERO_OVERHEAD",
+        "MINIMAL_NAMESPACES",
+        "MODERATE_CONTAINER",
+        "HEAVY_VIRTUALIZATION"
+      ],
+      "description": "Relative memory and CPU overhead class."
+    },
+    "hardware_requirements": {
+      "type": "object",
+      "properties": {
+        "kvm_required": {
+          "type": "boolean"
+        },
+        "rootless_namespaces_required": {
+          "type": "boolean"
+        },
+        "gpu_acceleration_supported": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

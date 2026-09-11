@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuronix.org/schemas/execution_receipt.schema.json",
+  "title": "NEURONIX Execution Receipt Schema",
+  "type": "object",
+  "description": "Cryptographically verifiable receipt produced upon completion of an Operational Contract Envelope.",
+  "required": [
+    "receipt_id",
+    "envelope_hash",
+    "provider_id",
+    "exit_code",
+    "state_root_after",
+    "duration_ms",
+    "resource_usage",
+    "evidence_digest"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^rcpt-[0-9]{8}-[a-zA-Z0-9_-]+$",
+      "description": "Unique deterministic identifier for the receipt."
+    },
+    "envelope_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "RFC 8785 SHA-256 hash of the executing OperationalContractEnvelope."
+    },
+    "provider_id": {
+      "type": "string",
+      "description": "Identifier of the ExecutionProvider that executed the workload."
+    },
+    "exit_code": {
+      "type": "integer",
+      "description": "POSIX process exit code (0 for success)."
+    },
+    "state_root_after": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Observed StateRoot hash immediately following execution."
+    },
+    "duration_ms": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "Total execution duration in milliseconds."
+    },
+    "resource_usage": {
+      "type": "object",
+      "required": ["peak_rss_bytes", "cpu_time_ms"],
+      "properties": {
+        "peak_rss_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Peak Resident Set Size in bytes."
+        },
+        "cpu_time_ms": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Total user and system CPU time consumed in milliseconds."
+        },
+        "io_read_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "io_write_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "stdout_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hash of standard output stream."
+    },
+    "stderr_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hash of standard error stream."
+    },
+    "evidence_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Cumulative cryptographic evidence hash bound to EvidenceRoot."
+    },
+    "invariants_verified": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^INV-SEC-[0-9]{3}$"
+      },
+      "description": "List of formal security invariants verified during and after execution."
+    }
+  },
+  "additionalProperties": false
+}
