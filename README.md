@@ -17,12 +17,12 @@
 </p>
 
 <p align="center">
-  <strong>NEURONIX OS: The Self-Healing, Declarative Workstation for Mission-Critical Engineering & Local AI Development</strong><br>
-  <em>Dual-Plane Micro-Engine &bull; Cryptographic Generational Immutability &bull; Ephemeral Blast-Radius Containment &bull; NIP RFC Governance</em>
+  <strong>NEURONIX OS: The Self Healing, Declarative Workstation for Mission Critical Engineering & Local AI Development</strong><br>
+  <em>Dual-Plane Micro-Engine &bull; Cryptographic Generational Immutability &bull; Ephemeral Blast Radius Containment &bull; NIP RFC Governance</em>
 </p>
 
 <p align="center">
-  <strong>BUILD</strong> Mathematically Reproducible Flakes &bull; <strong>CONTAIN</strong> Ephemeral Workspaces &bull; <strong>RECOVER</strong> Autonomous Zero-Loss Generations
+  <strong>BUILD</strong> Mathematically Reproducible Flakes &bull; <strong>CONTAIN</strong> Ephemeral Workspaces &bull; <strong>RECOVER</strong> Autonomous Zero Loss Generations
 </p>
 
 ---
@@ -116,7 +116,7 @@ NEURONIX OS is an independent, declarative Linux distribution platform based on 
 
 ### Design Objectives & Core Utility
 
-NEURONIX OS is engineered to resolve fundamental operational vulnerabilities common to traditional Linux distributions: configuration drift, dependency breakage during upgrades, lack of system state reproducibility, and fragile disaster recovery. Built on a pure-functional NixOS substrate, NEURONIX OS elevates declarative configuration from a specialized sysadmin toolkit into an enterprise-ready, desktop-grade operating platform.
+NEURONIX OS is engineered to resolve fundamental operational vulnerabilities common to traditional Linux distributions: configuration drift, dependency breakage during upgrades, lack of system state reproducibility, and fragile disaster recovery. Built on a pure-functional NixOS substrate, NEURONIX OS elevates declarative configuration from a specialized sysadmin toolkit into an enterprise-ready, desktop grade operating platform.
 
 Its primary design objectives are:
 
@@ -124,10 +124,10 @@ Its primary design objectives are:
    Every package derivation, system daemon, kernel option, and configuration parameter is declared as pure code within `flake.nix` and pinned cryptographically via `flake.lock`. Deploying a configuration across multiple physical or virtual nodes produces mathematically identical systems, eliminating divergent package closures and unrecorded host mutations.
 
 2. **Atomic Generational Lifecycle with Zero-Loss Rollback:**
-   Operating system upgrades and package modifications are compiled and staged into isolated cryptographic store paths (`/nix/store`) before system symlink pointers are switched atomically. The running operating system is never modified in-place. If an update introduces regressions or unbootable states, users and automated recovery services can revert to the previous operational generation instantly at the bootloader or from the active shell (`nixos-rebuild --rollback` or `neuronix-rollback`) without data loss.
+   Operating system upgrades and package modifications are compiled and staged into isolated cryptographic store paths (`/nix/store`) before system symlink pointers are switched atomically. The running operating system is never modified in place. If an update introduces regressions or unbootable states, users and automated recovery services can revert to the previous operational generation instantly at the bootloader or from the active shell (`nixos-rebuild --rollback` or `neuronix-rollback`) without data loss.
 
 3. **Turnkey Desktop Ergonomics on an Immutable Foundation:**
-   Functional package managers historically impose steep friction for desktop users. NEURONIX OS bridges this divide by providing a declarative Calamares installer engine, automated hardware profile detection, out-of-the-box global FHS binary execution via `nix-ld` (enabling unpatched execution of VS Code, proprietary CLI tools, and CUDA binaries), and a dual-layer application model pairing immutable core system derivations with user-managed Flathub Flatpaks.
+   Functional package managers historically impose steep friction for desktop users. NEURONIX OS bridges this divide by providing a declarative Calamares installer engine, automated hardware profile detection, out of the box global FHS binary execution via `nix-ld` (enabling unpatched execution of VS Code, proprietary CLI tools, and CUDA binaries), and a dual-layer application model pairing immutable core system derivations with user-managed Flathub Flatpaks.
 
 4. **Autonomous Reliability & Local AI Developer Substrate:**
    Modern workstations require active telemetry and intelligent maintenance. NEURONIX integrates memory pressure defenses (ZRAM ZSTD compression paired with Pressure Stall Information monitoring via systemd-oomd), background storage hygiene (automated TRIM, metadata balancing, and store deduplication), and an embedded OpenCode AI copilot coupled with a standardized Model Context Protocol (MCP) JSON-RPC 2.0 interface.
@@ -136,7 +136,7 @@ Its primary design objectives are:
 
 ### Intended Audience & Professional Roles
 
-NEURONIX OS is purpose-built for technical professionals and organizations requiring uncompromising system predictability, security isolation, and developer agility:
+NEURONIX OS is purpose built for technical professionals and organizations requiring uncompromising system predictability, security isolation, and developer agility:
 
 - **Systems Engineers & Site Reliability Engineers (SREs):**
   Engineers who treat infrastructure as code. NEURONIX provides a workstation environment that mirrors modern cloud native deployment patterns, enabling local testing of complex declarative environments that compile directly to production-grade server appliances without environmental discrepancies.
@@ -145,20 +145,20 @@ NEURONIX OS is purpose-built for technical professionals and organizations requi
   Practitioners requiring isolated, reproducible compute stacks. The `neuronix dev ai` substrate provides immediate access to PyTorch, CUDA runtime libraries, JupyterLab, and Ollama without polluting system libraries or conflicting with host NVIDIA display drivers.
 
 - **Security Analysts & Penetration Testers:**
-  Specialists requiring auditable environments with minimal attack surfaces. NEURONIX supports hardened kernel branches (`linuxPackages_hardened`), cryptographically sealed package closures, ephemeral in-memory micro-VM evaluation (`neuronix sandbox`), and isolated execution sandboxes (`neuronix run --sandbox`).
+  Specialists requiring auditable environments with minimal attack surfaces. NEURONIX supports hardened kernel branches (`linuxPackages_hardened`), cryptographically sealed package closures, ephemeral in memory micro VM evaluation (`neuronix sandbox`), and isolated execution sandboxes (`neuronix run --sandbox`).
 
 - **Full-Stack & Cloud-Native Developers:**
-  Engineers working across polyglot stacks (Rust, Go, Python, TypeScript, Node.js). NEURONIX eliminates global package version conflicts through instant project level development shells (`neuronix dev <stack>`), while `nix-ld` enables direct execution of standard pre-compiled dynamic ELF binaries.
+  Engineers working across polyglot stacks (Rust, Go, Python, TypeScript, Node.js). NEURONIX eliminates global package version conflicts through instant project level development shells (`neuronix dev <stack>`), while `nix-ld` enables direct execution of standard pre compiled dynamic ELF binaries.
 
 - **Production Workstation Operators:**
-  Users who depend on daily system availability. Traditional rolling-release systems risk catastrophic breakage during routine updates; NEURONIX delivers modern packages (Linux Zen kernel, Wayland compositors, modern desktop environments) backed by deterministic boot time rollback to previous working generations.
+  Users who depend on daily system availability. Traditional rolling release systems risk catastrophic breakage during routine updates; NEURONIX delivers modern packages (Linux Zen kernel, Wayland compositors, modern desktop environments) backed by deterministic boot time rollback to previous working generations.
 
 ---
 
 ### Optimal Use Cases & Deployment Profiles
 
 - **Mission-Critical Engineering Workstations:**
-  Primary daily-driver operating system for engineering organizations where workstation downtime equates to lost development velocity. Routine updates occur without fear of library incompatibilities, and complete disaster recovery requires seconds rather than system reinstallation.
+  Primary daily driver operating system for engineering organizations where workstation downtime equates to lost development velocity. Routine updates occur without fear of library incompatibilities, and complete disaster recovery requires seconds rather than system reinstallation.
 
 - **Autonomous Edge & Local AI Inference Nodes:**
   Dedicated local hardware running persistent background reasoning models, autonomous code agents, and automated data pipelines via the OpenCode background daemon and MCP JSON-RPC protocol transport.
@@ -167,7 +167,7 @@ NEURONIX OS is purpose-built for technical professionals and organizations requi
   Building and verifying software packages in pure, isolated sandboxes where external host state, ambient environment variables, and unpinned network dependencies are strictly blocked from influencing compilation outputs.
 
 - **Rapid Hardware Qualification & Benchmarking:**
-  Validating modern PC and laptop hardware across distinct performance profiles. Switching between low-latency scheduling (`zen`), conservative enterprise stability (`lts`), or attack-surface hardened (`hardened`) kernels requires modifying a single declarative configuration attribute.
+  Validating modern PC and laptop hardware across distinct performance profiles. Switching between low latency scheduling (`zen`), conservative enterprise stability (`lts`), or attack-surface hardened (`hardened`) kernels requires modifying a single declarative configuration attribute.
 
 ---
 
@@ -207,7 +207,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 ### In Depth Architectural Differentiators
 
 #### 1. NEURONIX OS vs. Vanilla NixOS
-Vanilla NixOS provides an exceptional functional package management paradigm, but operates fundamentally as an infrastructure toolkit rather than a cohesive, out-of-the-box desktop distribution. A user installing vanilla NixOS must manually architect their Btrfs subvolume layout, configure swap parameters, script hardware driver integrations (such as NVIDIA PRIME offloading), research dynamic linker workarounds for proprietary software (`nix-ld`), and resolve complex multi-desktop configurations.
+Vanilla NixOS provides an exceptional functional package management paradigm, but operates fundamentally as an infrastructure toolkit rather than a cohesive, out of the box desktop distribution. A user installing vanilla NixOS must manually architect their Btrfs subvolume layout, configure swap parameters, script hardware driver integrations (such as NVIDIA PRIME offloading), research dynamic linker workarounds for proprietary software (`nix-ld`), and resolve complex multi-desktop configurations.
 
 NEURONIX OS transforms this substrate into an engineered, production ready distribution. It ships with a customized Calamares installation engine that generates production grade Nix Flakes directly from graphical user inputs, provisions an opinionated 5 subvolume Btrfs topology with transparent ZSTD:3 compression, pre-configures memory defenses (ZRAM + PSI telemetry), enables seamless FHS binary execution, embeds local AI copilot services via MCP, and validates every build against a 1,353-assertion test taxonomy (cataloged in `data/test_manifest.json`). Crucially, NEURONIX achieves this without forking upstream Nixpkgs, ensuring zero security patch latency.
 
@@ -402,7 +402,7 @@ NEURONIX includes declarative configurations addressing standard desktop and lap
 | **Storage Reclamation** | Autonomous SSD TRIM and sparse disk reclamation (Auto-TRIM) | Daily `fstrim.timer` + `auto-optimise-store` hardlink dedupe | `modules/services/storage.nix` |
 | **Application Ecosystem** | Sandboxed desktop application integration without root modification | Dual-layer distribution: immutable Nix core + Flathub Flatpak | `modules/services/flatpak.nix` |
 | **Boot Partition Guard** | EFI System Partition storage overflow prevention | 1.0 GiB ESP standard with generation prune threshold (`configurationLimit = 15`) | `modules/hardware/boot.nix` |
-| **Offline Firmware** | Out-of-the-box Wi-Fi and Bluetooth chipset connectivity | Full redistributable firmware bundle (Broadcom, Realtek, Intel) | `modules/hardware/firmware.nix` |
+| **Offline Firmware** | out of the box Wi-Fi and Bluetooth chipset connectivity | Full redistributable firmware bundle (Broadcom, Realtek, Intel) | `modules/hardware/firmware.nix` |
 | **Hybrid Graphics** | Dynamic dGPU power gating on Optimus/PRIME laptops | Declarative NVIDIA PRIME Render Offload configuration (Status: Implemented) | `modules/hardware/nvidia-prime.nix` |
 | **Secure Boot** | Compatibility with UEFI Secure Boot firmware policies | Lanzaboote signed boot integration (Status: Experimental, requires MOK enrollment) | `modules/hardware/secureboot.nix` |
 | **Portal Integration** | Native file-chooser dialog synchronization under Wayland | Explicit portal backend mapping via `portals.conf` | `modules/services/flatpak.nix` |
@@ -488,7 +488,7 @@ The graphical installer functions as a declarative flake generator ([ADR-002](do
 - Formats target storage using the Btrfs subvolume layout (`@`, `@nix`, `@home`, `@snapshots`, `@swap`).
 - Runs `nixos-install --flake /mnt/etc/nixos#neuronix-desktop`, producing a fully declarative system installation upon first boot.
 
-### 2. System Control Center (neuronix-center)
+### 2. System Control Center (neuronix center)
 A desktop management application for common administrative tasks:
 - **Telemetry Dashboard:** Monitors kernel release, active generation, CPU, GPU, and filesystem compression status.
 - **Generation Management:** Displays generation history and allows rolling back to previous system generations without using the terminal.
@@ -555,7 +555,7 @@ neuronix mcp
 
 ### 6. OpenCode AI Coding Agent & Autonomous Updates
 A built-in, declarative AI coding agent providing interactive TUI and CLI-driven intelligence across all desktop environments (KDE Plasma, GNOME, Hyprland). Powered by upstream [OpenCode](https://opencode.ai) ([anomalyco/opencode](https://github.com/anomalyco/opencode)). See the [OpenCode Architecture Specification](docs/opencode.md) for comprehensive design details.
-- **Pre-installed by Default:** Enabled out-of-the-box (`neuronix.services.opencode.enable = true;`), exposing application launcher entries (`opencode.desktop`) and desktop shortcuts across all desktop environments.
+- **Pre-installed by Default:** Enabled out of the box (`neuronix.services.opencode.enable = true;`), exposing application launcher entries (`opencode.desktop`) and desktop shortcuts across all desktop environments.
 - **Native MCP Substrate Integration:** Pre-configured with the local NEURONIX Model Context Protocol (MCP) server, granting OpenCode immediate access to system inspection, verification, and atomic rollback tools.
 - **Autonomous System Manual Grounding:** OpenCode automatically discovers root directives at `/etc/neuronix/SYSTEM_PROMPT.md`, `/etc/neuronix/AGENTS.md`, and `$NEURONIX_AI_DIRECTIVE` without requiring manual CLI invocations (`neuronix manual`).
 - **Autonomous Background Updates:** Powered by `neuronix-opencode-update.timer` which checks and synchronizes upstream releases daily without touching physical store immutability or risking running system stability.
@@ -863,7 +863,7 @@ neuronix ghost
 neuronix ghost --run "pytest -v"
 ```
 
-### 22. Instant Time-Travel Workspace Branching (neuronix branch)
+### 22. Instant Time Travel Workspace Branching (neuronix branch)
 Brings the power of atomic operating system rollbacks down to individual project repositories:
 - **Sub-Millisecond CoW Snapshots:** Leverages native Btrfs subvolumes and Linux filesystem Reflinks (`cp --reflink=always`) to capture instantaneous point-in-time workspace checkpoints in under 10 milliseconds with 0 bytes initial storage footprint.
 - **Risk-Free Prototyping:** Developers and autonomous AI models can capture a checkpoint before large-scale refactorings, test modifications destructively, and restore workspace snapshots via CoW reflink if regressions are detected.
