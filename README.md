@@ -88,6 +88,7 @@
   - [32. Conductor Operating Surface & Zero-Idle Capability Runtime (SPEC-NRX-CND-018, SPEC-NRX-CND-021)](#32-conductor-operating-surface--zero-idle-capability-runtime-spec-nrx-cnd-018-spec-nrx-cnd-021)
   - [33. Vital Laboratory Observation Substrate & Machine Contracts (SPEC-NRX-VTL-020)](#33-vital-laboratory-observation-substrate--machine-contracts-spec-nrx-vtl-020)
   - [34. NEURONIX Skill System & Delegated Authority Engine (SPEC-NRX-SKL-019)](#34-neuronix-skill-system--delegated-authority-engine-spec-nrx-skl-019)
+  - [35. Universal Operational Environment (UOE) & Execution Fabric](#35-universal-operational-environment-uoe--execution-fabric)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
 - [Verification, Lifecycle Gate & Test Harness (1,353 Assertions)](#verification--test-harness)
@@ -1304,6 +1305,21 @@ The NEURONIX Skill System establishes a single, authoritative machine-readable o
   - Strict Token-Validated Authority: Self-asserted delegation claims from unauthenticated agents are rejected fail-closed. Valid execution requires an authentic delegation grant token (`DEL-...`) issued by the human owner with explicit scope and time expiry.
 - **Unbypassable Audit Trail:** Every skill execution generates an immutable cryptographic execution receipt (`RCP-...`) recording SHA-256 input digests, output digests, caller principal, delegation tier, duration, and execution timestamp.
 - **Model Context Protocol (MCP) Adapter (`packages/conductor-mcp`):** Native compatibility adapter supporting both modern MCP 2026-07-28 and legacy 2024-11-05 specifications, translating external agent tool calls directly into verified NEURONIX skills and exposing Vital telemetry as laboratory resources (`vital://snapshot`).
+
+### 35. Universal Operational Environment (UOE) & Execution Fabric
+NEURONIX OS evolves from traditional operating system assumptions into a **Universal Operational Environment (UOE)**, unifying the **Universal Execution Fabric (UEF)** and the **Operational Semantic Layer (OSL)**:
+
+- **Universal Operational Semantic Overlay:** Linux and NixOS provide the certified, deeply integrated host substrate. NEURONIX adds universal typed operational semantics to system operations: intent, actor, authority, environment, preconditions, expected effects, security invariants, evidence, and outcome.
+- **Operational Contract Envelope (OCE):** All operational actions are formalized via canonical Draft 2020-12 schemas (`data/schemas/operational_contract_envelope.schema.json`) canonicalized with RFC 8785 JCS.
+- **Selective Semanticization & Lean Resource Rules:**
+  - *Tier 0 (Passthrough):* Read-only inquiries execute directly with near-zero overhead and microsecond-level latency (~250us resolver, ~2us evaluation).
+  - *Tier 1 (Lightweight):* Non-destructive inquiries and proposals record verified execution receipts.
+  - *Tier 2 (Full Contract):* State-altering mutations enforce strict StateRoot commitments, invariant verification, and interactive Conductor operator authorization.
+- **3-Provider MVP Architecture:**
+  - `native.linux`: 0% overhead host POSIX execution with direct syscall performance.
+  - `rootfs.bwrap`: Unprivileged Bubblewrap sandbox for foreign rootfs directories.
+  - `oci.crun`: Standard OCI container runtime for portable containerized workflows.
+- **The 8 Lean Architecture Rules:** Zero idle execution daemons, no unnecessary virtual machines, ephemeral memory cleanup on exit, lean ISO distribution footprint, and native path preservation.
 
 ---
 
