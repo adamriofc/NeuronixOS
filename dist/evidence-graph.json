@@ -24,11 +24,11 @@
     "HARDWARE_NODE": {
       "node_id": "HARDWARE_NODE",
       "type": "HARDWARE_INTELLIGENCE",
-      "hardware_root": "94ca286e14448680cccce2e2ad9e3779ef7a7e6df4591db973008e2cb61841cf",
+      "hardware_root": "6ac486f64046aac518ddf62f30f80084a74038f49de7f61ba2a00d3c2ecf97a5",
       "cpu_cores": 16,
       "kvm_available": true,
       "tpm_present": true,
-      "digest": "94ca286e14448680cccce2e2ad9e3779ef7a7e6df4591db973008e2cb61841cf"
+      "digest": "6ac486f64046aac518ddf62f30f80084a74038f49de7f61ba2a00d3c2ecf97a5"
     },
     "TOPOLOGY_NODE": {
       "node_id": "TOPOLOGY_NODE",
@@ -108,14 +108,14 @@
     "STATE_NODE": {
       "node_id": "STATE_NODE",
       "type": "MERKLE_STATE_COMMITMENT",
-      "state_root": "12ba15cab5b08d7de78506e003826f32032770f4c770d532bdd89d29f33a9c03",
+      "state_root": "ab92448df6453d77b708384bd6a332cf95d2513c9cc2a4b6b1e5cd7ec6ccb838",
       "parent_build_digest": "6402ab456a132848862a7526191eeaa407a5dc2e9182a2fff41bf76afd46419b",
-      "parent_hardware_digest": "94ca286e14448680cccce2e2ad9e3779ef7a7e6df4591db973008e2cb61841cf",
+      "parent_hardware_digest": "6ac486f64046aac518ddf62f30f80084a74038f49de7f61ba2a00d3c2ecf97a5",
       "parent_policy_digest": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
       "parent_storage_digest": "aefd61691edb1f7f3420ec759ac825b5313e9f6ae23c86d31a2be6ed6806bbf5",
       "parent_boot_digest": "ad59da0903fe9d13eefc2a0dafad78fcca10c8eccb613cda6b3f49538f0944de",
       "trust_status": "TRUSTED",
-      "digest": "12ba15cab5b08d7de78506e003826f32032770f4c770d532bdd89d29f33a9c03"
+      "digest": "ab92448df6453d77b708384bd6a332cf95d2513c9cc2a4b6b1e5cd7ec6ccb838"
     },
     "RUNTIME_NODE": {
       "node_id": "RUNTIME_NODE",
@@ -146,17 +146,17 @@
       "ci_run_id": "34554948142",
       "parent_test_digest": "0d97b829ec470b06d5aa25a11ad3d0e0607819e00363e61a48c5564c48e2dd06",
       "parent_build_digest": "6402ab456a132848862a7526191eeaa407a5dc2e9182a2fff41bf76afd46419b",
-      "parent_state_root": "12ba15cab5b08d7de78506e003826f32032770f4c770d532bdd89d29f33a9c03",
-      "digest": "8b52c0f9a44a5fe6f6f4fafae41a762f4ee59678ee9c67d091be86d0fe36eeac"
+      "parent_state_root": "ab92448df6453d77b708384bd6a332cf95d2513c9cc2a4b6b1e5cd7ec6ccb838",
+      "digest": "f2329d8c96d9f4af99e21dc28422c200db6ed580285c810196b29cf1123cb690"
     },
     "HOST_NODE": {
       "node_id": "HOST_NODE",
       "type": "HARDWARE_ATTESTATION",
-      "hardware_root": "94ca286e14448680cccce2e2ad9e3779ef7a7e6df4591db973008e2cb61841cf",
+      "hardware_root": "6ac486f64046aac518ddf62f30f80084a74038f49de7f61ba2a00d3c2ecf97a5",
       "cpu_cores": 16,
       "kvm_available": true,
       "tpm_present": true,
-      "digest": "94ca286e14448680cccce2e2ad9e3779ef7a7e6df4591db973008e2cb61841cf"
+      "digest": "6ac486f64046aac518ddf62f30f80084a74038f49de7f61ba2a00d3c2ecf97a5"
     },
     "HDS_NODE": {
       "node_id": "HDS_NODE",
@@ -175,10 +175,10 @@
     "PROOF_NODE": {
       "node_id": "PROOF_NODE",
       "type": "DOMAIN_PROOF_V1",
-      "proof_root": "e94deadda9459cea8494ae3eb8ae58aa0e1d3063aac1c636c792c370a0d9e2a9",
-      "parent_state_root": "12ba15cab5b08d7de78506e003826f32032770f4c770d532bdd89d29f33a9c03",
+      "proof_root": "baad5b3bcda2a7888ff6859d1b3313d755be5cda09d01b83cba2e04b3e22e0f1",
+      "parent_state_root": "ab92448df6453d77b708384bd6a332cf95d2513c9cc2a4b6b1e5cd7ec6ccb838",
       "trust_verdict": "VERIFIED_TRUSTED",
-      "digest": "e94deadda9459cea8494ae3eb8ae58aa0e1d3063aac1c636c792c370a0d9e2a9"
+      "digest": "baad5b3bcda2a7888ff6859d1b3313d755be5cda09d01b83cba2e04b3e22e0f1"
     }
   },
   "edges": [
@@ -198,7 +198,7 @@
       "from": "STATE_NODE",
       "to": "RUNTIME_NODE",
       "edge_type": "host_state_root",
-      "digest": "12ba15cab5b08d7de78506e003826f32032770f4c770d532bdd89d29f33a9c03"
+      "digest": "ab92448df6453d77b708384bd6a332cf95d2513c9cc2a4b6b1e5cd7ec6ccb838"
     },
     {
       "from": "BUILD_NODE",
@@ -216,7 +216,7 @@
       "from": "HARDWARE_NODE",
       "to": "STATE_NODE",
       "edge_type": "hardware_leaf",
-      "digest": "94ca286e14448680cccce2e2ad9e3779ef7a7e6df4591db973008e2cb61841cf"
+      "digest": "6ac486f64046aac518ddf62f30f80084a74038f49de7f61ba2a00d3c2ecf97a5"
     },
     {
       "from": "TOPOLOGY_NODE",
@@ -264,7 +264,7 @@
       "from": "HARDWARE_NODE",
       "to": "CAPABILITY_NODE",
       "edge_type": "hardware_facts",
-      "digest": "94ca286e14448680cccce2e2ad9e3779ef7a7e6df4591db973008e2cb61841cf"
+      "digest": "6ac486f64046aac518ddf62f30f80084a74038f49de7f61ba2a00d3c2ecf97a5"
     },
     {
       "from": "CAPABILITY_NODE",
@@ -282,8 +282,8 @@
       "from": "PROOF_NODE",
       "to": "RELEASE_NODE",
       "edge_type": "parent_proof_root",
-      "digest": "e94deadda9459cea8494ae3eb8ae58aa0e1d3063aac1c636c792c370a0d9e2a9"
+      "digest": "baad5b3bcda2a7888ff6859d1b3313d755be5cda09d01b83cba2e04b3e22e0f1"
     }
   ],
-  "graph_digest": "8b52c0f9a44a5fe6f6f4fafae41a762f4ee59678ee9c67d091be86d0fe36eeac"
+  "graph_digest": "f2329d8c96d9f4af99e21dc28422c200db6ed580285c810196b29cf1123cb690"
 }

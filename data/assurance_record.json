@@ -8,7 +8,7 @@
   "verified_failure_count": 0,
   "pass_rate_percentage": 100,
   "verification_status": "PASSING_ALL",
-  "verification_timestamp": "2026-09-11T02:56:36Z",
+  "verification_timestamp": "2026-09-11T03:01:57Z",
   "proof_classes_covered": [
     "L0_STATIC",
     "L1_UNIT",
@@ -18,5 +18,5 @@
     "L4_BENCHMARK",
     "L5_REAL_E2E"
   ],
-  "evidence_snapshot_digest": "3558515a40fd8ab17a7c082fbc882992dc59ef2a338265d4bba92e6a92c8fce4"
+  "evidence_snapshot_digest": "d83e1c9c0ba9e500bf167009ff6daed86cf7b9e69ac38a11b6b760f0cef0cf4e"
 }

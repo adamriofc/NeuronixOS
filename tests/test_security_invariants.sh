@@ -311,6 +311,7 @@ ok, reason, factors = StorageFirewall.evaluate_7_factors(
     target_device='/dev/sda1',
     plan_hash='a'*64,
     expected_plan_hash='a'*64,
+    active_mounts_override=[],
     active_devices_override={'/dev/sda1'}
 )
 assert not ok and 'Factor 3 failed' in reason
