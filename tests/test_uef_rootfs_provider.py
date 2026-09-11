@@ -106,6 +106,75 @@ class TestUefRootfsProvider(unittest.TestCase):
         proof = self.provider.cleanup(prep)
         self.assertTrue(proof.clean)
 
+    def test_missing_bwrap_inspect_fails_closed(self) -> None:
+        """Missing bwrap binary must report compatible=False (fail-closed)."""
+        workload = WorkloadSpec(
+            workload_id="wl-rootfs",
+            format="rootfs-dir",
+            entrypoint=["/bin/sh"],
+            rootfs_path="/",
+        )
+        with patch.object(self.provider, "_get_bwrap_binary", return_value=None):
+            report = self.provider.inspect(workload)
+            self.assertFalse(report.compatible)
+            self.assertIn("bwrap", report.missing_features)
+            self.assertEqual(self.provider.score(workload, OperationalContext()), 0.0)
+
+    @patch("subprocess.run")
+    def test_execution_failure_fails_closed_no_synthetic_success(
+        self, mock_run: MagicMock
+    ) -> None:
+        """Execution errors must yield non-zero exit code and never synthetic success."""
+        mock_run.side_effect = Exception("bwrap namespace creation failed")
+        workload = WorkloadSpec(
+            workload_id="wl-fail",
+            format="rootfs-dir",
+            entrypoint=["/bin/sh"],
+            rootfs_path="/",
+        )
+        prep = self.provider.prepare(workload)
+        envelope = {
+            "envelope_id": "oce-fail-001",
+            "intent": {"action": "test.fail"},
+        }
+        with patch.object(self.provider, "_get_bwrap_binary", return_value="/usr/bin/bwrap"):
+            receipt = self.provider.execute(prep, envelope)
+            self.assertNotEqual(receipt.exit_code, 0)
+            self.assertNotIn("ROOTFS_EXEC_SUCCESS", receipt.stdout_preview)
+            self.assertIn("bwrap namespace creation failed", receipt.stderr_preview)
+            self.assertEqual(receipt.invariants_verified, [])
+
+        proof = self.provider.cleanup(prep)
+        self.assertTrue(proof.clean)
+
+    def test_real_bwrap_integration_execution(self) -> None:
+        """Integration test: verifies real unprivileged bwrap container execution on host."""
+        if not shutil.which("bwrap"):
+            self.skipTest("Bubblewrap ('bwrap') is not available on this host.")
+
+        workload = WorkloadSpec(
+            workload_id="wl-real-bwrap",
+            format="rootfs-dir",
+            entrypoint=["/bin/echo"],
+            arguments=["REAL_BWRAP_EXECUTION_VERIFIED"],
+            rootfs_path="/",
+        )
+        prep = self.provider.prepare(workload)
+        envelope = {
+            "envelope_id": "oce-real-bwrap-001",
+            "intent": {"action": "system.probe_bwrap"},
+            "invariants": ["INV-SEC-005"],
+        }
+        receipt = self.provider.execute(prep, envelope)
+        self.assertEqual(receipt.exit_code, 0)
+        self.assertIn("REAL_BWRAP_EXECUTION_VERIFIED", receipt.stdout_preview)
+        self.assertEqual(len(receipt.envelope_hash), 64)
+        self.assertEqual(len(receipt.state_root_after), 64)
+        self.assertIn("INV-SEC-005", receipt.invariants_verified)
+
+        proof = self.provider.cleanup(prep)
+        self.assertTrue(proof.clean)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,7 +14,10 @@ import tempfile
 import time
 from typing import Any, Dict, List, Optional
 
+from neuronix_core.state import canonical_json_bytes, compute_state_root
+
 from .models import (
+    CapabilityVector,
     CompatibilityReport,
     ExecutionReceiptData,
     OperationalContext,
@@ -68,9 +71,10 @@ class RootfsBwrapProvider(ExecutionProvider):
         bwrap_path = self._get_bwrap_binary()
         if not bwrap_path:
             return CompatibilityReport(
-                compatible=True,  # Capable in principle, simulated if host lacks bwrap binary
-                reason="Bubblewrap supported via host daemon or synthetic isolation.",
-                estimated_startup_latency_ms=5.0,
+                compatible=False,
+                reason="Bubblewrap binary 'bwrap' not found on host system.",
+                missing_features=["bwrap"],
+                estimated_startup_latency_ms=0.0,
             )
 
         return CompatibilityReport(
@@ -79,9 +83,44 @@ class RootfsBwrapProvider(ExecutionProvider):
             estimated_startup_latency_ms=3.5,
         )
 
-    def score(self, workload: WorkloadSpec, context: OperationalContext) -> float:
+    def evaluate_capabilities(
+        self,
+        workload: WorkloadSpec,
+        context: OperationalContext,
+    ) -> CapabilityVector:
         report = self.inspect(workload)
         if not report.compatible:
+            return CapabilityVector(
+                compatible=False,
+                policy_fit=0.0,
+                isolation_fit=0.0,
+                resource_cost=0.0,
+                startup_latency=0.0,
+                provenance=0.0,
+            )
+
+        policy_fit = 0.95 if workload.format == "rootfs-dir" else 0.85
+        isolation_fit = (
+            0.90
+            if context.requested_isolation_tier in ["TIER_1_SANDBOX", "TIER_2_MICROVM"]
+            else 0.70
+        )
+        resource_cost = 0.90
+        startup_latency = 0.85
+        provenance = 0.90
+
+        return CapabilityVector(
+            compatible=True,
+            policy_fit=policy_fit,
+            isolation_fit=isolation_fit,
+            resource_cost=resource_cost,
+            startup_latency=startup_latency,
+            provenance=provenance,
+        )
+
+    def score(self, workload: WorkloadSpec, context: OperationalContext) -> float:
+        vec = self.evaluate_capabilities(workload, context)
+        if not vec.compatible:
             return 0.0
 
         if workload.format == "rootfs-dir":
@@ -161,6 +200,9 @@ class RootfsBwrapProvider(ExecutionProvider):
         if not workload:
             raise RuntimeError("PreparedEnvironment missing associated WorkloadSpec.")
 
+        if not self._get_bwrap_binary():
+            raise RuntimeError("Bubblewrap binary 'bwrap' not found on host system.")
+
         cmd = self._build_bwrap_command(prepared, workload)
         start_mono = time.monotonic()
         usage_start = resource.getrusage(resource.RUSAGE_CHILDREN)
@@ -179,11 +221,14 @@ class RootfsBwrapProvider(ExecutionProvider):
             exit_code = 124
             stdout_bytes = b""
             stderr_bytes = b"Bubblewrap execution timed out."
+        except FileNotFoundError as exc:
+            exit_code = 127
+            stdout_bytes = b""
+            stderr_bytes = f"Bubblewrap binary not found: {exc}".encode("utf-8")
         except Exception as exc:
-            # Fallback for environments where bwrap is not installed
-            exit_code = 0
-            stdout_bytes = b"ROOTFS_EXEC_SUCCESS\n"
-            stderr_bytes = f"Bwrap invocation handled: {exc}".encode("utf-8")
+            exit_code = 1
+            stdout_bytes = b""
+            stderr_bytes = f"Bubblewrap execution failed: {exc}".encode("utf-8")
 
         duration_ms = (time.monotonic() - start_mono) * 1000.0
         usage_end = resource.getrusage(resource.RUSAGE_CHILDREN)
@@ -198,14 +243,31 @@ class RootfsBwrapProvider(ExecutionProvider):
         evidence_input = f"{envelope.get('envelope_id', '')}:{exit_code}:{stdout_hash}:{stderr_hash}"
         evidence_digest = hashlib.sha256(evidence_input.encode("utf-8")).hexdigest()
         receipt_id = f"rcpt-{int(time.time()):08d}-{evidence_digest[:8]}"
-        state_root = envelope.get("preconditions", {}).get("required_state_root", "0" * 64)
+
+        try:
+            state_root_after = compute_state_root()
+        except Exception:
+            state_root_after = envelope.get("preconditions", {}).get("required_state_root", "0" * 64)
+
+        envelope_bytes = canonical_json_bytes(envelope)
+        envelope_hash = hashlib.sha256(envelope_bytes).hexdigest()
+
+        invariants_verified = (
+            [
+                inv
+                for inv in ["INV-SEC-005", "INV-SEC-010"]
+                if inv in envelope.get("invariants", ["INV-SEC-005", "INV-SEC-010"])
+            ]
+            if exit_code == 0
+            else []
+        )
 
         return ExecutionReceiptData(
             receipt_id=receipt_id,
-            envelope_hash=hashlib.sha256(str(envelope).encode("utf-8")).hexdigest(),
+            envelope_hash=envelope_hash,
             provider_id=self.provider_id,
             exit_code=exit_code,
-            state_root_after=state_root,
+            state_root_after=state_root_after,
             duration_ms=round(duration_ms, 3),
             resource_usage={
                 "peak_rss_bytes": usage_end.ru_maxrss * 1024,
@@ -216,7 +278,7 @@ class RootfsBwrapProvider(ExecutionProvider):
             stderr_hash=stderr_hash,
             stdout_preview=stdout_bytes[:512].decode("utf-8", errors="replace"),
             stderr_preview=stderr_bytes[:512].decode("utf-8", errors="replace"),
-            invariants_verified=["INV-SEC-005", "INV-SEC-010"],
+            invariants_verified=invariants_verified,
         )
 
     def cleanup(self, prepared: PreparedEnvironment) -> ResourceReleaseProof:
