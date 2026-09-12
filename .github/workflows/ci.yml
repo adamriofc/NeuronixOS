@@ -18,7 +18,7 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}/packages/neuronix-core:${{ github.workspace }}/packages/conductor-runtime:${{ github.workspace }}/packages/conductor-mcp:${{ github.workspace }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Nix with Flakes Support
         uses: cachix/install-nix-action@v30
@@ -255,7 +255,7 @@ jobs:
     name: Security Audit & Vulnerability Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Nix with Flakes Support
         uses: cachix/install-nix-action@v30
