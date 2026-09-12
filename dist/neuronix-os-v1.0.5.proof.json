@@ -5,18 +5,18 @@
     "distribution": "NEURONIX OS",
     "release_version": "1.0.5",
     "release_tag": "v1.0.5",
-    "commit_sha": "b0618c32fdfe215b2e9e65ca77f985055b85a3d4",
+    "commit_sha": "32375cea6ee77e53d6649eee2ce46b85ae623ad2",
     "target_architecture": "x86_64-linux"
   },
   "cryptographic_commitments": {
-    "merkle_state_root": "6446368965b98a125ba34b3a0a6fc74f50132ac1f8e9eed3e67ba3de07d4f8dd",
-    "verification_passport_sha256": "383c8ed7525f6eb3f7810213543f31a56b4460dbd1b912501807b80bec62d1c8",
-    "evidence_graph_sha256": "0bb5c863cbb75017a9051aece418aa0ab2601b556bdc6563b58249ed0b3c7f24",
+    "merkle_state_root": "eabd64fb75b37cfd96e5860978821cbb3a1f38af51b4d74d183d4c06911b1cd7",
+    "verification_passport_sha256": "c23824a5beca37cb57228931d1436a6210241448912d65f07b299b56d1a8d9e8",
+    "evidence_graph_sha256": "d897d265662922e78c14013360a552d9f623df09a86ce07b015526b67ec24c8c",
     "iso_checksums_sha256": "4a24065718d8269ea318bb15b073b9c9f0df3c9927bcef6b99dba08f2ebb04f9",
     "sbom_spdx_sha256": "d85362f15c9dd881eec16da8673106fa4c3dfc55eb8abd8df3a36192813ae101",
     "reproducibility_evidence_sha256": "73d8870cdec7755ed11f5f070402b55aa01d8cc97332203eef0e9722c7e49cb1"
   },
   "verification_status": "CERTIFIED_PROVABLE_RELEASE",
-  "timestamp": "2026-09-12T03:38:53Z",
-  "release_proof_digest": "3f58b397c750cf0dae9f832563273c057153d542c82fc2e25ca92bb1deb83abf"
+  "timestamp": "2026-09-12T04:22:06Z",
+  "release_proof_digest": "9912a7eeedfc9f10aa1288e7d8b9461ceba2a9580c0306326876c936965b5ab0"
 }
