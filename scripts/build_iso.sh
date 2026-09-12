@@ -62,9 +62,9 @@ if [[ $STORE_AVAIL_GB -lt 6 ]]; then
 fi
 
 # Read canonical version
-VERSION="1.0.4"
+VERSION="1.0.5"
 if [[ -f "${REPO_ROOT}/version.nix" ]]; then
-    VERSION=$(grep -E 'version\s*=' "${REPO_ROOT}/version.nix" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.4")
+    VERSION=$(grep -E 'version\s*=' "${REPO_ROOT}/version.nix" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.5")
 fi
 log_info "Canonical Release Version  : ${BOLD}v${VERSION}${RESET}"
 

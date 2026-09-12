@@ -18,7 +18,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET_BIN="${PROJECT_ROOT}/bin/neuronix"
 INSTALLER_BIN="${PROJECT_ROOT}/installer/scripts/neuronix-install-engine.sh"
 PYTHON_BIN="$(command -v python3 || ls -d /nix/store/*-python3-*/bin/python3 2>/dev/null | tail -n 1 || echo "python3")"
-CANONICAL_VERSION=$(grep -E 'version\s*=' "${PROJECT_ROOT}/version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.4")
+CANONICAL_VERSION=$(grep -E 'version\s*=' "${PROJECT_ROOT}/version.nix" 2>/dev/null | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.5")
 
 PASSED=0
 FAILED=0

@@ -298,7 +298,7 @@ def generate_manifest():
         except Exception:
             pass
 
-    version_str = "1.0.4"
+    version_str = "1.0.5"
     version_nix = os.path.join(PROJECT_ROOT, "version.nix")
     if os.path.exists(version_nix):
         try:

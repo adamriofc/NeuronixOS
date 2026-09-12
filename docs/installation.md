@@ -60,7 +60,7 @@ You can compile the official live installer ISO directly from the declarative Fl
 nix build .#packages.x86_64-linux.iso --out-link result-iso
 ```
 
-The compiled bootable ISO will be located at `dist/neuronix-os-1.0.4-x86_64.iso` (or `result-iso/iso/neuronix-os-*.iso`).
+The compiled bootable ISO will be located at `dist/neuronix-os-1.0.5-x86_64.iso` (or `result-iso/iso/neuronix-os-*.iso`).
 
 #### High-Performance Binary Caching
 NEURONIX leverages the official NixOS binary cache alongside continuous CI caching:

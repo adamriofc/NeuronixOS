@@ -68,7 +68,7 @@ def generate_passport() -> Dict[str, Any]:
     iso_digest = file_sha256(os.path.join(DIST_DIR, "SHA256SUMS"))
     sbom_candidate = os.path.join(DIST_DIR, f"neuronix-os-v{version_str}-sbom.spdx.json")
     if not os.path.exists(sbom_candidate):
-        sbom_candidate = os.path.join(DIST_DIR, "neuronix-os-v1.0.4-sbom.spdx.json")
+        sbom_candidate = os.path.join(DIST_DIR, "neuronix-os-v1.0.5-sbom.spdx.json")
     sbom_digest = file_sha256(sbom_candidate)
     jcs_digest = file_sha256(os.path.join(DIST_DIR, "jcs_conformance_evidence.json"))
     assurance_digest = file_sha256(evidence_path)

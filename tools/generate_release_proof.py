@@ -53,7 +53,7 @@ def main():
 
     sbom_path = os.path.join(DIST_DIR, f"neuronix-os-v{version_str}-sbom.spdx.json")
     if not os.path.exists(sbom_path):
-        sbom_path = os.path.join(DIST_DIR, "neuronix-os-v1.0.4-sbom.spdx.json")
+        sbom_path = os.path.join(DIST_DIR, "neuronix-os-v1.0.5-sbom.spdx.json")
     sbom_digest = file_sha256(sbom_path)
 
     repro_path = os.path.join(DIST_DIR, "reproducibility_evidence.json")

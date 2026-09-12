@@ -279,7 +279,7 @@ test_neuronix_center() {
   local ver
   ver=$("$python_bin" "${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py" --version 2>&1 || true)
   local expected_ver
-  expected_ver=$(grep -E 'version\s*=' "${DISTRO_ROOT}/version.nix" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.4")
+  expected_ver=$(grep -E 'version\s*=' "${DISTRO_ROOT}/version.nix" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "1.0.5")
   if echo "$ver" | grep -Fq "$expected_ver"; then
     log_pass "neuronix-center reports correct version (${ver})"
   else

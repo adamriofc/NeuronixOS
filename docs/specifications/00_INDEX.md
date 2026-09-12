@@ -1,6 +1,6 @@
 # NEURONIX Master Blueprint: Master Index & Executive Overview
 
-> **Version:** 1.0.4-RELEASE  
+> **Version:** 1.0.5-RELEASE  
 > **Status:** RATIFIED & LOCKED  
 > **Standard:** Enterprise Systems Architecture & Open-Source Production Grade  
 > **Target Path:** `docs/specifications`  
@@ -42,7 +42,9 @@ docs/specifications/
 ├── 18_conductor_runtime_and_surface_specification.md # Conductor Runtime, Unified Surface & Zero-Idle Lifecycle
 ├── 19_neuronix_skill_system_specification.md # NEURONIX Skill System & Deterministic Machine Contracts
 ├── 20_vital_telemetry_and_observer_specification.md # Vital Machine Telemetry & Zero-Idle Observer
-└── 21_conductor_master_architecture_charter.md # Conductor Master Architecture Charter & Definitive Doctrine
+├── 21_conductor_master_architecture_charter.md # Conductor Master Architecture Charter & Definitive Doctrine
+├── 22_hardware_qualification_and_l5_contract.md # Hardware Qualification Matrix & L5 Real Hypervisor Contract
+└── 23_longitudinal_reliability_and_soak_specification.md # Longitudinal Reliability & Multi-Cycle Soak Testing Protocol
 ```
 
 ---
@@ -68,6 +70,8 @@ docs/specifications/
 | **`19_SKILL`** | [NEURONIX Skill System](19_neuronix_skill_system_specification.md) | Deterministic machine contracts, READ/PROPOSE/MUTATE taxonomy, human approval gates, and adapters. | AI Engineers, Systems Developers |
 | **`20_VITAL`** | [Vital Telemetry & Observer](20_vital_telemetry_and_observer_specification.md) | Pull-based zero-idle telemetry, adaptive sampling streams, hardware metrics, and redaction boundaries. | Systems Engineers, AI Engineers |
 | **`21_CHARTER`**| [Conductor Master Charter](21_conductor_master_architecture_charter.md) | Definitive doctrine, 5 core signatures, negative architecture, and closed-loop system intelligence. | Systems Architects, UI/UX, AI Engineers |
+| **`22_HARDWARE`**| [Hardware & L5 Contract](22_hardware_qualification_and_l5_contract.md) | Hardware qualification matrix, physical prerequisites, and truthful non-simulated L5 reservation. | Systems Engineers, Hardware Leads |
+| **`23_RELIABILITY`**| [Longitudinal Reliability](23_longitudinal_reliability_and_soak_specification.md) | Multi-cycle soak testing protocol, resource leak invariants, and 1,000-cycle endurance matrix. | SRE, QA Engineers, Core Team |
 
 ---
 

@@ -15,7 +15,7 @@ export PATH="${PATH:-/run/current-system/sw/bin:/usr/bin:/bin}:/run/current-syst
 
 # Version Metadata
 SERVER_NAME="neuronix-mcp"
-SERVER_VERSION="1.0.4"
+SERVER_VERSION="1.0.5"
 VERSION_NIX="$(dirname "$(readlink -f "$0")")/../version.nix"
 if [[ ! -f "$VERSION_NIX" && -f "$(dirname "$(readlink -f "$0")")/version.nix" ]]; then
     VERSION_NIX="$(dirname "$(readlink -f "$0")")/version.nix"

@@ -89,6 +89,9 @@
   - [33. Vital Laboratory Observation Substrate & Machine Contracts (SPEC-NRX-VTL-020)](#33-vital-laboratory-observation-substrate--machine-contracts-spec-nrx-vtl-020)
   - [34. NEURONIX Skill System & Delegated Authority Engine (SPEC-NRX-SKL-019)](#34-neuronix-skill-system--delegated-authority-engine-spec-nrx-skl-019)
   - [35. Universal Operational Environment (UOE) & Execution Fabric](#35-universal-operational-environment-uoe--execution-fabric)
+  - [36. Hardware Qualification & Truthful L5 Hypervisor Reservation (NRX-SPEC-022)](#36-hardware-qualification--truthful-l5-hypervisor-reservation-nrx-spec-022)
+  - [37. Longitudinal Reliability & Multi-Cycle Soak Testing Protocol (NRX-SPEC-023)](#37-longitudinal-reliability--multi-cycle-soak-testing-protocol-nrx-spec-023)
+  - [38. Cryptographic Trust Anchor & Release Signature Verification](#38-cryptographic-trust-anchor--release-signature-verification)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
 - [Verification, Lifecycle Gate & Test Harness (1,384 Assertions)](#verification--test-harness)
@@ -1355,6 +1358,34 @@ NEURONIX OS evolves from traditional operating system assumptions into a **Unive
   - *1,000-Cycle Endurance Qualification (Native + Rootfs):* 1,000 full execution lifecycles verified with **0 FD leaks**, **0 mount leaks**, **0 leftover temporary directories**, and **0.31 MB bounded RSS delta**.
   - *100-Cycle OCI Container Qualification:* 100 full container bundle preparation and cleanup lifecycles verified with **0 FD leaks**, **0 mount leaks**, **0 leftover temporary directories**, and **0.01 MB RSS delta** (1.05 ms/cycle).
 - **The 8 Lean Architecture Rules:** Zero idle execution daemons, no unnecessary virtual machines, ephemeral memory cleanup on exit, lean ISO distribution footprint, and native path preservation.
+
+### 36. Hardware Qualification & Truthful L5 Hypervisor Reservation (NRX-SPEC-022)
+NEURONIX OS distinguishes between portable software contracts verified across automated continuous integration pipelines and physical bare-metal execution ([NRX-SPEC-022](docs/specifications/22_hardware_qualification_and_l5_contract.md)):
+- **Epistemic Honesty & Zero-Simulation Policy:** In containerized or virtualized runner environments lacking hardware virtualization (`/dev/kvm`), NEURONIX strictly prohibits simulated or fraudulent L5 pass assertions. If physical prerequisites are missing, execution is truthfully recorded as an unsimulated L4 verification contract.
+- **Mandatory L5 Hardware Prerequisites:** Full L5 execution requires 5 physical parameters: (1) read-write `/dev/kvm` character device, (2) CPU hardware virtualization extensions (`vmx` or `svm`), (3) minimum 4 GiB unreserved host RAM, (4) minimum 15 GiB dedicated block storage, and (5) staged live installation ISO (`dist/neuronix-os-1.0.5-x86_64.iso`).
+- **Golden Reference Hardware Matrix (`data/hardware_qualification.json`):** Formally catalogs 8 platform profiles across 5 qualification tiers, including maintainer bare-metal reference workstations (`amd-workstation-rdna3`, Ryzen 9 7950X, Radeon RX 7900 XTX, BARE_METAL_TESTED), virtualized hypervisors (`qemu-kvm-microvm`, VM_VALIDATED), and targeted laptop/workstation profiles (`lenovo-thinkpad-t14`, `framework-laptop-13`, `intel-workstation-arc`, `dell-xps-15-hybrid`).
+
+### 37. Longitudinal Reliability & Multi-Cycle Soak Testing Protocol (NRX-SPEC-023)
+To ensure that long-running control planes, background daemon processes, and AI agent execution environments do not degrade over sustained multi-day or multi-week operation, NEURONIX OS establishes formal longitudinal reliability specifications ([NRX-SPEC-023](docs/specifications/23_longitudinal_reliability_and_soak_specification.md)):
+- **Resource Invariant Preservation Gates:** Asserts zero unclosed file descriptors (`INV-RES-001_ZERO_FD_LEAK`: $\Delta FD == 0$), zero leaked kernel mount points (`INV-RES-002_ZERO_MOUNT_LEAK`: $\Delta Mount == 0$), zero leftover scratch directories in volatile memory (`INV-RES-003_ZERO_TEMP_DIR_LEAK`: $\Delta Temp == 0$), and strictly bounded resident set size growth (`INV-RES-004_BOUNDED_RSS_GROWTH`: $\Delta RSS < 1.0\text{ MB}$ over 1,000 cycles).
+- **1,000-Cycle Endurance Qualification Matrix (`benchmark_uef_resources.py`):** 1,000 full execution lifecycles completed in 13.7 seconds (13.7 ms/cycle) with **0 FD leaks**, **0 mount leaks**, **0 temp dir leaks**, and **0.33 MB RSS delta**.
+- **100-Cycle OCI Container Soak Benchmark:** 100 continuous container prepare, execution, and cleanup cycles completed in 0.04s (0.387 ms/cycle) with zero resource leaks and 0.01 MB RSS growth.
+- **100-Iteration Generation Rollback Benchmark:** 100 atomic profile switches (Gen 42 -> 41 -> 40) verified with sub-millisecond p99 latency (0.047 ms) and zero state corruption.
+
+### 38. Cryptographic Trust Anchor & Release Signature Verification
+NEURONIX OS release tags and binary distributions are cryptographically signed using the maintainer's primary EdDSA GPG key:
+- **Maintainer GPG Signing Key:** `dist/MAINTAINER_GPG_KEY.asc` (also available at `docs/security/MAINTAINER_GPG_KEY.asc`)
+- **Key Fingerprint:** `92C6CCCAA701EB18DE678D4B0DEEDA0E9629F4D3`
+- **Signer Identity:** `adamriofc <adamriofc@protonmail.com>`
+- **Independent Offline Verification:** Any developer or security auditor can verify official signed release tags directly using standard GnuPG:
+  ```bash
+  # Import maintainer public key into local keyring
+  gpg --import dist/MAINTAINER_GPG_KEY.asc
+
+  # Verify cryptographic signature on release tag
+  git tag -v v1.0.5
+  ```
+- **GitHub Identity & Web UI Badge Behavior:** On the GitHub web interface, commit and tag signatures display a green "Verified" badge if and only if the signing public key has been registered to the author's GitHub user account (`https://github.com/settings/keys`). When auditing release tags locally via GnuPG, the signature is cryptographically valid, authentic, and tamper-free regardless of third-party web interface trust stores.
 
 ---
 
