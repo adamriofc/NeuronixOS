@@ -39,12 +39,147 @@ def _find_binary(name: str) -> Optional[str]:
     return shutil.which(name)
 
 
+# Standard userspace container syscall allowlist (Docker / OCI / runc baseline)
+STANDARD_CONTAINER_SYSCALL_ALLOWLIST: List[str] = [
+    # Core File and Descriptor I/O
+    "read", "write", "open", "openat", "openat2", "close", "stat", "fstat", "lstat",
+    "newfstatat", "poll", "ppoll", "lseek", "access", "faccessat", "faccessat2",
+    "dup", "dup2", "dup3", "pipe", "pipe2", "select", "pselect6", "fcntl", "flock",
+    "fsync", "fdatasync", "truncate", "ftruncate", "getdents", "getdents64",
+    "getcwd", "chdir", "fchdir", "rename", "renameat", "renameat2", "mkdir",
+    "mkdirat", "rmdir", "creat", "link", "linkat", "unlink", "unlinkat",
+    "symlink", "symlinkat", "readlink", "readlinkat", "chmod", "fchmod",
+    "fchmodat", "chown", "fchown", "lchown", "fchownat", "umask", "pread64",
+    "pwrite64", "readv", "writev", "preadv", "pwritev", "preadv2", "pwritev2",
+    "sendfile", "splice", "tee", "vmsplice", "fallocate", "statx", "copy_file_range",
+    # Process Lifecycle, Memory and Threading
+    "mmap", "mprotect", "munmap", "brk", "mremap", "msync", "mincore", "madvise",
+    "clone", "clone3", "fork", "vfork", "execve", "execveat", "exit", "exit_group",
+    "wait4", "waitid", "kill", "tgkill", "tkill", "getpid", "getppid", "gettid",
+    "getuid", "geteuid", "getgid", "getegid", "getresuid", "getresgid",
+    "set_tid_address", "set_robust_list", "get_robust_list", "prctl", "arch_prctl",
+    "futex", "sched_yield", "sched_getaffinity", "sched_setaffinity", "sched_getparam",
+    "sched_setparam", "sched_getscheduler", "sched_setscheduler", "sched_get_priority_max",
+    "sched_get_priority_min", "getrlimit", "setrlimit", "prlimit64", "getrusage",
+    "sysinfo", "times", "uname", "memfd_create", "getrandom",
+    # Signals, Timers and Clocks
+    "rt_sigaction", "rt_sigprocmask", "rt_sigreturn", "rt_sigsuspend", "rt_sigpending",
+    "rt_sigtimedwait", "sigaltstack", "pause", "nanosleep", "clock_nanosleep",
+    "gettimeofday", "clock_gettime", "clock_getres", "getitimer", "setitimer",
+    "alarm", "timerfd_create", "timerfd_settime", "timerfd_gettime",
+    # Networking and IPC
+    "socket", "connect", "accept", "accept4", "sendto", "recvfrom", "sendmsg",
+    "recvmsg", "shutdown", "bind", "listen", "getsockname", "getpeername",
+    "socketpair", "setsockopt", "getsockopt", "sendmmsg", "recvmmsg",
+    "epoll_create", "epoll_create1", "epoll_ctl", "epoll_wait", "epoll_pwait",
+    "eventfd", "eventfd2", "signalfd", "signalfd4", "semget", "semop", "semctl",
+    "shmget", "shmat", "shmdt", "shmctl", "msgget", "msgsnd", "msgrcv", "msgctl",
+    "ioctl", "restart_syscall", "utime", "utimes", "utimensat",
+]
+
+# Privileged syscalls blocked by defaultAction SCMP_ACT_ERRNO
+RESTRICTED_PRIVILEGED_SYSCALLS: List[str] = [
+    "reboot", "kexec_load", "kexec_file_load", "init_module", "finit_module",
+    "delete_module", "bpf", "ptrace", "sysfs", "pivot_root", "mount",
+    "umount2", "swapon", "swapoff", "acct", "iopl", "ioperm", "create_module",
+    "get_kernel_syms", "query_module", "lookup_dcookie", "open_by_handle_at",
+    "name_to_handle_at", "clock_adjtime", "adjtimex",
+]
+
+
+def generate_standard_seccomp_profile(
+    default_action: str = "SCMP_ACT_ERRNO",
+    extra_syscalls: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """
+    Generates a hardened, architecture-aware OCI seccomp configuration.
+    Enforces a strict default-deny action (SCMP_ACT_ERRNO) with an established container
+    userspace allowlist across x86_64, x86, and aarch64 architectures.
+    Guarantees dangerous privileged kernel operations (reboot, kexec, bpf, ptrace,
+    module insertion, raw filesystem mounts) are blocked, while standard container
+    userspace workloads execute cleanly.
+    """
+    names = set(STANDARD_CONTAINER_SYSCALL_ALLOWLIST)
+    if extra_syscalls:
+        names.update(extra_syscalls)
+
+    if default_action in ("SCMP_ACT_ERRNO", "SCMP_ACT_KILL") and not names:
+        raise ValueError("Invalid seccomp configuration: default-deny with empty syscall allowlist is prohibited")
+
+    return {
+        "defaultAction": default_action,
+        "architectures": [
+            "SCMP_ARCH_X86_64",
+            "SCMP_ARCH_X86",
+            "SCMP_ARCH_AARCH64",
+        ],
+        "syscalls": [
+            {
+                "names": sorted(list(names)),
+                "action": "SCMP_ACT_ALLOW",
+                "args": [],
+            }
+        ],
+    }
+
+
+def validate_seccomp_profile(profile: Dict[str, Any]) -> bool:
+    """
+    Validates that a seccomp profile enforces secure architecture-aware default-deny
+    without locking out userspace execution via empty allowlists.
+    """
+    if not isinstance(profile, dict):
+        return False
+    default_action = profile.get("defaultAction")
+    archs = profile.get("architectures", [])
+    syscalls = profile.get("syscalls", [])
+
+    if not default_action or not archs:
+        return False
+
+    if "SCMP_ARCH_X86_64" not in archs or "SCMP_ARCH_AARCH64" not in archs:
+        return False
+
+    if default_action in ("SCMP_ACT_ERRNO", "SCMP_ACT_KILL"):
+        if not syscalls:
+            return False
+        total_allowed = 0
+        for entry in syscalls:
+            if entry.get("action") == "SCMP_ACT_ALLOW":
+                total_allowed += len(entry.get("names", []))
+        if total_allowed == 0:
+            return False
+
+    return True
+
+
+def evaluate_syscall_policy(
+    syscall_name: str,
+    seccomp_profile: Optional[Dict[str, Any]] = None,
+) -> str:
+    """
+    Evaluates whether a given syscall is permitted by the OCI seccomp configuration.
+    Returns 'SCMP_ACT_ALLOW' if explicitly allowlisted, or the profile's defaultAction
+    (e.g., 'SCMP_ACT_ERRNO') if not allowlisted.
+    """
+    if seccomp_profile is None:
+        seccomp_profile = generate_standard_seccomp_profile()
+    for rule in seccomp_profile.get("syscalls", []):
+        if syscall_name in rule.get("names", []):
+            return rule.get("action", "SCMP_ACT_ALLOW")
+    return seccomp_profile.get("defaultAction", "SCMP_ACT_ERRNO")
+
+
 class OciContainerProvider(ExecutionProvider):
     """Executes workloads inside standard OCI container runtimes."""
 
     @property
     def provider_id(self) -> str:
         return "oci.crun"
+
+    generate_standard_seccomp_profile = staticmethod(generate_standard_seccomp_profile)
+    validate_seccomp_profile = staticmethod(validate_seccomp_profile)
+    evaluate_syscall_policy = staticmethod(evaluate_syscall_policy)
 
     def _detect_high_level_runtime(self) -> Optional[str]:
         """Detect high-level container engines capable of pulling/running OCI images."""
@@ -358,17 +493,11 @@ class OciContainerProvider(ExecutionProvider):
                                 "limit": 1024,
                             },
                         },
-                        "seccomp": {
-                            "defaultAction": "SCMP_ACT_ERRNO",
-                            "architectures": [
-                                "SCMP_ARCH_X86_64",
-                                "SCMP_ARCH_X86",
-                                "SCMP_ARCH_AARCH64",
-                            ],
-                            "syscalls": [],
-                        },
+                        "seccomp": generate_standard_seccomp_profile(),
                     },
                 }
+                if not validate_seccomp_profile(oci_spec["linux"]["seccomp"]):
+                    raise ValueError("Seccomp profile failed validation check: empty allowlist or missing architecture")
                 with open(config_path, "w", encoding="utf-8") as f:
                     json.dump(oci_spec, f, indent=2)
 

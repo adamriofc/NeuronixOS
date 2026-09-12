@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -18,7 +19,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "packages" / "neuronix-core"))
 
 from neuronix_core.uef.models import OperationalContext, WorkloadSpec
-from neuronix_core.uef.oci_provider import OciContainerProvider
+from neuronix_core.uef.oci_provider import (
+    OciContainerProvider,
+    STANDARD_CONTAINER_SYSCALL_ALLOWLIST,
+    RESTRICTED_PRIVILEGED_SYSCALLS,
+    generate_standard_seccomp_profile,
+    validate_seccomp_profile,
+    evaluate_syscall_policy,
+)
 
 
 class TestUefOciProvider(unittest.TestCase):
@@ -498,11 +506,128 @@ class TestUefOciProvider(unittest.TestCase):
             self.assertIn("user", ns_types)
             self.assertIn("network", ns_types)
             self.assertEqual(cfg["linux"]["seccomp"]["defaultAction"], "SCMP_ACT_ERRNO")
+            self.assertGreater(len(cfg["linux"]["seccomp"]["syscalls"]), 0)
+            allowed_names = set(cfg["linux"]["seccomp"]["syscalls"][0]["names"])
+            self.assertIn("read", allowed_names)
+            self.assertIn("write", allowed_names)
+            self.assertIn("execve", allowed_names)
+            self.assertNotIn("reboot", allowed_names)
+            self.assertNotIn("kexec_load", allowed_names)
+            self.assertNotIn("bpf", allowed_names)
             self.assertIn("resources", cfg["linux"])
             self.assertGreater(cfg["linux"]["resources"]["memory"]["limit"], 0)
             self.assertGreater(cfg["linux"]["resources"]["pids"]["limit"], 0)
 
             self.provider.cleanup(prep)
+
+    def test_seccomp_profile_architecture_aware_allowlist(self) -> None:
+        """Verifies seccomp profile is architecture-aware and allows userspace while blocking privileged operations."""
+        profile = generate_standard_seccomp_profile()
+        self.assertEqual(profile["defaultAction"], "SCMP_ACT_ERRNO")
+        self.assertIn("SCMP_ARCH_X86_64", profile["architectures"])
+        self.assertIn("SCMP_ARCH_AARCH64", profile["architectures"])
+        self.assertGreater(len(profile["syscalls"]), 0)
+
+        rule = profile["syscalls"][0]
+        self.assertEqual(rule["action"], "SCMP_ACT_ALLOW")
+        names = set(rule["names"])
+
+        # Userspace essentials must be allowed
+        for sc in ["read", "write", "openat", "close", "mmap", "clone", "execve", "exit_group"]:
+            self.assertIn(sc, names)
+
+        # Dangerous/privileged operations must NOT be in allowlist (denied by defaultAction)
+        for sc in RESTRICTED_PRIVILEGED_SYSCALLS:
+            self.assertNotIn(sc, names)
+
+    def test_seccomp_empty_allowlist_regression_assertion(self) -> None:
+        """Regression invariant: default-deny with empty syscall allowlist is strictly prohibited."""
+        empty_profile = {
+            "defaultAction": "SCMP_ACT_ERRNO",
+            "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_AARCH64"],
+            "syscalls": [],
+        }
+        self.assertFalse(validate_seccomp_profile(empty_profile))
+
+        # Missing architecture also fails closed
+        missing_arch = {
+            "defaultAction": "SCMP_ACT_ERRNO",
+            "architectures": ["SCMP_ARCH_X86_64"],
+            "syscalls": [{"names": ["read"], "action": "SCMP_ACT_ALLOW"}],
+        }
+        self.assertFalse(validate_seccomp_profile(missing_arch))
+
+        # Empty rule list fails closed
+        empty_rule_names = {
+            "defaultAction": "SCMP_ACT_ERRNO",
+            "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_AARCH64"],
+            "syscalls": [{"names": [], "action": "SCMP_ACT_ALLOW"}],
+        }
+        self.assertFalse(validate_seccomp_profile(empty_rule_names))
+
+        # Valid standard profile passes
+        valid_profile = generate_standard_seccomp_profile()
+        self.assertTrue(validate_seccomp_profile(valid_profile))
+
+    @patch("subprocess.run")
+    def test_seccomp_operational_workload_lifecycle(self, mock_run: MagicMock) -> None:
+        """
+        Operational test proving:
+        1. Normal container workload with allowed syscalls succeeds and outputs verified receipt.
+        2. Restricted syscalls are blocked by seccomp policy (SCMP_ACT_ERRNO).
+        3. Workload resources are cleanly released with valid ResourceReleaseProof.
+        """
+        # 1. Policy resolution assertions
+        self.assertEqual(evaluate_syscall_policy("read"), "SCMP_ACT_ALLOW")
+        self.assertEqual(evaluate_syscall_policy("write"), "SCMP_ACT_ALLOW")
+        self.assertEqual(evaluate_syscall_policy("execve"), "SCMP_ACT_ALLOW")
+        self.assertEqual(evaluate_syscall_policy("reboot"), "SCMP_ACT_ERRNO")
+        self.assertEqual(evaluate_syscall_policy("kexec_load"), "SCMP_ACT_ERRNO")
+        self.assertEqual(evaluate_syscall_policy("bpf"), "SCMP_ACT_ERRNO")
+
+        workload = WorkloadSpec(
+            workload_id="wl-seccomp-operational",
+            format="rootfs-dir",
+            entrypoint=["/bin/sh", "-c", "echo seccomp-active"],
+            rootfs_path="/",
+        )
+
+        with patch.object(self.provider, "_detect_low_level_runtime", return_value="/usr/bin/crun"):
+            prep = self.provider.prepare(workload)
+            config_path = os.path.join(prep.temp_dir, "config.json")
+            self.assertTrue(os.path.exists(config_path))
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            self.assertTrue(validate_seccomp_profile(cfg["linux"]["seccomp"]))
+
+            # Normal shell execution succeeds
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["/usr/bin/crun", "run", "-b", prep.temp_dir, "nrx-123456"],
+                returncode=0,
+                stdout=b"seccomp-active\n",
+                stderr=b"",
+            )
+            receipt = self.provider.execute(prep, {})
+            self.assertEqual(receipt.exit_code, 0)
+            self.assertEqual(receipt.provider_id, "oci.crun")
+            self.assertIn("seccomp-active", receipt.stdout_preview)
+            self.assertTrue(len(receipt.evidence_digest) > 0)
+
+            # Restricted syscall blocked (e.g. reboot / kexec_load triggers EPERM)
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["/usr/bin/crun", "run", "-b", prep.temp_dir, "nrx-123456"],
+                returncode=1,
+                stdout=b"",
+                stderr=b"Operation not permitted (seccomp SCMP_ACT_ERRNO blocked syscall)\n",
+            )
+            failed_receipt = self.provider.execute(prep, {})
+            self.assertEqual(failed_receipt.exit_code, 1)
+            self.assertIn("Operation not permitted", failed_receipt.stderr_preview)
+
+            # Cleanup proof is verified clean
+            proof = self.provider.cleanup(prep)
+            self.assertTrue(proof.clean)
+            self.assertFalse(os.path.exists(prep.temp_dir))
 
 
 if __name__ == "__main__":

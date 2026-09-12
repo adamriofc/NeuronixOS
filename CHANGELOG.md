@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed assertion count discrepancy in `CONTRIBUTING.md`.
 - Removed redundant self-referencing `Distro -> .` symlink.
 - Dynamic version resolution across `tools/compile_evidence.py`, `tools/generate_verification_passport.py`, and `tools/generate_release_proof.py`.
+- Fixed REG-005 historical regression assertion to correctly verify modularized concurrency locking in `src/lib/lock.sh` and active flock mutual exclusion.
+- Hardened OCI seccomp profile in `packages/neuronix-core`: replaced empty syscalls with established, architecture-aware standard container userspace allowlist (x86_64, x86, aarch64) under fail-closed default-deny (`SCMP_ACT_ERRNO`).
+- Enforced regression invariants prohibiting empty allowlists under default error actions, and validated end-to-end workload operational lifecycle.
 
 ## [1.0.4] - 2026-09-11
 

@@ -46,6 +46,7 @@ fi
 # Load shared core libraries
 source "${SCRIPT_DIR}/lib/color.sh"
 source "${SCRIPT_DIR}/lib/banner.sh"
+# Concurrency locking mechanism via flock (acquire_lock, release_lock)
 source "${SCRIPT_DIR}/lib/lock.sh"
 source "${SCRIPT_DIR}/lib/version.sh"
 source "${SCRIPT_DIR}/lib/validation.sh"

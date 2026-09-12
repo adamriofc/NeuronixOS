@@ -86,8 +86,9 @@ reg_assert "REG-004" "Shadow VM validates all 4 mandatory guest telemetry gates"
     "grep -q 'kernel_seen' '${PROJECT_ROOT}/src/shadow_vm.sh' && grep -q 'guest_ready_seen' '${PROJECT_ROOT}/src/shadow_vm.sh'"
 
 # REG-005: Concurrency Lock Mechanism
+LOCK_LIB="${PROJECT_ROOT}/src/lib/lock.sh"
 reg_assert "REG-005" "CLI engine defines flock concurrency locking" \
-    "grep -q 'acquire_lock()' '${CLI_BIN}' && grep -q 'flock' '${CLI_BIN}'"
+    "(grep -q 'lib/lock.sh' '${CLI_BIN}' || grep -q 'acquire_lock' '${CLI_BIN}') && grep -q 'acquire_lock()' '${LOCK_LIB}' && grep -q 'flock' '${LOCK_LIB}' && ( source '${LOCK_LIB}' 2>/dev/null; type acquire_lock >/dev/null 2>&1 && type release_lock >/dev/null 2>&1 && TDIR=\$(mktemp -d) && ( exec 200>\"\${TDIR}/test.lock\"; flock -n 200; ( exec 201>\"\${TDIR}/test.lock\"; ! flock -n 201 ) ) && rm -rf \"\${TDIR}\" )"
 
 # REG-006: Doctor Diagnostic Schema Standardization
 DOCTOR_JSON=$(bash "${CLI_BIN}" doctor --json 2>/dev/null || echo "{}")
