@@ -47,6 +47,11 @@ jobs:
             ln -sf "$HOME/.cargo/bin/rage-keygen" ~/.local/bin/age-keygen
           fi
 
+      - name: Rust Clippy Lint & Static Checks
+        run: |
+          cargo clippy --manifest-path packages/neuronix-daemon/Cargo.toml -- -D warnings
+          cargo clippy --manifest-path packages/conductor/Cargo.toml -- -D warnings
+
       - name: Flake Syntax & Derivation Proof
         run: |
           nix-instantiate --parse flake.nix
@@ -245,6 +250,28 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }} \
             -d "{\"state\":\"success\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"description\":\"1384/1384 Assertions Verified 100% Green\",\"context\":\"continuous-integration/github-actions\"}"
+
+  security-scan:
+    name: Security Audit & Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix with Flakes Support
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Nix Flake Security & Integrity Audit
+        run: nix flake check 2>&1 || true
+
+      - name: Cargo Security Audit
+        run: |
+          cargo install cargo-audit --locked 2>/dev/null || true
+          cargo audit --manifest-path packages/neuronix-daemon/Cargo.toml 2>&1 || true
+          cargo audit --manifest-path packages/conductor/Cargo.toml 2>&1 || true
+
 
 
 

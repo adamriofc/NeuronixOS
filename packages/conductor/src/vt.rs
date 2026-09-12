@@ -92,6 +92,7 @@ impl TerminalBuffer {
         }
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn resize(&mut self, new_cols: usize, new_rows: usize) {
         let new_cols = new_cols.max(1);
         let new_rows = new_rows.max(1);
@@ -254,9 +255,8 @@ impl TerminalBuffer {
     }
 
     fn handle_csi(&mut self, seq: &str) {
-        if seq.ends_with('m') {
+        if let Some(params) = seq.strip_suffix('m') {
             // SGR
-            let params = &seq[..seq.len() - 1];
             if params.is_empty() {
                 self.reset_attributes();
                 return;
@@ -347,63 +347,62 @@ impl TerminalBuffer {
                 }
                 i += 1;
             }
-        } else if seq.ends_with('H') || seq.ends_with('f') {
+        } else if let Some(body) = seq.strip_suffix('H').or_else(|| seq.strip_suffix('f')) {
             // Cursor position
-            let body = &seq[..seq.len() - 1];
             let parts: Vec<&str> = body.split(';').collect();
-            let row = parts.get(0).and_then(|s| s.parse::<usize>().ok()).unwrap_or(1);
+            let row = parts.first().and_then(|s| s.parse::<usize>().ok()).unwrap_or(1);
             let col = parts.get(1).and_then(|s| s.parse::<usize>().ok()).unwrap_or(1);
             self.cursor_row = (row.saturating_sub(1)).min(self.rows - 1);
             self.cursor_col = (col.saturating_sub(1)).min(self.cols - 1);
-        } else if seq.ends_with('J') {
-            let mode = seq[..seq.len() - 1].parse::<u8>().unwrap_or(0);
+        } else if let Some(stripped) = seq.strip_suffix('J') {
+            let mode = stripped.parse::<u8>().unwrap_or(0);
             if mode == 2 {
                 self.clear_screen();
             }
-        } else if seq.ends_with('K') {
-            let mode = seq[..seq.len() - 1].parse::<u8>().unwrap_or(0);
+        } else if let Some(stripped) = seq.strip_suffix('K') {
+            let mode = stripped.parse::<u8>().unwrap_or(0);
             self.clear_line(mode);
-        } else if seq.ends_with('A') {
+        } else if let Some(stripped) = seq.strip_suffix('A') {
             // Cursor Up
-            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            let n = stripped.parse::<usize>().unwrap_or(1).max(1);
             self.cursor_row = self.cursor_row.saturating_sub(n);
-        } else if seq.ends_with('B') {
+        } else if let Some(stripped) = seq.strip_suffix('B') {
             // Cursor Down
-            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            let n = stripped.parse::<usize>().unwrap_or(1).max(1);
             self.cursor_row = (self.cursor_row + n).min(self.rows - 1);
-        } else if seq.ends_with('C') {
+        } else if let Some(stripped) = seq.strip_suffix('C') {
             // Cursor Forward
-            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            let n = stripped.parse::<usize>().unwrap_or(1).max(1);
             self.cursor_col = (self.cursor_col + n).min(self.cols - 1);
-        } else if seq.ends_with('D') {
+        } else if let Some(stripped) = seq.strip_suffix('D') {
             // Cursor Backward
-            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            let n = stripped.parse::<usize>().unwrap_or(1).max(1);
             self.cursor_col = self.cursor_col.saturating_sub(n);
-        } else if seq.ends_with('G') {
+        } else if let Some(stripped) = seq.strip_suffix('G') {
             // Cursor Horizontal Absolute
-            let col = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1);
+            let col = stripped.parse::<usize>().unwrap_or(1);
             self.cursor_col = (col.saturating_sub(1)).min(self.cols - 1);
-        } else if seq.ends_with('L') {
+        } else if let Some(stripped) = seq.strip_suffix('L') {
             // Insert Line
-            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            let n = stripped.parse::<usize>().unwrap_or(1).max(1);
             for _ in 0..n {
                 if self.cursor_row < self.rows {
                     self.grid.insert(self.cursor_row, vec![Cell::default(); self.cols]);
                     self.grid.truncate(self.rows);
                 }
             }
-        } else if seq.ends_with('M') {
+        } else if let Some(stripped) = seq.strip_suffix('M') {
             // Delete Line
-            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            let n = stripped.parse::<usize>().unwrap_or(1).max(1);
             for _ in 0..n {
                 if self.cursor_row < self.rows {
                     self.grid.remove(self.cursor_row);
                     self.grid.push(vec![Cell::default(); self.cols]);
                 }
             }
-        } else if seq.ends_with('@') {
+        } else if let Some(stripped) = seq.strip_suffix('@') {
             // Insert Characters
-            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            let n = stripped.parse::<usize>().unwrap_or(1).max(1);
             if self.cursor_row < self.rows {
                 for _ in 0..n {
                     if self.cursor_col < self.cols {
@@ -412,9 +411,9 @@ impl TerminalBuffer {
                     }
                 }
             }
-        } else if seq.ends_with('P') {
+        } else if let Some(stripped) = seq.strip_suffix('P') {
             // Delete Characters
-            let n = seq[..seq.len() - 1].parse::<usize>().unwrap_or(1).max(1);
+            let n = stripped.parse::<usize>().unwrap_or(1).max(1);
             if self.cursor_row < self.rows {
                 for _ in 0..n {
                     if self.cursor_col < self.cols {

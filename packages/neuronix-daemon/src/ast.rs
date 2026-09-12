@@ -357,8 +357,8 @@ fn extract_json_field(json: &str, field: &str) -> Option<String> {
     let key = format!("\"{}\":", field);
     let idx = json.find(&key)?;
     let rest = json[idx + key.len()..].trim_start();
-    if rest.starts_with('"') {
-        let val = rest[1..].split('"').next()?;
+    if let Some(stripped) = rest.strip_prefix('"') {
+        let val = stripped.split('"').next()?;
         Some(format!("\"{}\"", val))
     } else {
         let end = rest.find(|c: char| c == ',' || c == '}' || c == ']' || c.is_whitespace())?;
@@ -370,8 +370,8 @@ fn extract_json_string_field(json: &str, field: &str) -> Option<String> {
     let key = format!("\"{}\":", field);
     let idx = json.find(&key)?;
     let rest = json[idx + key.len()..].trim_start();
-    if rest.starts_with('"') {
-        let val = rest[1..].split('"').next()?;
+    if let Some(stripped) = rest.strip_prefix('"') {
+        let val = stripped.split('"').next()?;
         Some(val.to_string())
     } else {
         None

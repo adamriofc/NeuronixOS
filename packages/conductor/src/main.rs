@@ -83,7 +83,7 @@ impl Drop for RawModeGuard {
     fn drop(&mut self) {
         if self.active {
             let _ = std::process::Command::new("stty").arg("sane").status();
-            print!("\x1b[?25h\x1b[0m\n"); // Show cursor, reset attributes
+            println!("\x1b[?25h\x1b[0m"); // Show cursor, reset attributes
             let _ = std::io::stdout().flush();
         }
     }

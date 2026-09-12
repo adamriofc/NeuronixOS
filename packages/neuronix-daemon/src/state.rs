@@ -163,8 +163,8 @@ impl StateEngine {
                 }
                 if let Some(pos) = content.find("\"validation_status\":") {
                     let rest = content[pos + 20..].trim_start();
-                    if rest.starts_with('"') {
-                        if let Some(val) = rest[1..].split('"').next() {
+                    if let Some(stripped) = rest.strip_prefix('"') {
+                        if let Some(val) = stripped.split('"').next() {
                             validation_status = val.to_string();
                         }
                     }
@@ -386,8 +386,8 @@ fn extract_json_string(json: &str, field: &str) -> Option<String> {
     let key = format!("\"{}\":", field);
     let idx = json.find(&key)?;
     let rest = json[idx + key.len()..].trim_start();
-    if rest.starts_with('"') {
-        let val = rest[1..].split('"').next()?;
+    if let Some(stripped) = rest.strip_prefix('"') {
+        let val = stripped.split('"').next()?;
         Some(val.to_string())
     } else {
         None

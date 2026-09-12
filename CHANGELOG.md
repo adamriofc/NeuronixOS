@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OCI container image reference cryptographic provenance classification (`PROVENANCE_STRONG` for digest pinning vs `PROVENANCE_NORMAL` for mutable tags).
 - Modular CLI architecture: decomposed monolithic `src/neuronix` into `src/lib/` and `src/commands/` while maintaining 100% backwards compatibility and permission security invariants.
 - PEP 561 typed package marker (`py.typed`) and `pyproject.toml` with mypy and ruff configurations for `neuronix-core`.
-- Repository community standards: `CONTRIBUTING.md` (synchronized to 1,353+ assertions), `.github/PULL_REQUEST_TEMPLATE.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), and `.editorconfig`.
+- Repository community standards: `CONTRIBUTING.md` (synchronized to 1,384 assertions), `.github/PULL_REQUEST_TEMPLATE.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), and `.editorconfig`.
 - Automated release infrastructure: `.github/RELEASE_TEMPLATE.md`, `.github/dependabot.yml`, `.github/workflows/benchmark.yml`.
 - Comprehensive Hardware Compatibility Matrix in `README.md`.
 - End-to-end hardware contracts test suite (`tests/e2e/test_hardware_contracts.sh`).

@@ -102,6 +102,7 @@ impl HyperionBroker {
     /// Computes Merkle Domain Proof linking StateRoot, HDS hash, policy, input, output, and runtime receipt.
     /// Strictly adheres to SPEC-NRX-DP-014 (DomainProofV1 canonical formulation).
     /// Fails closed with NO_RUNTIME_RECEIPT if evidence is absent or invalid.
+    #[allow(clippy::too_many_arguments)]
     pub fn generate_proof(
         state_root: &str,
         hds_json_or_hash: &str,
@@ -158,10 +159,9 @@ impl HyperionBroker {
                     if (backend != "bubblewrap_ram_overlay" && backend != "direct_seccomp_v1") || mode != "real_ghost" {
                         tier_mismatch = true;
                     }
-                } else if isolation_tier == "TIER_0_FAST_PATH" {
-                    if (backend != "host_direct" && backend != "fast_path_v1") || mode != "real_host" {
-                        tier_mismatch = true;
-                    }
+                } else if isolation_tier == "TIER_0_FAST_PATH"
+                    && ((backend != "host_direct" && backend != "fast_path_v1") || mode != "real_host") {
+                    tier_mismatch = true;
                 }
 
                 if extracted_nonce.is_empty() {
@@ -277,8 +277,8 @@ fn extract_field(json: &str, field: &str) -> Option<String> {
     let key = format!("\"{}\":", field);
     let idx = json.find(&key)?;
     let rest = json[idx + key.len()..].trim_start();
-    if rest.starts_with('"') {
-        let val = rest[1..].split('"').next()?;
+    if let Some(stripped) = rest.strip_prefix('"') {
+        let val = stripped.split('"').next()?;
         Some(val.to_string())
     } else {
         let end = rest.find(|c: char| c == ',' || c == '}' || c == ']' || c.is_whitespace())?;

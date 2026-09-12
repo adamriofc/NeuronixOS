@@ -313,7 +313,7 @@ impl SurfaceLayout {
         lines.push(self.format_line(""));
 
         if let Some(OverlayType::SkillProposal(ref prop)) = self.active_overlay {
-            lines.push(self.format_line(&format!("  [ ACTIVE PROPOSAL REQUIRING DECISION ]")));
+            lines.push(self.format_line("  [ ACTIVE PROPOSAL REQUIRING DECISION ]"));
             lines.push(self.format_line(&format!("    Title:        {}", prop.title)));
             lines.push(self.format_line(&format!("    Skill:        {}", prop.skill_id)));
             lines.push(self.format_line(&format!("    Severity:     {}", prop.severity)));

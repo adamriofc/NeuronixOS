@@ -237,13 +237,7 @@ pub fn parse_rpc_response(raw: &str) -> Result<RpcResponse, String> {
         None
     };
     let result = if error.is_none() {
-        if let Some(obj) = extract_object_field(raw, "result") {
-            Some(obj)
-        } else if let Some(s) = extract_str_field(raw, "result") {
-            Some(s)
-        } else {
-            None
-        }
+        extract_object_field(raw, "result").or_else(|| extract_str_field(raw, "result"))
     } else {
         None
     };
