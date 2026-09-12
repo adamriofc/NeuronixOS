@@ -1,27 +1,27 @@
 {
   "schema_version": "1.1.0",
   "distribution": "NEURONIX OS",
-  "version": "1.0.4",
-  "release_tag": "v1.0.4",
-  "last_verified_run_id": "34585650733",
-  "last_verified_commit_sha": "9871c2940fb94645b3265d3b19c3be83ccfa734a",
+  "version": "1.0.5",
+  "release_tag": "v1.0.5",
+  "last_verified_run_id": "LOCAL_VERIFIED",
+  "last_verified_commit_sha": "edf920406c63b4c934c4a2ca6c3daa039516dbbe",
   "taxonomy": {
-    "CATALOG": 1353,
-    "VERIFIED": 1353,
+    "CATALOG": 1384,
+    "VERIFIED": 1384,
     "OBSERVED": true,
     "ATTESTED": true
   },
   "metrics": {
-    "total_assertions": 1353,
-    "verified_assertions": 1353,
+    "total_assertions": 1384,
+    "verified_assertions": 1384,
     "failed_assertions": 0,
     "skipped_assertions": 0,
     "pass_rate_percentage": 100,
     "confidence_score_percentage": 100
   },
   "verification_status": "PASSING_ALL",
-  "verification_timestamp": "2026-09-11T09:47:48Z",
-  "freshness_epoch": 1789120068,
+  "verification_timestamp": "2026-09-12T02:11:37Z",
+  "freshness_epoch": 1789179097,
   "proof_classes_covered": [
     "L0_STATIC",
     "L1_UNIT",
@@ -31,5 +31,5 @@
     "L4_BENCHMARK",
     "L5_REAL_E2E"
   ],
-  "compiler_digest": "0531794c25a8827139b734951e77275864c2ef33db78c12be6de54a839341710"
+  "compiler_digest": "06009513df42842cddc6a05a3834605e60551b95a262275aa04ffb887e3a9c10"
 }

@@ -1,7 +1,7 @@
 # NEURONIX OS: Reference Hardware Qualification Matrix
 
 > **Document ID:** `NRX-HW-001`  
-> **Target Release:** `v1.0.4`  
+> **Target Release:** `v1.0.5`  
 > **Status:** APPROVED  
 > **Specification Path:** `docs/hardware_profiles.md`  
 

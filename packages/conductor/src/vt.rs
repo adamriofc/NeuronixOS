@@ -4,6 +4,8 @@
 // Adheres strictly to SPEC-NRX-CND-018.
 // ==============================================================================
 
+/// VT100 and ANSI terminal color representation.
+/// Supports standard 16 colors, 256 indexed palette, and 24-bit RGB truecolor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     Default,
@@ -27,6 +29,7 @@ pub enum Color {
     Rgb(u8, u8, u8),
 }
 
+/// A single terminal cell representing character glyph and visual attributes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cell {
     pub ch: char,

@@ -11,7 +11,7 @@ on:
       release_tag:
         description: 'Release Tag to attach ISO artifacts to (e.g. v1.0.3)'
         required: true
-        default: 'v1.0.4'
+        default: 'v1.0.5'
 
 permissions:
   contents: write
@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           TARGET_SHA=$(git rev-parse HEAD)
-          TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.4' }}"
+          TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.5' }}"
           echo "================================================================================"
           echo "         NEURONIX RELEASE LINEAGE & CI GATE ENFORCEMENT VERIFICATION"
           echo "================================================================================"
@@ -142,7 +142,7 @@ jobs:
 
           echo "Executing Offline Standalone Verification Engine on exact release artifacts..."
           python3 tools/verify_passport.py dist/verification-passport.json --graph --trace release
-          python3 tools/verify_passport.py dist/neuronix-os-v1.0.4.proof.json
+          python3 tools/verify_passport.py "dist/neuronix-os-${TAG}.proof.json"
 
           echo "================================================================================"
           echo "ALL RELEASE LINEAGE & INTEGRITY GATES CERTIFIED FOR COMMIT ${TARGET_SHA}"
@@ -160,7 +160,7 @@ jobs:
             echo "::error::Compiled ISO not found in result-iso/iso"
             exit 1
           fi
-          TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.4' }}"
+          TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.5' }}"
           TARGET_NAME="neuronix-os-${TAG}-x86_64.iso"
           cp "$ISO_FILE" "dist/${TARGET_NAME}"
           ISO_SIZE=$(stat -c%s "dist/${TARGET_NAME}")
@@ -209,7 +209,7 @@ jobs:
       - name: Upload ISO Artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.4' }}
+          tag_name: ${{ github.event.release.tag_name || github.event.inputs.release_tag || 'v1.0.5' }}
           files: |
             dist/*
         env:

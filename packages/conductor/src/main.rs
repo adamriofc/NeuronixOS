@@ -17,7 +17,8 @@ use surface::{ProposalCard, SurfaceLayout, WorkspaceTab};
 use client::ConductorClient;
 use pty::PtySession;
 
-pub const CONDUCTOR_VERSION: &str = "1.0.4";
+/// Conductor application version string.
+pub const CONDUCTOR_VERSION: &str = "1.0.5";
 
 const TIOCGWINSZ: u64 = 0x5413;
 const POLLIN: i16 = 0x0001;
@@ -389,7 +390,7 @@ fn main() {
 
     if args.contains(&"--test-render".to_string()) {
         let mut layout = SurfaceLayout::new(80, 24);
-        layout.terminal.write_str("NEURONIX Conductor v1.0.4 Terminal Canvas\nZero-Idle Runtime Broker Connected.\nType 'neuronix doctor' or run skills directly.");
+        layout.terminal.write_str("NEURONIX Conductor v1.0.5 Terminal Canvas\nZero-Idle Runtime Broker Connected.\nType 'neuronix doctor' or run skills directly.");
         layout.show_proposal(ProposalCard {
             title: "Storage Layout Plan".to_string(),
             skill_id: "storage.plan".to_string(),

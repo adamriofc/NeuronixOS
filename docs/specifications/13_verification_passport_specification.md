@@ -97,8 +97,8 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
   },
   "verification_evidence": {
     "test_manifest_hash": "5d2b7b51...",
-    "catalog_assertion_count": 1353,
-    "verified_assertion_count": 1353,
+    "catalog_assertion_count": 1384,
+    "verified_assertion_count": 1384,
     "verified_failure_count": 0,
     "verified_pass_rate_percentage": 100,
     "verification_status": "PASSING_ALL",

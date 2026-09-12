@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test-and-verify:
-    name: Industrial Systems Verification & Release Gate (1353 Assertions + Reproducibility)
+    name: Industrial Systems Verification & Release Gate (1384 Assertions + Reproducibility)
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: ${{ github.workspace }}/packages/neuronix-core:${{ github.workspace }}/packages/conductor-runtime:${{ github.workspace }}/packages/conductor-mcp:${{ github.workspace }}
@@ -151,7 +151,7 @@ jobs:
         run: |
           bash tests/test_reproducible_iso.sh
 
-      - name: Verify Single Source of Truth Test Manifest (1353 Assertions)
+      - name: Verify Single Source of Truth Test Manifest (1384 Assertions)
         run: |
           python3 tools/generate_test_manifest.py
           git diff -I '"generated_at":' --exit-code data/test_manifest.json
@@ -204,6 +204,22 @@ jobs:
         run: |
           python3 -m unittest tests/test_uef_provider_interface.py tests/test_uef_native_provider.py tests/test_uef_rootfs_provider.py tests/test_uef_oci_provider.py tests/test_uef_resolver.py
 
+      - name: Execute RFC 8032 Ed25519 Cryptographic Known-Answer Vectors & Mutation Gate (9 Tests)
+        run: |
+          python3 -m unittest tests/test_crypto_vectors.py
+
+      - name: Execute Property-Based Invariant Verification Suite (5 Invariants)
+        run: |
+          python3 tests/property/test_core_invariants.py
+
+      - name: Execute Hardware Contracts & Integration Verification Gate (7 Contracts)
+        run: |
+          bash tests/e2e/test_hardware_contracts.sh
+
+      - name: Execute Comprehensive 10-Mutant Fault Injection & Mutation Resilience Gate (10 Mutants)
+        run: |
+          bash tests/mutation/run_mutation_evaluation.sh
+
       - name: Execute Negative Reproducibility & Mutation Sensitivity Gate (6 Mutants)
         run: |
           bash tests/test_negative_reproducibility.sh
@@ -219,7 +235,7 @@ jobs:
           python3 tools/generate_verification_passport.py
           python3 tools/generate_release_proof.py
           python3 tools/verify_passport.py dist/verification-passport.json --graph --lineage --trace release
-          python3 tools/verify_passport.py dist/neuronix-os-v1.0.4.proof.json
+          python3 tools/verify_passport.py dist/neuronix-os-v1.0.5.proof.json
 
       - name: Publish Verified Commit Status to GitHub API
         if: success()
@@ -228,7 +244,7 @@ jobs:
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }} \
-            -d "{\"state\":\"success\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"description\":\"1353/1353 Assertions Verified 100% Green\",\"context\":\"continuous-integration/github-actions\"}"
+            -d "{\"state\":\"success\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"description\":\"1384/1384 Assertions Verified 100% Green\",\"context\":\"continuous-integration/github-actions\"}"
 
 
 

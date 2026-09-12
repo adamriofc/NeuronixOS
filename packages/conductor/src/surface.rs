@@ -95,9 +95,9 @@ impl SurfaceLayout {
 
     pub fn render_topbar(&self) -> String {
         let left = if self.width >= 90 {
-            format!(" CONDUCTOR [ NEURONIX v1.0.4:gen-{} ]", self.active_generation)
+            format!(" CONDUCTOR [ NEURONIX v1.0.5:gen-{} ]", self.active_generation)
         } else {
-            format!(" CONDUCTOR [ v1.0.4:gen-{} ]", self.active_generation)
+            format!(" CONDUCTOR [ v1.0.5:gen-{} ]", self.active_generation)
         };
 
         let (t1, t2, t3, t4) = if self.width >= 100 {
@@ -382,14 +382,14 @@ mod tests {
     fn test_topbar_rendering() {
         let layout = SurfaceLayout::new(80, 24);
         let topbar = layout.render_topbar();
-        assert!(topbar.contains("CONDUCTOR [ v1.0.4"));
+        assert!(topbar.contains("CONDUCTOR [ v1.0.5"));
         assert!(topbar.contains("1:Term"));
         assert!(topbar.contains("VITAL o NOMINAL"));
         assert_eq!(topbar.len(), 80);
 
         let wide_layout = SurfaceLayout::new(120, 24);
         let wide_topbar = wide_layout.render_topbar();
-        assert!(wide_topbar.contains("CONDUCTOR [ NEURONIX v1.0.4"));
+        assert!(wide_topbar.contains("CONDUCTOR [ NEURONIX v1.0.5"));
         assert!(wide_topbar.contains("1:Terminal"));
         assert_eq!(wide_topbar.len(), 120);
     }

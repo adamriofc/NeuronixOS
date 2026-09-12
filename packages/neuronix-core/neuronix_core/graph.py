@@ -263,7 +263,7 @@ class EvidenceGraph:
         # 13. Test Node
         manifest_path = os.path.join(self.root_dir, "data/test_manifest.json") if self.root_dir else "data/test_manifest.json"
         manifest_hash = "0" * 64
-        total_assertions = 1353
+        total_assertions = 1384
         if os.path.exists(manifest_path):
             with open(manifest_path, "rb") as f:
                 content = f.read()
@@ -287,13 +287,27 @@ class EvidenceGraph:
         }
 
         # 14. Release Node
+        version_str = "1.0.5"
+        release_tag = "v1.0.5"
+        version_nix = os.path.join(self.root_dir, "version.nix")
+        if os.path.exists(version_nix):
+            try:
+                with open(version_nix, "r", encoding="utf-8") as vf:
+                    for line in vf:
+                        if "version =" in line:
+                            version_str = line.split('"')[1]
+                        elif "releaseTag =" in line:
+                            release_tag = line.split('"')[1]
+            except Exception:
+                pass
+
         release_concat = f"{commit_sha}{build_node['digest']}{state_root}{test_node['digest']}{storage_root}{boot_root}"
         release_digest = hashlib.sha256(release_concat.encode()).hexdigest()
         release_node = {
             "node_id": "RELEASE_NODE",
             "type": "QUALIFIED_RELEASE_ROOT",
-            "release_version": "1.0.4",
-            "release_tag": "v1.0.4",
+            "release_version": version_str,
+            "release_tag": release_tag,
             "commit_sha": commit_sha,
             "ci_run_id": run_id,
             "parent_test_digest": test_node["digest"],

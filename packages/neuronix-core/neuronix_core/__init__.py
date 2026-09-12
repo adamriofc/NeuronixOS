@@ -4,7 +4,7 @@ Exports canonical utilities for telemetry, generation management,
 atomic rollback, storage optimization, and system update operations.
 """
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 from .telemetry import get_system_telemetry, get_cpu_info, get_ram_info
 from .generation import list_generations, get_active_generation, parse_generation_number

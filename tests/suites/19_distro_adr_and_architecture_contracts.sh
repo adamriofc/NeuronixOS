@@ -5,6 +5,8 @@
 # ==============================================================================
 
 DOCS_PATH="${PROJECT_ROOT}/Distro/docs"
+[[ ! -d "$DOCS_PATH" ]] && DOCS_PATH="${PROJECT_ROOT}/docs"
+
 
 start_suite "19 - Distro ADRs & Platform Architecture Contracts"
 

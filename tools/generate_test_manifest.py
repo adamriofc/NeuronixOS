@@ -242,6 +242,38 @@ STANDALONE_GATES = [
         "assertions": 5,
         "proof_class": "L1_UNIT",
         "release_blocker": True
+    },
+    {
+        "id": "gate_crypto_vectors",
+        "file": "tests/test_crypto_vectors.py",
+        "description": "Pure-Python RFC 8032 Ed25519 Cryptographic Known-Answer Vectors & Mutation Invariants",
+        "assertions": 9,
+        "proof_class": "L1_UNIT",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_property_invariants",
+        "file": "tests/property/test_core_invariants.py",
+        "description": "Property-Based Invariants for JCS Determinism, Crypto Roundtrip & OCI Provenance",
+        "assertions": 5,
+        "proof_class": "L1_UNIT",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_hardware_contracts",
+        "file": "tests/e2e/test_hardware_contracts.sh",
+        "description": "Hardware Contracts for CPU Topology, ZRAM Memory Shield, Btrfs and Flash Storage",
+        "assertions": 7,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": True
+    },
+    {
+        "id": "gate_mutation_evaluation",
+        "file": "tests/mutation/run_mutation_evaluation.sh",
+        "description": "Comprehensive 10-Mutant Fault Injection & Defensive Gate Resilience",
+        "assertions": 10,
+        "proof_class": "L2_SYSTEM",
+        "release_blocker": True
     }
 ]
 

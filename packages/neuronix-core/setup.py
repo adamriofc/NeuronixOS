@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="neuronix-core",
-    version="1.0.4",
+    version="1.0.5",
     description="Canonical shared domain logic library for NEURONIX OS",
     author="NEURONIX Contributors",
     url="https://github.com/adamriofc/NeuronixOS",

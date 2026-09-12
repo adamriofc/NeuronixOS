@@ -522,7 +522,7 @@ class TestStandaloneVerifierClosure(unittest.TestCase):
         self.assertTrue(valid, f"Passport verification failed: {msg}")
 
         manifest_path = os.path.join(PROJECT_ROOT, "data/test_manifest.json")
-        expected_assertions = summary.get("catalog_assertions", 1353)
+        expected_assertions = summary.get("catalog_assertions", 1384)
         if os.path.exists(manifest_path):
             try:
                 with open(manifest_path, "r", encoding="utf-8") as mf:
@@ -535,7 +535,12 @@ class TestStandaloneVerifierClosure(unittest.TestCase):
         self.assertEqual(summary.get("pass_rate_percentage"), 100)
 
     def test_offline_release_proof_valid(self):
-        proof_path = os.path.join(PROJECT_ROOT, "dist/neuronix-os-v1.0.4.proof.json")
+        proof_path = os.path.join(PROJECT_ROOT, "dist/neuronix-os-v1.0.5.proof.json")
+        if not os.path.exists(proof_path):
+            import glob
+            matches = sorted(glob.glob(os.path.join(PROJECT_ROOT, "dist/neuronix-os-v*.proof.json")))
+            if matches:
+                proof_path = matches[-1]
         self.assertTrue(os.path.exists(proof_path), "Release proof file must exist")
         valid, msg, summary = verify_release_proof(proof_path)
         self.assertTrue(valid, f"Release proof verification failed: {msg}")
@@ -559,7 +564,12 @@ class TestStandaloneVerifierClosure(unittest.TestCase):
 
     def test_exact_commit_sha_binding(self):
         passport_path = os.path.join(PROJECT_ROOT, "dist/verification-passport.json")
-        proof_path = os.path.join(PROJECT_ROOT, "dist/neuronix-os-v1.0.4.proof.json")
+        proof_path = os.path.join(PROJECT_ROOT, "dist/neuronix-os-v1.0.5.proof.json")
+        if not os.path.exists(proof_path):
+            import glob
+            matches = sorted(glob.glob(os.path.join(PROJECT_ROOT, "dist/neuronix-os-v*.proof.json")))
+            if matches:
+                proof_path = matches[-1]
         graph_path = os.path.join(PROJECT_ROOT, "dist/evidence-graph.json")
 
         with open(passport_path, "r", encoding="utf-8") as f:

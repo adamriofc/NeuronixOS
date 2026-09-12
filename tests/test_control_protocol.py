@@ -137,7 +137,7 @@ class TestControlProtocolV1(unittest.TestCase):
             "jsonrpc": "2.0",
             "id": "req-001",
             "result": {
-                "version": "1.0.4",
+                "version": "1.0.5",
                 "status": "READY"
             }
         }

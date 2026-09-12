@@ -136,11 +136,11 @@ impl StateEngine {
         let h_policy = sha256_hex(policy_canonical.as_bytes());
 
         // 5. Evidence Leaf (L_evidence) - RFC 8785 canonical format backed by authoritative assurance record
-        let mut total_assertions = 1353u64;
+        let mut total_assertions = 1384u64;
         let mut validation_status = "PASSING_ALL".to_string();
         let mut last_run_id = std::env::var("GITHUB_RUN_ID").unwrap_or_default();
         let mut last_commit_sha = std::env::var("GITHUB_SHA").unwrap_or_default();
-        let mut verified_count = 1353u64;
+        let mut verified_count = 1384u64;
         let mut failure_count = 0u64;
         let mut timestamp = "2026-09-09T01:14:10Z".to_string();
 

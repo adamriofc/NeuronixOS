@@ -7,5 +7,5 @@ Adheres strictly to SPEC-NRX-CND-018, SPEC-NRX-SKL-019, and SPEC-NRX-CND-021.
 
 from .server import McpServer, main
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 __all__ = ["McpServer", "main"]

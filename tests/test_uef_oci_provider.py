@@ -420,6 +420,87 @@ class TestUefOciProvider(unittest.TestCase):
             self.assertTrue(report_a.compatible)
             self.assertIn("Mode A", report_a.reason)
 
+    def test_discover_no_runtime_returns_empty_supported_formats(self) -> None:
+        """When neither high-level nor low-level runtime is present, discover returns empty supported_formats."""
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value=None), \
+             patch.object(self.provider, "_detect_low_level_runtime", return_value=None):
+            cap = self.provider.discover()
+            self.assertEqual(cap.supported_formats, [])
+            self.assertEqual(cap.isolation_level, 0.0)
+            self.assertEqual(cap.startup_latency_class, "UNAVAILABLE")
+            self.assertEqual(cap.resource_overhead_class, "NONE")
+
+    def test_resolver_rejects_oci_when_no_runtimes_detected(self) -> None:
+        """When no runtimes are installed, resolver assigns 0.0 score and inspect fails closed."""
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value=None), \
+             patch.object(self.provider, "_detect_low_level_runtime", return_value=None):
+            workload = WorkloadSpec(
+                workload_id="wl-img-noruntime",
+                format="oci-image",
+                entrypoint=["alpine:latest", "sh"],
+            )
+            report = self.provider.inspect(workload)
+            self.assertFalse(report.compatible)
+            self.assertIn("podman", report.missing_features)
+
+            ctx = OperationalContext(
+                requested_isolation_tier="TIER_1_SANDBOX",
+                network_allowed=False,
+            )
+            score = self.provider.score(workload, ctx)
+            self.assertEqual(score, 0.0)
+
+    def test_oci_image_provenance_classification(self) -> None:
+        """Validates distinction between digest-pinned images and mutable tags."""
+        self.assertEqual(
+            OciContainerProvider.classify_image_provenance("alpine@sha256:abcd1234ef567890"),
+            "PROVENANCE_STRONG",
+        )
+        self.assertEqual(
+            OciContainerProvider.classify_image_provenance("alpine:latest"),
+            "PROVENANCE_NORMAL",
+        )
+
+        # In evaluate_capabilities, pinned digest yields 1.0 provenance
+        workload_pinned = WorkloadSpec(
+            workload_id="wl-pinned",
+            format="oci-image",
+            entrypoint=["alpine@sha256:1234567890abcdef", "sh"],
+        )
+        with patch.object(self.provider, "_detect_high_level_runtime", return_value="/usr/bin/podman"):
+            vec = self.provider.evaluate_capabilities(
+                workload_pinned,
+                OperationalContext("TIER_1_SANDBOX", False, False),
+            )
+            self.assertEqual(vec.provenance, 1.0)
+
+    def test_untrusted_workload_oci_config_hardening(self) -> None:
+        """Verifies generated config.json contains hardened security profile."""
+        workload = WorkloadSpec(
+            workload_id="wl-untrusted-bundle",
+            format="rootfs-dir",
+            entrypoint=["/bin/sh", "-c", "whoami"],
+            rootfs_path="/",
+        )
+        with patch.object(self.provider, "_detect_low_level_runtime", return_value="/usr/bin/crun"):
+            prep = self.provider.prepare(workload)
+            config_path = os.path.join(prep.temp_dir, "config.json")
+            self.assertTrue(os.path.exists(config_path))
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+
+            # Security invariants
+            self.assertTrue(cfg["process"]["noNewPrivileges"])
+            self.assertIn("capabilities", cfg["process"])
+            self.assertNotIn("CAP_SYS_ADMIN", cfg["process"]["capabilities"]["bounding"])
+            self.assertTrue(cfg["root"]["readonly"])
+            ns_types = [ns["type"] for ns in cfg["linux"]["namespaces"]]
+            self.assertIn("user", ns_types)
+            self.assertIn("network", ns_types)
+            self.assertEqual(cfg["linux"]["seccomp"]["defaultAction"], "SCMP_ACT_ERRNO")
+
+            self.provider.cleanup(prep)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,47 @@
+name: NEURONIX Performance Benchmarks
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: System Performance Benchmark Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+          nix_path: nixpkgs=https://github.com/NixOS/nixpkgs/archive/3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2.tar.gz
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Performance Benchmarks
+        run: |
+          set -euo pipefail
+          echo "Executing boot, memory, rollback, storage, and UEF latency benchmarks..."
+          bash tests/benchmarks/boot_benchmark.sh || true
+          bash tests/benchmarks/memory_benchmark.sh || true
+          bash tests/benchmarks/rollback_benchmark.sh || true
+          bash tests/benchmarks/storage_benchmark.sh || true
+          python3 tests/benchmarks/benchmark_uef_latency.py || true
+          python3 tests/benchmarks/benchmark_uef_resources.py || true
+
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: dist/*benchmark*.json

@@ -1,7 +1,7 @@
 {
   "schema_version": "2.1.0",
   "distribution": "NEURONIX OS",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "taxonomy_definition": {
     "DECLARED": "Architecture or chip family defined in version matrix or flake inputs without hardware-specific testing.",
     "TARGET": "Hardware platform targeted with dedicated declarative modules in modules/hardware.",

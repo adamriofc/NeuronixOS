@@ -90,7 +90,7 @@ class TestConductorRuntime(unittest.IsolatedAsyncioTestCase):
         })
         res = resp["result"]
         self.assertEqual(res["distribution"], "NEURONIX OS")
-        self.assertEqual(res["version"], "1.0.4")
+        self.assertEqual(res["version"], "1.0.5")
         self.assertEqual(res["protocol_version"], "1.0.0")
         self.assertTrue(res["zero_idle_enabled"])
         self.assertGreaterEqual(res["capabilities_registered"], 5)

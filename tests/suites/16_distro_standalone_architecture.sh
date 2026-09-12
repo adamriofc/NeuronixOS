@@ -5,6 +5,7 @@
 # ==============================================================================
 
 DISTRO_PATH="${PROJECT_ROOT}/Distro"
+[[ ! -d "$DISTRO_PATH" ]] && DISTRO_PATH="${PROJECT_ROOT}"
 TARGET_BIN="${PROJECT_ROOT}/bin/neuronix"
 
 start_suite "16 - Distro Standalone Architecture & Calamares Flake Engine"

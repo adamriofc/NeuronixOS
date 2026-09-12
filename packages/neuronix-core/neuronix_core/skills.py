@@ -644,12 +644,12 @@ class SkillDispatcher:
         computed_root = live_verification.get("recomputed_state_root", "00" * 32)
         expected_root = live_verification.get("claimed_state_root", "00" * 32)
 
-        assertion_count = 1353
+        assertion_count = 1384
         if ASSURANCE_RECORD_FILE.exists():
             try:
                 with open(ASSURANCE_RECORD_FILE, "r", encoding="utf-8") as f:
                     assurance_data = json.load(f)
-                    assertion_count = int(assurance_data.get("verified_assertion_count", 1353))
+                    assertion_count = int(assurance_data.get("verified_assertion_count", 1384))
             except Exception:
                 pass
 

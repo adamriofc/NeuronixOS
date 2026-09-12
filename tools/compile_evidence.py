@@ -88,7 +88,7 @@ def compile_evidence(
         manifest = json.load(f)
 
     summary = manifest.get("summary", {})
-    total_assertions = int(summary.get("total_repository_assertions", 1353))
+    total_assertions = int(summary.get("total_repository_assertions", 1384))
     
     verified_assertions = max(0, total_assertions - failures_count)
     total_executed = verified_assertions + failures_count
@@ -98,11 +98,25 @@ def compile_evidence(
     now_epoch = int(time.time())
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    version_str = "1.0.5"
+    release_tag = "v1.0.5"
+    version_nix = os.path.join(PROJECT_ROOT, "version.nix")
+    if os.path.exists(version_nix):
+        try:
+            with open(version_nix, "r", encoding="utf-8") as vf:
+                for line in vf:
+                    if "version =" in line:
+                        version_str = line.split('"')[1]
+                    elif "releaseTag =" in line:
+                        release_tag = line.split('"')[1]
+        except Exception:
+            pass
+
     evidence_body = {
         "schema_version": "1.1.0",
         "distribution": "NEURONIX OS",
-        "version": "1.0.4",
-        "release_tag": "v1.0.4",
+        "version": version_str,
+        "release_tag": release_tag,
         "last_verified_run_id": str(run_id),
         "last_verified_commit_sha": str(commit_sha),
         "taxonomy": {
@@ -140,7 +154,7 @@ def compile_evidence(
     compat_record = {
         "schema_version": "1.0.0",
         "distribution": "NEURONIX OS",
-        "version": "1.0.4",
+        "version": version_str,
         "last_verified_run_id": str(run_id),
         "last_verified_commit_sha": str(commit_sha),
         "verified_assertion_count": verified_assertions,

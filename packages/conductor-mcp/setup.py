@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="conductor-mcp",
-    version="1.0.4",
+    version="1.0.5",
     description="NEURONIX Model Context Protocol (MCP 2026-07-28) Universal Adapter for Conductor",
     author="NEURONIX Contributors",
     author_email="maintainers@neuronix.org",

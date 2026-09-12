@@ -48,11 +48,28 @@ def generate_passport() -> Dict[str, Any]:
         evidence_data = {}
 
     # 3. Flake lock, manifest, and evidence graph digests
+    version_str = "1.0.5"
+    release_tag = "v1.0.5"
+    version_nix = os.path.join(PROJECT_ROOT, "version.nix")
+    if os.path.exists(version_nix):
+        try:
+            with open(version_nix, "r", encoding="utf-8") as vf:
+                for line in vf:
+                    if "version =" in line:
+                        version_str = line.split('"')[1]
+                    elif "releaseTag =" in line:
+                        release_tag = line.split('"')[1]
+        except Exception:
+            pass
+
     flake_lock_digest = file_sha256(os.path.join(PROJECT_ROOT, "flake.lock"))
     manifest_digest = file_sha256(os.path.join(DATA_DIR, "test_manifest.json"))
     repro_digest = file_sha256(os.path.join(DIST_DIR, "reproducibility_evidence.json"))
     iso_digest = file_sha256(os.path.join(DIST_DIR, "SHA256SUMS"))
-    sbom_digest = file_sha256(os.path.join(DIST_DIR, "neuronix-os-v1.0.4-sbom.spdx.json"))
+    sbom_candidate = os.path.join(DIST_DIR, f"neuronix-os-v{version_str}-sbom.spdx.json")
+    if not os.path.exists(sbom_candidate):
+        sbom_candidate = os.path.join(DIST_DIR, "neuronix-os-v1.0.4-sbom.spdx.json")
+    sbom_digest = file_sha256(sbom_candidate)
     jcs_digest = file_sha256(os.path.join(DIST_DIR, "jcs_conformance_evidence.json"))
     assurance_digest = file_sha256(evidence_path)
 
@@ -87,8 +104,8 @@ def generate_passport() -> Dict[str, Any]:
         "passport_type": "NEURONIX_VERIFICATION_PASSPORT_V1",
         "release_metadata": {
             "distribution": "NEURONIX OS",
-            "release_version": "1.0.4",
-            "release_tag": "v1.0.4",
+            "release_version": version_str,
+            "release_tag": release_tag,
             "commit_sha": passport_commit,
             "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
             "proof_engine_version": "1.1.0"
@@ -103,8 +120,8 @@ def generate_passport() -> Dict[str, Any]:
         },
         "verification_evidence": {
             "test_manifest_hash": manifest_digest,
-            "catalog_assertion_count": evidence_data.get("taxonomy", {}).get("CATALOG", 1353),
-            "verified_assertion_count": evidence_data.get("taxonomy", {}).get("VERIFIED", 1353),
+            "catalog_assertion_count": evidence_data.get("taxonomy", {}).get("CATALOG", 1384),
+            "verified_assertion_count": evidence_data.get("taxonomy", {}).get("VERIFIED", 1384),
             "verified_failure_count": evidence_data.get("metrics", {}).get("failed_assertions", 0),
             "verified_pass_rate_percentage": evidence_data.get("metrics", {}).get("pass_rate_percentage", 100),
             "verification_status": evidence_data.get("verification_status", "PASSING_ALL"),

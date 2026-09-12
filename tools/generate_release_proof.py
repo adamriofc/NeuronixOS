@@ -16,7 +16,21 @@ from datetime import datetime, timezone
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DIST_DIR = os.path.join(PROJECT_ROOT, "dist")
-OUTPUT_PROOF = os.path.join(DIST_DIR, "neuronix-os-v1.0.4.proof.json")
+def get_version_info():
+    version_str = "1.0.5"
+    release_tag = "v1.0.5"
+    version_nix = os.path.join(PROJECT_ROOT, "version.nix")
+    if os.path.exists(version_nix):
+        try:
+            with open(version_nix, "r", encoding="utf-8") as vf:
+                for line in vf:
+                    if "version =" in line:
+                        version_str = line.split('"')[1]
+                    elif "releaseTag =" in line:
+                        release_tag = line.split('"')[1]
+        except Exception:
+            pass
+    return version_str, release_tag
 
 def file_sha256(path: str) -> str:
     if not os.path.exists(path):
@@ -25,6 +39,9 @@ def file_sha256(path: str) -> str:
         return hashlib.sha256(f.read()).hexdigest()
 
 def main():
+    version_str, release_tag = get_version_info()
+    output_proof = os.path.join(DIST_DIR, f"neuronix-os-v{version_str}.proof.json")
+
     passport_path = os.path.join(DIST_DIR, "verification-passport.json")
     passport_digest = file_sha256(passport_path)
 
@@ -34,7 +51,9 @@ def main():
     iso_sums_path = os.path.join(DIST_DIR, "SHA256SUMS")
     iso_sums_digest = file_sha256(iso_sums_path)
 
-    sbom_path = os.path.join(DIST_DIR, "neuronix-os-v1.0.4-sbom.spdx.json")
+    sbom_path = os.path.join(DIST_DIR, f"neuronix-os-v{version_str}-sbom.spdx.json")
+    if not os.path.exists(sbom_path):
+        sbom_path = os.path.join(DIST_DIR, "neuronix-os-v1.0.4-sbom.spdx.json")
     sbom_digest = file_sha256(sbom_path)
 
     repro_path = os.path.join(DIST_DIR, "reproducibility_evidence.json")
@@ -62,8 +81,8 @@ def main():
         "proof_type": "NEURONIX_PROOF_CARRYING_RELEASE_V1",
         "release_metadata": {
             "distribution": "NEURONIX OS",
-            "release_version": "1.0.4",
-            "release_tag": "v1.0.4",
+            "release_version": version_str,
+            "release_tag": release_tag,
             "commit_sha": commit_sha,
             "target_architecture": "x86_64-linux"
         },
@@ -92,10 +111,10 @@ def main():
     proof_digest = hashlib.sha256(canonical_bytes).hexdigest()
     proof_bundle["release_proof_digest"] = proof_digest
 
-    with open(OUTPUT_PROOF, "w", encoding="utf-8") as f:
+    with open(output_proof, "w", encoding="utf-8") as f:
         json.dump(proof_bundle, f, indent=2, ensure_ascii=False)
 
-    print(f"[PROOF-CARRYING-RELEASE] Generated release proof bundle at {OUTPUT_PROOF}")
+    print(f"[PROOF-CARRYING-RELEASE] Generated release proof bundle at {output_proof}")
     print(f"  Release Proof Digest: {proof_digest}")
 
 if __name__ == "__main__":

@@ -77,6 +77,16 @@ class OciContainerProvider(ExecutionProvider):
         """Fallback detection for general runtime availability."""
         return self._detect_low_level_runtime() or self._detect_high_level_runtime()
 
+    @staticmethod
+    def classify_image_provenance(ref: str) -> str:
+        """Classify OCI image reference into cryptographic provenance tiers.
+        Returns PROVENANCE_STRONG for immutable digest pinning (@sha256:),
+        or PROVENANCE_NORMAL for mutable tags.
+        """
+        if "@sha256:" in ref:
+            return "PROVENANCE_STRONG"
+        return "PROVENANCE_NORMAL"
+
     def discover(self) -> ProviderCapability:
         has_high_level = bool(self._detect_high_level_runtime())
         has_low_level = bool(self._detect_low_level_runtime())
@@ -86,13 +96,14 @@ class OciContainerProvider(ExecutionProvider):
         if has_low_level:
             supported.extend(["rootfs-dir", "oci-bundle"])
 
+        isolation_level = 0.85 if supported else 0.0
         return ProviderCapability(
             provider_id=self.provider_id,
             provider_type="OCI_CONTAINER",
-            supported_formats=supported or ["oci-image", "rootfs-dir", "oci-bundle"],
-            isolation_level=0.85,
-            startup_latency_class="COLD_START_MODERATE",
-            resource_overhead_class="MODERATE_CONTAINER",
+            supported_formats=supported,
+            isolation_level=isolation_level,
+            startup_latency_class="COLD_START_MODERATE" if supported else "UNAVAILABLE",
+            resource_overhead_class="MODERATE_CONTAINER" if supported else "NONE",
             kvm_available=os.path.exists("/dev/kvm"),
             gpu_available=os.path.exists("/dev/dri"),
         )
@@ -225,6 +236,13 @@ class OciContainerProvider(ExecutionProvider):
         resource_cost = 0.80
         startup_latency = 0.75
         provenance = 0.95
+        if workload.format == "oci-image":
+            img_ref = getattr(workload, "image_ref", None)
+            if not img_ref and workload.entrypoint:
+                img_ref = workload.entrypoint[0]
+            if img_ref:
+                prov_tier = self.classify_image_provenance(img_ref)
+                provenance = 1.0 if prov_tier == "PROVENANCE_STRONG" else 0.90
 
         return CapabilityVector(
             compatible=True,
@@ -283,6 +301,13 @@ class OciContainerProvider(ExecutionProvider):
                     os.makedirs(resolved_rootfs, exist_ok=True)
 
                 args = list(workload.entrypoint) + list(workload.arguments)
+                bounded_caps = [
+                    "CAP_CHOWN",
+                    "CAP_DAC_OVERRIDE",
+                    "CAP_FOWNER",
+                    "CAP_SETGID",
+                    "CAP_SETUID",
+                ]
                 oci_spec = {
                     "ociVersion": "1.0.2",
                     "process": {
@@ -291,6 +316,14 @@ class OciContainerProvider(ExecutionProvider):
                         "args": args,
                         "env": [f"{k}={v}" for k, v in workload.env.items()],
                         "cwd": workload.working_dir or "/",
+                        "noNewPrivileges": True,
+                        "capabilities": {
+                            "bounding": bounded_caps,
+                            "effective": bounded_caps,
+                            "inheritable": bounded_caps,
+                            "permitted": bounded_caps,
+                            "ambient": bounded_caps,
+                        },
                     },
                     "root": {
                         "path": resolved_rootfs,
@@ -309,7 +342,18 @@ class OciContainerProvider(ExecutionProvider):
                             {"type": "ipc"},
                             {"type": "uts"},
                             {"type": "mount"},
-                        ]
+                            {"type": "network"},
+                            {"type": "user"},
+                        ],
+                        "seccomp": {
+                            "defaultAction": "SCMP_ACT_ERRNO",
+                            "architectures": [
+                                "SCMP_ARCH_X86_64",
+                                "SCMP_ARCH_X86",
+                                "SCMP_ARCH_AARCH64",
+                            ],
+                            "syscalls": [],
+                        },
                     },
                 }
                 with open(config_path, "w", encoding="utf-8") as f:

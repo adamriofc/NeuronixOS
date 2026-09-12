@@ -2,17 +2,22 @@
 System generation inspection and historical lineage management.
 """
 
-import os
+from __future__ import annotations
+
 import glob
+import os
 import subprocess
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 SYSTEM_PROFILE = os.environ.get("NEURONIX_SYSTEM_PROFILE", "/nix/var/nix/profiles/system")
 
-def get_system_profile():
+
+def get_system_profile() -> str:
     return os.environ.get("NEURONIX_SYSTEM_PROFILE", SYSTEM_PROFILE)
 
-def parse_generation_number(path):
+
+def parse_generation_number(path: str) -> Optional[int]:
     """Extracts numeric generation ID from profile symlink string."""
     basename = os.path.basename(path)
     if basename.startswith("system-") and basename.endswith("-link"):
@@ -22,7 +27,8 @@ def parse_generation_number(path):
             return None
     return None
 
-def get_active_generation():
+
+def get_active_generation() -> Optional[str]:
     """Returns the current active system generation number as a string, or None if unresolved."""
     prof = get_system_profile()
     if os.path.exists(prof) or os.path.islink(prof):
@@ -36,7 +42,8 @@ def get_active_generation():
             pass
     return None
 
-def list_generations():
+
+def list_generations() -> List[Dict[str, Any]]:
     """
     Returns a sorted list of dictionaries representing system generations:
     [{ 'generation': int, 'date': str, 'active': bool, 'path': str }]

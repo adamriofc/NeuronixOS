@@ -287,7 +287,7 @@ def get_sanitized_diagnostics(share_mode: bool = False) -> Dict[str, Any]:
     try:
         from . import __version__ as core_ver
     except Exception:
-        core_ver = "1.0.4"
+        core_ver = "1.0.5"
     os_name = f"NEURONIX OS {core_ver} (NixOS Substrate)"
     if os.path.exists("/etc/os-release"):
         try:

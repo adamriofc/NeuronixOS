@@ -5,6 +5,7 @@
 # ==============================================================================
 
 DISTRO_PATH="${PROJECT_ROOT}/Distro"
+[[ ! -d "$DISTRO_PATH" ]] && DISTRO_PATH="${PROJECT_ROOT}"
 
 start_suite "17 - Distro Kernel, Memory & Subsystem Invariants"
 

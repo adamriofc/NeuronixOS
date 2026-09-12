@@ -807,7 +807,7 @@ status = res.get('status', 'UNKNOWN')
 local_c = res.get('local_commit')
 up_c = res.get('upstream_commit')
 pinned = res.get('pinned_nixpkgs_commit')
-tag = res.get('release_tag', 'v1.0.4')
+tag = res.get('release_tag', 'v1.0.5')
 channel = res.get('channel', 'nixos-26.05')
 
 summary = f'NEURONIX OS Release Status: {status}\n'

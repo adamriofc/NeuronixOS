@@ -13,7 +13,7 @@ import argparse
 import glob
 import types
 
-VERSION = "1.0.4"
+VERSION = "1.0.5"
 try:
     _vfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../version.nix")
     if not os.path.exists(_vfile):

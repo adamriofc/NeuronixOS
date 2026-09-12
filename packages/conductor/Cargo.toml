@@ -1,6 +1,6 @@
 [package]
 name = "conductor"
-version = "1.0.4"
+version = "1.0.5"
 edition = "2021"
 authors = ["NEURONIX Contributors"]
 description = "Native Minimalist Surface & Terminal Subsystem for NEURONIX OS"

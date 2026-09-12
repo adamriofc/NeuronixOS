@@ -21,7 +21,7 @@ class McpServer:
     def __init__(self):
         self.server_info = {
             "name": "conductor-mcp",
-            "version": "1.0.4"
+            "version": "1.0.5"
         }
         self.negotiated_version = "2026-07-28"
 

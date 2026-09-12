@@ -5,6 +5,7 @@
 # ==============================================================================
 
 DISTRO_PATH="${PROJECT_ROOT}/Distro"
+[[ ! -d "$DISTRO_PATH" ]] && DISTRO_PATH="${PROJECT_ROOT}"
 
 start_suite "20 - Distro Storage, Btrfs & Filesystem Resilience"
 

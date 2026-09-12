@@ -4,11 +4,11 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
-  <a href="https://github.com/adamriofc/NeuronixOS/releases/tag/v1.0.4"><img src="https://img.shields.io/badge/Release-v1.0.4_(Provable_Release)-success.svg" alt="Release"></a>
-  <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.4-blueviolet.svg" alt="Version"></a>
+  <a href="https://github.com/adamriofc/NeuronixOS/releases/tag/v1.0.5"><img src="https://img.shields.io/badge/Release-v1.0.5_(Provable_Release)-success.svg" alt="Release"></a>
+  <a href="version.nix"><img src="https://img.shields.io/badge/Version-1.0.5-blueviolet.svg" alt="Version"></a>
   <a href="flake.nix"><img src="https://img.shields.io/badge/Substrate-NixOS_26.05_%2F_Unstable-5277C3.svg?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="#platform-architecture"><img src="https://img.shields.io/badge/Architecture-4--Layer_Platform-9cf.svg" alt="Architecture"></a>
-  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1353%2F1353_Passed_(100%25)-success.svg" alt="Testing"></a>
+  <a href="#verification--test-harness"><img src="https://img.shields.io/badge/Assertions-1384%2F1384_Passed_(100%25)-success.svg" alt="Testing"></a>
   <a href="#storage-architecture--maintenance"><img src="https://img.shields.io/badge/Filesystem-Btrfs_%2F_EXT4-orange.svg" alt="Filesystem"></a>
   <a href="#memory-pressure-management"><img src="https://img.shields.io/badge/Memory_Subsystem-ZRAM_ZSTD_%2B_PSI-purple.svg" alt="Memory"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions_Passing-brightgreen.svg" alt="CI/CD"></a>
@@ -83,7 +83,7 @@
   - [27. Authoritative Evidence Graph & Lineage Traversal (neuronix graph)](#27-authoritative-evidence-graph--lineage-traversal-neuronix-graph)
   - [28. Canonical Domain Proof Specification & Dual-Plane Parity (SPEC-NRX-DP-014)](#28-canonical-domain-proof-specification--dual-plane-parity-spec-nrx-dp-014)
   - [29. Continuous Security Invariant Registry (SEC-001 to SEC-020)](#29-continuous-security-invariant-registry-sec-001-to-sec-020)
-  - [30. Proof-Carrying Release Architecture (dist/neuronix-os-v1.0.4.proof.json)](#30-proof-carrying-release-architecture-distneuronix-os-v104proofjson)
+  - [30. Proof-Carrying Release Architecture (dist/neuronix-os-v1.0.5.proof.json)](#30-proof-carrying-release-architecture-distneuronix-os-v105proofjson)
   - [31. Closed Semantic Subsystem Architecture (MES-NRX-002)](#31-closed-semantic-subsystem-architecture-mes-nrx-002)
   - [32. Conductor Operating Surface & Zero-Idle Capability Runtime (SPEC-NRX-CND-018, SPEC-NRX-CND-021)](#32-conductor-operating-surface--zero-idle-capability-runtime-spec-nrx-cnd-018-spec-nrx-cnd-021)
   - [33. Vital Laboratory Observation Substrate & Machine Contracts (SPEC-NRX-VTL-020)](#33-vital-laboratory-observation-substrate--machine-contracts-spec-nrx-vtl-020)
@@ -91,7 +91,7 @@
   - [35. Universal Operational Environment (UOE) & Execution Fabric](#35-universal-operational-environment-uoe--execution-fabric)
 - [Building & Installation](#building--installation)
 - [Post-Installation Administration](#post-installation-administration)
-- [Verification, Lifecycle Gate & Test Harness (1,353 Assertions)](#verification--test-harness)
+- [Verification, Lifecycle Gate & Test Harness (1,384 Assertions)](#verification--test-harness)
   - [Independent Conformance Corpus & Differential Fuzzing](#independent-conformance-corpus--differential-fuzzing)
   - [Negative Reproducibility & Sensitivity Testing](#negative-reproducibility--sensitivity-testing)
 - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
@@ -106,7 +106,8 @@ NEURONIX OS is an independent, declarative Linux distribution platform based on 
 ### Release Engineering & Version Truth
 - **Single Source of Truth (`version.nix`):** All components (CLI, GUI Center, MCP Daemon, Calamares installer engine, release manifests, package derivations) read canonical versioning from `version.nix`.
 - **Release `v1.0.0` (Frozen GA):** Immutable initial General Availability release tag.
-- **Release `v1.0.4` (Hardened Production Baseline on `main`):** Actively maintained release incorporating comprehensive architectural hardening, truthful error propagation, injection proof verification, privacy-preserving doctor diagnostics, end-to-end lifecycle verification gates, runtime telemetry, multi arch flake outputs, and MCP JSON-RPC protocol compliance.
+- **Release `v1.0.4` (Hardened Milestone):** Production hardening baseline establishing closed semantic subsystems and offline verification passports.
+- **Release `v1.0.5` (Hardened Production Baseline on `main`):** Actively maintained release incorporating modular CLI architecture (`src/lib/` and `src/commands/`), RFC 8032 pure-Python Ed25519 known-answer test vectors, property-based invariant testing, comprehensive mutation resilience (100% kill rate across 10 mutants), tightened OCI container security boundaries (`noNewPrivileges`, dropping `CAP_SYS_ADMIN`, unprivileged namespaces), dynamic version-bound evidence compilation, and end-to-end hardware contract validation (1,384 assertions).
 - **Development Channel Baseline:** Tracks `nixos-unstable` for modern Linux kernels, Wayland compositors, and rapid developer tooling.
 - **Production Stable Baseline:** Targets `nixos-26.05` for conservative enterprise stability and verified patch streams.
 - **State Version (`system.stateVersion = "24.11"`):** The immutable NixOS state migration baseline preserving data directory layouts and system state compatibility across upgrades.
@@ -187,7 +188,7 @@ To evaluate NEURONIX OS objectively, it is compared directly against leading ope
 
 ### Comparative Feature & Architecture Matrix
 
-| Architectural Dimension | NEURONIX OS (v1.0.4) | Vanilla NixOS (24.11/Unstable) | Fedora Silverblue (Atomic) | openSUSE MicroOS / Aeon | EndeavourOS / Arch Linux |
+| Architectural Dimension | NEURONIX OS (v1.0.5) | Vanilla NixOS (24.11/Unstable) | Fedora Silverblue (Atomic) | openSUSE MicroOS / Aeon | EndeavourOS / Arch Linux |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **System Paradigm** | Pure-functional declarative substrate | Functional declarative toolkit | Image-based OSTree composition | Transactional Btrfs snapshots | Imperative mutable Unix filesystem |
 | **Configuration Model** | Single declarative Flake (`flake.nix`) | Declarative Nix expressions or channels | Imperative package layering (`rpm-ostree`) | Imperative packages via `transactional-update` | Imperative commands (`pacman`, Arch build system) |
@@ -391,9 +392,24 @@ To prevent system lockups under memory exhaustion, NEURONIX implements an intell
 
 ---
 
-## Hardware & Subsystem Configuration Matrix
+## Hardware Compatibility Matrix & Profiles
 
-NEURONIX includes declarative configurations addressing standard desktop and laptop hardware requirements across 27 subsystem domains. For empirical platform qualifications across reference platforms (ThinkPad, Framework, Dell XPS, ASUS ROG Zephyrus, QEMU KVM, Apple Silicon), see the [Reference Hardware Qualification Matrix](docs/hardware_profiles.md).
+NEURONIX includes declarative configurations addressing standard desktop and laptop hardware requirements across 27 subsystem domains. For empirical platform qualifications across reference platforms (ThinkPad, Framework, Dell XPS, ASUS ROG Zephyrus, QEMU KVM, Apple Silicon), see the [Reference Hardware Qualification Matrix](docs/hardware_profiles.md) and machine-readable evidence in `data/hardware_qualification.json`.
+
+### Reference Platform Qualification Matrix
+
+| Reference Platform | Processor / Architecture | GPU Subsystem | Wi-Fi / Bluetooth | Audio Duplex | Suspend / S3 | Qualification Tier |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Generic QEMU / KVM Micro-VM** | Virtual x86_64 (KVM Host) | VirtIO-GPU / DRM | VirtIO-Net | PipeWire Dummy | S3 / S4 Supported | **Tier 1 (CI Validated)** |
+| **Lenovo ThinkPad T14 / P14s (Gen 4/5)** | AMD Ryzen 7 PRO (Zen 4) | AMD Radeon 780M (Mesa RDNA3) | Qualcomm Atheros / MT7922 | Realtek ALC257 (PipeWire) | Deep (`mem_sleep=deep`) | **Tier 1 (Target Reference)** |
+| **Framework Laptop 13 (Intel Core Ultra)** | Intel Core Ultra 7 155H | Intel Arc Graphics (Xe-LPG) | Intel Wi-Fi 6E AX211 | Realtek ALC295 (PipeWire) | Modern Standby (s2idle) | **Tier 1 (Target Reference)** |
+| **Custom AMD Workstation (Ryzen + RDNA3)** | AMD Ryzen 9 7950X (Zen 4) | AMD Radeon RX 7900 XTX (Mesa RADV) | Intel I225-V 2.5GbE / AX210 | Realtek ALC4080 (PipeWire) | S3 Sleep Supported | **Tier 1 (Desktop Reference)** |
+| **Intel Desktop Workstation (Core + Arc)** | Intel Core i7-14700K (Raptor Lake) | Intel Arc A770 / UHD Graphics 770 | Realtek RTL8125 2.5GbE / AX211 | Realtek ALC1220 (PipeWire) | S3 Sleep Supported | **Tier 1 (Desktop Reference)** |
+| **Dell XPS 15 / 16 (Hybrid Dual-GPU)** | Intel Core i7/i9 (Alder/Raptor Lake) | Intel Iris Xe + NVIDIA RTX 4060 | Killer Wi-Fi 6E AX1675 | Realtek ALC3281 (PipeWire) | Modern Standby (s2idle) | **Tier 2 (PRIME Offload Validated)** |
+| **ASUS ROG Zephyrus G14 (AMD + NVIDIA)** | AMD Ryzen 9 + NVIDIA RTX 4060 | AMD Radeon 780M + RTX 4060 Mobile | MediaTek MT7922 Wi-Fi 6E | Realtek HD Audio (PipeWire) | Deep (`mem_sleep=deep`) | **Tier 2 (Hybrid PRIME Qualified)** |
+| **Apple Silicon (aarch64 via UTM / Asahi)** | Apple M1/M2/M3 (aarch64) | Apple AGX / VirtIO-GPU | Broadcom Wi-Fi / VirtIO | PipeWire Core | Suspend Supported | **Tier 2 (Experimental aarch64)** |
+
+### Hardware & Subsystem Configuration Matrix (27 Pillars)
 
 | Subsystem Domain | Technical Objective | Declarative Implementation | Configuration Module |
 | :--- | :--- | :--- | :--- |
@@ -474,7 +490,7 @@ USAGE:
 | `hyperion` | `[status \| negotiate \| proof \| verify \| list]` | Provable Adaptive Execution Architecture: HDS synthesis, domain lifecycle, and Merkle Domain Proofs. | `neuronix hyperion status` |
 | `verify-passport` | `[passport.json] [--public-key <k>] [--graph] [--trace <target>]` | Zero-dependency standalone offline verification engine for system release passports and lineage graphs. | `neuronix verify-passport dist/verification-passport.json --graph --trace release` |
 | `graph` | `[--json] [--format ascii\|dot] [--trace <target>]` | Authoritative 10-node Directed Evidence Graph visualization and lineage tracing from source to release. | `neuronix graph --trace release` |
-| `verify-release` | `[proof.json] [--iso <path>]` | Cryptographic verification of proof-carrying release bundle against StateRoot and Evidence Graph. | `neuronix verify-release dist/neuronix-os-v1.0.4.proof.json` |
+| `verify-release` | `[proof.json] [--iso <path>]` | Cryptographic verification of proof-carrying release bundle against StateRoot and Evidence Graph. | `neuronix verify-release dist/neuronix-os-v1.0.5.proof.json` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
 | `help` | None (`-h`, `--help`)   | Displays available commands and syntax summaries. | `neuronix help` |
 
@@ -1197,13 +1213,13 @@ System security in NEURONIX OS is governed by a formal invariant registry ([SPEC
 bash tests/test_security_invariants.sh
 ```
 
-### 30. Proof-Carrying Release Architecture (dist/neuronix-os-v1.0.4.proof.json)
+### 30. Proof-Carrying Release Architecture (dist/neuronix-os-v1.0.5.proof.json)
 NEURONIX OS implements Proof-Carrying Release (PCR) bundles, coupling release media directly with cryptographic verification tokens:
-- **Unified Release Bundle (`dist/neuronix-os-v1.0.4.proof.json`):**
+- **Unified Release Bundle (`dist/neuronix-os-v1.0.5.proof.json`):**
   Packages the canonical release metadata:
-  - Canonical Release Tag (`v1.0.4`) and Git Commit SHA.
-  - Live ISO Image SHA-256 digest (`dist/neuronix-os-1.0.4-x86_64.iso`).
-  - Software Bill of Materials (SBOM) digest (`dist/neuronix-os-1.0.4-sbom.spdx.json`).
+  - Canonical Release Tag (`v1.0.5`) and Git Commit SHA.
+  - Live ISO Image SHA-256 digest (`dist/neuronix-os-1.0.5-x86_64.iso`).
+  - Software Bill of Materials (SBOM) digest (`dist/neuronix-os-v1.0.5-sbom.spdx.json`).
   - Authoritative 5-leaf Merkle StateRoot.
   - Verification Passport Digest (`dist/verification-passport.json`).
   - Directed Evidence Graph Digest (`dist/evidence-graph.json`).
@@ -1216,10 +1232,10 @@ NEURONIX OS implements Proof-Carrying Release (PCR) bundles, coupling release me
 python3 tools/generate_release_proof.py
 
 # Verify the proof-carrying release bundle against ISO image and evidence graph
-neuronix verify-release dist/neuronix-os-v1.0.4.proof.json
+neuronix verify-release dist/neuronix-os-v1.0.5.proof.json
 
 # Offline verification without neuronix CLI installation
-python3 tools/verify_passport.py dist/neuronix-os-v1.0.4.proof.json
+python3 tools/verify_passport.py dist/neuronix-os-v1.0.5.proof.json
 ```
 
 ### 31. Closed Semantic Subsystem Architecture (MES-NRX-002)
@@ -1271,7 +1287,7 @@ python3 tests/test_semantic_closure.py -v
 ### 32. Conductor Operating Surface & Zero-Idle Capability Runtime (SPEC-NRX-CND-018, SPEC-NRX-CND-021)
 NEURONIX Conductor is the native operating surface and local agent substrate for the NEURONIX platform. Conductor replaces visual complexity with a single, terminal-first window offering maximum capability and zero permanent clutter:
 
-- **Surface Architecture:** One unified window featuring a 95% workspace canvas dedicated to an ultra-fast, native Rust terminal subsystem (`packages/conductor`). A subtle topbar displays `CONDUCTOR [ NEURONIX v1.0.4:gen-X ]` alongside live Vital health status (`VITAL o NOMINAL`) and adaptive workspace tabs:
+- **Surface Architecture:** One unified window featuring a 95% workspace canvas dedicated to an ultra-fast, native Rust terminal subsystem (`packages/conductor`). A subtle topbar displays `CONDUCTOR [ NEURONIX v1.0.5:gen-X ]` alongside live Vital health status (`VITAL o NOMINAL`) and adaptive workspace tabs:
   - `Tab 1: Terminal` - Full-speed VT100 terminal canvas with 95% screen real estate.
   - `Tab 2: Vital` - Real-time machine observation laboratory with CPU, memory, mount, and StateRoot telemetry.
   - `Tab 3: Proposals` - Dedicated deck for reviewing and resolving pending mutation proposals.
@@ -1341,9 +1357,9 @@ cd NeuronixOS
 # Option 2: Direct Flake build
 nix build .#packages.x86_64-linux.iso --out-link result-iso
 ```
-The resulting bootable image is located at `dist/neuronix-os-1.0.4-x86_64.iso` (or `result-iso/iso/neuronix-os-*.iso`). Flash to installation media:
+The resulting bootable image is located at `dist/neuronix-os-1.0.5-x86_64.iso` (or `result-iso/iso/neuronix-os-*.iso`). Flash to installation media:
 ```bash
-sudo dd if=dist/neuronix-os-1.0.4-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=dist/neuronix-os-1.0.5-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 ### High Performance Binary Caching
@@ -1390,9 +1406,9 @@ neuronix diet
 
 ---
 
-## Verification, Lifecycle Gate & Industrial Test Battery (1,353 Assertions)
+## Verification, Lifecycle Gate & Industrial Test Battery (1,384 Assertions)
 
-System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,353 automated assertions across 23 test harnesses (32 master suites, 19 distro suites, and 21 standalone gates):
+System invariants, module structures, and CLI dispatchers are validated through an automated test battery comprising 1,384 automated assertions across 25 standalone gates (32 master suites, 19 distro suites, and 25 standalone gates):
 
 ```text
 ═══════════════════════════════════════════════════════════════════
@@ -1405,7 +1421,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Two-Build Derivation Repro (two_build_repro)     :   8 /   8 PASS
   Hybrid E2E ISO Lifecycle Gate (e2e/test_iso_install):  8 /   8 PASS
   Real OS Install & Boot Gate (test_real_os_install_boot): 10 /  10 PASS
-  Release Lifecycle Gate (test_release_lifecycle)  :  48 /  48 PASS
+  Release Lifecycle Gate (test_release_lifecycle)  :  46 /  46 PASS
   Multi-Hop Rollback Correctness (rollback_corr)   :  13 /  13 PASS
   Enterprise Security Audit (security_audit)       :  14 /  14 PASS
   Failure Injection & Chaos (failure_injection)    :   6 /   6 PASS
@@ -1414,15 +1430,18 @@ System invariants, module structures, and CLI dispatchers are validated through 
   Historical Regression Corpus (regression_corpus) :   7 /   7 PASS
   Reproducibility Gate (test_reproducible_iso)     :   6 /   6 PASS
   Performance Benchmarks (test_benchmarks)         :   4 /   4 PASS
-  Semantic Closure & Subsystems (semantic_closure) :  37 /  37 PASS
-  Conductor Native Interactive Surface (Rust crate):  13 /  13 PASS
+  Semantic Closure & Subsystems (semantic_closure) :  35 /  35 PASS
   Conductor Runtime & Socket Activation (runtime)  :  10 /  10 PASS
   Conductor MCP 2026-07-28 Adapter (conductor_mcp) :   8 /   8 PASS
   Conductor Control Protocol v1 (control_protocol) :   6 /   6 PASS
   Vital Observation Contract & Domains (vital_obs) :   4 /   4 PASS
   Vital 16 Collectors & Skills Broker (vital_skl)  :   9 /   9 PASS
   Universal Skill Registry & Delegation (skills)   :   5 /   5 PASS
-  Total Executed Assertions                        : 1,353 Assertions
+  RFC 8032 Ed25519 Vectors (crypto_vectors)        :   9 /   9 PASS
+  Property-Based Invariants (property_invariants)  :   5 /   5 PASS
+  Hardware Contracts (hardware_contracts)          :   7 /   7 PASS
+  Mutation Evaluation Gate (mutation_evaluation)   :  10 /  10 KILLED
+  Total Executed Assertions                        : 1,384 Assertions
   Failed Verification                              : 0 Failures
   Execution Duration                               : ~195 seconds
   Confidence Score                                 : 100%

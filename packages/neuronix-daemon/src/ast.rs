@@ -9,8 +9,9 @@ use std::fs;
 use std::path::Path;
 
 pub const AST_SCHEMA_VERSION: &str = "2.0.0";
-pub const CANONICAL_VERSION: &str = "1.0.4";
+pub const CANONICAL_VERSION: &str = "1.0.5";
 
+/// In-memory typed Abstract Syntax Tree (AST) representing full host operational state.
 #[derive(Debug, Clone)]
 pub struct SystemAst {
     pub schema_version: String,

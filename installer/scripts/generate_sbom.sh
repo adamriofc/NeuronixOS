@@ -13,14 +13,14 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${PROJECT_ROOT}/dist"
 VERSION_NIX="${PROJECT_ROOT}/version.nix"
 
-VER="1.0.4"
-REL_TAG="v1.0.4"
+VER="1.0.5"
+REL_TAG="v1.0.5"
 if [[ -f "$VERSION_NIX" ]]; then
     VER=$(grep -E 'version\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
     REL_TAG=$(grep -E 'releaseTag\s*=' "$VERSION_NIX" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
 fi
 
-TAG="${1:-${REL_TAG:-v1.0.4}}"
+TAG="${1:-${REL_TAG:-v1.0.5}}"
 OUTPUT_FILE="${DIST_DIR}/neuronix-os-${TAG}-sbom.spdx.json"
 
 mkdir -p "${DIST_DIR}"
@@ -71,7 +71,7 @@ cat << EOF > "${OUTPUT_FILE}"
     {
       "SPDXID": "SPDXRef-Package-neuronix-center",
       "name": "neuronix-center",
-      "versionInfo": "1.0.4",
+      "versionInfo": "${VER}",
       "downloadLocation": "https://github.com/adamriofc/NeuronixOS",
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
@@ -80,7 +80,7 @@ cat << EOF > "${OUTPUT_FILE}"
     {
       "SPDXID": "SPDXRef-Package-neuronix-core",
       "name": "neuronix-core",
-      "versionInfo": "1.0.4",
+      "versionInfo": "${VER}",
       "downloadLocation": "https://github.com/adamriofc/NeuronixOS",
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",

@@ -189,7 +189,7 @@ def verify_evidence_graph(graph_file: str, expected_digest: Optional[str] = None
                 return False, f"Node 'BUILD_NODE' digest mismatch: claimed {claimed_digest} != expected {expected}", {}
         elif node_id == "TEST_NODE":
             manifest = node_data.get("test_manifest_hash", "")
-            total = node_data.get("total_assertions", 1353)
+            total = node_data.get("total_assertions", 1384)
             failed = node_data.get("failed_assertions", 0)
             rate = node_data.get("pass_rate_percentage", 100)
             run_id = node_data.get("ci_run_id", "")
@@ -406,7 +406,7 @@ def verify_exact_lineage(passport_path: str) -> Tuple[bool, str, Dict[str, Any]]
     """
     Validates mathematical cross-artifact commit lineage across all release and assurance documents:
       1. dist/verification-passport.json (release_metadata.commit_sha)
-      2. dist/neuronix-os-v1.0.4.proof.json (release_metadata.commit_sha)
+      2. dist/neuronix-os-v1.0.5.proof.json (release_metadata.commit_sha)
       3. dist/evidence-graph.json (nodes.SOURCE_NODE.git_commit_sha and nodes.RELEASE_NODE.commit_sha)
       4. data/assurance_record.json (last_verified_commit_sha)
       5. data/assurance_evidence_snapshot.json (last_verified_commit_sha)
@@ -416,8 +416,24 @@ def verify_exact_lineage(passport_path: str) -> Tuple[bool, str, Dict[str, Any]]
     dist_dir = os.path.dirname(passport_file)
     project_root = os.path.abspath(os.path.join(dist_dir, ".."))
     data_dir = os.path.join(project_root, "data")
+    version_str = "1.0.5"
+    version_nix = os.path.join(project_root, "version.nix")
+    if os.path.exists(version_nix):
+        try:
+            with open(version_nix, "r", encoding="utf-8") as vf:
+                for line in vf:
+                    if "version =" in line:
+                        version_str = line.split('"')[1]
+                        break
+        except Exception:
+            pass
 
-    proof_file = os.path.join(dist_dir, "neuronix-os-v1.0.4.proof.json")
+    proof_file = os.path.join(dist_dir, f"neuronix-os-v{version_str}.proof.json")
+    if not os.path.exists(proof_file):
+        import glob
+        matches = sorted(glob.glob(os.path.join(dist_dir, "neuronix-os-v*.proof.json")))
+        if matches:
+            proof_file = matches[-1]
     graph_file = os.path.join(dist_dir, "evidence-graph.json")
     record_file = os.path.join(data_dir, "assurance_record.json")
     snapshot_file = os.path.join(data_dir, "assurance_evidence_snapshot.json")

@@ -130,6 +130,14 @@ def sign_canonical(payload: Any, private_key_hex: str) -> str:
     return sig_bytes.hex()
 
 
+def sign_bytes(message: bytes, private_key_hex: str) -> str:
+    """Signs raw bytes using Ed25519, returning signature hex."""
+    sk = bytes.fromhex(private_key_hex)
+    pk = _ed25519_publickey(sk)
+    sig_bytes = _ed25519_sign(message, sk, pk)
+    return sig_bytes.hex()
+
+
 def verify_canonical(payload: Any, signature_hex: str, public_key_hex: str) -> bool:
     """Verifies Ed25519 signature over canonical RFC 8785 JSON bytes of a payload."""
     try:
@@ -139,3 +147,14 @@ def verify_canonical(payload: Any, signature_hex: str, public_key_hex: str) -> b
         return _ed25519_verify(sig_bytes, msg_bytes, pk_bytes)
     except Exception:
         return False
+
+
+def verify_bytes(message: bytes, signature_hex: str, public_key_hex: str) -> bool:
+    """Verifies Ed25519 signature over raw bytes."""
+    try:
+        sig_bytes = bytes.fromhex(signature_hex)
+        pk_bytes = bytes.fromhex(public_key_hex)
+        return _ed25519_verify(sig_bytes, message, pk_bytes)
+    except Exception:
+        return False
+

@@ -285,7 +285,7 @@ class ConductorServer:
         elif method == "conductor.version":
             return {
                 "distribution": "NEURONIX OS",
-                "version": "1.0.4",
+                "version": "1.0.5",
                 "protocol_version": "1.0.0",
                 "control_socket": str(self.socket_path),
                 "capabilities_registered": len(skills.list_skills()),
@@ -429,7 +429,7 @@ class ConductorServer:
                 "gui_attached": self._gui_attached,
                 "active_connections": len(self._clients),
                 "pending_proposals": pending_count,
-                "topbar": "CONDUCTOR [ NEURONIX v1.0.4 ] VITAL o NOMINAL"
+                "topbar": "CONDUCTOR [ NEURONIX v1.0.5 ] VITAL o NOMINAL"
             }
 
         else:

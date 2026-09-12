@@ -2,11 +2,15 @@
 Storage hygiene, Nix store inspection, and disk reclamation metrics.
 """
 
-import os
-import subprocess
-import shutil
+from __future__ import annotations
 
-def calculate_store_size():
+import os
+import shutil
+import subprocess
+from typing import Any, Dict, List, Optional
+
+
+def calculate_store_size() -> str:
     """Returns human-readable size of /nix/store."""
     if not os.path.exists("/nix/store"):
         return "0 GB"
@@ -21,7 +25,8 @@ def calculate_store_size():
             pass
     return "Unavailable"
 
-def probe_storage_hygiene():
+
+def probe_storage_hygiene() -> Dict[str, Any]:
     """
     Evaluates storage hygiene metrics:
     - Journal logs size
