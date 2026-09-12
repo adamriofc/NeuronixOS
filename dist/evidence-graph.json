@@ -8,27 +8,27 @@
     "SOURCE_NODE": {
       "node_id": "SOURCE_NODE",
       "type": "GOVERNANCE_SOURCE",
-      "git_commit_sha": "6a3172c4beb0875017cd1b9e155cf9a37e701a35",
+      "git_commit_sha": "3237b24227ebd5812fceff00c84fabb3f0fafeae",
       "git_branch": "main",
       "repository": "https://github.com/adamriofc/NeuronixOS",
-      "digest": "5f3a119542a3b3bf38e59f6f1fc228d317d90306e1a2ba2e647fc7d8dc7c57f4"
+      "digest": "7c23e34ad2a00bc3cfb028a9017d045a50413e69921ed5fd44184315912e98f4"
     },
     "BUILD_NODE": {
       "node_id": "BUILD_NODE",
       "type": "SUBSTRATE_BUILD",
-      "parent_source_sha": "6a3172c4beb0875017cd1b9e155cf9a37e701a35",
+      "parent_source_sha": "3237b24227ebd5812fceff00c84fabb3f0fafeae",
       "flake_lock_hash": "06135d460eb72c7dcb846ac22cab8cee65f9acea9f3b285a9adb9d27de876981",
       "system_store_path": "none",
-      "digest": "67ef4d1cd91a5c9d4de442debd436d7d23e3b598a80140f156df0eaa6c3f32a9"
+      "digest": "1dcb525ea8ec0a264764b6ce9effcb493cfac188e8215f0d0e3db942cc1898c8"
     },
     "HARDWARE_NODE": {
       "node_id": "HARDWARE_NODE",
       "type": "HARDWARE_INTELLIGENCE",
-      "hardware_root": "b5dc6942c0a213ec5e0c58587f1a0b4dc3ea8da876bde6e41189043087eddfcf",
+      "hardware_root": "19ade85bede05f22e95a8f03a4761bf3469096ce7b55b949fd60bf3d5ba451f0",
       "cpu_cores": 16,
       "kvm_available": true,
       "tpm_present": true,
-      "digest": "b5dc6942c0a213ec5e0c58587f1a0b4dc3ea8da876bde6e41189043087eddfcf"
+      "digest": "19ade85bede05f22e95a8f03a4761bf3469096ce7b55b949fd60bf3d5ba451f0"
     },
     "TOPOLOGY_NODE": {
       "node_id": "TOPOLOGY_NODE",
@@ -108,14 +108,14 @@
     "STATE_NODE": {
       "node_id": "STATE_NODE",
       "type": "MERKLE_STATE_COMMITMENT",
-      "state_root": "4b0069f396f9b30c8dde3c0dea90bc48a9c34214456f2ad682d0c8b2382f7dff",
-      "parent_build_digest": "67ef4d1cd91a5c9d4de442debd436d7d23e3b598a80140f156df0eaa6c3f32a9",
-      "parent_hardware_digest": "b5dc6942c0a213ec5e0c58587f1a0b4dc3ea8da876bde6e41189043087eddfcf",
+      "state_root": "8038583b689b99dad57fb252fe310334652a8dbab046811dc92b1f741430e637",
+      "parent_build_digest": "1dcb525ea8ec0a264764b6ce9effcb493cfac188e8215f0d0e3db942cc1898c8",
+      "parent_hardware_digest": "19ade85bede05f22e95a8f03a4761bf3469096ce7b55b949fd60bf3d5ba451f0",
       "parent_policy_digest": "eaaea8a0352a4c4c393ae0b81007f6152213b412e87106dae93b108c9b89af30",
       "parent_storage_digest": "aefd61691edb1f7f3420ec759ac825b5313e9f6ae23c86d31a2be6ed6806bbf5",
       "parent_boot_digest": "ad59da0903fe9d13eefc2a0dafad78fcca10c8eccb613cda6b3f49538f0944de",
       "trust_status": "TRUSTED",
-      "digest": "4b0069f396f9b30c8dde3c0dea90bc48a9c34214456f2ad682d0c8b2382f7dff"
+      "digest": "8038583b689b99dad57fb252fe310334652a8dbab046811dc92b1f741430e637"
     },
     "RUNTIME_NODE": {
       "node_id": "RUNTIME_NODE",
@@ -142,21 +142,21 @@
       "type": "QUALIFIED_RELEASE_ROOT",
       "release_version": "1.0.5",
       "release_tag": "v1.0.5",
-      "commit_sha": "6a3172c4beb0875017cd1b9e155cf9a37e701a35",
+      "commit_sha": "3237b24227ebd5812fceff00c84fabb3f0fafeae",
       "ci_run_id": "LOCAL_VERIFIED",
       "parent_test_digest": "19103ec5e5ff57fb9f73cc6b91068bfd712ee642cd0d39ff3f923f2bccca1987",
-      "parent_build_digest": "67ef4d1cd91a5c9d4de442debd436d7d23e3b598a80140f156df0eaa6c3f32a9",
-      "parent_state_root": "4b0069f396f9b30c8dde3c0dea90bc48a9c34214456f2ad682d0c8b2382f7dff",
-      "digest": "e6dd6db8fb4e403948647762572ab0a0f31568ef60e529d13a82e965bd05b3ec"
+      "parent_build_digest": "1dcb525ea8ec0a264764b6ce9effcb493cfac188e8215f0d0e3db942cc1898c8",
+      "parent_state_root": "8038583b689b99dad57fb252fe310334652a8dbab046811dc92b1f741430e637",
+      "digest": "8aade061e4dbe6bd73d3dbb24f4be3a6cb84d9af01bb0947903b6a64946cd824"
     },
     "HOST_NODE": {
       "node_id": "HOST_NODE",
       "type": "HARDWARE_ATTESTATION",
-      "hardware_root": "b5dc6942c0a213ec5e0c58587f1a0b4dc3ea8da876bde6e41189043087eddfcf",
+      "hardware_root": "19ade85bede05f22e95a8f03a4761bf3469096ce7b55b949fd60bf3d5ba451f0",
       "cpu_cores": 16,
       "kvm_available": true,
       "tpm_present": true,
-      "digest": "b5dc6942c0a213ec5e0c58587f1a0b4dc3ea8da876bde6e41189043087eddfcf"
+      "digest": "19ade85bede05f22e95a8f03a4761bf3469096ce7b55b949fd60bf3d5ba451f0"
     },
     "HDS_NODE": {
       "node_id": "HDS_NODE",
@@ -175,10 +175,10 @@
     "PROOF_NODE": {
       "node_id": "PROOF_NODE",
       "type": "DOMAIN_PROOF_V1",
-      "proof_root": "b88d7be6574f096efebab44cc039972f8ff26da2ad5fe603ecd66bc6f01dc8a3",
-      "parent_state_root": "4b0069f396f9b30c8dde3c0dea90bc48a9c34214456f2ad682d0c8b2382f7dff",
+      "proof_root": "e73d95b34566161c6ecf3a0719779f5133b8b6083f34b2c0b3a860edb47e38e5",
+      "parent_state_root": "8038583b689b99dad57fb252fe310334652a8dbab046811dc92b1f741430e637",
       "trust_verdict": "VERIFIED_TRUSTED",
-      "digest": "b88d7be6574f096efebab44cc039972f8ff26da2ad5fe603ecd66bc6f01dc8a3"
+      "digest": "e73d95b34566161c6ecf3a0719779f5133b8b6083f34b2c0b3a860edb47e38e5"
     }
   },
   "edges": [
@@ -198,25 +198,25 @@
       "from": "STATE_NODE",
       "to": "RUNTIME_NODE",
       "edge_type": "host_state_root",
-      "digest": "4b0069f396f9b30c8dde3c0dea90bc48a9c34214456f2ad682d0c8b2382f7dff"
+      "digest": "8038583b689b99dad57fb252fe310334652a8dbab046811dc92b1f741430e637"
     },
     {
       "from": "BUILD_NODE",
       "to": "STATE_NODE",
       "edge_type": "state_parent_sha",
-      "digest": "67ef4d1cd91a5c9d4de442debd436d7d23e3b598a80140f156df0eaa6c3f32a9"
+      "digest": "1dcb525ea8ec0a264764b6ce9effcb493cfac188e8215f0d0e3db942cc1898c8"
     },
     {
       "from": "SOURCE_NODE",
       "to": "BUILD_NODE",
       "edge_type": "artifact_parent_sha",
-      "digest": "6a3172c4beb0875017cd1b9e155cf9a37e701a35"
+      "digest": "3237b24227ebd5812fceff00c84fabb3f0fafeae"
     },
     {
       "from": "HARDWARE_NODE",
       "to": "STATE_NODE",
       "edge_type": "hardware_leaf",
-      "digest": "b5dc6942c0a213ec5e0c58587f1a0b4dc3ea8da876bde6e41189043087eddfcf"
+      "digest": "19ade85bede05f22e95a8f03a4761bf3469096ce7b55b949fd60bf3d5ba451f0"
     },
     {
       "from": "TOPOLOGY_NODE",
@@ -264,7 +264,7 @@
       "from": "HARDWARE_NODE",
       "to": "CAPABILITY_NODE",
       "edge_type": "hardware_facts",
-      "digest": "b5dc6942c0a213ec5e0c58587f1a0b4dc3ea8da876bde6e41189043087eddfcf"
+      "digest": "19ade85bede05f22e95a8f03a4761bf3469096ce7b55b949fd60bf3d5ba451f0"
     },
     {
       "from": "CAPABILITY_NODE",
@@ -276,14 +276,14 @@
       "from": "BUILD_NODE",
       "to": "RELEASE_NODE",
       "edge_type": "parent_build_digest",
-      "digest": "67ef4d1cd91a5c9d4de442debd436d7d23e3b598a80140f156df0eaa6c3f32a9"
+      "digest": "1dcb525ea8ec0a264764b6ce9effcb493cfac188e8215f0d0e3db942cc1898c8"
     },
     {
       "from": "PROOF_NODE",
       "to": "RELEASE_NODE",
       "edge_type": "parent_proof_root",
-      "digest": "b88d7be6574f096efebab44cc039972f8ff26da2ad5fe603ecd66bc6f01dc8a3"
+      "digest": "e73d95b34566161c6ecf3a0719779f5133b8b6083f34b2c0b3a860edb47e38e5"
     }
   ],
-  "graph_digest": "e6dd6db8fb4e403948647762572ab0a0f31568ef60e529d13a82e965bd05b3ec"
+  "graph_digest": "8aade061e4dbe6bd73d3dbb24f4be3a6cb84d9af01bb0947903b6a64946cd824"
 }
