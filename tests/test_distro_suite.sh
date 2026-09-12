@@ -107,6 +107,9 @@ check_file "${DISTRO_ROOT}/installer/calamares/modules/keyboard.conf"
 check_file "${DISTRO_ROOT}/installer/calamares/modules/mount.conf"
 check_file "${DISTRO_ROOT}/installer/calamares/modules/summary.conf"
 check_file "${DISTRO_ROOT}/installer/calamares/modules/finished.conf"
+check_file "${DISTRO_ROOT}/installer/calamares/branding/neuronix/branding.desc"
+check_file "${DISTRO_ROOT}/installer/calamares/branding/neuronix/show.qml"
+check_file "${DISTRO_ROOT}/installer/calamares/branding/neuronix/stylesheet.qss"
 check_file "${DISTRO_ROOT}/installer/scripts/neuronix-install-engine.sh"
 check_file "${DISTRO_ROOT}/packages/neuronix-center/neuronix_center.py"
 check_file "${DISTRO_ROOT}/packages/neuronix-center/default.nix"
@@ -371,6 +374,10 @@ assert_contains "${DISTRO_ROOT}/installer/calamares/modules/finished.conf" "show
 assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "home = \"/home/nixos\";" "Live ISO user explicitly defines home directory"
 assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "initialPassword = \"neuronix\";" "Live ISO user sets initial authentication password"
 assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "services.displayManager.autoLogin" "Live ISO enables display manager auto-login"
+assert_contains "${DISTRO_ROOT}/installer/calamares/settings.conf" "branding-search" "Calamares declares branding-search path"
+assert_contains "${DISTRO_ROOT}/installer/calamares/branding/neuronix/branding.desc" "componentName:  neuronix" "Calamares branding componentName is neuronix"
+assert_contains "${DISTRO_ROOT}/installer/calamares/branding/neuronix/branding.desc" "slideshow:               \"show.qml\"" "Calamares branding defines show.qml slideshow"
+assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "calamares/branding/neuronix" "Live ISO provisions Calamares branding"
 
 # ------------------------------------------------------------------------------
 # SUITE 11: Kernel Parameters, Watchdogs & Sysctl Limits

@@ -1,0 +1,95 @@
+/* NEURONIX OS Calamares Tokyo Dark Stylesheet */
+
+QWidget {
+    background-color: #16161e;
+    color: #c0caf5;
+    font-family: "Sans";
+    font-size: 13px;
+}
+
+/* Sidebar */
+#sidebarApp {
+    background-color: #13141c;
+    border-right: 1px solid #1f2335;
+}
+
+#sidebarApp QLabel {
+    color: #a9b1d6;
+    font-size: 12px;
+}
+
+/* Push Buttons */
+QPushButton {
+    background-color: #1f2335;
+    color: #c0caf5;
+    border: 1px solid #292e42;
+    border-radius: 4px;
+    padding: 6px 14px;
+    min-height: 20px;
+}
+
+QPushButton:hover {
+    background-color: #24283b;
+    border-color: #7aa2f7;
+}
+
+QPushButton:pressed {
+    background-color: #3b4261;
+    color: #ffffff;
+}
+
+QPushButton:disabled {
+    background-color: #16161e;
+    color: #565f89;
+    border-color: #1f2335;
+}
+
+/* Progress Bar */
+QProgressBar {
+    background-color: #1a1b26;
+    border: 1px solid #292e42;
+    border-radius: 4px;
+    text-align: center;
+    color: #c0caf5;
+    height: 14px;
+}
+
+QProgressBar::chunk {
+    background-color: #7aa2f7;
+    border-radius: 3px;
+}
+
+/* Input Fields */
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background-color: #1a1b26;
+    color: #c0caf5;
+    border: 1px solid #292e42;
+    border-radius: 4px;
+    padding: 4px 8px;
+    selection-background-color: #7aa2f7;
+    selection-color: #16161e;
+}
+
+QLineEdit:focus, QTextEdit:focus {
+    border-color: #7aa2f7;
+}
+
+/* Lists and Trees */
+QTreeView, QListView {
+    background-color: #1a1b26;
+    color: #c0caf5;
+    border: 1px solid #292e42;
+    border-radius: 4px;
+}
+
+QTreeView::item:selected, QListView::item:selected {
+    background-color: #24283b;
+    color: #7aa2f7;
+}
+
+/* Headers */
+QLabel#headerText {
+    font-size: 16px;
+    font-weight: bold;
+    color: #7aa2f7;
+}

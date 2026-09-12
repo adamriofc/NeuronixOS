@@ -60,6 +60,7 @@
 
   # Provision declarative Calamares configuration and installation engine into Live Media
   environment.etc."calamares/modules".source = ../../installer/calamares/modules;
+  environment.etc."calamares/branding/neuronix".source = ../../installer/calamares/branding/neuronix;
   environment.etc."calamares/settings.conf".source = ../../installer/calamares/settings.conf;
   environment.etc."calamares/scripts/neuronix-install-engine.sh" = {
     source = ../../installer/scripts/neuronix-install-engine.sh;

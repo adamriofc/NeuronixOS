@@ -1,0 +1,36 @@
+---
+componentName:  neuronix
+
+welcomeStyleCalamares:   false
+welcomeExpandingLogo:    true
+windowExpanding:         normal
+windowSize:              840px, 560px
+windowPlacement:         center
+
+strings:
+    productName:         "NEURONIX OS"
+    shortProductName:    "NeuronixOS"
+    version:             "1.0.5"
+    shortVersion:        "1.0.5"
+    versionedName:       "NEURONIX OS v1.0.5"
+    shortVersionedName:  "NeuronixOS 1.0.5"
+    bootloaderEntryName: "NEURONIX OS"
+    productUrl:          "https://github.com/adamriofc/NeuronixOS"
+    supportUrl:          "https://github.com/adamriofc/NeuronixOS/issues"
+    knownIssuesUrl:      "https://github.com/adamriofc/NeuronixOS/issues"
+    releaseNotesUrl:     "https://github.com/adamriofc/NeuronixOS/releases"
+    donateUrl:           "https://github.com/adamriofc/NeuronixOS"
+
+images:
+    productLogo:         "logo.png"
+    productIcon:         "icon.png"
+    productWelcome:      "welcome.png"
+
+style:
+   SidebarBackground:        "#13141c"
+   SidebarText:              "#a9b1d6"
+   SidebarTextCurrent:       "#7aa2f7"
+   SidebarBackgroundCurrent: "#1f2335"
+
+slideshow:               "show.qml"
+slideshowAPI:            2
