@@ -23,8 +23,21 @@
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
     description = "NEURONIX Live User";
+    home = "/home/nixos";
+    shell = pkgs.bash;
+    initialHashedPassword = lib.mkForce null;
+    initialPassword = "neuronix";
   };
   security.sudo.wheelNeedsPassword = false;
+
+  # Auto-login for live session (bypass GDM login screen)
+  services.displayManager.autoLogin = {
+    enable = true;
+    user = "nixos";
+  };
+
+  # Ensure GDM display manager is enabled
+  services.displayManager.gdm.enable = true;
 
   # Paket esensial di sesi Live ISO
   environment.systemPackages = with pkgs; [
@@ -40,6 +53,10 @@
       exec ${bash}/bin/bash /etc/calamares/scripts/neuronix-install-engine.sh "$@"
     '')
   ];
+
+  # Ensure GNOME desktop is available for live session
+  services.xserver.enable = true;
+  services.desktopManager.gnome.enable = true;
 
   # Provision declarative Calamares configuration and installation engine into Live Media
   environment.etc."calamares/modules".source = ../../installer/calamares/modules;

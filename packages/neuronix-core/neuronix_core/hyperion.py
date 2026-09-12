@@ -514,6 +514,12 @@ class HyperionExecutionEngine:
             "architecture": "Provable Adaptive Execution Architecture (PAEA)",
             "host_state_root": st.get("state_root"),
             "policy_hash": st.get("leaf_hashes", {}).get("policy_hash"),
+            "supported_tiers": [
+                "TIER_0_FAST_PATH",
+                "TIER_1_RAM_GHOST",
+                "TIER_2_EBPF_ENCLAVE",
+                "TIER_3_MICRO_VM",
+            ],
             "tiers": [
                 {
                     "tier": 0,

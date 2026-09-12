@@ -503,10 +503,13 @@ USAGE:
 
 ### 1. Declarative Calamares Installation Engine
 The graphical installer functions as a declarative flake generator ([ADR-002](docs/adr/ADR-002-why-calamares-flake-generator.md)):
-- Collects locale, keyboard, user accounts, and disk partitioning choices through the Calamares UI.
-- Writes corresponding `/mnt/etc/nixos/flake.nix` and `configuration.nix` files tailored to the target system.
-- Formats target storage using the Btrfs subvolume layout (`@`, `@nix`, `@home`, `@snapshots`, `@swap`).
-- Runs `nixos-install --flake /mnt/etc/nixos#neuronix-desktop`, producing a fully declarative system installation upon first boot.
+- **Modular Pipeline:** Complete declarative sequence configuration (`welcome`, `locale`, `keyboard`, `partition`, `users`, `summary`, `mount`, `shellprocess@neuronix-engine`, and `finished`) ensures end-to-end setup stability.
+- **Robust User Account Provisioning:** Calamares `users.conf` standardizes default user attributes, wheel administration group bindings, and user shell definitions without runtime crash risks.
+- **Automated Mount Orchestration:** Dedicated `mount.conf` declares swap and EFI system partition mount targets into `/mnt` before dispatching the installation engine.
+- **Hardened Live ISO Environment:** Live media boots into GNOME Wayland with automated GDM user auto-login (`nixos` account with initialized home, shell, and passwordless sudo privileges), preventing session startup crashes.
+- **Declarative Flake Synthesis:** Writes corresponding `/mnt/etc/nixos/flake.nix` and `configuration.nix` files tailored to the target system.
+- **Resilient Storage Architecture:** Formats target storage using the Btrfs subvolume layout (`@`, `@nix`, `@home`, `@snapshots`, `@swap`).
+- **Hermetic System Deployment:** Runs `nixos-install --flake /mnt/etc/nixos#neuronix-desktop`, producing a fully declarative system installation upon first boot with autonomous network detection and offline fallback support.
 
 ### 2. System Control Center (Conductor)
 The official graphical desktop control surface and administration hub engineered under the "Quiet Systems UI" doctrine :
@@ -1465,12 +1468,12 @@ NEURONIX incorporates continuous binary caching across GitHub Actions workflows 
 - **Continuous CI Cache:** Powered by Determinate Systems Magic Nix Cache for instant sub-minute builds without recompilation.
 
 ### Installation Workflow
-1. Boot the target system from the live installation medium.
+1. Boot the target system from the live installation medium (boots directly into live GNOME session via automated GDM autologin).
 2. Select driver initialization mode (standard open-source drivers or proprietary NVIDIA drivers).
-3. The Calamares installer starts automatically on the desktop.
+3. The Calamares installer starts automatically within the Wayland graphical desktop session.
 4. Select a partitioning scheme (automated Btrfs ZSTD:3 layout or manual partition mapping).
-5. Configure regional settings, user credentials, and desktop environment (KDE Plasma, GNOME, or Hyprland).
-6. Complete installation and reboot into the target environment.
+5. Configure regional settings, user credentials (provisioned via declarative `users.conf`), and desktop environment (KDE Plasma, GNOME, or Hyprland).
+6. Complete declarative target installation via `neuronix-install-engine` and reboot into the target environment.
 
 ---
 
