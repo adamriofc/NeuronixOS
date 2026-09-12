@@ -8,7 +8,9 @@
 use std::fs;
 use std::path::Path;
 
+/// Current AST schema version for JSON-RPC serialization compatibility.
 pub const AST_SCHEMA_VERSION: &str = "2.0.0";
+/// Canonical NEURONIX OS version embedded in AST responses.
 pub const CANONICAL_VERSION: &str = "1.0.5";
 
 /// In-memory typed Abstract Syntax Tree (AST) representing full host operational state.
@@ -206,6 +208,7 @@ impl SystemAst {
     }
 }
 
+/// Handles incoming JSON-RPC 2.0 requests for system state queries.
 pub fn handle_jsonrpc(request_str: &str) -> String {
     // Parse JSON-RPC 2.0 without external crate dependencies
     let req = request_str.trim();

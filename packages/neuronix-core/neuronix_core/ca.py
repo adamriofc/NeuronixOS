@@ -13,7 +13,7 @@ import shutil
 import subprocess
 from datetime import datetime, timezone
 
-def parse_cert_metadata(cert_path: str):
+def parse_cert_metadata(cert_path: str) -> tuple[bool, dict | str, bytes | None]:
     """Extracts SHA-256 and basic metadata from certificate file."""
     with open(cert_path, "rb") as f:
         content = f.read()
@@ -44,7 +44,7 @@ def parse_cert_metadata(cert_path: str):
     }
     return True, meta, content
 
-def enroll_certificate(cert_path: str, target_ca_dir=None, target_ssl_dir=None):
+def enroll_certificate(cert_path: str, target_ca_dir=None, target_ssl_dir=None) -> tuple[bool, int, str]:
     """
     Enrolls certificate with content-addressed naming and postcondition verification.
     Returns (success: bool, return_code: int, message: str).

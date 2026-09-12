@@ -11,8 +11,13 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::crypto::sha256_hex;
 
+/// Null sentinel SHA-256 hash used for untrusted or missing state roots.
 pub const NULL_SENTINEL_SHA256: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
+/// Hyperion Domain Broker for Provable Adaptive Execution Architecture (PAEA).
+///
+/// Manages domain negotiation, capability probing, and cryptographic proof generation
+/// across four isolation tiers (TIER_0 through TIER_3).
 pub struct HyperionBroker;
 
 impl HyperionBroker {

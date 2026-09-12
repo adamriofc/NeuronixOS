@@ -6,6 +6,7 @@
 
 use crate::vt::TerminalBuffer;
 
+/// Workspace tab identifiers for the Conductor terminal surface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkspaceTab {
     Terminal,
@@ -14,6 +15,7 @@ pub enum WorkspaceTab {
     Capabilities,
 }
 
+/// Conductor surface layout state for terminal rendering.
 pub struct SurfaceLayout {
     pub width: usize,
     pub height: usize,
@@ -27,12 +29,14 @@ pub struct SurfaceLayout {
     pub toast_message: Option<String>,
 }
 
+/// Overlay types for skill proposals and vital glance data.
 #[derive(Debug, Clone)]
 pub enum OverlayType {
     SkillProposal(ProposalCard),
     VitalGlance(VitalGlanceData),
 }
 
+/// Skill proposal card for workspace operation previews.
 #[derive(Debug, Clone)]
 pub struct ProposalCard {
     pub title: String,
@@ -42,6 +46,7 @@ pub struct ProposalCard {
     pub explanation: String,
 }
 
+/// Vital glance data for system health monitoring overlay.
 #[derive(Debug, Clone)]
 pub struct VitalGlanceData {
     pub cpu_load: Option<String>,

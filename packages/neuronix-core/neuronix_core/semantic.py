@@ -337,7 +337,7 @@ SemanticAIGovernor = SemanticAstEngine
 parse_nix_ast = SemanticAstEngine.parse_nix_ast
 
 
-def main():
+def main() -> None:
     engine = SemanticAstEngine()
     opts = engine.list_options("neuronix.")
     print(f"Found {len(opts)} neuronix options:")

@@ -18,7 +18,7 @@ FALLBACK_REPO_MODULE = os.path.join(
     "../../../modules/custom/user-packages.nix"
 )
 
-def verify_package_in_nixpkgs(package_name):
+def verify_package_in_nixpkgs(package_name) -> bool:
     """Formally verifies if a package exists in pure nixpkgs closure."""
     if not package_name or not re.match(r"^[a-zA-Z0-9_\.\-]+$", package_name):
         return False, f"Invalid package name format: '{package_name}'"
@@ -62,13 +62,13 @@ def verify_package_in_nixpkgs(package_name):
     return False, f"Package '{package_name}' not found in current nixpkgs channel"
 
 
-def resolve_target_file():
+def resolve_target_file() -> str:
     """Locates the active declarative custom packages file."""
     if os.path.exists(USER_PACKAGES_MODULE_PATH) or os.path.isdir(os.path.dirname(USER_PACKAGES_MODULE_PATH)):
         return USER_PACKAGES_MODULE_PATH
     return FALLBACK_REPO_MODULE
 
-def distill_packages(packages, dry_run=False, force=False):
+def distill_packages(packages, dry_run=False, force=False) -> dict[str, object]:
     """Declaratively ingests packages into user-packages.nix with machine-managed safety boundary."""
     if not packages:
         return {"status": "error", "message": "No packages specified for distillation."}
@@ -198,7 +198,7 @@ def distill_packages(packages, dry_run=False, force=False):
         "total_packages": all_pkgs
     }
 
-def verify_nixpkgs_attribute(pkg):
+def verify_nixpkgs_attribute(pkg: str) -> bool:
     ok, _ = verify_package_in_nixpkgs(pkg)
     return ok
 

@@ -249,7 +249,7 @@ class SystemTopologyEngine:
         cycles: List[List[str]] = []
         current_path: List[str] = []
 
-        def dfs(node: str):
+        def dfs(node: str) -> None:
             visited.add(node)
             rec_stack.add(node)
             current_path.append(node)
@@ -337,7 +337,7 @@ class SystemTopologyEngine:
         return sha256_canonical(topology)
 
 
-def main():
+def main() -> None:
     engine = SystemTopologyEngine()
     topo = engine.build_topology()
     root = engine.compute_topology_root(topo)

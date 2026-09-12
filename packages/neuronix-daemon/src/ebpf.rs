@@ -9,18 +9,24 @@ use std::fs;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
+/// Operating mode for eBPF Linux Security Module policy engine.
 pub enum LsmMode {
     Enforcing,
     Audit,
     Disabled,
 }
 
+/// eBPF LSM security policy engine for declarative syscall restriction.
+///
+/// Probes kernel BPF LSM support and generates JSON policy contracts
+/// for package-level security enforcement.
 pub struct EbpfLsmEngine {
     pub mode: LsmMode,
     pub bpf_lsm_supported: bool,
 }
 
 impl EbpfLsmEngine {
+    /// Probes the kernel for BPF LSM support via `/sys/kernel/security/lsm`.
     pub fn probe() -> Self {
         let mut bpf_lsm_supported = false;
         if let Ok(lsm) = fs::read_to_string("/sys/kernel/security/lsm") {
@@ -39,6 +45,7 @@ impl EbpfLsmEngine {
         }
     }
 
+    /// Generates a JSON policy contract for a package with allowed filesystem paths.
     pub fn generate_policy_contract(&self, package_name: &str, allowed_paths: &[&str]) -> String {
         let paths_json = allowed_paths.iter()
             .map(|p| format!("\"{}\"", p))

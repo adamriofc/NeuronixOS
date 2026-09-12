@@ -11,9 +11,18 @@ use crate::crypto::sha256_hex;
 
 const NULL_SENTINEL_SHA256: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
+/// Provable State Engine for NEURONIX OS.
+///
+/// Computes 5-leaf cryptographic StateRoot commitment from:
+/// - Posture (TPM PCR values, Secure Boot policy)
+/// - Substrate (NixOS generation, store path, architecture)
+/// - Provenance (actor identity, auth boundary)
+/// - Policy (eBPF LSM rules, protected paths)
+/// - Evidence (assertion counts, verification status, journal integrity)
 pub struct StateEngine;
 
 impl StateEngine {
+    /// Probes live system state and computes 5-leaf cryptographic StateRoot.
     pub fn probe_state() -> String {
         let now_epoch = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -300,6 +309,7 @@ impl StateEngine {
         )
     }
 
+    /// Verifies the current state root by recomputing from live system data.
     pub fn verify_state() -> String {
         let state_json = Self::probe_state();
         let claimed_root = extract_json_string(&state_json, "state_root").unwrap_or_default();
@@ -332,6 +342,7 @@ impl StateEngine {
         )
     }
 
+    /// Verifies a provided state document against live system state for drift detection.
     pub fn verify_state_doc(doc: &str) -> String {
         let claimed_root = extract_json_string(doc, "state_root").unwrap_or_default();
 

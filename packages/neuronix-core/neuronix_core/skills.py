@@ -276,7 +276,7 @@ class SkillRegistry:
         self._skills: Dict[str, Dict[str, Any]] = {}
         self.load_skills()
 
-    def load_skills(self):
+    def load_skills(self) -> object:
         """Loads and indexes all canonical skill contract JSON files."""
         self._skills.clear()
         if not self.skills_dir.exists():
@@ -325,7 +325,7 @@ class SkillExecutorRegistry:
     def __init__(self):
         self._handlers: Dict[str, Callable] = {}
 
-    def register(self, skill_id: str, handler: Callable):
+    def register(self, skill_id: str, handler: Callable) -> object:
         self._handlers[skill_id] = handler
 
     def get(self, skill_id: str) -> Optional[Callable]:
@@ -349,7 +349,7 @@ class SkillDispatcher:
         self._resolved_proposals: Dict[str, Dict[str, Any]] = {}
         self._register_default_executors()
 
-    def _register_default_executors(self):
+    def _register_default_executors(self) -> None:
         """Binds all 11 canonical NEURONIX capabilities to their execution handlers."""
         self.executors.register("vital.snapshot", self._handle_vital_snapshot)
         self.executors.register("system.status", self._handle_system_status)

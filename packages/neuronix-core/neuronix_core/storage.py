@@ -93,7 +93,7 @@ def _get_branch_dir(source: str, branch_name: str) -> str:
     base = os.path.basename(os.path.abspath(source))
     return os.path.join(parent, f".branch_{base}_{branch_name}")
 
-def create_workspace_branch(source_path: str, branch_name: str):
+def create_workspace_branch(source_path: str, branch_name: str) -> str:
     """
     Creates an instant CoW / Reflink workspace branch.
     If on Btrfs, utilizes atomic subvolume snapshotting; otherwise leverages cp --reflink=auto.
@@ -129,7 +129,7 @@ def create_workspace_branch(source_path: str, branch_name: str):
         "method": snapshot_method
     }
 
-def list_workspace_branches(source_path: str):
+def list_workspace_branches(source_path: str) -> list[str]:
     """Lists existing workspace branches for given workspace directory."""
     source = os.path.abspath(source_path)
     parent = os.path.dirname(source)
@@ -142,7 +142,7 @@ def list_workspace_branches(source_path: str):
                 branches.append(name[len(prefix):])
     return sorted(branches)
 
-def revert_workspace_branch(source_path: str, branch_name: str):
+def revert_workspace_branch(source_path: str, branch_name: str) -> bool:
     """Restores source workspace from designated branch snapshot via CoW reflink."""
     source = os.path.abspath(source_path)
     branch_dir = _get_branch_dir(source, branch_name)

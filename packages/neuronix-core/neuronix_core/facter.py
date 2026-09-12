@@ -217,7 +217,7 @@ class HardwareFacter:
         return hw_root
 
 
-def main():
+def main() -> None:
     facter = HardwareFacter()
     facts = facter.collect_facts()
     hw_root = facter.compute_hardware_root(facts)

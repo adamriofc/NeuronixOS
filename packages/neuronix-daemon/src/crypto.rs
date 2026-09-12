@@ -24,6 +24,10 @@ const K: [u32; 64] = [
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ];
 
+/// Computes SHA-256 hash of input data per FIPS 180-4.
+///
+/// Pure Rust implementation with no external dependencies.
+/// Returns a 32-byte digest.
 pub fn sha256(data: &[u8]) -> [u8; 32] {
     let mut h0 = 0x6a09e667u32;
     let mut h1 = 0xbb67ae85u32;
@@ -105,6 +109,7 @@ pub fn sha256(data: &[u8]) -> [u8; 32] {
     out
 }
 
+/// Computes SHA-256 hash and returns lowercase hex string representation.
 pub fn sha256_hex(data: &[u8]) -> String {
     let digest = sha256(data);
     let mut s = String::with_capacity(64);

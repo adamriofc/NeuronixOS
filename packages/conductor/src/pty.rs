@@ -35,6 +35,10 @@ extern "C" {
     fn setsid() -> i32;
 }
 
+/// POSIX pseudo-terminal session for the Conductor terminal surface.
+///
+/// Provides zero-dependency PTY allocation, slave device setup,
+/// and bidirectional I/O through the master file descriptor.
 pub struct PtySession {
     master_fd: RawFd,
     slave_name: String,

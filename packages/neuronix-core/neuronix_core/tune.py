@@ -56,7 +56,7 @@ TUNING_PROFILES = PROFILES
 
 STATE_FILE = "/var/lib/neuronix/active-workload-profile"
 
-def get_active_profile_name():
+def get_active_profile_name() -> str:
     """Reads recorded profile name or returns 'balanced'."""
     if os.path.exists(STATE_FILE):
         try:
@@ -68,7 +68,7 @@ def get_active_profile_name():
             pass
     return "balanced"
 
-def get_current_tuning_status():
+def get_current_tuning_status() -> dict[str, object]:
     """Probes current active kernel governors, energy prefs, and audio quantum."""
     status = {
         "active_profile": get_active_profile_name(),
@@ -125,7 +125,7 @@ def get_current_tuning_status():
 
     return status
 
-def apply_tuning_profile(profile_name):
+def apply_tuning_profile(profile_name) -> dict[str, object]:
     """Applies a declared tuning profile harmoniously with strict APPLY -> READBACK -> VALIDATE semantics."""
     if profile_name not in PROFILES:
         return {

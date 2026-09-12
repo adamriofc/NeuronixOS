@@ -317,7 +317,7 @@ class MeasuredBootVerifier:
         return sha256_canonical(telemetry)
 
 
-def main():
+def main() -> None:
     verifier = MeasuredBootVerifier()
     contract = BootHealthContract()
 

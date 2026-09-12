@@ -511,7 +511,7 @@ encrypt_secret_envelope = SecretFabricEngine.encrypt_secret_envelope
 decrypt_secret_envelope = SecretFabricEngine.decrypt_secret_envelope
 
 
-def main():
+def main() -> None:
     engine = SecretFabricEngine()
     ident, rec = SecretFabricEngine.generate_keypair()
     ciphertext = SecretFabricEngine.encrypt_secret_envelope(

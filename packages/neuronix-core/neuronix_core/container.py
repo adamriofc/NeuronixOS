@@ -27,7 +27,7 @@ SENSITIVE_ENV_EXACT = {
     "SSH_AUTH_SOCK", "GPG_AGENT_INFO", "GNUPGHOME", "KUBECONFIG"
 }
 
-def sanitize_environment(base_env=None):
+def sanitize_environment(base_env=None) -> object:
     """Sanitizes environment by scrubbing all credentials, secret keys, and tokens."""
     source = base_env if base_env is not None else os.environ
     clean = {}
@@ -45,7 +45,7 @@ def sanitize_environment(base_env=None):
     clean["NEURONIX_SANDBOX"] = "1"
     return clean
 
-def is_git_url(target):
+def is_git_url(target) -> bool:
     """Checks if target is a remote git URL."""
     if not target or not isinstance(target, str):
         return False
@@ -55,7 +55,7 @@ def is_git_url(target):
         return True
     return False
 
-def is_oci_url(target):
+def is_oci_url(target) -> bool:
     """Checks if target is an OCI or Docker image reference."""
     if not target or not isinstance(target, str):
         return False
@@ -67,7 +67,7 @@ def is_oci_url(target):
             return True
     return False
 
-def resolve_fhs_paths():
+def resolve_fhs_paths() -> str | None:
     """
     Detects dynamic linker and standard shared library directories for FHS compatibility.
     Resolves /lib64/ld-linux-x86-64.so.2 and glibc libraries across host and Nix store.
@@ -102,7 +102,7 @@ def resolve_fhs_paths():
         fhs["env"]["NIX_LD_LIBRARY_PATH"] = ":".join(fhs["lib_dirs"])
     return fhs
 
-def safe_extract_tar(tar, destination_dir):
+def safe_extract_tar(tar, destination_dir) -> str:
     """
     Safely extracts tarfile members, protecting against Tar Slip (directory traversal),
     absolute path injection, device node creation, and suid/sgid privilege escalations.
@@ -151,7 +151,7 @@ def safe_extract_tar(tar, destination_dir):
 
     tar.extractall(destination_dir, members=validated_members)
 
-def pull_and_extract_oci_image(image_ref, destination_dir, allow_synthetic=False):
+def pull_and_extract_oci_image(image_ref, destination_dir, allow_synthetic=False) -> str:
     """
     Daemonless OCI / Docker Hub layer extractor.
     Downloads and unpacks image layers directly into destination_dir/rootfs in RAM tmpfs.
@@ -255,7 +255,7 @@ def pull_and_extract_oci_image(image_ref, destination_dir, allow_synthetic=False
             shutil.rmtree(rootfs_dir, ignore_errors=True)
             return None, metadata, f"Failed to pull OCI image '{image_ref}': {e}"
 
-def setup_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True, allow_synthetic=False):
+def setup_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True, allow_synthetic=False) -> object:
     """Allocates ephemeral RAM workspace and clones/stages target repository or OCI image."""
     if require_ram:
         if not (os.path.isdir(custom_shm_base) and os.access(custom_shm_base, os.W_OK)):
@@ -294,7 +294,7 @@ def setup_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True, al
         project_name = os.path.basename(os.path.abspath(target)) or "workspace"
         active_dir = os.path.join(workspace_dir, project_name)
         
-        def _ignore_special(dir_path, names):
+        def _ignore_special(dir_path, names) -> None:
             ignored = set()
             for name in names:
                 full_path = os.path.join(dir_path, name)
@@ -321,7 +321,7 @@ def setup_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True, al
 
     return workspace_dir, active_dir, "Workspace successfully prepared in RAM"
 
-def build_bwrap_command(active_dir, command=None, enable_fhs=True, unshare_net=False, extra_binds=None, extra_env=None):
+def build_bwrap_command(active_dir, command=None, enable_fhs=True, unshare_net=False, extra_binds=None, extra_env=None) -> dict[str, object]:
     """
     Constructs an isolated bubblewrap execution command or fallback subshell command.
     Ensures private PID, UTS, IPC namespaces, dynamic FHS emulation, and optional network unsharing.
@@ -427,7 +427,7 @@ def build_bwrap_command(active_dir, command=None, enable_fhs=True, unshare_net=F
         tokens = ["bash", "-c", command] if command else ["bash"]
         return tokens, sub_env
 
-def run_container_session(active_dir, command=None, env_vars=None, enable_fhs=True, unshare_net=False):
+def run_container_session(active_dir, command=None, env_vars=None, enable_fhs=True, unshare_net=False) -> object:
     """Executes a command or launches an interactive shell inside the container with FHS emulation."""
     if not active_dir or not os.path.isdir(active_dir):
         return 1, "Invalid container directory"
@@ -445,7 +445,7 @@ def run_container_session(active_dir, command=None, env_vars=None, enable_fhs=Tr
 # Backward-compatible alias
 run_sandbox_session = run_container_session
 
-def synthesize_micro_dns_hosts(services, scratch_dir):
+def synthesize_micro_dns_hosts(services, scratch_dir) -> object:
     """
     Synthesizes an in-memory /etc/hosts mapping service names to loopback aliases.
     Enables zero-root, daemonless inter-service discovery in ephemeral stacks.
@@ -468,7 +468,7 @@ def synthesize_micro_dns_hosts(services, scratch_dir):
         f.write("\n".join(lines) + "\n")
     return hosts_path, service_ips
 
-def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None, allow_secret_env=False):
+def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None, allow_secret_env=False) -> object:
     """
     Ephemeral Multi-Service Stack Orchestrator (Alternative to docker-compose).
     Runs multi-service declarative definitions in RAM with isolated Bubblewrap containers, Micro-DNS & graceful termination.
@@ -568,7 +568,7 @@ def run_stack_session(stack_file, custom_shm_base="/dev/shm", timeout_sec=None, 
         "message": "Ephemeral multi-service stack orchestrated with Micro-DNS and vaporized cleanly in RAM"
     }
 
-def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", entrypoint=None, mode="auto"):
+def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", entrypoint=None, mode="auto") -> dict[str, object]:
     """
     Declarative Nix-to-OCI Micro-Layer Compiler.
     Compiles target source, Nix closure, or derivation into a standard OCI Image Layout tarball.
@@ -769,7 +769,7 @@ def build_container_oci(target, output_tar, tag="latest", repo="neuronix-app", e
 
 CONTAINER_RUNTIME_DIR = os.path.expanduser("~/.local/share/neuronix/containers")
 
-def daemonize_container_session(target, name, command=None, custom_shm_base="/dev/shm", enable_fhs=True, unshare_net=False):
+def daemonize_container_session(target, name, command=None, custom_shm_base="/dev/shm", enable_fhs=True, unshare_net=False) -> object:
     """
     Spawns an isolated container session as a background daemon without Docker daemon.
     Supervised via systemd-run --user when available, or detached process supervisor.
@@ -843,7 +843,7 @@ def daemonize_container_session(target, name, command=None, custom_shm_base="/de
 
     return True, f"Container daemon '{clean_name}' running in background (PID: {proc.pid}, RAM: {ws_dir})"
 
-def stop_container_daemon(name):
+def stop_container_daemon(name) -> object:
     """Stops a background container daemon and vaporizes its RAM workspace."""
     clean_name = "".join(c for c in name if c.isalnum() or c in "-_")
     runtime_dir = os.path.join(CONTAINER_RUNTIME_DIR, clean_name)
@@ -876,7 +876,7 @@ def stop_container_daemon(name):
     shutil.rmtree(runtime_dir, ignore_errors=True)
     return True, f"Container daemon '{clean_name}' stopped and workspace vaporized cleanly"
 
-def list_container_daemons():
+def list_container_daemons() -> dict[str, object]:
     """Lists active container daemons."""
     if not os.path.isdir(CONTAINER_RUNTIME_DIR):
         return []
@@ -896,7 +896,7 @@ def list_container_daemons():
             daemons.append({"name": d, "target_type": val, "status": status})
     return daemons
 
-def export_container_oci(source_dir, output_tar, tag="latest", repo="neuronix-app"):
+def export_container_oci(source_dir, output_tar, tag="latest", repo="neuronix-app") -> object:
     """
     Zero-Bloat OCI Exporter.
     Compiles workspace directory into an OCI/Docker compliant image tarball ready for docker load.
@@ -1037,7 +1037,7 @@ def export_container_oci(source_dir, output_tar, tag="latest", repo="neuronix-ap
 
     return True, f"OCI image tarball successfully compiled to {output_tar}"
 
-def teardown_container(workspace_dir, export_path=None):
+def teardown_container(workspace_dir, export_path=None) -> object:
     """Cleans up in-memory workspace and optionally exports changes."""
     if not workspace_dir or not os.path.exists(workspace_dir):
         return True, "No workspace to clean"
@@ -1058,10 +1058,10 @@ def teardown_container(workspace_dir, export_path=None):
 # Backward-compatible alias
 teardown_sandbox = teardown_container
 
-def allocate_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True):
+def allocate_ram_workspace(target, custom_shm_base="/dev/shm", require_ram=True) -> object:
     ws, _, _ = setup_ram_workspace(target, custom_shm_base, require_ram=require_ram)
     return ws
 
-def vaporize_workspace(ws, export_path=None):
+def vaporize_workspace(ws, export_path=None) -> object:
     ok, _ = teardown_container(ws, export_path)
     return ok

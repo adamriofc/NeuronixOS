@@ -12,7 +12,7 @@ import socket
 import urllib.request
 import urllib.error
 
-def get_local_ip():
+def get_local_ip() -> str:
     """Finds non-loopback local network IP."""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -23,7 +23,7 @@ def get_local_ip():
     except Exception:
         return "127.0.0.1"
 
-def is_avahi_running():
+def is_avahi_running() -> bool:
     """Checks if avahi-daemon is active."""
     if shutil.which("systemctl"):
         try:
@@ -33,7 +33,7 @@ def is_avahi_running():
             pass
     return False
 
-def is_cache_serving(port=None):
+def is_cache_serving(port=None) -> bool:
     """Checks if local binary cache service (nix-serve) is active and listening."""
     active_port = int(port or os.environ.get("NEURONIX_MESH_PORT", 5000))
     try:
@@ -53,7 +53,7 @@ def is_cache_serving(port=None):
             pass
     return False
 
-def validate_peer_cache(substituter_url, timeout=1.5):
+def validate_peer_cache(substituter_url, timeout=1.5) -> tuple[bool, bool]:
     """
     Probes peer /nix-cache-info endpoint.
     Returns (reachable, cache_verified) distinguishing raw HTTP reachability from pure Nix cache verification.
@@ -75,7 +75,7 @@ def validate_peer_cache(substituter_url, timeout=1.5):
     except Exception:
         return False, False
 
-def discover_local_peers(timeout_sec=2, validate=True):
+def discover_local_peers(timeout_sec=2, validate=True) -> list[dict[str, object]]:
     """Discovers nearby NEURONIX nodes broadcasting _nix-cache._tcp on the LAN and verifies them."""
     peers = []
     if shutil.which("avahi-browse"):
@@ -107,7 +107,7 @@ def discover_local_peers(timeout_sec=2, validate=True):
             pass
     return peers
 
-def get_mesh_status(port=None):
+def get_mesh_status(port=None) -> dict[str, object]:
     """Returns complete runtime mesh and peer discovery status."""
     configured_port = int(port or os.environ.get("NEURONIX_MESH_PORT", 5000))
     local_ip = get_local_ip()

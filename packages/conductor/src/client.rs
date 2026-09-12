@@ -12,11 +12,14 @@ use std::time::Duration;
 
 use crate::surface::VitalGlanceData;
 
+/// Maximum JSON-RPC frame size in bytes (1 MiB).
 pub const MAX_FRAME_SIZE: usize = 1024 * 1024;
+/// Default RPC call timeout in seconds.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
 
 static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
 
+/// JSON-RPC 2.0 request envelope with typed parameters.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RpcRequest<T: std::fmt::Display = String> {
     pub jsonrpc: String,
@@ -46,6 +49,7 @@ impl<T: std::fmt::Display> RpcRequest<T> {
     }
 }
 
+/// JSON-RPC 2.0 response envelope.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RpcResponse {
     pub jsonrpc: String,
@@ -54,12 +58,14 @@ pub struct RpcResponse {
     pub error: Option<RpcError>,
 }
 
+/// JSON-RPC 2.0 error object with code and message.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RpcError {
     pub code: i64,
     pub message: String,
 }
 
+/// Conductor surface state snapshot for terminal rendering.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SurfaceState {
     pub lifecycle_state: String,
@@ -69,6 +75,7 @@ pub struct SurfaceState {
     pub topbar: String,
 }
 
+/// Proposal card data for workspace operation previews.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProposalData {
     pub proposal_hash: String,
@@ -83,6 +90,7 @@ pub struct ProposalData {
 // Zero-Dependency Pure Rust JSON Extractors
 // -----------------------------------------------------------------------------
 
+/// Escapes special characters for safe JSON string embedding.
 pub fn escape_json_str(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 16);
     for c in s.chars() {
@@ -104,6 +112,7 @@ pub fn escape_json_str(s: &str) -> String {
     out
 }
 
+/// Extracts an f32 value from a JSON string by field name.
 pub fn extract_f32_field(json: &str, field: &str) -> Option<f32> {
     let key_pattern = format!("\"{}\"", field);
     let key_pos = json.find(&key_pattern)?;
@@ -117,6 +126,7 @@ pub fn extract_f32_field(json: &str, field: &str) -> Option<f32> {
     num_str.parse::<f32>().ok()
 }
 
+/// Extracts a string value from a JSON string by field name.
 pub fn extract_str_field(json: &str, field: &str) -> Option<String> {
     let key_pattern = format!("\"{}\"", field);
     let key_pos = json.find(&key_pattern)?;
@@ -143,6 +153,7 @@ pub fn extract_str_field(json: &str, field: &str) -> Option<String> {
     None
 }
 
+/// Extracts a u64 value from a JSON string by field name.
 pub fn extract_u64_field(json: &str, field: &str) -> Option<u64> {
     let key_pattern = format!("\"{}\"", field);
     let key_pos = json.find(&key_pattern)?;
@@ -153,6 +164,7 @@ pub fn extract_u64_field(json: &str, field: &str) -> Option<u64> {
     num_str.parse::<u64>().ok()
 }
 
+/// Extracts an i64 value from a JSON string by field name.
 pub fn extract_i64_field(json: &str, field: &str) -> Option<i64> {
     let key_pattern = format!("\"{}\"", field);
     let key_pos = json.find(&key_pattern)?;
@@ -166,6 +178,7 @@ pub fn extract_i64_field(json: &str, field: &str) -> Option<i64> {
     num_str.parse::<i64>().ok()
 }
 
+/// Extracts a boolean value from a JSON string by field name.
 pub fn extract_bool_field(json: &str, field: &str) -> Option<bool> {
     let key_pattern = format!("\"{}\"", field);
     let key_pos = json.find(&key_pattern)?;
@@ -181,6 +194,7 @@ pub fn extract_bool_field(json: &str, field: &str) -> Option<bool> {
     }
 }
 
+/// Extracts a nested JSON object value by field name.
 pub fn extract_object_field(json: &str, field: &str) -> Option<String> {
     let key_pattern = format!("\"{}\"", field);
     let key_pos = json.find(&key_pattern)?;
@@ -226,6 +240,7 @@ pub fn extract_object_field(json: &str, field: &str) -> Option<String> {
     }
 }
 
+/// Parses a raw JSON-RPC 2.0 response string into a typed RpcResponse.
 pub fn parse_rpc_response(raw: &str) -> Result<RpcResponse, String> {
     let jsonrpc = extract_str_field(raw, "jsonrpc").unwrap_or_else(|| "2.0".to_string());
     let id = extract_u64_field(raw, "id").unwrap_or(0);
@@ -254,6 +269,10 @@ pub fn parse_rpc_response(raw: &str) -> Result<RpcResponse, String> {
 // Conductor Unix Domain Socket Client
 // -----------------------------------------------------------------------------
 
+/// Conductor control protocol client for UNIX domain socket communication.
+///
+/// Manages JSON-RPC 2.0 sessions with the conductor-runtime server,
+/// handling connection lifecycle, request framing, and response parsing.
 pub struct ConductorClient {
     socket_path: PathBuf,
 }

@@ -53,6 +53,7 @@ impl Default for Cell {
     }
 }
 
+/// VT100 terminal screen buffer with cursor state and scrollback history.
 #[derive(Debug)]
 pub struct TerminalBuffer {
     pub cols: usize,

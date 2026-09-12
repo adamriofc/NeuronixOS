@@ -165,7 +165,7 @@ class StateLifecycleEngine:
         return len(errors) == 0, errors
 
 
-def main():
+def main() -> None:
     engine = StateLifecycleEngine()
     manifest = engine.build_lifecycle_manifest()
     root = engine.compute_lifecycle_root(manifest)

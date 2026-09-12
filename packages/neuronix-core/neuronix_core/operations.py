@@ -58,7 +58,7 @@ def is_operation_permitted(operation_id: str) -> bool:
     """Checks whether an operation ID is registered in the privileged allow-list."""
     return operation_id in APPROVED_PRIVILEGED_OPERATIONS
 
-def execute_privileged_operation(operation_id: str, *args):
+def execute_privileged_operation(operation_id: str, *args: object) -> dict[str, object]:
     """
     Executes an approved privileged operation through dedicated handlers.
     Strictly rejects arbitrary shell execution or unregistered operations.

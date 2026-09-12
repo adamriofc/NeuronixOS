@@ -307,6 +307,7 @@ fn run_daemon(socket_path: PathBuf) {
     }
 }
 
+/// UNIX peer credentials extracted via SO_PEERCRED for privilege verification.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct PeerCred {
@@ -315,6 +316,7 @@ pub struct PeerCred {
     pub gid: u32,
 }
 
+/// Extracts UNIX peer credentials (PID, UID, GID) from a connected UnixStream socket.
 pub fn get_peer_credentials(stream: &UnixStream) -> Option<PeerCred> {
     let fd = stream.as_raw_fd();
     let mut cred = PeerCred { pid: 0, uid: 0, gid: 0 };

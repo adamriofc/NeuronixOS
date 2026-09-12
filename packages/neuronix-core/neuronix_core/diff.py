@@ -12,7 +12,7 @@ import subprocess
 import glob
 from .generation import get_active_generation, list_generations
 
-def resolve_generation_path(gen_id):
+def resolve_generation_path(gen_id) -> str | None:
     """Resolves a generation number or keyword ('current', 'previous') to profile path."""
     profile_dir = "/nix/var/nix/profiles"
     if gen_id in (None, "current", "latest"):
@@ -37,7 +37,7 @@ def resolve_generation_path(gen_id):
         return os.path.realpath(str(gen_id))
     return None
 
-def extract_system_packages(system_path):
+def extract_system_packages(system_path) -> set[str]:
     """Extracts package names from system profile sw/bin or manifest."""
     packages = set()
     if not system_path or not os.path.isdir(system_path):
@@ -51,7 +51,7 @@ def extract_system_packages(system_path):
             pass
     return packages
 
-def extract_systemd_services(system_path):
+def extract_systemd_services(system_path) -> set[str]:
     """Extracts systemd service unit names declared in the generation profile."""
     services = set()
     if not system_path or not os.path.isdir(system_path):
@@ -69,7 +69,7 @@ def extract_systemd_services(system_path):
                 pass
     return services
 
-def extract_kernel_version(system_path):
+def extract_kernel_version(system_path) -> str:
     """Probes the kernel version string of the given generation."""
     if not system_path or not os.path.isdir(system_path):
         return "Unknown"
@@ -87,7 +87,7 @@ def extract_kernel_version(system_path):
         return os.path.basename(os.path.realpath(kernel_link))
     return "Unknown"
 
-def parse_diff_closures_output(raw_text):
+def parse_diff_closures_output(raw_text) -> dict[str, object]:
     """Parses nix store diff-closures output into authoritative closure forensic records."""
     closures_added = []
     closures_removed = []
@@ -132,7 +132,7 @@ def parse_diff_closures_output(raw_text):
         "total_changes": len(closures_added) + len(closures_removed) + len(closures_upgraded)
     }
 
-def compute_generation_diff(gen_a_arg=None, gen_b_arg=None):
+def compute_generation_diff(gen_a_arg=None, gen_b_arg=None) -> dict[str, object]:
     """Computes comprehensive 3-tier diff between generation A and B."""
     path_b = resolve_generation_path(gen_b_arg or "current")
     

@@ -634,7 +634,7 @@ class StoragePlannerEngine:
 get_active_generation_devices = StorageFirewall.get_active_generation_devices
 
 
-def main():
+def main() -> None:
     planner = StoragePlannerEngine()
     plan = planner.generate_plan()
     plan_hash = planner.compute_plan_hash(plan)
