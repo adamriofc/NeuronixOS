@@ -33,7 +33,7 @@ an external auditor, automated pipeline, or air-gapped verifier can falsify or c
 flowchart TD
     SOURCE["Upstream Source & Flake Lock"]:::sourceNode
     BUILD["Reproducible Build Engine"]:::buildNode
-    TESTS["1,299 Verification Assertions"]:::testNode
+    TESTS["1,384 Verification Assertions"]:::testNode
     ENGINE["Provable State Engine"]:::stateNode
     SUPPLY["Supply Chain (SBOM & ISO)"]:::supplyNode
 
@@ -137,7 +137,7 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
 
 The passport formalizes an epistemically rigorous taxonomy:
 
-1. **`CATALOG`**: Total test assertions registered in canonical manifest (`data/test_manifest.json`), fixed at 1,299 across 32 QA suites, 19 distro suites, and 15 standalone verification gates.
+1. **`CATALOG`**: Total test assertions registered in canonical manifest (`data/test_manifest.json`), fixed at 1,384 across 32 QA suites, 19 distro suites, and 25 standalone verification gates.
 2. **`VERIFIED`**: Assertions that were executed and observed green in CI/local runs.
 3. **`OBSERVED`**: Dynamic confirmation that execution occurred on a physical or hypervisor substrate.
 4. **`ATTESTED`**: Cryptographically bound into `assurance_evidence_snapshot.json` and signed.

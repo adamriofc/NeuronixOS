@@ -69,10 +69,23 @@ def _ed25519_encodepoint(P: Tuple[int, int]) -> bytes:
 
 
 def _ed25519_decodepoint(b: bytes) -> Optional[Tuple[int, int]]:
+    """Decodes 32-byte string to Edwards curve point adhering to RFC 8032 Section 5.1.3.
+    Rejects noncanonical encodings (y >= p), off-curve points, and invalid sign parity."""
     if len(b) != 32:
         return None
     y = int.from_bytes(b[:31] + bytes([b[31] & 0x7F]), "little")
-    x = _ed25519_xrecover(y)
+    if y >= _ED25519_Q:
+        return None
+    u = (y * y - 1) % _ED25519_Q
+    v = (_ED25519_D * y * y + 1) % _ED25519_Q
+    xx = (u * _ed25519_inv(v)) % _ED25519_Q
+    x = pow(xx, (_ED25519_Q + 3) // 8, _ED25519_Q)
+    if (x * x - xx) % _ED25519_Q != 0:
+        x = (x * _ED25519_I) % _ED25519_Q
+    if (x * x - xx) % _ED25519_Q != 0:
+        return None
+    if x == 0 and ((b[31] >> 7) & 1) == 1:
+        return None
     if (x & 1) != ((b[31] >> 7) & 1):
         x = _ED25519_Q - x
     return (x, y)

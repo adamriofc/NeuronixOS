@@ -31,7 +31,7 @@ NEURONIX is organized into four distinct architectural layers, ensuring clear bo
   ├─ neuronix dev node   (node 20, pnpm, typescript, eslint)      ├─ Micro-Rust Systems Daemon (ast.sock)
   ├─ neuronix dev ai     (pytorch, cuda, ollama, jupyterlab)      ├─ Model Context Protocol (MCP) Server (JSON-RPC 2.0)
   ├─ neuronix dev go     (compiler, gopls, golangci-lint, delve)  ├─ In-Memory OS Sandbox (neuronix sandbox / try)
-  └─ neuronix container  (Micro-DNS, OCI Build, Quadlet Daemons)  └─ 1,299 Automated Test Assertions (33 Master Suites)
+  └─ neuronix container  (Micro-DNS, OCI Build, Quadlet Daemons)  └─ 1,384 Automated Test Assertions (32 Master Suites)
 ```
 
 ---

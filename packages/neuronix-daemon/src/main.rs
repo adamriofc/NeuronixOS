@@ -30,6 +30,11 @@ use branch::BranchEngine;
 const DEFAULT_SOCKET_PATH: &str = "/run/neuronix/ast.sock";
 const FALLBACK_SOCKET_PATH: &str = "/tmp/neuronix_ast.sock";
 
+/// Main entrypoint for the NEURONIX systems daemon.
+///
+/// Supports two primary operating modes:
+/// - One-shot CLI evaluation (`--ast`, `--eval`, `--ping`, `--state`, `--hyperion`)
+/// - Long-running UNIX domain socket daemon handling JSON-RPC 2.0 requests
 fn main() {
     let args: Vec<String> = env::args().collect();
 

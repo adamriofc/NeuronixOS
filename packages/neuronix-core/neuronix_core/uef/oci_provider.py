@@ -345,6 +345,19 @@ class OciContainerProvider(ExecutionProvider):
                             {"type": "network"},
                             {"type": "user"},
                         ],
+                        "resources": {
+                            "memory": {
+                                "limit": 536870912,
+                            },
+                            "cpu": {
+                                "shares": 1024,
+                                "quota": 100000,
+                                "period": 100000,
+                            },
+                            "pids": {
+                                "limit": 1024,
+                            },
+                        },
                         "seccomp": {
                             "defaultAction": "SCMP_ACT_ERRNO",
                             "architectures": [

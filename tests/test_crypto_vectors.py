@@ -15,6 +15,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "packages" / "neuronix-core"))
 
 from neuronix_core.crypto import (
+    _ED25519_L,
+    _ED25519_Q,
+    _ed25519_decodepoint,
     _ed25519_publickey,
     _ed25519_sign,
     _ed25519_verify,
@@ -151,6 +154,40 @@ class TestCryptoVectors(unittest.TestCase):
         self.assertFalse(_ed25519_verify(valid_sig, msg, b"short_pk"))
         self.assertFalse(_ed25519_verify(valid_sig, msg, b"\x00" * 31))
         self.assertFalse(_ed25519_verify(valid_sig, msg, b"\x00" * 33))
+
+    def test_negative_noncanonical_point_encoding_rejected(self) -> None:
+        """RFC 8032: Encoded point coordinates with y >= p (2^255 - 19) must be rejected."""
+        # y = 2^255 - 19 is exactly p, so y >= p is noncanonical
+        noncanonical_y_p = (_ED25519_Q).to_bytes(32, "little")
+        self.assertIsNone(_ed25519_decodepoint(noncanonical_y_p))
+        self.assertFalse(_ed25519_verify(b"\x00" * 64, b"test", noncanonical_y_p))
+
+        # y = 2^255 - 1 is also >= p
+        noncanonical_y_max = (2**255 - 1).to_bytes(32, "little")
+        self.assertIsNone(_ed25519_decodepoint(noncanonical_y_max))
+        self.assertFalse(_ed25519_verify(b"\x00" * 64, b"test", noncanonical_y_max))
+
+    def test_negative_noncanonical_scalar_rejected(self) -> None:
+        """RFC 8032 Section 5.1.7: Signature scalar S >= L must be rejected."""
+        sk, pk = generate_keypair()
+        msg = b"Authentication challenge"
+        sig = _ed25519_sign(msg, bytes.fromhex(sk), bytes.fromhex(pk))
+
+        # Replace S with L (noncanonical scalar)
+        s_noncanonical = sig[:32] + _ED25519_L.to_bytes(32, "little")
+        self.assertFalse(_ed25519_verify(s_noncanonical, msg, bytes.fromhex(pk)))
+
+        # Replace S with L + 100
+        s_overflow = sig[:32] + (_ED25519_L + 100).to_bytes(32, "little")
+        self.assertFalse(_ed25519_verify(s_overflow, msg, bytes.fromhex(pk)))
+
+    def test_negative_off_curve_point_rejected(self) -> None:
+        """Points that do not satisfy the Edwards curve equation must fail decoding."""
+        # Carefully crafted point coordinate that has no square root on curve
+        # (e.g. y = 2, where (y^2 - 1)/(d*y^2 + 1) is not a quadratic residue in GF(2^255-19))
+        invalid_point_bytes = (2).to_bytes(32, "little")
+        self.assertIsNone(_ed25519_decodepoint(invalid_point_bytes))
+        self.assertFalse(_ed25519_verify(b"\x00" * 64, b"test", invalid_point_bytes))
 
     def test_canonical_json_signing_and_verification(self) -> None:
         """Validates canonical RFC 8785 JSON payload signing and verification."""

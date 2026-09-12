@@ -498,6 +498,9 @@ class TestUefOciProvider(unittest.TestCase):
             self.assertIn("user", ns_types)
             self.assertIn("network", ns_types)
             self.assertEqual(cfg["linux"]["seccomp"]["defaultAction"], "SCMP_ACT_ERRNO")
+            self.assertIn("resources", cfg["linux"])
+            self.assertGreater(cfg["linux"]["resources"]["memory"]["limit"], 0)
+            self.assertGreater(cfg["linux"]["resources"]["pids"]["limit"], 0)
 
             self.provider.cleanup(prep)
 

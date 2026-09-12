@@ -8,9 +8,11 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+/// Time-travel workspace branching engine leveraging Btrfs subvolume snapshots.
 pub struct BranchEngine;
 
 impl BranchEngine {
+    /// Evaluates if the filesystem underlying the specified path is Btrfs.
     pub fn is_btrfs<P: AsRef<Path>>(path: P) -> bool {
         let output = Command::new("stat")
             .arg("-f")

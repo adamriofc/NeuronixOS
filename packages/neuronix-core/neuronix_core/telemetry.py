@@ -3,11 +3,16 @@ Truthful hardware and operating system telemetry probe.
 Extracts metrics directly from sysfs, procfs, and profile symlinks.
 """
 
-import os
-import subprocess
-import shutil
+from __future__ import annotations
 
-def get_cpu_info():
+import glob
+import os
+import shutil
+import subprocess
+from typing import Any, Dict, Optional
+
+
+def get_cpu_info() -> str:
     """Extracts CPU model name from /proc/cpuinfo."""
     if os.path.exists("/proc/cpuinfo"):
         try:
@@ -19,7 +24,8 @@ def get_cpu_info():
             pass
     return "Unknown Processor"
 
-def get_ram_info():
+
+def get_ram_info() -> str:
     """Extracts total and available memory from /proc/meminfo."""
     total_mb = 0
     avail_mb = 0
@@ -37,7 +43,7 @@ def get_ram_info():
             pass
     return "Unknown RAM"
 
-def get_storage_info():
+def get_storage_info() -> str:
     """Calculates disk usage for root mount point."""
     try:
         st = os.statvfs("/")
@@ -48,7 +54,8 @@ def get_storage_info():
     except Exception:
         return "Unknown Filesystem"
 
-def get_gpu_info():
+
+def get_gpu_info() -> str:
     """Detects primary display controller via lspci or sysfs."""
     if shutil.which("lspci"):
         try:
@@ -69,7 +76,8 @@ def get_gpu_info():
             pass
     return "Integrated / Standard Display"
 
-def get_battery_info():
+
+def get_battery_info() -> str:
     """Probes battery charging status and health from /sys/class/power_supply."""
     base = "/sys/class/power_supply"
     if os.path.isdir(base):
@@ -90,9 +98,9 @@ def get_battery_info():
                         pass
     return "AC Power / Bare-Metal"
 
-def get_battery_limit():
+
+def get_battery_limit() -> str:
     """Probes battery charge control ceiling if supported by kernel sysfs."""
-    import glob
     battery_limit_paths = glob.glob("/sys/class/power_supply/*/charge_control_end_threshold") + \
                           glob.glob("/sys/class/power_supply/*/charge_control_limit_max") + \
                           glob.glob("/sys/class/power_supply/*/charge_stop_threshold")
@@ -105,7 +113,8 @@ def get_battery_limit():
             return "Supported (Unset)"
     return "Not Supported (AC / Bare-Metal)"
 
-def get_system_telemetry():
+
+def get_system_telemetry() -> Dict[str, Any]:
     """Probes complete truthful system runtime telemetry."""
     from .generation import get_active_generation
     return {
@@ -117,5 +126,5 @@ def get_system_telemetry():
         "storage": get_storage_info(),
         "gpu": get_gpu_info(),
         "battery": get_battery_info(),
-        "battery_limit": get_battery_limit()
+        "battery_limit": get_battery_limit(),
     }

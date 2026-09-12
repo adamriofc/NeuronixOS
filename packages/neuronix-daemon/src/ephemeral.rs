@@ -9,12 +9,17 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+/// Ghost session for ephemeral, zero-trace desktop environments.
+///
+/// Creates disposable workspace in RAM (`/dev/shm`) with private
+/// namespace isolation. All artifacts are vaporized on session end.
 pub struct GhostSession {
     pub session_id: String,
     pub ram_mount_point: PathBuf,
 }
 
 impl GhostSession {
+    /// Creates a new ephemeral GhostSession with a unique randomized RAM mount path.
     pub fn new() -> Self {
         let rand_suffix = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
