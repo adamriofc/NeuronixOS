@@ -111,7 +111,14 @@ LIGHT_PALETTE = {
 
 def detect_system_dark_mode():
     """Detects whether the desktop environment is configured for dark mode."""
-    # 1. Check GNOME / Freedesktop color-scheme via gsettings
+    # 1. Check GTK_THEME environment variable (explicit user/process override)
+    gtk_theme = os.environ.get("GTK_THEME", "").lower()
+    if "dark" in gtk_theme:
+        return True
+    if "light" in gtk_theme:
+        return False
+
+    # 2. Check GNOME / Freedesktop color-scheme via gsettings
     try:
         res = subprocess.check_output(
             ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
@@ -124,14 +131,34 @@ def detect_system_dark_mode():
     except Exception:
         pass
 
-    # 2. Check GTK_THEME environment variable
-    gtk_theme = os.environ.get("GTK_THEME", "").lower()
-    if "dark" in gtk_theme:
-        return True
-    if "light" in gtk_theme:
-        return False
+    # 3. Check KDE Plasma configuration (~/.config/kdeglobals or kreadconfig6/5)
+    kde_globals = os.path.expanduser("~/.config/kdeglobals")
+    if os.path.exists(kde_globals):
+        try:
+            with open(kde_globals, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+                if "ColorScheme=BreezeLight" in content:
+                    return False
+                if "ColorScheme=" in content and "Dark" in content:
+                    return True
+        except Exception:
+            pass
+    try:
+        import shutil
+        for kcmd in ["kreadconfig6", "kreadconfig5"]:
+            if shutil.which(kcmd):
+                res = subprocess.check_output(
+                    [kcmd, "--group", "General", "--key", "ColorScheme"],
+                    stderr=subprocess.DEVNULL, universal_newlines=True
+                ).strip()
+                if "dark" in res.lower():
+                    return True
+                if "light" in res.lower():
+                    return False
+    except Exception:
+        pass
 
-    # 3. Default to clean calm dark mode for technical Linux desktop environments
+    # 4. Default to clean calm dark mode for technical Linux desktop environments
     return True
 
 
@@ -140,7 +167,7 @@ def clean_display_text(val, max_len=36):
     if not val:
         return "Unknown"
     s = str(val).strip()
-    if len(s) > max_len:
+    if max_len > 3 and len(s) > max_len:
         return s[:max_len - 3] + "..."
     return s
 
@@ -150,7 +177,8 @@ def format_cpu_display(cpu_raw):
     if not cpu_raw:
         return "Unknown Processor"
     s = str(cpu_raw).strip()
-    s = s.replace("with Radeon Graphics", "").replace("Processor", "").strip()
+    s = s.replace("with Radeon Graphics", "").replace("Processor", "")
+    s = s.replace("(R)", "").replace("(TM)", "").replace("CPU", "")
     s = " ".join(s.split())
     if len(s) > 32:
         return s[:29] + "..."
@@ -254,12 +282,14 @@ def launch_in_terminal(cmd_args, parent_window=None):
         full_cmd = [found_term, "--", "bash", "-c", f"{cmd_str}; exec bash"]
     elif found_term == "konsole":
         full_cmd = [found_term, "-e", "bash", "-c", f"{cmd_str}; exec bash"]
-    elif found_term in ["kitty", "alacritty", "foot"]:
+    elif found_term in ["kitty", "foot"]:
         full_cmd = [found_term, "bash", "-c", f"{cmd_str}; exec bash"]
+    elif found_term == "alacritty":
+        full_cmd = [found_term, "-e", "bash", "-c", f"{cmd_str}; exec bash"]
     elif found_term == "wezterm":
         full_cmd = [found_term, "start", "--", "bash", "-c", f"{cmd_str}; exec bash"]
     else:
-        full_cmd = [found_term, "-e", f"bash -c '{cmd_str}; exec bash'"]
+        full_cmd = [found_term, "-e", "bash", "-c", f"{cmd_str}; exec bash"]
 
     try:
         subprocess.Popen(full_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -429,12 +459,16 @@ def run_cli_mode(args):
     """Executes NEURONIX Center in CLI / headless mode."""
     telemetry = get_system_telemetry()
     gen_val = telemetry.get("generation")
+    if gen_val is not None and str(gen_val).strip() and str(gen_val).lower() != "unknown":
+        gen_display = f"#{gen_val}" if str(gen_val).isdigit() else str(gen_val)
+    else:
+        gen_display = "Active Substrate"
     print("=" * 64)
     print(f"  NEURONIX CONTROL CENTER & SYSTEM HUB (v{VERSION})")
     print("=" * 64)
     print(f"  ● Operating System : {telemetry.get('os', 'NEURONIX OS')}")
     print(f"  ● Kernel Version   : {telemetry.get('kernel', 'Linux')}")
-    print(f"  ● Active Generation: #{gen_val if gen_val is not None else 'None'}")
+    print(f"  ● Active Generation: {gen_display}")
     print(f"  ● Processor (CPU)  : {telemetry.get('cpu', 'Unknown')}")
     print(f"  ● Physical Memory  : {telemetry.get('ram', 'Unknown')}")
     print(f"  ● Display Adapter  : {telemetry.get('gpu', 'Not Detected')}")
@@ -581,6 +615,7 @@ class NeuronixControlCenterApp:
         self.generations_data = []
         self.passport_data = get_passport_summary()
         self.is_refreshing = False
+        self.is_busy = False
 
         # Build UI layout hierarchy
         self._build_header()
@@ -596,6 +631,28 @@ class NeuronixControlCenterApp:
 
         # Schedule automatic background refresh every 45s (calm cadence)
         self.root.after(45000, self._auto_refresh_loop)
+
+    def _set_busy(self, busy=True):
+        """Disables mutation triggers while a background operation is active."""
+        self.is_busy = busy
+        state = "disabled" if busy else "normal"
+        btns = [
+            getattr(self, "btn_upgrade", None),
+            getattr(self, "btn_rollback", None),
+            getattr(self, "btn_doctor", None),
+            getattr(self, "btn_terminal", None),
+            getattr(self, "btn_maint_upgrade", None),
+            getattr(self, "btn_maint_rollback", None),
+            getattr(self, "btn_maint_diet", None),
+            getattr(self, "btn_maint_update", None),
+            getattr(self, "refresh_btn", None),
+        ]
+        for btn in btns:
+            if btn is not None:
+                try:
+                    btn.configure(state=state)
+                except Exception:
+                    pass
 
     def _process_queue(self):
         """Processes background thread callbacks on the main thread safely."""
@@ -622,9 +679,8 @@ class NeuronixControlCenterApp:
         self.style.configure(
             "TNotebook",
             background=p["bg_header"],
-            borderwidth=1,
-            lightcolor=p["border"],
-            darkcolor=p["border"],
+            borderwidth=0,
+            relief="flat",
             tabmargins=[SPACE_MD, SPACE_XS, SPACE_MD, 0]
         )
         self.style.configure(
@@ -634,14 +690,19 @@ class NeuronixControlCenterApp:
             padding=[SPACE_MD, SPACE_SM],
             font=self.font_subtitle,
             borderwidth=1,
+            relief="flat",
             lightcolor=p["border"],
             darkcolor=p["border"],
-            bordercolor=p["border"]
+            bordercolor=p["border"],
+            focuscolor=p["border"]
         )
         self.style.map(
             "TNotebook.Tab",
-            background=[("selected", p["bg_app"]), ("active", p["bg_card_alt"])],
-            foreground=[("selected", p["fg_primary"]), ("active", p["fg_secondary"])]
+            background=[("selected", p["bg_card"]), ("active", p["bg_card_alt"])],
+            foreground=[("selected", p["fg_primary"]), ("active", p["fg_secondary"])],
+            bordercolor=[("selected", p["border"]), ("active", p["border"])],
+            lightcolor=[("selected", p["border"]), ("active", p["border"])],
+            darkcolor=[("selected", p["border"]), ("active", p["border"])]
         )
 
         # Buttons (Clean, flat Adwaita-style buttons)
@@ -831,17 +892,17 @@ class NeuronixControlCenterApp:
         act_frame.columnconfigure(2, weight=1)
         act_frame.columnconfigure(3, weight=1)
 
-        btn_upgrade = ttk.Button(act_frame, text="Staged Upgrade", command=self.on_upgrade, style="Primary.TButton")
-        btn_upgrade.grid(row=0, column=0, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
+        self.btn_upgrade = ttk.Button(act_frame, text="Staged Upgrade", command=self.on_upgrade, style="Primary.TButton")
+        self.btn_upgrade.grid(row=0, column=0, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        btn_rollback = ttk.Button(act_frame, text="Rollback", command=self.on_rollback, style="Primary.TButton")
-        btn_rollback.grid(row=0, column=1, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
+        self.btn_rollback = ttk.Button(act_frame, text="Rollback", command=self.on_rollback, style="Primary.TButton")
+        self.btn_rollback.grid(row=0, column=1, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        btn_doctor = ttk.Button(act_frame, text="Doctor Diagnostics", command=self.on_doctor, style="Primary.TButton")
-        btn_doctor.grid(row=0, column=2, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
+        self.btn_doctor = ttk.Button(act_frame, text="Doctor Diagnostics", command=self.on_doctor, style="Primary.TButton")
+        self.btn_doctor.grid(row=0, column=2, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        btn_terminal = ttk.Button(act_frame, text="Terminal Shell", command=self.launch_shell, style="Primary.TButton")
-        btn_terminal.grid(row=0, column=3, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
+        self.btn_terminal = ttk.Button(act_frame, text="Terminal Shell", command=self.launch_shell, style="Primary.TButton")
+        self.btn_terminal.grid(row=0, column=3, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
     def _setup_system_tab(self):
         """System: Generation timeline and maintenance actions."""
@@ -853,17 +914,27 @@ class NeuronixControlCenterApp:
         self.tab_system.columnconfigure(1, weight=2)
         self.tab_system.rowconfigure(0, weight=1)
 
-        # Left: Generations Treeview
+        # Left: Generations Treeview with scrollbar
         tree_frame = tk.Frame(self.tab_system, bg=p["bg_card"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
         tree_frame.grid(row=0, column=0, sticky="nsew", padx=(0, SPACE_XS))
         tree_frame.rowconfigure(1, weight=1)
         tree_frame.columnconfigure(0, weight=1)
 
-        tk.Label(tree_frame, text="System Generation Timeline", font=self.font_section, bg=p["bg_card"], fg=p["fg_primary"]).grid(row=0, column=0, sticky="w", padx=SPACE_MD, pady=(SPACE_SM, SPACE_XS))
+        tk.Label(tree_frame, text="System Generation Timeline", font=self.font_section, bg=p["bg_card"], fg=p["fg_primary"]).grid(row=0, column=0, columnspan=2, sticky="w", padx=SPACE_MD, pady=(SPACE_SM, SPACE_XS))
 
-        self.gen_tree = ttk.Treeview(tree_frame, columns=("entry",), show="headings", selectmode="browse")
+        tree_inner = tk.Frame(tree_frame, bg=p["bg_card"])
+        tree_inner.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=SPACE_SM, pady=SPACE_SM)
+        tree_inner.rowconfigure(0, weight=1)
+        tree_inner.columnconfigure(0, weight=1)
+
+        self.gen_tree = ttk.Treeview(tree_inner, columns=("entry",), show="headings", selectmode="browse")
         self.gen_tree.heading("entry", text="Nix Generation Record", anchor="w")
-        self.gen_tree.grid(row=1, column=0, sticky="nsew", padx=SPACE_SM, pady=SPACE_SM)
+        self.gen_tree.column("entry", width=430, minwidth=280, stretch=True, anchor="w")
+        self.gen_tree.grid(row=0, column=0, sticky="nsew")
+
+        tree_scroll = ttk.Scrollbar(tree_inner, orient="vertical", command=self.gen_tree.yview)
+        self.gen_tree.configure(yscrollcommand=tree_scroll.set)
+        tree_scroll.grid(row=0, column=1, sticky="ns")
 
         # Right: Maintenance Actions Card
         maint_card = tk.Frame(self.tab_system, bg=p["bg_card"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
@@ -882,10 +953,14 @@ class NeuronixControlCenterApp:
             justify="left"
         ).pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_MD))
 
-        ttk.Button(maint_card, text="Prepare Staged Upgrade", command=self.on_upgrade).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(maint_card, text="Atomic Rollback", command=self.on_rollback).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(maint_card, text="Storage Diet (GC & TRIM)", command=self.on_diet).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(maint_card, text="Check Upstream Updates", command=self.on_check_update).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        self.btn_maint_upgrade = ttk.Button(maint_card, text="Prepare Staged Upgrade", command=self.on_upgrade)
+        self.btn_maint_upgrade.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        self.btn_maint_rollback = ttk.Button(maint_card, text="Atomic Rollback", command=self.on_rollback)
+        self.btn_maint_rollback.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        self.btn_maint_diet = ttk.Button(maint_card, text="Storage Diet (GC & TRIM)", command=self.on_diet)
+        self.btn_maint_diet.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        self.btn_maint_update = ttk.Button(maint_card, text="Check Upstream Updates", command=self.on_check_update)
+        self.btn_maint_update.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
 
         # Status feedback display
         self.sys_feedback_lbl = tk.Label(
@@ -997,17 +1072,22 @@ class NeuronixControlCenterApp:
 
     def _bind_shortcuts(self):
         """Binds standard desktop keyboard shortcuts for keyboard-first navigation."""
-        self.root.bind("<Control-r>", lambda e: self.refresh_telemetry())
+        for key in ["r", "R"]:
+            self.root.bind(f"<Control-{key}>", lambda e: self.refresh_telemetry())
         self.root.bind("<F5>", lambda e: self.refresh_telemetry())
-        self.root.bind("<Control-t>", lambda e: self.launch_shell())
-        self.root.bind("<Control-u>", lambda e: self.on_upgrade())
-        self.root.bind("<Control-z>", lambda e: self.on_rollback())
-        self.root.bind("<Control-d>", lambda e: self.on_doctor())
-        self.root.bind("<Control-Key-1>", lambda e: self.notebook.select(0))
-        self.root.bind("<Control-Key-2>", lambda e: self.notebook.select(1))
-        self.root.bind("<Control-Key-3>", lambda e: self.notebook.select(2))
-        self.root.bind("<Control-Key-4>", lambda e: self.notebook.select(3))
-        self.root.bind("<Control-q>", lambda e: self.root.destroy())
+        for key in ["t", "T"]:
+            self.root.bind(f"<Control-{key}>", lambda e: self.launch_shell())
+        for key in ["u", "U"]:
+            self.root.bind(f"<Control-{key}>", lambda e: self.on_upgrade())
+        for key in ["z", "Z"]:
+            self.root.bind(f"<Control-{key}>", lambda e: self.on_rollback())
+        for key in ["d", "D"]:
+            self.root.bind(f"<Control-{key}>", lambda e: self.on_doctor())
+        for i in range(1, 5):
+            self.root.bind(f"<Control-Key-{i}>", lambda e, idx=i-1: self.notebook.select(idx))
+            self.root.bind(f"<Alt-Key-{i}>", lambda e, idx=i-1: self.notebook.select(idx))
+        for key in ["q", "Q"]:
+            self.root.bind(f"<Control-{key}>", lambda e: self.root.destroy())
         self.root.bind("<Escape>", lambda e: self.root.destroy())
 
     def _add_metric_row(self, parent, row, label_text, default_val, is_mono=False):
@@ -1069,9 +1149,19 @@ class NeuronixControlCenterApp:
             os_display = clean_display_text(os_raw, 28)
         self.ov_os_val.configure(text=os_display)
         self.ov_kernel_val.configure(text=clean_display_text(tel.get("kernel", "Linux"), 28))
-        gen_str = tel.get("generation")
-        self.ov_gen_val.configure(text=f"#{gen_str}" if gen_str is not None else "Active Substrate")
-        self.ov_storage_val.configure(text="Btrfs (ZSTD:3, subvol=@)")
+
+        gen_raw = tel.get("generation")
+        if gen_raw is not None and str(gen_raw).strip() and str(gen_raw).lower() != "unknown":
+            gen_val = str(gen_raw).strip()
+            self.ov_gen_val.configure(text=f"#{gen_val}" if gen_val.isdigit() else gen_val)
+        else:
+            self.ov_gen_val.configure(text="Active Substrate")
+
+        storage_raw = tel.get("storage")
+        if storage_raw and "Unknown" not in str(storage_raw):
+            self.ov_storage_val.configure(text=clean_display_text(storage_raw, 32))
+        else:
+            self.ov_storage_val.configure(text="Btrfs (ZSTD:3, subvol=@)")
 
         self.ov_cpu_val.configure(text=format_cpu_display(tel.get("cpu")))
         self.ov_ram_val.configure(text=clean_display_text(tel.get("ram", "Memory Probed"), 28))
@@ -1098,8 +1188,11 @@ class NeuronixControlCenterApp:
 
     def on_upgrade(self):
         """Prepares and stages declarative system upgrade."""
+        if self.is_busy:
+            return
         from tkinter import messagebox
         if messagebox.askyesno("Confirm System Upgrade", "Prepare and stage system upgrade for next reboot (zero session disruption)?", parent=self.root):
+            self._set_busy(True)
             self.set_status("working", "Staging Upgrade...")
             self.sys_feedback_lbl.configure(text="Staging system upgrade...")
 
@@ -1108,6 +1201,7 @@ class NeuronixControlCenterApp:
                 res = subprocess.run(get_neuronix_cmd() + ["upgrade", "--staged"], check=False)
                 elapsed = time.monotonic() - start_t
                 def _done():
+                    self._set_busy(False)
                     if res.returncode == 0:
                         self.set_status("healthy", "Upgrade Staged")
                         self.sys_feedback_lbl.configure(text=f"Upgrade staged successfully in {elapsed:.2f}s.")
@@ -1122,8 +1216,11 @@ class NeuronixControlCenterApp:
 
     def on_rollback(self):
         """Executes atomic system rollback to previous Nix generation."""
+        if self.is_busy:
+            return
         from tkinter import messagebox
         if messagebox.askyesno("Confirm Rollback", "Revert system to previous stable NixOS generation?", parent=self.root):
+            self._set_busy(True)
             self.set_status("working", "Rolling Back...")
             self.sys_feedback_lbl.configure(text="Executing system rollback...")
 
@@ -1132,6 +1229,7 @@ class NeuronixControlCenterApp:
                 res = subprocess.run(["sudo", "nixos-rebuild", "switch", "--rollback"], check=False)
                 elapsed = time.monotonic() - start_t
                 def _done():
+                    self._set_busy(False)
                     if res.returncode == 0:
                         self.set_status("healthy", "Rollback Complete")
                         self.sys_feedback_lbl.configure(text=f"System reverted successfully in {elapsed:.2f}s.")
@@ -1147,7 +1245,10 @@ class NeuronixControlCenterApp:
 
     def on_diet(self):
         """Runs Nix store garbage collection and SSD TRIM."""
+        if self.is_busy:
+            return
         from tkinter import messagebox
+        self._set_busy(True)
         self.set_status("working", "Reclaiming Storage...")
         self.sys_feedback_lbl.configure(text="Running garbage collection & TRIM...")
 
@@ -1156,6 +1257,7 @@ class NeuronixControlCenterApp:
             res = subprocess.run(get_neuronix_cmd() + ["diet"], check=False)
             elapsed = time.monotonic() - start_t
             def _done():
+                self._set_busy(False)
                 if res.returncode == 0:
                     self.set_status("healthy", "Storage Reclaimed")
                     self.sys_feedback_lbl.configure(text=f"Storage reclaimed in {elapsed:.2f}s.")
@@ -1179,12 +1281,16 @@ class NeuronixControlCenterApp:
 
     def on_check_update(self):
         """Checks for upstream system updates."""
+        if self.is_busy:
+            return
+        self._set_busy(True)
         self.set_status("working", "Checking Updates...")
         self.sys_feedback_lbl.configure(text="Checking upstream update channel...")
 
         def _worker():
             res = subprocess.run(get_neuronix_cmd() + ["check-update"], check=False)
             def _done():
+                self._set_busy(False)
                 self.set_status("healthy", "System Healthy")
                 if res.returncode == 0:
                     self.sys_feedback_lbl.configure(text="System is up to date.")
@@ -1199,12 +1305,18 @@ class NeuronixControlCenterApp:
         from tkinter import messagebox
         tel = self.telemetry_data
         ps = self.passport_data
+        gen = tel.get('generation', 'N/A')
+        if gen is not None and str(gen).strip() and str(gen).lower() not in ["unknown", "n/a", "none"]:
+            gen_str = f"#{gen}" if str(gen).isdigit() else str(gen)
+        else:
+            gen_str = str(gen) if gen else "N/A"
+
         lines = [
             f"NEURONIX OS Control Center Diagnostics (v{VERSION})",
             "--------------------------------------------------",
             f"OS             : {tel.get('os', 'NEURONIX OS')}",
             f"Kernel         : {tel.get('kernel', 'Linux')}",
-            f"Generation     : #{tel.get('generation', 'N/A')}",
+            f"Generation     : {gen_str}",
             f"CPU            : {tel.get('cpu', 'N/A')}",
             f"RAM            : {tel.get('ram', 'N/A')}",
             f"Storage        : {tel.get('storage', 'N/A')}",
