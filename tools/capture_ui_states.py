@@ -14,7 +14,7 @@ repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 center_dir = os.path.join(repo_root, "packages/neuronix-center")
 assets_dir = os.path.join(repo_root, "docs/assets")
 artifacts_dir = os.path.expanduser("~/.gemini/antigravity/artifacts")
-brain_dir = "/home/adamrofc/.gemini/antigravity/brain/b5df519d-9fea-48e8-a2fd-50575a066515"
+brain_dir = os.path.expanduser("~/.gemini/antigravity/brain/b5df519d-9fea-48e8-a2fd-50575a066515")
 os.makedirs(assets_dir, exist_ok=True)
 os.makedirs(artifacts_dir, exist_ok=True)
 

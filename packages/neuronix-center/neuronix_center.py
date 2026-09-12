@@ -464,7 +464,7 @@ def run_cli_mode(args):
     else:
         gen_display = "Active Substrate"
     print("=" * 64)
-    print(f"  CONDUCTOR CONTROL SURFACE & SYSTEM HUB (v{VERSION})")
+    print(f"  CONDUCTOR - NEURONIX CONTROL CENTER (v{VERSION})")
     print("=" * 64)
     os_name = telemetry.get('os', 'Neuronix OS')
     if not os_name or "Neuronix" in str(os_name) or "NEURONIX" in str(os_name) or "NixOS" in str(os_name):
@@ -1086,10 +1086,10 @@ class NeuronixControlCenterApp:
             launch_in_terminal(nrx_bin + ["dev", stack], parent_window=self.root)
 
         ttk.Button(dev_card, text="✦ AI System", command=lambda: launch_in_terminal(["opencode"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(dev_card, text="◆ Python Substrate (uv)", command=lambda: launch_stack("python")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(dev_card, text="◆ Rust Substrate (cargo)", command=lambda: launch_stack("rust")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(dev_card, text="◆ Node.js Substrate (pnpm)", command=lambda: launch_stack("node")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(dev_card, text="◆ AI Substrate (PyTorch)", command=lambda: launch_stack("ai")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="Python Substrate (uv)", command=lambda: launch_stack("python")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="Rust Substrate (cargo)", command=lambda: launch_stack("rust")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="Node.js Substrate (pnpm)", command=lambda: launch_stack("node")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="AI Substrate (PyTorch)", command=lambda: launch_stack("ai")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
 
         # Right: Tools & Catalog
         tools_card = tk.Frame(self.tab_developer, bg=p["bg_card"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
@@ -1330,7 +1330,7 @@ class NeuronixControlCenterApp:
         if self.is_busy:
             return
         from tkinter import messagebox
-        if messagebox.askyesno("Confirm Rollback", "Revert system to previous stable NixOS generation?", parent=self.root):
+        if messagebox.askyesno("Confirm Rollback", "Revert system to previous stable generation?", parent=self.root):
             self._set_busy(True)
             self.set_status("working", "Rolling Back...")
             self.sys_feedback_lbl.configure(text="Executing system rollback...")
@@ -1482,7 +1482,7 @@ def main():
     parser.add_argument("--doctor", action="store_true", help="Run deep diagnostic and issue reporting tool")
     parser.add_argument("--welcome", action="store_true", help="Launch interactive first-boot onboarding guide")
     parser.add_argument("--quickstart", action="store_true", help="Explore curated daily apps catalog (Flatpak)")
-    parser.add_argument("--version", action="version", version=f"Conductor {VERSION}")
+    parser.add_argument("--version", action="version", version=f"Conductor (NEURONIX Center) {VERSION}")
 
     args = parser.parse_args()
 

@@ -244,6 +244,29 @@ class TestNeuronixCenterCLI(unittest.TestCase):
         with patch("sys.stdout.write"):
             neuronix_center.run_cli_mode(args)
 
+    def test_cli_banner_and_os_formatting(self):
+        import io
+        from contextlib import redirect_stdout
+        args = types.SimpleNamespace(
+            list_generations=False,
+            diet=False,
+            opencode=False,
+            rollback=False,
+            upgrade=False,
+            check_update=False,
+            doctor=False,
+            welcome=False,
+            quickstart=False,
+        )
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            neuronix_center.run_cli_mode(args)
+        output = buf.getvalue()
+        self.assertIn("CONDUCTOR", output)
+        self.assertIn("NEURONIX CONTROL CENTER", output)
+        self.assertIn("Operating System : Neuronix OS", output)
+        self.assertNotIn("Operating System : NEURONIX OS (NixOS)", output)
+
 
 if __name__ == "__main__":
     unittest.main()
