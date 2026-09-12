@@ -489,7 +489,7 @@ USAGE:
 | `state` | `[show \| verify \| explain \| diff \| history \| recover \| prove]` | Provable State Engine: 5-leaf Merkle StateRoot calculation, cryptographic lineage, and verified recovery. | `neuronix state verify` |
 | `hyperion` | `[status \| negotiate \| proof \| verify \| list]` | Provable Adaptive Execution Architecture: HDS synthesis, domain lifecycle, and Merkle Domain Proofs. | `neuronix hyperion status` |
 | `verify-passport` | `[passport.json] [--public-key <k>] [--graph] [--trace <target>]` | Zero-dependency standalone offline verification engine for system release passports and lineage graphs. | `neuronix verify-passport dist/verification-passport.json --graph --trace release` |
-| `graph` | `[--json] [--format ascii\|dot] [--trace <target>]` | Authoritative 10-node Directed Evidence Graph visualization and lineage tracing from source to release. | `neuronix graph --trace release` |
+| `graph` | `[--json] [--format ascii\|dot] [--trace <target>]` | Authoritative 18-node Directed Evidence Graph visualization and lineage tracing from source to release. | `neuronix graph --trace release` |
 | `verify-release` | `[proof.json] [--iso <path>]` | Cryptographic verification of proof-carrying release bundle against StateRoot and Evidence Graph. | `neuronix verify-release dist/neuronix-os-v1.0.5.proof.json` |
 | `version` | None (`-v`, `--version`)| Displays package version, architecture, and license information. | `neuronix version` |
 | `help` | None (`-h`, `--help`)   | Displays available commands and syntax summaries. | `neuronix help` |
@@ -1098,43 +1098,52 @@ python3 tools/compile_evidence.py
 ```
 
 ### 27. Authoritative Evidence Graph & Lineage Traversal (neuronix graph)
-NEURONIX OS structures all epistemic guarantees into an authoritative 10-node Directed Acyclic Graph (DAG) connecting foundational source code to verifiable release artifacts:
-- **10-Node Authoritative Topology:**
-  1. `SOURCE_NODE`: Cryptographic source commit identity, tree SHA-256, and canonical version pinning.
-  2. `FLAKE_NODE`: Hermetic Nix Flake lockfile (`flake.lock`) evaluating locked nixpkgs revisions.
-  3. `STATEROOT_NODE`: 5-leaf Merkle StateRoot commitment ($L_{\text{posture}}$, $L_{\text{substrate}}$, $L_{\text{provenance}}$, $L_{\text{policy}}$, $L_{\text{evidence}}$).
-  4. `DAEMON_NODE`: Micro-Rust systems daemon binary digest and compiled architecture.
-  5. `TEST_SUITES_NODE`: Master test taxonomy digest (`data/test_manifest.json`, 1,384 assertions across 32 suites and 25 standalone gates).
-  6. `REPRODUCIBILITY_NODE`: Bit-identical build evaluation records and cross-language differential parity.
-  7. `SECURITY_INVARIANTS_NODE`: Continuous security invariant registry (10/10 formal invariant proofs).
-  8. `PASSPORT_NODE`: Signed verification passport binding hardware matrices and test catalogs.
-  9. `DOMAIN_PROOF_NODE`: Canonical DomainProofV1 mathematical attestation contract.
-  10. `RELEASE_NODE`: Proof-carrying release bundle aggregating ISO image, SBOM, and all predecessor node digests.
+NEURONIX OS structures all epistemic guarantees into an authoritative 18-node Directed Acyclic Graph (DAG) connecting foundational source code to verifiable release artifacts:
+- **18-Node Universal Control Plane Topology:**
+  1. `SOURCE_NODE`: Authoritative Git commit SHA, branch identity, and governance source anchor.
+  2. `BUILD_NODE`: Substrate build derivation binding parent source commit, Flake lock hash, and system store path.
+  3. `HARDWARE_NODE`: Portable hardware facter leaf ($L_{\text{hardware}}$) capturing CPU topology, virtualization, and firmware contracts.
+  4. `TOPOLOGY_NODE`: System topology graph leaf ($L_{\text{topology}}$) validating acyclic component hierarchies.
+  5. `CAPABILITY_NODE`: Security capability and namespace confinement leaf ($L_{\text{capability}}$).
+  6. `POLICY_NODE`: Evaluated security policy leaf ($L_{\text{policy}}$) compiling eBPF LSM rules and sandboxing bounds.
+  7. `STORAGE_NODE`: Storage planner and Btrfs subvolume layout leaf ($L_{\text{storage}}$).
+  8. `BOOT_NODE`: Measured boot and Secure Boot telemetry leaf ($L_{\text{boot}}$).
+  9. `SECRETS_NODE`: Capability-bound ephemeral secret fabric leaf ($L_{\text{secrets}}$).
+  10. `LIFECYCLE_NODE`: State lifecycle preservation and generational tier distribution ($L_{\text{lifecycle}}$).
+  11. `STATE_NODE`: 5-Leaf Merkle StateRoot commitment binding all leaf domain roots.
+  12. `RUNTIME_NODE`: Authoritative runtime receipt verifying backend execution, nonce freshness, and exit codes.
+  13. `TEST_NODE`: Industrial assurance verification node binding test manifest hash, 1,384 executed assertions, and CI run ID.
+  14. `RELEASE_NODE`: Qualified release root concatenating target commit SHA, parent build digest, StateRoot, and test digest.
+  15. `HOST_NODE`: Hardware attestation contract compatibility alias.
+  16. `HDS_NODE`: Hierarchical domain specification compatibility alias.
+  17. `OUTPUT_NODE`: Workload output artifact digest compatibility alias.
+  18. `PROOF_NODE`: Domain proof attestation contract compatibility alias.
 - **Strict Cryptographic Parent Edges:** Every child node references its authoritative parent digests. If any upstream leaf or source code is altered, downstream edge hashes diverge, invalidating the graph.
 - **Directed Lineage Traversal (`--trace`):** Operators and automated verifiers can trace backward lineage from any target node (e.g., `--trace release` or `--trace proof`) all the way back to `SOURCE_NODE`, verifying cryptographic integrity at every edge.
-- **Integrated Visualization:** Visualizes graph topology natively in formatted ASCII trees or Graphviz DOT notation (`neuronix graph --format ascii`).
+- **Integrated Visualization:** Visualizes graph topology natively in formatted ASCII trees or Graphviz DOT notation (`neuronix graph --format ascii` or `neuronix graph --format dot`).
 
 ```mermaid
 flowchart TD
-    SOURCE["1. SOURCE_NODE<br>Git Tree & Commit SHA"]:::rootNode --> FLAKE["2. FLAKE_NODE<br>flake.lock & nixpkgs"]:::midNode
-    SOURCE --> TEST["5. TEST_SUITES_NODE<br>1,384 Assertions Manifest"]:::midNode
-    SOURCE --> INVARIANTS["7. SECURITY_INVARIANTS_NODE<br>SEC-001..SEC-010 Registry"]:::midNode
+    SOURCE["1. SOURCE_NODE<br>Git Commit SHA & Source Anchor"]:::rootNode --> BUILD["2. BUILD_NODE<br>Substrate Derivation Proof"]:::midNode
     
-    FLAKE --> STATE["3. STATEROOT_NODE<br>5-Leaf Merkle Tree"]:::stateNode
-    SOURCE --> DAEMON["4. DAEMON_NODE<br>Micro-Rust Binary Digest"]:::midNode
+    HARDWARE["3. HARDWARE_NODE<br>Hardware Intelligence"]:::midNode --> STATE["11. STATE_NODE<br>5-Leaf Merkle StateRoot"]:::stateNode
+    TOPOLOGY["4. TOPOLOGY_NODE<br>System Topology DAG"]:::midNode --> STATE
+    CAPABILITY["5. CAPABILITY_NODE<br>Capability Boundary"]:::midNode --> STATE
+    POLICY["6. POLICY_NODE<br>Security Policy Leaf"]:::midNode --> STATE
+    STORAGE["7. STORAGE_NODE<br>Storage Planner Root"]:::midNode --> STATE
+    BOOT["8. BOOT_NODE<br>Measured Boot Trust"]:::midNode --> STATE
+    SECRETS["9. SECRETS_NODE<br>Ephemeral Secret Fabric"]:::midNode --> STATE
+    LIFECYCLE["10. LIFECYCLE_NODE<br>Lifecycle Preservation"]:::midNode --> STATE
     
-    TEST --> REPRO["6. REPRODUCIBILITY_NODE<br>Conformance & Diff Fuzz"]:::midNode
+    BUILD --> STATE
+    HARDWARE --> CAPABILITY
+    CAPABILITY --> RUNTIME["12. RUNTIME_NODE<br>Runtime Receipt Hash"]:::midNode
+    STATE --> RUNTIME
+    RUNTIME --> TEST["13. TEST_NODE<br>1,384 Assertions Manifest"]:::midNode
     
-    STATE --> PASSPORT["8. PASSPORT_NODE<br>Verification Passport"]:::midNode
-    TEST --> PASSPORT
-    
-    STATE --> DOMAIN["9. DOMAIN_PROOF_NODE<br>DomainProofV1 Contract"]:::midNode
-    DAEMON --> DOMAIN
-    
-    PASSPORT --> RELEASE["10. RELEASE_NODE<br>Proof-Carrying Release"]:::releaseNode
-    DOMAIN --> RELEASE
-    REPRO --> RELEASE
-    INVARIANTS --> RELEASE
+    BUILD --> RELEASE["14. RELEASE_NODE<br>Proof-Carrying Release Root"]:::releaseNode
+    TEST --> RELEASE
+    PROOF["18. PROOF_NODE<br>DomainProofV1 Contract"]:::midNode --> RELEASE
 
     classDef rootNode fill:#0f2744,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
     classDef midNode fill:#1e293b,stroke:#94a3b8,stroke-width:1.5px,color:#f8fafc;
@@ -1143,8 +1152,14 @@ flowchart TD
 ```
 
 ```bash
-# Render complete 10-node authoritative evidence graph in terminal
+# Render complete 18-node authoritative evidence graph in terminal
 neuronix graph
+
+# Render graph in structured ASCII tree format
+neuronix graph --format ascii
+
+# Render graph in Graphviz DOT format
+neuronix graph --format dot
 
 # Trace cryptographic backward lineage for production release bundle
 neuronix graph --trace release
@@ -1194,7 +1209,7 @@ System security in NEURONIX OS is governed by a formal invariant registry ([SPEC
 | `SEC-005` | **Fail-Closed Hypervisor Boundary** | Tier 3 rejects execution when KVM unavailable | Isolation | **VERIFIED** |
 | `SEC-006` | **Zero Mocks In Production Path** | Synthetic flags forbidden in live release builds | Runtime | **VERIFIED** |
 | `SEC-007` | **eBPF LSM Confinement Integrity** | Security hooks enforce least-privilege policies | Kernel | **VERIFIED** |
-| `SEC-008` | **Evidence Graph Directed Lineage** | 14-node DAG with tamper-proof parent hashes | Epistemics | **VERIFIED** |
+| `SEC-008` | **Evidence Graph Directed Lineage** | 18-node DAG with tamper-proof parent hashes | Epistemics | **VERIFIED** |
 | `SEC-009` | **Verification Passport Tamper Proof** | Self-contained offline validation rejects corrupt digests | Release | **VERIFIED** |
 | `SEC-010` | **Cross-Language Cryptographic Parity** | Python and micro-Rust produce identical proof roots | Dual-Plane | **VERIFIED** |
 | `SEC-011` | **Capability-Bound Resource Guard** | Memory, CPU, and network quotas enforced fail-closed | Resource | **VERIFIED** |
@@ -1223,7 +1238,7 @@ NEURONIX OS implements Proof-Carrying Release (PCR) bundles, coupling release me
   - Authoritative 5-leaf Merkle StateRoot.
   - Verification Passport Digest (`dist/verification-passport.json`).
   - Directed Evidence Graph Digest (`dist/evidence-graph.json`).
-  - Complete 14-node evidence graph snapshot.
+  - Complete 18-node evidence graph snapshot.
 - **Offline Self-Verification (`neuronix verify-release`):**
   Third-party auditors, users, and automated staging gates verify the complete supply chain offline in a single command, ensuring zero bit-level tampering from source code to installation media.
 
