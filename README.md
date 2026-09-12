@@ -110,7 +110,7 @@ NEURONIX OS is an independent, declarative Linux distribution platform based on 
 - **Single Source of Truth (`version.nix`):** All components (CLI, GUI Center, MCP Daemon, Calamares installer engine, release manifests, package derivations) read canonical versioning from `version.nix`.
 - **Release `v1.0.0` (Frozen GA):** Immutable initial General Availability release tag.
 - **Release `v1.0.4` (Hardened Milestone):** Production hardening baseline establishing closed semantic subsystems and offline verification passports.
-- **Release `v1.0.5` (Hardened Production Baseline on `main`):** Actively maintained release incorporating modular CLI architecture (`src/lib/` and `src/commands/`) with verified flock concurrency locking, 100% static Python type annotation coverage (302/302 functions across 21 core files), 100% Rust documentation comments (29/29 public items across conductor and neuronix-daemon crates), RFC 8032 pure-Python Ed25519 known-answer test vectors, property-based invariant testing, comprehensive mutation resilience (100% kill rate across 10 mutants), hardened architecture-aware OCI container security profiles (standard userspace seccomp allowlist under fail-closed `SCMP_ACT_ERRNO`, `noNewPrivileges`, capability bounding, unprivileged namespaces), dynamic version-bound evidence compilation, and end-to-end hardware contract validation (1,384 assertions).
+- **Release `v1.0.5` (Hardened Production Baseline on `main`):** Actively maintained release incorporating modular CLI architecture (`src/lib/` and `src/commands/`) with verified flock concurrency locking, 100% static Python type annotation coverage (302/302 functions across 21 core files), 100% Rust documentation comments (29/29 public items across conductor and neuronix-daemon crates), RFC 8032 pure Python Ed25519 known-answer test vectors, property-based invariant testing, comprehensive mutation resilience (100% kill rate across 10 mutants), hardened architecture aware OCI container security profiles (standard userspace seccomp allowlist under fail-closed `SCMP_ACT_ERRNO`, `noNewPrivileges`, capability bounding, unprivileged namespaces), dynamic version-bound evidence compilation, and end-to-end hardware contract validation (1,384 assertions).
 - **Development Channel Baseline:** Tracks `nixos-unstable` for modern Linux kernels, Wayland compositors, and rapid developer tooling.
 - **Production Stable Baseline:** Targets `nixos-26.05` for conservative enterprise stability and verified patch streams.
 - **State Version (`system.stateVersion = "24.11"`):** The immutable NixOS state migration baseline preserving data directory layouts and system state compatibility across upgrades.
@@ -128,7 +128,7 @@ Its primary design objectives are:
 1. **Deterministic State Reproducibility:**
    Every package derivation, system daemon, kernel option, and configuration parameter is declared as pure code within `flake.nix` and pinned cryptographically via `flake.lock`. Deploying a configuration across multiple physical or virtual nodes produces mathematically identical systems, eliminating divergent package closures and unrecorded host mutations.
 
-2. **Atomic Generational Lifecycle with Zero-Loss Rollback:**
+2. **Atomic Generational Lifecycle with Zero Loss Rollback:**
    Operating system upgrades and package modifications are compiled and staged into isolated cryptographic store paths (`/nix/store`) before system symlink pointers are switched atomically. The running operating system is never modified in place. If an update introduces regressions or unbootable states, users and automated recovery services can revert to the previous operational generation instantly at the bootloader or from the active shell (`nixos-rebuild --rollback` or `neuronix-rollback`) without data loss.
 
 3. **Turnkey Desktop Ergonomics on an Immutable Foundation:**
@@ -509,7 +509,7 @@ The graphical installer functions as a declarative flake generator ([ADR-002](do
 - Runs `nixos-install --flake /mnt/etc/nixos#neuronix-desktop`, producing a fully declarative system installation upon first boot.
 
 ### 2. System Control Center (Conductor)
-The official graphical desktop control surface and administration hub engineered under the "Quiet Systems UI" doctrine with an authentic Ghostty and GNOME Wayland Tokyo 50 aesthetic (native, calm, compact, translucent, and keyboard-first with pure-text buttons and zero AI slop):
+The official graphical desktop control surface and administration hub engineered under the "Quiet Systems UI" doctrine :
 
 #### Conductor Operational Surfaces & Visual States
 
@@ -518,7 +518,7 @@ The official graphical desktop control surface and administration hub engineered
   <img src="docs/assets/neuronix_center_overview.png" alt="Conductor - Overview Surface" width="90%">
 </p>
 
-* **Function:** Real-time operating system substrate summary (Neuronix OS, kernel release, active generation state, root filesystem utilization) and live hardware telemetry (CPU model, physical memory, display adapter, battery charge ceiling) with direct one-click action triggers (`Staged Upgrade`, `Rollback`, `Diagnostics`, `Terminal`).
+* **Function:** Real time operating system substrate summary (Neuronix OS, kernel release, active generation state, root filesystem utilization) and live hardware telemetry (CPU model, physical memory, display adapter, battery charge ceiling) with direct one-click action triggers (`Staged Upgrade`, `Rollback`, `Diagnostics`, `Terminal`).
 
 ##### 2. System Generation Timeline
 <p align="center">
@@ -539,7 +539,7 @@ The official graphical desktop control surface and administration hub engineered
   <img src="docs/assets/neuronix_center_advanced.png" alt="Conductor - Advanced Cryptographic Provenance" width="90%">
 </p>
 
-* **Function:** High-assurance cryptographic audit surface displaying the Merkle StateRoot commitment, offline verification passport status (1,384/1,384 verified), directed evidence lineage graph, Btrfs subvolume layouts (`@`, `@nix`, `@home`, `@snapshots`, `@swap`), kernel memory policies, and one-click diagnostic clipboard export.
+* **Function:** High assurance cryptographic audit surface displaying the Merkle StateRoot commitment, offline verification passport status (1,384/1,384 verified), directed evidence lineage graph, Btrfs subvolume layouts (`@`, `@nix`, `@home`, `@snapshots`, `@swap`), kernel memory policies, and one click diagnostic clipboard export.
 
 ##### 5. Active Mutation State (Working)
 <p align="center">
@@ -561,7 +561,7 @@ The official graphical desktop control surface and administration hub engineered
 - **Theme Awareness & Translucent Dark Mode:** Automatic detection of desktop dark/light appearance (GTK, KDE Plasma, GNOME GSettings) with deep Tokyo Night and Arc-Darker palettes (`#13141c`, `#16161e`, `#1a1b26`, `#24283b`) and subtle window alpha translucency (`-alpha 0.90`) for an authentic Ghostty terminal aesthetic.
 - **Pure-Text Button Design:** Clean, modern, typography-first button design free from icon clutter, matching high-end enterprise terminal tools.
 - **Non-Blocking Telemetry Worker:** Asynchronous background worker thread (`threading.Thread` with thread-safe UI event queue) preventing interface freeze during hardware inspection, complemented by gentle 45s auto-refresh and instant on-demand refresh (`F5` or `Ctrl+R`).
-- **Non-Silent Diagnostic Feedback:** Descriptive user-facing dialogs for missing desktop terminal emulators rather than silent process dismissal.
+- **Non-Silent Diagnostic Feedback:** Descriptive user facing dialogs for missing desktop terminal emulators rather than silent process dismissal.
 - **Keyboard-First Navigation:** Full tab order navigation with standard accelerators: `F5` / `Ctrl+R` (Refresh), `Ctrl+T` (Terminal), `Ctrl+U` (Upgrade), `Ctrl+Z` (Rollback), `Ctrl+D` (Doctor), `Ctrl+1..4` (Switch Tabs), and `Ctrl+Q` / `Esc` (Exit).
 - **Interface Modes:** Runs seamlessly via native desktop graphical launcher or full headless CLI mode (`neuronix-center --cli`, `--list-generations`, `--version`).
 
@@ -587,7 +587,7 @@ neuronix dev go
 neuronix dev web3
 ```
 
-### 4. In-Memory Micro-VM Simulation (neuronix sandbox)
+### 4. In Memory Micro VM Simulation (neuronix sandbox)
 Enables verification of proposed system configurations, kernel options, or untrusted software inside an ephemeral QEMU micro-VM running entirely in memory (`/dev/shm`) with read-only 9P store pass-through, Autonomous OS Fabric, Windows 11 Autopilot, and Btrfs CoW snapshot trees:
 ```bash
 # Execute automated smoke test inside the in-memory Micro-VM
@@ -611,7 +611,7 @@ neuronix sandbox branch base-dev feature-experiment
 ```
 
 ### 5. Model Context Protocol (MCP) Server
-NEURONIX includes a built-in Model Context Protocol server communicating over `stdio` adhering to JSON-RPC 2.0 (Protocol Version `2024-11-05`). It provides structured tools, resources, and prompt templates for autonomous development agents:
+NEURONIX includes a built in Model Context Protocol server communicating over `stdio` adhering to JSON-RPC 2.0 (Protocol Version `2024-11-05`). It provides structured tools, resources, and prompt templates for autonomous development agents:
 - **Tools:** Exposes `neuronix_status`, `neuronix_diet`, `neuronix_verify`, `neuronix_undo`, `neuronix_shadow_eval`, `neuronix_doctor`, `neuronix_check_update`, `neuronix_upgrade`, `neuronix_manual`, `neuronix_sentinel`, `neuronix_diff`, `neuronix_distill`, `neuronix_container`, `neuronix_sandbox`, `neuronix_tune`, `neuronix_mesh`, `neuronix_ast_query`, `neuronix_workspace_branch`, and `neuronix_ghost_exec`.
 - **Architectural Convergence:** All state-mutating tools (`neuronix_diet`, `neuronix_undo`, `neuronix_upgrade`) converge strictly through the unified, transactional Python core (`neuronix_core.operations`). They enforce POSIX mutual exclusion via `OperationLock`, exact generation predecessor verification, and transaction journaling (`TransactionJournal`), maintaining 100% parity with CLI and GUI control center workflows.
 - **Clean Update Separation:** Update checks isolate local system commits from pinned upstream Nixpkgs hashes, eliminating cross-domain SHA comparisons.
@@ -650,7 +650,7 @@ opencode upgrade --help
 ```
 
 ### 7. Autonomous Update Architecture & Desktop Notifier
-A gated, generation-preserving update architecture providing continuous rolling freshness without un-gated instability or active session disruption. See the [Update & Storage Specification](docs/specifications/07_UPDATE_AND_STORAGE_LIFECYCLE.md) for architectural details.
+A gated, generation preserving update architecture providing continuous rolling freshness without un-gated instability or active session disruption. See the [Update & Storage Specification](docs/specifications/07_UPDATE_AND_STORAGE_LIFECYCLE.md) for architectural details.
 - **Lightweight Desktop Notifier:** A background systemd timer (`neuronix-update-check.timer`) queries upstream flake metadata (< 50 KB) and broadcasts desktop notifications (`notify-send`) across KDE Plasma, GNOME, and Hyprland when a new generation is available.
 - **1-Click Staged Upgrades:** By default, upgrades are built in the background using `nixos-rebuild boot` (`neuronix upgrade --staged`), registering the new generation to the bootloader without restarting the display server or interrupting running applications.
 - **User Sovereignty & Full Automation:** Unattended auto-upgrades can be toggled via `neuronix.services.updates.autoUpgrade = true;` or via the NEURONIX Center GUI.
@@ -681,7 +681,7 @@ neuronix welcome --disable-autostart
 
 ### 9. System Doctor & Privacy Sanitized Issue Reporter
 An automated deep system diagnostics engine that inspects hardware, kernel dmesg rings, active generation, filesystem health, and systemd maintenance timers.
-- **Privacy-First Data Scrubbing:** Automatically scrubs and masks real local usernames (`<sanitized-user>`), hostnames (`<sanitized-host>`), IPv4/IPv6 addresses (`[REDACTED-IP]`), and hardware MAC identifiers (`[REDACTED-MAC]`). Personal identifiers are redacted, while system architecture and hardware topology remain intentionally visible for diagnostic accuracy.
+- **Privacy First Data Scrubbing:** Automatically scrubs and masks real local usernames (`<sanitized-user>`), hostnames (`<sanitized-host>`), IPv4/IPv6 addresses (`[REDACTED-IP]`), and hardware MAC identifiers (`[REDACTED-MAC]`). Personal identifiers are redacted, while system architecture and hardware topology remain intentionally visible for diagnostic accuracy.
 - **GitHub Issue Ready:** Produces formatted Markdown at `/tmp/neuronix-doctor.md` ready to copy-paste directly into community bug reports.
 
 ```bash
@@ -723,7 +723,7 @@ neuronix kernel list
 neuronix kernel set zen
 ```
 
-### 12. System-Embedded Manual & Autonomous AI Grounding
+### 12. System Embedded Manual & Autonomous AI Grounding
 NEURONIX embeds an immutable, 11-chapter technical manual directly into the operating system filesystem at `/etc/neuronix/manual/` via pure Nix derivations (`modules/core/manual.nix`):
 - **Always Synchronized:** Directly symlinked to `/nix/store`, automatically re-evaluated and updated during every system generation rebuild (`nixos-rebuild switch` or `neuronix upgrade`).
 - **Autonomous AI Preloading:** AI agents (OpenCode, Cursor, Claude, Antigravity) automatically discover root directives at `/etc/neuronix/SYSTEM_PROMPT.md`, `/etc/neuronix/AGENTS.md`, and `$NEURONIX_AI_DIRECTIVE` without requiring manual user commands.
@@ -790,7 +790,7 @@ neuronix sentinel confirm
 
 ### 15. Generational Forensic Diff Engine (neuronix diff)
 A deep forensic analysis engine that compares system generations to pinpoint exact causes of breakage or configuration drift:
-- **Authoritative Three-Tier Analytical Forensics:**
+- **Authoritative Three Tier Analytical Forensics:**
   - **Tier 1 (System Metadata):** Kernel version, NixOS release ID, creation timestamps, and active profile symlinks.
   - **Tier 2 (Authoritative Store Closures):** Leverages `nix store diff-closures` to analyze exact closure paths, added/removed packages, and upgraded versions with exact delta size byte accounting (KiB/MiB).
   - **Tier 3 (Convenience Deltas):** Forensics for executables (`/sw/bin`) and systemd background services (`/etc/systemd/system`).
@@ -826,7 +826,7 @@ neuronix distill ripgrep fd htop
 neuronix distill ripgrep fd htop --force
 ```
 
-### 17. Ephemeral Zero-Copy RAM Development Container (neuronix container)
+### 17. Ephemeral Zero Copy RAM Development Container (neuronix container)
 Enables instantaneous, isolated code experimentation, OCI container execution, and untrusted repo exploration without touching workstation storage or risking system state:
 - **Strict RAM-Backed Workspace (/dev/shm):** Clones or unpacks target repositories into a temporary RAM filesystem with zero disk writes. Refuses silent physical disk fallback (`require_ram=True`) when RAM isolation is requested.
 - **Dynamic Transparent FHS Emulation:** Automatically resolves `/lib64/ld-linux-x86-64.so.2` and glibc shared library paths so foreign pre-compiled binaries (Go, Rust, Node, Python C-extensions) run out of the box without container bloat.
@@ -872,7 +872,7 @@ Dynamically optimizes host kernel, scheduler, cgroups, and audio parameters for 
   - `battery`: Enforces powersave CPU governor, sets EPP to `power`, sets 80% battery charging ceiling, engages aggressive PCIe ASPM power saving.
   - `audio-daw`: Configures low-latency PipeWire quantum (128 samples / 48000 Hz) for pro-audio and DAW production.
   - `balanced`: Restores default adaptive schedutil governors and standard desktop priorities.
-- **Non-Destructive & Safe:** All tunings are applied in-memory and cleanly revertible without modifying persistent Nix Flakes.
+- **Non-Destructive & Safe:** All tunings are applied in memory and cleanly revertible without modifying persistent Nix Flakes.
 
 ```bash
 # Display active CPU governors, audio latency quantum, and verified tuning status
@@ -903,9 +903,9 @@ neuronix mesh peers
 neuronix mesh peers --json
 ```
 
-### 20. Micro-Rust Systems Daemon & Live Unified AST Engine (neuronix daemon)
-A standalone, high-performance micro-Rust systems substrate (`packages/neuronix-daemon/`):
-- **Zero-Cost Abstractions & Surgical Static Binary:** Packaged as an ultra-lean 758 KB static binary compiled with zero external crates (`extern crate std` only), eliminating software supply-chain bloat while providing microsecond response times.
+### 20. Micro Rust Systems Daemon & Live Unified AST Engine (neuronix daemon)
+A standalone, high performance micro Rust systems substrate (`packages/neuronix-daemon/`):
+- **Zero Cost Abstractions & Surgical Static Binary:** Packaged as an ultra-lean 758 KB static binary compiled with zero external crates (`extern crate std` only), eliminating software supply chain bloat while providing microsecond response times.
 - **Unified Live AST Socket (/run/neuronix/ast.sock):** Exposes an authoritative Abstract System Tree (AST Schema 2.0.0) via JSON-RPC 2.0. Autonomous AI agents and tooling query active system generations, Btrfs storage topologies, memory pressure shields, and security postures through a single atomic query.
 - **Fail-Safe Transparent Fallback:** If executing rootless or without the binary daemon running, all queries fall back seamlessly to native Python and Bash engines with 100% functional parity.
 
@@ -1224,7 +1224,7 @@ neuronix graph --trace proof
 neuronix graph --json
 ```
 
-### 28. Canonical Domain Proof Specification & Dual-Plane Parity (SPEC-NRX-DP-014)
+### 28. Canonical Domain Proof Specification & Dual Plane Parity (SPEC-NRX-DP-014)
 To eliminate any discrepancy between high-level Python tooling and low-level systems runtimes, NEURONIX OS establishes the Canonical Domain Proof Specification ([SPEC-NRX-DP-014](docs/specifications/14_canonical_domain_proof_specification.md)):
 - **Canonical 6-Part Merkle Commitment:**
   $$P_{\text{root}} = \operatorname{SHA-256}(L_{\text{state}} \parallel H_{\text{hds}} \parallel H_{\text{policy}} \parallel H_{\text{input}} \parallel H_{\text{output}} \parallel H_{\text{receipt}})$$
