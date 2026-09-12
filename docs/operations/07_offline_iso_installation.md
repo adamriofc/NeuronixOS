@@ -9,13 +9,13 @@ Download the official release ISO image and verify cryptographic checksums:
 sha256sum -c SHA256SUMS
 
 # Verify Maintainer GPG Signature
-gpg --verify neuronix-os-v1.0.4-x86_64.iso.sig neuronix-os-v1.0.4-x86_64.iso
+gpg --verify neuronix-os-1.0.5-x86_64.iso.sig neuronix-os-1.0.5-x86_64.iso
 ```
 
 Flash to USB storage (replace `/dev/sdX` with your target drive):
 
 ```bash
-sudo dd if=neuronix-os-v1.0.4-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=dist/neuronix-os-1.0.5-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 ## 2. Graphical Installation (Calamares)

@@ -3,7 +3,7 @@
 > **Document ID:** `NRX-SPEC-013`  
 > **Status:** RATIFIED STANDARD  
 > **Version:** `1.0.0`  
-> **Target Release:** `v1.0.4+`  
+> **Target Release:** `v1.0.5+`  
 > **Standard:** `NEURONIX-VERIFICATION-PASSPORT-V1`
 
 ---
@@ -14,7 +14,7 @@ Prior to this specification, verification evidence across NEURONIX OS was distri
 - Release manifests (`dist/release.json`, `dist/release-manifest.json`)
 - Cryptographic checksums and GPG signatures (`dist/SHA256SUMS`, `dist/SHA256SUMS.sig`)
 - Two-build bit-identical reproducibility evidence (`dist/reproducibility_evidence.json`)
-- Software Bill of Materials (`dist/neuronix-os-v1.0.4-sbom.spdx.json`)
+- Software Bill of Materials (`dist/neuronix-os-v1.0.5-sbom.spdx.json`)
 - JCS RFC 8785 number formatting evidence (`dist/jcs_conformance_evidence.json`)
 - Performance benchmark reports (`dist/benchmark_results.json`)
 - Provable State Engine StateRoot (`L_posture`, `L_substrate`, `L_provenance`, `L_policy`, `L_evidence`)
@@ -73,9 +73,9 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
   "passport_type": "NEURONIX_VERIFICATION_PASSPORT_V1",
   "release_metadata": {
     "distribution": "NEURONIX OS",
-    "release_version": "1.0.4",
-    "release_tag": "v1.0.4",
-    "commit_sha": "ef8e07bc5f1428552ebf2399921313df1da8b6f3",
+    "release_version": "1.0.5",
+    "release_tag": "v1.0.5",
+    "commit_sha": "b0618c32fdfe215b2e9e65ca77f985055b85a3d4",
     "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
     "proof_engine_version": "1.1.0"
   },

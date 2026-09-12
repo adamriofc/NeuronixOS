@@ -1450,7 +1450,7 @@ System invariants, module structures, and CLI dispatchers are validated through 
   ✔ NEURONIX RELEASE GATE PASSED: CONTRACT AND RUNTIME LIFECYCLE VERIFIED
 ```
 
-> **Industrial Qualification Evidence:** Formal qualification report and empirical test logs are documented in [docs/releases/v1.0.4-qualification-report.md](docs/releases/v1.0.4-qualification-report.md). Rather than claiming unbounded mathematical safety proofs, NEURONIX verifies explicit contract assertions and behavioral state machines within defined test scopes:
+> **Industrial Qualification Evidence:** Formal qualification report and empirical test logs are documented in [docs/releases/v1.0.5-qualification-report.md](docs/releases/v1.0.5-qualification-report.md). Rather than claiming unbounded mathematical safety proofs, NEURONIX verifies explicit contract assertions and behavioral state machines within defined test scopes:
 > - **L0 (Static Contracts):** AST syntax parsing, declarative markdown specifications, and lint invariants.
 > - **L1 (Deterministic Unit):** Isolated argument validation, property-based fuzzing, and variable sanitization.
 > - **L2 (System State Machines):** Concurrency locking, journal recovery, service daemons, and micro-VM simulation.
