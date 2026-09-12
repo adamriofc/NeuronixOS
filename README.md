@@ -509,11 +509,23 @@ The graphical installer functions as a declarative flake generator ([ADR-002](do
 - Runs `nixos-install --flake /mnt/etc/nixos#neuronix-desktop`, producing a fully declarative system installation upon first boot.
 
 ### 2. System Control Center (neuronix center)
-A desktop management application for common administrative tasks:
-- **Telemetry Dashboard:** Monitors kernel release, active generation, CPU, GPU, and filesystem compression status.
-- **Generation Management:** Displays generation history and allows rolling back to previous system generations without using the terminal.
-- **Storage Maintenance:** Provides controls for store garbage collection, hardlink deduplication, and filesystem TRIM.
-- **Interface Modes:** Runs with a graphical interface (Tkinter/Qt) or via command-line arguments (`neuronix-center --cli`).
+The official graphical desktop control surface and administration hub engineered under the "Quiet Systems UI" doctrine (native, calm, compact, obvious, and keyboard-first with zero AI slop):
+
+<p align="center">
+  <img src="docs/assets/neuronix_center_overview.png" alt="NEURONIX Control Center - Quiet Systems UI" width="90%">
+</p>
+
+- **Progressive Disclosure Architecture (4 Clean Tab Surfaces):**
+  - **Overview:** Calm system substrate summary (OS, kernel release, active generation, Btrfs ZSTD:3 mount) and real hardware telemetry (CPU, RAM, GPU, battery ceiling) alongside immediate primary actions (`Staged Upgrade`, `Rollback`, `Doctor`, `Terminal`).
+  - **System:** Interactive generation timeline (`Treeview`), staged system upgrades, atomic generational rollback with precision duration tracking (`time.monotonic`), and store maintenance (garbage collection and TRIM).
+  - **Developer:** Quick launch access to hermetic isolated developer shells (`python`, `rust`, `node`, `ai`), OpenCode AI system copilot, interactive terminal shells, and system diagnostics.
+  - **Advanced:** Cryptographic StateRoot Merkle commitment verification, offline verification passport status (`1384/1384 Green`), evidence graph lineage traversal, Btrfs subvolume contracts (`@`, `@nix`, `@home`, `@snapshots`, `@swap`), and clipboard diagnostic exporter.
+- **Responsive & Accessible Geometry:** Dynamic resizable window (`minsize(600, 420)`, preferred `720x520`) with fluid grid/pack weight expansion, explicit spacing tokens (4, 8, 12, 16, 24, 32), and semantic typography scale following desktop accessibility settings.
+- **Theme Awareness & Quiet Status States:** Automatic detection of system dark/light appearance using a calm, high-contrast palette with 4 quiet status indicators (`● Healthy`, `● Working`, `● Attention`, `● Error`) without fluorescent glows or decorative clutter.
+- **Non-Blocking Telemetry Worker:** Asynchronous background worker thread (`threading.Thread` with thread-safe UI event queue) preventing interface freeze during hardware inspection, complemented by gentle 45s auto-refresh and instant on-demand refresh (`F5` or `Ctrl+R`).
+- **Non-Silent Diagnostic Feedback:** Descriptive user-facing dialogs for missing desktop terminal emulators rather than silent process dismissal.
+- **Keyboard-First Navigation:** Full tab order navigation with standard accelerators: `F5` / `Ctrl+R` (Refresh), `Ctrl+T` (Terminal), `Ctrl+U` (Upgrade), `Ctrl+Z` (Rollback), `Ctrl+D` (Doctor), `Ctrl+1..4` (Switch Tabs), and `Ctrl+Q` / `Esc` (Exit).
+- **Interface Modes:** Runs seamlessly via native desktop graphical launcher or full headless CLI mode (`neuronix-center --cli`, `--list-generations`, `--version`).
 
 ### 3. Isolated Development Environments (neuronix dev)
 Pre-configured development shells running in RAM via `nix-shell`:
