@@ -175,6 +175,7 @@ class TestNeuronixCenterGUI(unittest.TestCase):
             self.skipTest("Tkinter display server unavailable in current execution context")
 
         import tkinter as tk
+        from tkinter import ttk
         root = tk.Tk()
         try:
             app = neuronix_center.NeuronixControlCenterApp(root)
@@ -214,7 +215,32 @@ class TestNeuronixCenterGUI(unittest.TestCase):
             app._apply_telemetry_results({"os": "NEURONIX OS (NixOS)"}, [], 0.01)
             self.assertEqual(app.ov_os_val.cget("text"), "Neuronix OS")
             app._apply_telemetry_results({"os": "Neuronix OS"}, [], 0.01)
-            self.assertEqual(app.ov_os_val.cget("text"), "Neuronix OS")
+            # Verify Clean Button Labels (Zero Icon Glyphs)
+            self.assertEqual(app.refresh_btn.cget("text"), "Refresh")
+            self.assertEqual(app.btn_upgrade.cget("text"), "Staged Upgrade")
+            self.assertEqual(app.btn_rollback.cget("text"), "Rollback")
+            self.assertEqual(app.btn_doctor.cget("text"), "Diagnostics")
+            self.assertEqual(app.btn_terminal.cget("text"), "Terminal")
+            self.assertEqual(app.btn_maint_upgrade.cget("text"), "Prepare Staged Upgrade")
+            self.assertEqual(app.btn_maint_rollback.cget("text"), "Atomic Rollback")
+            self.assertEqual(app.btn_maint_diet.cget("text"), "Storage Diet (GC & TRIM)")
+            self.assertEqual(app.btn_maint_update.cget("text"), "Check Upstream Updates")
+            self.assertEqual(app.status_dot.cget("text"), "●")
+
+            def _find_buttons(widget):
+                buttons = []
+                for child in widget.winfo_children():
+                    if isinstance(child, (ttk.Button, tk.Button)):
+                        buttons.append(child)
+                    buttons.extend(_find_buttons(child))
+                return buttons
+
+            all_buttons = _find_buttons(root)
+            forbidden_glyphs = ["▲", "↺", "◆", "◈", "⟳", "↻", "✦", "⎘", "❯"]
+            for btn in all_buttons:
+                txt = btn.cget("text")
+                for glyph in forbidden_glyphs:
+                    self.assertNotIn(glyph, txt, f"Button text '{txt}' contains forbidden icon glyph '{glyph}'")
         finally:
             root.destroy()
 

@@ -906,7 +906,7 @@ class NeuronixControlCenterApp:
 
         self.refresh_btn = ttk.Button(
             right_box,
-            text="⟳ Refresh",
+            text="Refresh",
             command=self.refresh_telemetry
         )
         self.refresh_btn.pack(side="left")
@@ -976,16 +976,16 @@ class NeuronixControlCenterApp:
         act_frame.columnconfigure(2, weight=1)
         act_frame.columnconfigure(3, weight=1)
 
-        self.btn_upgrade = ttk.Button(act_frame, text="▲ Staged Upgrade", command=self.on_upgrade, style="Toolbar.TButton")
+        self.btn_upgrade = ttk.Button(act_frame, text="Staged Upgrade", command=self.on_upgrade, style="Toolbar.TButton")
         self.btn_upgrade.grid(row=0, column=0, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        self.btn_rollback = ttk.Button(act_frame, text="↺ Rollback", command=self.on_rollback, style="Toolbar.TButton")
+        self.btn_rollback = ttk.Button(act_frame, text="Rollback", command=self.on_rollback, style="Toolbar.TButton")
         self.btn_rollback.grid(row=0, column=1, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        self.btn_doctor = ttk.Button(act_frame, text="◆ Diagnostics", command=self.on_doctor, style="Toolbar.TButton")
+        self.btn_doctor = ttk.Button(act_frame, text="Diagnostics", command=self.on_doctor, style="Toolbar.TButton")
         self.btn_doctor.grid(row=0, column=2, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        self.btn_terminal = ttk.Button(act_frame, text="❯_ Terminal", command=self.launch_shell, style="Toolbar.TButton")
+        self.btn_terminal = ttk.Button(act_frame, text="Terminal", command=self.launch_shell, style="Toolbar.TButton")
         self.btn_terminal.grid(row=0, column=3, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
     def _setup_system_tab(self):
@@ -1041,13 +1041,13 @@ class NeuronixControlCenterApp:
             justify="left"
         ).pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_XS))
 
-        self.btn_maint_upgrade = ttk.Button(maint_card, text="▲ Prepare Staged Upgrade", command=self.on_upgrade)
+        self.btn_maint_upgrade = ttk.Button(maint_card, text="Prepare Staged Upgrade", command=self.on_upgrade)
         self.btn_maint_upgrade.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        self.btn_maint_rollback = ttk.Button(maint_card, text="↺ Atomic Rollback", command=self.on_rollback)
+        self.btn_maint_rollback = ttk.Button(maint_card, text="Atomic Rollback", command=self.on_rollback)
         self.btn_maint_rollback.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        self.btn_maint_diet = ttk.Button(maint_card, text="◈ Storage Diet (GC & TRIM)", command=self.on_diet)
+        self.btn_maint_diet = ttk.Button(maint_card, text="Storage Diet (GC & TRIM)", command=self.on_diet)
         self.btn_maint_diet.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        self.btn_maint_update = ttk.Button(maint_card, text="⟳ Check Upstream Updates", command=self.on_check_update)
+        self.btn_maint_update = ttk.Button(maint_card, text="Check Upstream Updates", command=self.on_check_update)
         self.btn_maint_update.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
 
         # Status feedback display
@@ -1085,7 +1085,7 @@ class NeuronixControlCenterApp:
         def launch_stack(stack):
             launch_in_terminal(nrx_bin + ["dev", stack], parent_window=self.root)
 
-        ttk.Button(dev_card, text="✦ AI System", command=lambda: launch_in_terminal(["opencode"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="AI System", command=lambda: launch_in_terminal(["opencode"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
         ttk.Button(dev_card, text="Python Substrate (uv)", command=lambda: launch_stack("python")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
         ttk.Button(dev_card, text="Rust Substrate (cargo)", command=lambda: launch_stack("rust")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
         ttk.Button(dev_card, text="Node.js Substrate (pnpm)", command=lambda: launch_stack("node")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
@@ -1098,10 +1098,10 @@ class NeuronixControlCenterApp:
         tk.Label(tools_card, text="Diagnostic & System Tools", font=self.font_section, bg=p["bg_card"], fg=p["fg_primary"]).pack(anchor="w", padx=SPACE_MD, pady=(SPACE_SM, SPACE_XS))
         tk.Label(tools_card, text="Host inspection, app catalog, and interactive onboarding.", font=self.font_caption, bg=p["bg_card"], fg=p["fg_muted"], wraplength=280, justify="left").pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_SM))
 
-        ttk.Button(tools_card, text="❯_ Terminal Shell (Ctrl+T)", command=self.launch_shell).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(tools_card, text="◆ System Doctor (Ctrl+D)", command=self.on_doctor).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(tools_card, text="◈ Curated Apps (Quickstart)", command=self.on_quickstart).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(tools_card, text="▲ Launch Welcome Tour", command=lambda: launch_in_terminal(nrx_bin + ["welcome"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="Terminal Shell (Ctrl+T)", command=self.launch_shell).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="System Doctor (Ctrl+D)", command=self.on_doctor).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="Curated Apps (Quickstart)", command=self.on_quickstart).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="Launch Welcome Tour", command=lambda: launch_in_terminal(nrx_bin + ["welcome"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
 
     def _setup_advanced_tab(self):
         """Advanced: Cryptographic StateRoot, provenance, and storage contracts."""
@@ -1151,7 +1151,7 @@ class NeuronixControlCenterApp:
         act_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, SPACE_XS))
         act_frame.columnconfigure(0, weight=1)
 
-        ttk.Button(act_frame, text="⎘ Copy Diagnostics to Clipboard", command=self._copy_diagnostics, style="Toolbar.TButton").grid(row=0, column=0, padx=SPACE_MD, pady=SPACE_SM, sticky="ew")
+        ttk.Button(act_frame, text="Copy Diagnostics to Clipboard", command=self._copy_diagnostics, style="Toolbar.TButton").grid(row=0, column=0, padx=SPACE_MD, pady=SPACE_SM, sticky="ew")
 
     def _build_footer(self):
         """Footer: Live telemetry source disclaimer and keyboard shortcuts hint."""
