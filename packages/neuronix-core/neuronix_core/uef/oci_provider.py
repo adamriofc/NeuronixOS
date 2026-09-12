@@ -41,39 +41,43 @@ def _find_binary(name: str) -> Optional[str]:
 
 # Standard userspace container syscall allowlist (Docker / OCI / runc baseline)
 STANDARD_CONTAINER_SYSCALL_ALLOWLIST: List[str] = [
-    # Core File and Descriptor I/O
-    "read", "write", "open", "openat", "openat2", "close", "stat", "fstat", "lstat",
+    # Core File and Descriptor I/O & Filesystem Metadata
+    "read", "write", "open", "openat", "openat2", "close", "close_range", "stat", "fstat", "lstat",
     "newfstatat", "poll", "ppoll", "lseek", "access", "faccessat", "faccessat2",
     "dup", "dup2", "dup3", "pipe", "pipe2", "select", "pselect6", "fcntl", "flock",
-    "fsync", "fdatasync", "truncate", "ftruncate", "getdents", "getdents64",
-    "getcwd", "chdir", "fchdir", "rename", "renameat", "renameat2", "mkdir",
-    "mkdirat", "rmdir", "creat", "link", "linkat", "unlink", "unlinkat",
-    "symlink", "symlinkat", "readlink", "readlinkat", "chmod", "fchmod",
+    "fsync", "fdatasync", "sync", "syncfs", "fadvise64", "truncate", "ftruncate",
+    "getdents", "getdents64", "getcwd", "chdir", "fchdir", "rename", "renameat",
+    "renameat2", "mkdir", "mkdirat", "rmdir", "creat", "link", "linkat", "unlink",
+    "unlinkat", "symlink", "symlinkat", "readlink", "readlinkat", "chmod", "fchmod",
     "fchmodat", "chown", "fchown", "lchown", "fchownat", "umask", "pread64",
     "pwrite64", "readv", "writev", "preadv", "pwritev", "preadv2", "pwritev2",
     "sendfile", "splice", "tee", "vmsplice", "fallocate", "statx", "copy_file_range",
-    # Process Lifecycle, Memory and Threading
+    "statfs", "fstatfs", "statfs64", "fstatfs64",
+    # Process Lifecycle, Memory, Threading and Capabilities
     "mmap", "mprotect", "munmap", "brk", "mremap", "msync", "mincore", "madvise",
     "clone", "clone3", "fork", "vfork", "execve", "execveat", "exit", "exit_group",
     "wait4", "waitid", "kill", "tgkill", "tkill", "getpid", "getppid", "gettid",
-    "getuid", "geteuid", "getgid", "getegid", "getresuid", "getresgid",
-    "set_tid_address", "set_robust_list", "get_robust_list", "prctl", "arch_prctl",
-    "futex", "sched_yield", "sched_getaffinity", "sched_setaffinity", "sched_getparam",
+    "getuid", "geteuid", "getgid", "getegid", "getresuid", "getresgid", "getgroups",
+    "setgroups", "getpgid", "setpgid", "getsid", "setsid", "getpgrp", "setpgrp",
+    "setpriority", "getpriority", "capget", "capset", "set_tid_address",
+    "set_robust_list", "get_robust_list", "prctl", "arch_prctl", "futex",
+    "sched_yield", "sched_getaffinity", "sched_setaffinity", "sched_getparam",
     "sched_setparam", "sched_getscheduler", "sched_setscheduler", "sched_get_priority_max",
     "sched_get_priority_min", "getrlimit", "setrlimit", "prlimit64", "getrusage",
-    "sysinfo", "times", "uname", "memfd_create", "getrandom",
+    "sysinfo", "times", "uname", "memfd_create", "getrandom", "rseq",
     # Signals, Timers and Clocks
     "rt_sigaction", "rt_sigprocmask", "rt_sigreturn", "rt_sigsuspend", "rt_sigpending",
     "rt_sigtimedwait", "sigaltstack", "pause", "nanosleep", "clock_nanosleep",
     "gettimeofday", "clock_gettime", "clock_getres", "getitimer", "setitimer",
     "alarm", "timerfd_create", "timerfd_settime", "timerfd_gettime",
-    # Networking and IPC
+    # Networking, IPC and Event Notification
     "socket", "connect", "accept", "accept4", "sendto", "recvfrom", "sendmsg",
     "recvmsg", "shutdown", "bind", "listen", "getsockname", "getpeername",
     "socketpair", "setsockopt", "getsockopt", "sendmmsg", "recvmmsg",
     "epoll_create", "epoll_create1", "epoll_ctl", "epoll_wait", "epoll_pwait",
     "eventfd", "eventfd2", "signalfd", "signalfd4", "semget", "semop", "semctl",
     "shmget", "shmat", "shmdt", "shmctl", "msgget", "msgsnd", "msgrcv", "msgctl",
+    "inotify_init", "inotify_init1", "inotify_add_watch", "inotify_rm_watch",
     "ioctl", "restart_syscall", "utime", "utimes", "utimensat",
 ]
 
@@ -90,6 +94,7 @@ RESTRICTED_PRIVILEGED_SYSCALLS: List[str] = [
 def generate_standard_seccomp_profile(
     default_action: str = "SCMP_ACT_ERRNO",
     extra_syscalls: Optional[List[str]] = None,
+    base_syscalls: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Generates a hardened, architecture-aware OCI seccomp configuration.
@@ -99,7 +104,11 @@ def generate_standard_seccomp_profile(
     module insertion, raw filesystem mounts) are blocked, while standard container
     userspace workloads execute cleanly.
     """
-    names = set(STANDARD_CONTAINER_SYSCALL_ALLOWLIST)
+    if base_syscalls is not None:
+        names = set(base_syscalls)
+    else:
+        names = set(STANDARD_CONTAINER_SYSCALL_ALLOWLIST)
+
     if extra_syscalls:
         names.update(extra_syscalls)
 
@@ -123,34 +132,45 @@ def generate_standard_seccomp_profile(
     }
 
 
-def validate_seccomp_profile(profile: Dict[str, Any]) -> bool:
+def validate_seccomp_profile(profile: Any) -> bool:
     """
     Validates that a seccomp profile enforces secure architecture-aware default-deny
     without locking out userspace execution via empty allowlists.
+    Fails closed (returns False) on any malformed, incomplete, or invalid profile.
     """
     if not isinstance(profile, dict):
         return False
-    default_action = profile.get("defaultAction")
-    archs = profile.get("architectures", [])
-    syscalls = profile.get("syscalls", [])
+    try:
+        default_action = profile.get("defaultAction")
+        archs = profile.get("architectures")
+        syscalls = profile.get("syscalls")
 
-    if not default_action or not archs:
-        return False
-
-    if "SCMP_ARCH_X86_64" not in archs or "SCMP_ARCH_AARCH64" not in archs:
-        return False
-
-    if default_action in ("SCMP_ACT_ERRNO", "SCMP_ACT_KILL"):
-        if not syscalls:
-            return False
-        total_allowed = 0
-        for entry in syscalls:
-            if entry.get("action") == "SCMP_ACT_ALLOW":
-                total_allowed += len(entry.get("names", []))
-        if total_allowed == 0:
+        if not isinstance(default_action, str) or not default_action:
             return False
 
-    return True
+        if not isinstance(archs, (list, tuple, set)):
+            return False
+
+        if "SCMP_ARCH_X86_64" not in archs or "SCMP_ARCH_AARCH64" not in archs:
+            return False
+
+        if default_action in ("SCMP_ACT_ERRNO", "SCMP_ACT_KILL"):
+            if not isinstance(syscalls, (list, tuple)):
+                return False
+            if not syscalls:
+                return False
+            total_allowed = 0
+            for entry in syscalls:
+                if isinstance(entry, dict) and entry.get("action") == "SCMP_ACT_ALLOW":
+                    names = entry.get("names")
+                    if isinstance(names, (list, tuple, set)):
+                        total_allowed += len(names)
+            if total_allowed == 0:
+                return False
+
+        return True
+    except Exception:
+        return False
 
 
 def evaluate_syscall_policy(
@@ -161,13 +181,29 @@ def evaluate_syscall_policy(
     Evaluates whether a given syscall is permitted by the OCI seccomp configuration.
     Returns 'SCMP_ACT_ALLOW' if explicitly allowlisted, or the profile's defaultAction
     (e.g., 'SCMP_ACT_ERRNO') if not allowlisted.
+    Fails closed on malformed profile or rule definitions.
     """
+    if not isinstance(syscall_name, str) or not syscall_name:
+        return "SCMP_ACT_ERRNO"
     if seccomp_profile is None:
         seccomp_profile = generate_standard_seccomp_profile()
-    for rule in seccomp_profile.get("syscalls", []):
-        if syscall_name in rule.get("names", []):
-            return rule.get("action", "SCMP_ACT_ALLOW")
-    return seccomp_profile.get("defaultAction", "SCMP_ACT_ERRNO")
+    if not isinstance(seccomp_profile, dict):
+        return "SCMP_ACT_ERRNO"
+
+    default_action = seccomp_profile.get("defaultAction", "SCMP_ACT_ERRNO")
+    if not isinstance(default_action, str):
+        default_action = "SCMP_ACT_ERRNO"
+
+    rules = seccomp_profile.get("syscalls", [])
+    if isinstance(rules, (list, tuple)):
+        for rule in rules:
+            if isinstance(rule, dict):
+                names = rule.get("names", [])
+                if isinstance(names, (list, tuple, set)) and syscall_name in names:
+                    action = rule.get("action", "SCMP_ACT_ALLOW")
+                    return str(action) if isinstance(action, str) else "SCMP_ACT_ALLOW"
+
+    return default_action
 
 
 class OciContainerProvider(ExecutionProvider):

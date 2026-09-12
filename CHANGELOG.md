@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dynamic version resolution across `tools/compile_evidence.py`, `tools/generate_verification_passport.py`, and `tools/generate_release_proof.py`.
 - Fixed REG-005 historical regression assertion to correctly verify modularized concurrency locking in `src/lib/lock.sh` and active flock mutual exclusion.
 - Hardened OCI seccomp profile in `packages/neuronix-core`: replaced empty syscalls with established, architecture-aware standard container userspace allowlist (x86_64, x86, aarch64) under fail-closed default-deny (`SCMP_ACT_ERRNO`).
-- Enforced regression invariants prohibiting empty allowlists under default error actions, and validated end-to-end workload operational lifecycle.
+- Enforced regression invariants prohibiting empty allowlists under default error actions, added fail-closed protection against malformed profile structures, and expanded allowlist to cover essential container userspace operations (`statfs`, `rseq`, `close_range`, `getgroups`, `setgroups`, `getpgid`, `setpgid`, `inotify_init1`, `capget`).
 
 ## [1.0.4] - 2026-09-11
 

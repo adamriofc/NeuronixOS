@@ -205,7 +205,7 @@ jobs:
         run: |
           python3 -m unittest tests/test_skill_system.py
 
-      - name: Execute Universal Execution Fabric & OCI Orthogonal Gate (51 Tests)
+      - name: Execute Universal Execution Fabric & OCI Orthogonal Gate (53 Tests)
         run: |
           python3 -m unittest tests/test_uef_provider_interface.py tests/test_uef_native_provider.py tests/test_uef_rootfs_provider.py tests/test_uef_oci_provider.py tests/test_uef_resolver.py
 

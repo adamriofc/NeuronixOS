@@ -569,6 +569,61 @@ class TestUefOciProvider(unittest.TestCase):
         valid_profile = generate_standard_seccomp_profile()
         self.assertTrue(validate_seccomp_profile(valid_profile))
 
+    def test_seccomp_malformed_input_resilience_and_fail_closed(self) -> None:
+        """Verifies validate_seccomp_profile and evaluate_syscall_policy fail closed on malformed structures."""
+        # Non-dict inputs must return False without crashing
+        self.assertFalse(validate_seccomp_profile(None))
+        self.assertFalse(validate_seccomp_profile("string_not_dict"))
+        self.assertFalse(validate_seccomp_profile([1, 2, 3]))
+
+        # Malformed architectures container type
+        self.assertFalse(validate_seccomp_profile({
+            "defaultAction": "SCMP_ACT_ERRNO",
+            "architectures": 12345,
+            "syscalls": [{"names": ["read"], "action": "SCMP_ACT_ALLOW"}],
+        }))
+
+        # Malformed syscall entry (string instead of dict)
+        self.assertFalse(validate_seccomp_profile({
+            "defaultAction": "SCMP_ACT_ERRNO",
+            "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_AARCH64"],
+            "syscalls": ["malformed_string_entry"],
+        }))
+
+        # Malformed names (None instead of list)
+        self.assertFalse(validate_seccomp_profile({
+            "defaultAction": "SCMP_ACT_ERRNO",
+            "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_AARCH64"],
+            "syscalls": [{"names": None, "action": "SCMP_ACT_ALLOW"}],
+        }))
+
+        # Policy evaluation resilience against invalid inputs
+        self.assertEqual(evaluate_syscall_policy("", {}), "SCMP_ACT_ERRNO")
+        self.assertEqual(evaluate_syscall_policy("read", None), "SCMP_ACT_ALLOW")
+        self.assertEqual(evaluate_syscall_policy("read", {"defaultAction": "SCMP_ACT_ERRNO", "syscalls": [{"names": None}]}), "SCMP_ACT_ERRNO")
+
+    def test_seccomp_custom_base_and_essential_syscalls_coverage(self) -> None:
+        """Verifies custom base allowlists and confirms essential modern container syscalls are present."""
+        # Empty base syscalls with defaultAction SCMP_ACT_ERRNO must raise ValueError
+        with self.assertRaises(ValueError):
+            generate_standard_seccomp_profile(default_action="SCMP_ACT_ERRNO", base_syscalls=[])
+
+        with self.assertRaises(ValueError):
+            generate_standard_seccomp_profile(default_action="SCMP_ACT_KILL", base_syscalls=[])
+
+        # Essential modern userspace syscalls must be covered in default profile
+        profile = generate_standard_seccomp_profile()
+        allowed = set(profile["syscalls"][0]["names"])
+        for essential in [
+            "statfs", "fstatfs", "statfs64", "fstatfs64",
+            "sync", "syncfs", "fadvise64", "close_range",
+            "rseq", "getgroups", "setgroups", "getpgid", "setpgid",
+            "getsid", "setsid", "getpgrp", "setpgrp",
+            "capget", "capset", "inotify_init", "inotify_init1",
+            "inotify_add_watch", "inotify_rm_watch",
+        ]:
+            self.assertIn(essential, allowed, f"Essential syscall '{essential}' must be present in standard container allowlist")
+
     @patch("subprocess.run")
     def test_seccomp_operational_workload_lifecycle(self, mock_run: MagicMock) -> None:
         """
