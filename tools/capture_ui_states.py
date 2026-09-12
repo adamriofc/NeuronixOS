@@ -14,6 +14,7 @@ repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 center_dir = os.path.join(repo_root, "packages/neuronix-center")
 assets_dir = os.path.join(repo_root, "docs/assets")
 artifacts_dir = os.path.expanduser("~/.gemini/antigravity/artifacts")
+brain_dir = "/home/adamrofc/.gemini/antigravity/brain/b5df519d-9fea-48e8-a2fd-50575a066515"
 os.makedirs(assets_dir, exist_ok=True)
 os.makedirs(artifacts_dir, exist_ok=True)
 
@@ -40,7 +41,10 @@ def capture(filename):
     # Copy to artifacts directory
     art_path = os.path.join(artifacts_dir, filename)
     shutil.copy2(out_path, art_path)
-    print(f"Captured: {filename} -> {out_path} and {art_path}")
+    if os.path.exists(brain_dir):
+        brain_path = os.path.join(brain_dir, filename)
+        shutil.copy2(out_path, brain_path)
+    print(f"Captured: {filename} -> {out_path}, {art_path}")
 
 
 def main():

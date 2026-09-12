@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-NEURONIX Center - Quiet Systems Control Surface & System Hub
+Conductor - System Control Surface & Runtime Hub
 Truthful system telemetry, modular developer environments, and atomic rollback hub.
-Designed with restraint: native, calm, compact, obvious, and keyboard-first.
+Ghostty & GNOME Wayland Tokyo 50 inspired aesthetic: compact, dark, translucent, and keyboard-first.
 All telemetry is probed directly from Linux kernel sysfs, /proc, and Nix profiles.
 """
 
@@ -51,7 +51,7 @@ except ImportError:
     HAS_CORE = False
 
 # -----------------------------------------------------------------------------
-# Explicit Design Tokens System (Quiet Systems UI)
+# Explicit Design Tokens System (Ghostty & GNOME Tokyo 50 Arc-Darker Aesthetic)
 # -----------------------------------------------------------------------------
 # Spacing scale (multiples of 4, consistent rhythm)
 SPACE_XS = 4    # micro
@@ -62,46 +62,46 @@ SPACE_XL = 24   # section
 SPACE_2XL = 32  # major section
 
 # Palette: Clean neutrals, zero neon / fluorescent slop
-# Dark Theme (Adwaita / Charcoal quiet systems aesthetic)
+# Dark Theme (Ghostty deep neutral & Tokyo Night / Arc-Darker slate)
 DARK_PALETTE = {
-    "bg_app": "#1c1c1f",
-    "bg_header": "#141416",
-    "bg_card": "#26262a",
-    "bg_card_alt": "#212124",
-    "bg_card_hover": "#2f2f34",
-    "fg_primary": "#f4f4f6",
-    "fg_secondary": "#d1d1d6",
-    "fg_muted": "#8e8e93",
-    "border": "#3a3a3e",
-    "border_subtle": "#2c2c30",
-    "btn_bg": "#2c2c30",
-    "btn_hover": "#38383e",
-    "btn_active": "#44444c",
-    "accent": "#0ea5e9",
-    "accent_hover": "#0284c7",
-    "status_healthy": "#10b981",    # Emerald
-    "status_working": "#0ea5e9",    # Sky blue
-    "status_attention": "#f59e0b",  # Amber
-    "status_error": "#ef4444",      # Rose
+    "bg_app": "#16161e",          # Ghostty deep backdrop (translucent, rich dark)
+    "bg_header": "#13141c",       # Refined titlebar / header
+    "bg_card": "#1f2335",         # Arc-Darker / Tokyo Night elevated card surface
+    "bg_card_alt": "#1a1b26",     # Inset container / surface alt
+    "bg_card_hover": "#292e42",   # Hover state for card/subtle elements
+    "fg_primary": "#c0caf5",      # Crisp Tokyo off-white text (never neon, easy on eyes)
+    "fg_secondary": "#a9b1d6",    # Tokyo secondary body
+    "fg_muted": "#787c99",        # Legible muted Tokyo slate
+    "border": "#2b3046",          # Crisp hairline border (no double borders)
+    "border_subtle": "#212536",   # Hairline subtle border
+    "btn_bg": "#24283b",          # Button surface
+    "btn_hover": "#2f354f",       # Button hover
+    "btn_active": "#3b4261",      # Button pressed
+    "accent": "#7aa2f7",          # Tokyo Night / Arc blue
+    "accent_hover": "#89b4fa",    # Tokyo light blue
+    "status_healthy": "#73daca",  # Tokyo teal green / emerald
+    "status_working": "#7aa2f7",  # Tokyo sky blue
+    "status_attention": "#e0af68",# Tokyo warm amber
+    "status_error": "#f7768e",    # Tokyo coral rose
 }
 
 # Light Theme (Clean slate / off-white neutral)
 LIGHT_PALETTE = {
-    "bg_app": "#f4f4f6",
-    "bg_header": "#ffffff",
+    "bg_app": "#f4f5f9",
+    "bg_header": "#e9ecf2",
     "bg_card": "#ffffff",
-    "bg_card_alt": "#f9f9fa",
-    "bg_card_hover": "#f0f0f2",
-    "fg_primary": "#18181b",
-    "fg_secondary": "#3f3f46",
-    "fg_muted": "#71717a",
-    "border": "#e4e4e7",
-    "border_subtle": "#ededf0",
-    "btn_bg": "#f0f0f2",
-    "btn_hover": "#e4e4e7",
-    "btn_active": "#d4d4d8",
-    "accent": "#0284c7",
-    "accent_hover": "#0369a1",
+    "bg_card_alt": "#f7f8fa",
+    "bg_card_hover": "#edf0f5",
+    "fg_primary": "#24283b",
+    "fg_secondary": "#4c566a",
+    "fg_muted": "#747d8d",
+    "border": "#d8dee9",
+    "border_subtle": "#e5e9f0",
+    "btn_bg": "#eef1f6",
+    "btn_hover": "#e2e6ee",
+    "btn_active": "#d4dae6",
+    "accent": "#3b82f6",
+    "accent_hover": "#2563eb",
     "status_healthy": "#059669",
     "status_working": "#0284c7",
     "status_attention": "#d97706",
@@ -464,7 +464,7 @@ def run_cli_mode(args):
     else:
         gen_display = "Active Substrate"
     print("=" * 64)
-    print(f"  NEURONIX CONTROL CENTER & SYSTEM HUB (v{VERSION})")
+    print(f"  CONDUCTOR CONTROL SURFACE & SYSTEM HUB (v{VERSION})")
     print("=" * 64)
     print(f"  ● Operating System : {telemetry.get('os', 'NEURONIX OS')}")
     print(f"  ● Kernel Version   : {telemetry.get('kernel', 'Linux')}")
@@ -527,7 +527,7 @@ def run_cli_mode(args):
             print(f"  ✗ Quickstart catalog exited with code {res.returncode}.")
 
     if args.opencode:
-        print("  [ LAUNCHING OPENCODE AI SYSTEM COPILOT ]")
+        print("  [ LAUNCHING AI SYSTEM ]")
         try:
             res = subprocess.run(["opencode", "--version"], check=False)
             if res.returncode != 0:
@@ -559,12 +559,31 @@ class NeuronixControlCenterApp:
         import tkinter.font as tkfont
 
         self.root = root
-        self.root.title("NEURONIX Control Center")
+        self.root.title("Conductor")
         
-        # Geometry: Resizable with sensible minimum and preferred sizes
-        self.root.geometry("720x520")
-        self.root.minsize(600, 420)
+        # Geometry: Resizable with sensible minimum and preferred sizes (compact, centered)
+        win_w, win_h = 720, 520
+        self.root.minsize(640, 440)
         self.root.resizable(True, True)
+
+        # Center window on screen if display dimensions are available
+        try:
+            sw = self.root.winfo_screenwidth()
+            sh = self.root.winfo_screenheight()
+            if sw > win_w and sh > win_h:
+                x = (sw - win_w) // 2
+                y = (sh - win_h) // 2
+                self.root.geometry(f"{win_w}x{win_h}+{x}+{y}")
+            else:
+                self.root.geometry(f"{win_w}x{win_h}")
+        except Exception:
+            self.root.geometry(f"{win_w}x{win_h}")
+
+        # Ghostty-inspired subtle window translucency on Wayland/X11 compositors
+        try:
+            self.root.wm_attributes("-alpha", 0.96)
+        except Exception:
+            pass
 
         # Palette selection based on system theme
         self.is_dark = detect_system_dark_mode()
@@ -573,23 +592,23 @@ class NeuronixControlCenterApp:
         # Thread-safe queue for background worker events
         self.ui_queue = queue.Queue()
 
-        # Semantic Typography scale
+        # Semantic Typography scale (Anti-slop: distinct system & designer typefaces)
         available_families = sorted(tkfont.families())
         sans_family = "sans-serif"
-        for candidate in ["Adwaita Sans", "Inter", "Cantarell", "Liberation Sans", "DejaVu Sans", "Helvetica"]:
+        for candidate in ["Inter", "Cantarell", "SF Pro Display", "SF Pro Text", "DejaVu Sans", "Helvetica"]:
             if candidate in available_families:
                 sans_family = candidate
                 break
 
         mono_family = "monospace"
-        for candidate in ["Adwaita Mono", "JetBrains Mono", "Liberation Mono", "DejaVu Sans Mono", "Consolas"]:
+        for candidate in ["JetBrains Mono", "Fira Code", "DejaVu Sans Mono", "Consolas"]:
             if candidate in available_families:
                 mono_family = candidate
                 break
 
-        self.font_title = tkfont.Font(family=sans_family, size=12, weight="bold")
+        self.font_title = tkfont.Font(family=sans_family, size=13, weight="bold")
         self.font_subtitle = tkfont.Font(family=sans_family, size=9, weight="bold")
-        self.font_section = tkfont.Font(family=sans_family, size=9, weight="bold")
+        self.font_section = tkfont.Font(family=sans_family, size=10, weight="bold")
         self.font_body = tkfont.Font(family=sans_family, size=9, weight="normal")
         self.font_body_bold = tkfont.Font(family=sans_family, size=9, weight="bold")
         self.font_caption = tkfont.Font(family=sans_family, size=8, weight="normal")
@@ -673,39 +692,42 @@ class NeuronixControlCenterApp:
         self.style.configure("TFrame", background=p["bg_app"])
         self.style.configure("Header.TFrame", background=p["bg_header"])
         self.style.configure("Footer.TFrame", background=p["bg_header"])
-        self.style.configure("Card.TFrame", background=p["bg_card"], relief="flat", borderwidth=1)
+        self.style.configure("Card.TFrame", background=p["bg_card"], relief="flat", borderwidth=0)
 
-        # Tab Notebook (Harmonized border with card outlines)
+        # Tab Notebook (Harmonized borderless client with Tokyo Night tabs)
         self.style.configure(
             "TNotebook",
-            background=p["bg_header"],
+            background=p["bg_app"],
             borderwidth=0,
             relief="flat",
-            tabmargins=[SPACE_MD, SPACE_XS, SPACE_MD, 0]
+            tabmargins=[SPACE_MD, SPACE_XS, SPACE_MD, 0],
+            bordercolor=p["bg_app"],
+            lightcolor=p["bg_app"],
+            darkcolor=p["bg_app"]
         )
         self.style.configure(
             "TNotebook.Tab",
             background=p["bg_header"],
             foreground=p["fg_muted"],
-            padding=[SPACE_MD, SPACE_SM],
+            padding=[SPACE_LG, SPACE_SM],
             font=self.font_subtitle,
             borderwidth=1,
             relief="flat",
-            lightcolor=p["border"],
-            darkcolor=p["border"],
-            bordercolor=p["border"],
-            focuscolor=p["border"]
+            lightcolor=p["border_subtle"],
+            darkcolor=p["border_subtle"],
+            bordercolor=p["border_subtle"],
+            focuscolor=p["accent"]
         )
         self.style.map(
             "TNotebook.Tab",
-            background=[("selected", p["bg_card"]), ("active", p["bg_card_alt"])],
-            foreground=[("selected", p["fg_primary"]), ("active", p["fg_secondary"])],
-            bordercolor=[("selected", p["border"]), ("active", p["border"])],
-            lightcolor=[("selected", p["border"]), ("active", p["border"])],
-            darkcolor=[("selected", p["border"]), ("active", p["border"])]
+            background=[("selected", p["bg_card"]), ("active", p["bg_card_hover"])],
+            foreground=[("selected", p["accent"]), ("active", p["fg_primary"])],
+            bordercolor=[("selected", p["border"]), ("active", p["border_subtle"])],
+            lightcolor=[("selected", p["border"]), ("active", p["border_subtle"])],
+            darkcolor=[("selected", p["border"]), ("active", p["border_subtle"])]
         )
 
-        # Buttons (Clean, flat Adwaita-style buttons)
+        # Buttons (Clean, flat Adwaita / Tokyo Night buttons)
         self.style.configure(
             "TButton",
             background=p["btn_bg"],
@@ -722,7 +744,8 @@ class NeuronixControlCenterApp:
         self.style.map(
             "TButton",
             background=[("active", p["btn_hover"]), ("pressed", p["btn_active"])],
-            foreground=[("active", p["fg_primary"]), ("pressed", p["fg_primary"])]
+            foreground=[("active", p["fg_primary"]), ("pressed", p["fg_primary"])],
+            bordercolor=[("active", p["accent"]), ("pressed", p["accent"])]
         )
 
         # Primary Action Buttons
@@ -735,12 +758,34 @@ class NeuronixControlCenterApp:
             borderwidth=1,
             relief="flat",
             lightcolor=p["border"],
-            darkcolor=p["border"]
+            darkcolor=p["border"],
+            bordercolor=p["border"]
         )
         self.style.map(
             "Primary.TButton",
             background=[("active", p["btn_hover"]), ("pressed", p["btn_active"])],
-            foreground=[("active", p["fg_primary"])]
+            foreground=[("active", p["fg_primary"])],
+            bordercolor=[("active", p["accent"]), ("pressed", p["accent"])]
+        )
+
+        # Toolbar Action Buttons (Compact horizontal padding for 4-column toolbar)
+        self.style.configure(
+            "Toolbar.TButton",
+            background=p["btn_bg"],
+            foreground=p["fg_primary"],
+            font=self.font_body_bold,
+            padding=[SPACE_SM, SPACE_SM],
+            borderwidth=1,
+            relief="flat",
+            lightcolor=p["border"],
+            darkcolor=p["border"],
+            bordercolor=p["border"]
+        )
+        self.style.map(
+            "Toolbar.TButton",
+            background=[("active", p["btn_hover"]), ("pressed", p["btn_active"])],
+            foreground=[("active", p["fg_primary"])],
+            bordercolor=[("active", p["accent"]), ("pressed", p["accent"])]
         )
 
         # Treeview (Generations timeline)
@@ -751,19 +796,40 @@ class NeuronixControlCenterApp:
             fieldbackground=p["bg_card"],
             font=self.font_mono,
             rowheight=24,
-            borderwidth=0
+            borderwidth=0,
+            relief="flat"
         )
         self.style.configure(
             "Treeview.Heading",
             background=p["bg_card_alt"],
             foreground=p["fg_muted"],
             font=self.font_caption,
-            relief="flat"
+            relief="flat",
+            borderwidth=0
         )
         self.style.map(
             "Treeview",
             background=[("selected", p["accent"])],
             foreground=[("selected", "#ffffff")]
+        )
+
+        # Dark Modern Scrollbar
+        self.style.configure(
+            "Vertical.TScrollbar",
+            background=p["btn_bg"],
+            troughcolor=p["bg_card_alt"],
+            bordercolor=p["border_subtle"],
+            arrowcolor=p["fg_muted"],
+            lightcolor=p["btn_bg"],
+            darkcolor=p["btn_bg"],
+            relief="flat",
+            borderwidth=0,
+            arrowsize=11
+        )
+        self.style.map(
+            "Vertical.TScrollbar",
+            background=[("active", p["btn_hover"]), ("pressed", p["btn_active"])],
+            arrowcolor=[("active", p["fg_primary"])]
         )
 
     def _build_header(self):
@@ -772,31 +838,22 @@ class NeuronixControlCenterApp:
         from tkinter import ttk
 
         p = self.palette
-        self.header_frame = tk.Frame(self.root, bg=p["bg_header"], padx=SPACE_MD, pady=SPACE_SM)
+        self.header_frame = tk.Frame(self.root, bg=p["bg_header"], padx=SPACE_LG, pady=SPACE_SM)
         self.header_frame.grid(row=0, column=0, sticky="ew")
         self.header_frame.columnconfigure(0, weight=1)
 
-        # Left brand info
+        # Left brand info (Conductor branding only)
         left_box = tk.Frame(self.header_frame, bg=p["bg_header"])
         left_box.grid(row=0, column=0, sticky="w")
 
         title_lbl = tk.Label(
             left_box,
-            text="NEURONIX OS",
+            text="Conductor",
             font=self.font_title,
             bg=p["bg_header"],
             fg=p["fg_primary"]
         )
         title_lbl.pack(side="left")
-
-        ver_lbl = tk.Label(
-            left_box,
-            text=f" v{VERSION}  •  Quiet Systems UI",
-            font=self.font_caption,
-            bg=p["bg_header"],
-            fg=p["fg_muted"]
-        )
-        ver_lbl.pack(side="left", padx=(SPACE_XS, 0), pady=(SPACE_XS // 2, 0))
 
         # Right status badge & refresh trigger
         right_box = tk.Frame(self.header_frame, bg=p["bg_header"])
@@ -861,7 +918,7 @@ class NeuronixControlCenterApp:
         self.tab_overview.rowconfigure(0, weight=1)
 
         # Card 1: System Substrate
-        card1 = tk.Frame(self.tab_overview, bg=p["bg_card"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
+        card1 = tk.Frame(self.tab_overview, bg=p["bg_card"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
         card1.grid(row=0, column=0, sticky="nsew", padx=(0, SPACE_XS), pady=(0, SPACE_SM))
         card1.columnconfigure(1, weight=1)
 
@@ -873,7 +930,7 @@ class NeuronixControlCenterApp:
         self.ov_storage_val = self._add_metric_row(card1, 4, "Root Filesystem", "Reading...")
 
         # Card 2: Hardware Capacity
-        card2 = tk.Frame(self.tab_overview, bg=p["bg_card"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
+        card2 = tk.Frame(self.tab_overview, bg=p["bg_card"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
         card2.grid(row=0, column=1, sticky="nsew", padx=(SPACE_XS, 0), pady=(0, SPACE_SM))
         card2.columnconfigure(1, weight=1)
 
@@ -885,23 +942,23 @@ class NeuronixControlCenterApp:
         self.ov_battery_val = self._add_metric_row(card2, 4, "Battery Ceiling", "Reading...")
 
         # Primary Actions Toolbar (Centered, calm, obvious)
-        act_frame = tk.Frame(self.tab_overview, bg=p["bg_card_alt"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
+        act_frame = tk.Frame(self.tab_overview, bg=p["bg_card_alt"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
         act_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, SPACE_XS))
         act_frame.columnconfigure(0, weight=1)
         act_frame.columnconfigure(1, weight=1)
         act_frame.columnconfigure(2, weight=1)
         act_frame.columnconfigure(3, weight=1)
 
-        self.btn_upgrade = ttk.Button(act_frame, text="Staged Upgrade", command=self.on_upgrade, style="Primary.TButton")
+        self.btn_upgrade = ttk.Button(act_frame, text="Staged Upgrade", command=self.on_upgrade, style="Toolbar.TButton")
         self.btn_upgrade.grid(row=0, column=0, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        self.btn_rollback = ttk.Button(act_frame, text="Rollback", command=self.on_rollback, style="Primary.TButton")
+        self.btn_rollback = ttk.Button(act_frame, text="Rollback", command=self.on_rollback, style="Toolbar.TButton")
         self.btn_rollback.grid(row=0, column=1, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        self.btn_doctor = ttk.Button(act_frame, text="Doctor Diagnostics", command=self.on_doctor, style="Primary.TButton")
+        self.btn_doctor = ttk.Button(act_frame, text="Doctor Diagnostics", command=self.on_doctor, style="Toolbar.TButton")
         self.btn_doctor.grid(row=0, column=2, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        self.btn_terminal = ttk.Button(act_frame, text="Terminal Shell", command=self.launch_shell, style="Primary.TButton")
+        self.btn_terminal = ttk.Button(act_frame, text="Terminal Shell", command=self.launch_shell, style="Toolbar.TButton")
         self.btn_terminal.grid(row=0, column=3, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
     def _setup_system_tab(self):
@@ -910,12 +967,12 @@ class NeuronixControlCenterApp:
         from tkinter import ttk
 
         p = self.palette
-        self.tab_system.columnconfigure(0, weight=3)
-        self.tab_system.columnconfigure(1, weight=2)
+        self.tab_system.columnconfigure(0, weight=1)
+        self.tab_system.columnconfigure(1, weight=1)
         self.tab_system.rowconfigure(0, weight=1)
 
         # Left: Generations Treeview with scrollbar
-        tree_frame = tk.Frame(self.tab_system, bg=p["bg_card"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
+        tree_frame = tk.Frame(self.tab_system, bg=p["bg_card"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
         tree_frame.grid(row=0, column=0, sticky="nsew", padx=(0, SPACE_XS))
         tree_frame.rowconfigure(1, weight=1)
         tree_frame.columnconfigure(0, weight=1)
@@ -929,7 +986,7 @@ class NeuronixControlCenterApp:
 
         self.gen_tree = ttk.Treeview(tree_inner, columns=("entry",), show="headings", selectmode="browse")
         self.gen_tree.heading("entry", text="Nix Generation Record", anchor="w")
-        self.gen_tree.column("entry", width=430, minwidth=280, stretch=True, anchor="w")
+        self.gen_tree.column("entry", width=300, minwidth=200, stretch=True, anchor="w")
         self.gen_tree.grid(row=0, column=0, sticky="nsew")
 
         tree_scroll = ttk.Scrollbar(tree_inner, orient="vertical", command=self.gen_tree.yview)
@@ -937,7 +994,7 @@ class NeuronixControlCenterApp:
         tree_scroll.grid(row=0, column=1, sticky="ns")
 
         # Right: Maintenance Actions Card
-        maint_card = tk.Frame(self.tab_system, bg=p["bg_card"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
+        maint_card = tk.Frame(self.tab_system, bg=p["bg_card"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
         maint_card.grid(row=0, column=1, sticky="nsew", padx=(SPACE_XS, 0))
         maint_card.columnconfigure(0, weight=1)
 
@@ -949,7 +1006,7 @@ class NeuronixControlCenterApp:
             font=self.font_caption,
             bg=p["bg_card"],
             fg=p["fg_muted"],
-            wraplength=200,
+            wraplength=280,
             justify="left"
         ).pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_MD))
 
@@ -988,30 +1045,30 @@ class NeuronixControlCenterApp:
         nrx_bin = get_neuronix_cmd()
 
         # Left: Hermetic Environments
-        dev_card = tk.Frame(self.tab_developer, bg=p["bg_card"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
+        dev_card = tk.Frame(self.tab_developer, bg=p["bg_card"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
         dev_card.grid(row=0, column=0, sticky="nsew", padx=(0, SPACE_XS))
 
         tk.Label(dev_card, text="Modular Dev Stacks", font=self.font_section, bg=p["bg_card"], fg=p["fg_primary"]).pack(anchor="w", padx=SPACE_MD, pady=(SPACE_SM, SPACE_XS))
-        tk.Label(dev_card, text="Isolated hermetic Nix developer shells with pre-cached toolchains.", font=self.font_caption, bg=p["bg_card"], fg=p["fg_muted"], wraplength=230, justify="left").pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_SM))
+        tk.Label(dev_card, text="Isolated hermetic Nix developer shells with pre-cached toolchains.", font=self.font_caption, bg=p["bg_card"], fg=p["fg_muted"], wraplength=280, justify="left").pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_SM))
 
         def launch_stack(stack):
             launch_in_terminal(nrx_bin + ["dev", stack], parent_window=self.root)
 
-        ttk.Button(dev_card, text="OpenCode AI System Copilot", command=lambda: launch_in_terminal(["opencode"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="AI System", command=lambda: launch_in_terminal(["opencode"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
         ttk.Button(dev_card, text="Python Substrate (uv)", command=lambda: launch_stack("python")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
         ttk.Button(dev_card, text="Rust Substrate (cargo)", command=lambda: launch_stack("rust")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
         ttk.Button(dev_card, text="Node.js Substrate (pnpm)", command=lambda: launch_stack("node")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
         ttk.Button(dev_card, text="AI Substrate (PyTorch)", command=lambda: launch_stack("ai")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
 
         # Right: Tools & Catalog
-        tools_card = tk.Frame(self.tab_developer, bg=p["bg_card"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
+        tools_card = tk.Frame(self.tab_developer, bg=p["bg_card"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
         tools_card.grid(row=0, column=1, sticky="nsew", padx=(SPACE_XS, 0))
 
         tk.Label(tools_card, text="Diagnostic & System Tools", font=self.font_section, bg=p["bg_card"], fg=p["fg_primary"]).pack(anchor="w", padx=SPACE_MD, pady=(SPACE_SM, SPACE_XS))
-        tk.Label(tools_card, text="Host inspection, app catalog, and interactive onboarding.", font=self.font_caption, bg=p["bg_card"], fg=p["fg_muted"], wraplength=230, justify="left").pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_SM))
+        tk.Label(tools_card, text="Host inspection, app catalog, and interactive onboarding.", font=self.font_caption, bg=p["bg_card"], fg=p["fg_muted"], wraplength=280, justify="left").pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_SM))
 
-        ttk.Button(tools_card, text="Launch Interactive Terminal (Ctrl+T)", command=self.launch_shell).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(tools_card, text="Run System Doctor (Ctrl+D)", command=self.on_doctor).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="Terminal Shell (Ctrl+T)", command=self.launch_shell).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="System Doctor (Ctrl+D)", command=self.on_doctor).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
         ttk.Button(tools_card, text="Explore Curated Apps (Quickstart)", command=self.on_quickstart).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
         ttk.Button(tools_card, text="Launch Welcome Tour", command=lambda: launch_in_terminal(nrx_bin + ["welcome"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
 
@@ -1024,7 +1081,7 @@ class NeuronixControlCenterApp:
         self.tab_advanced.columnconfigure(0, weight=1)
         self.tab_advanced.rowconfigure(0, weight=1)
 
-        adv_card = tk.Frame(self.tab_advanced, bg=p["bg_card"], bd=1, relief="solid", highlightbackground=p["border"], highlightthickness=1)
+        adv_card = tk.Frame(self.tab_advanced, bg=p["bg_card"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
         adv_card.grid(row=0, column=0, sticky="nsew")
         adv_card.columnconfigure(1, weight=1)
 
@@ -1312,7 +1369,7 @@ class NeuronixControlCenterApp:
             gen_str = str(gen) if gen else "N/A"
 
         lines = [
-            f"NEURONIX OS Control Center Diagnostics (v{VERSION})",
+            f"Conductor System Diagnostics (v{VERSION})",
             "--------------------------------------------------",
             f"OS             : {tel.get('os', 'NEURONIX OS')}",
             f"Kernel         : {tel.get('kernel', 'Linux')}",
@@ -1356,18 +1413,18 @@ def run_gui_mode():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="NEURONIX Center - Quiet Systems Control Center")
+    parser = argparse.ArgumentParser(description="Conductor - System Control Hub")
     parser.add_argument("--cli", action="store_true", help="Run in terminal CLI mode")
     parser.add_argument("--list-generations", action="store_true", help="List system generation history")
     parser.add_argument("--diet", action="store_true", help="Run store garbage collection and TRIM")
-    parser.add_argument("--opencode", action="store_true", help="Launch or check OpenCode AI System Assistant")
+    parser.add_argument("--opencode", action="store_true", help="Launch or check AI System Assistant")
     parser.add_argument("--rollback", action="store_true", help="Roll back to previous generation")
     parser.add_argument("--upgrade", action="store_true", help="Perform staged system upgrade")
     parser.add_argument("--check-update", action="store_true", help="Check for available upstream updates")
     parser.add_argument("--doctor", action="store_true", help="Run deep diagnostic and issue reporting tool")
     parser.add_argument("--welcome", action="store_true", help="Launch interactive first-boot onboarding guide")
     parser.add_argument("--quickstart", action="store_true", help="Explore curated daily apps catalog (Flatpak)")
-    parser.add_argument("--version", action="version", version=f"NEURONIX Center {VERSION}")
+    parser.add_argument("--version", action="version", version=f"Conductor {VERSION}")
 
     args = parser.parse_args()
 
