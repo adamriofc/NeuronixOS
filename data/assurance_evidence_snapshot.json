@@ -4,7 +4,7 @@
   "version": "1.0.5",
   "release_tag": "v1.0.5",
   "last_verified_run_id": "LOCAL_VERIFIED",
-  "last_verified_commit_sha": "3237b24227ebd5812fceff00c84fabb3f0fafeae",
+  "last_verified_commit_sha": "d23ceaf4b48c1940483a24ca54bac80b9bedee93",
   "taxonomy": {
     "CATALOG": 1384,
     "VERIFIED": 1384,
@@ -20,8 +20,8 @@
     "confidence_score_percentage": 100
   },
   "verification_status": "PASSING_ALL",
-  "verification_timestamp": "2026-09-12T03:07:36Z",
-  "freshness_epoch": 1789182456,
+  "verification_timestamp": "2026-09-12T03:27:17Z",
+  "freshness_epoch": 1789183637,
   "release_qualification_tier": "L4_HYBRID_ENGINE_QUALIFIED",
   "hardware_qualification_mode": "PORTABLE_HARDWARE_SIMULATION",
   "l5_hardware_qualification": "BARE_METAL_STAGE_RESERVED",
@@ -35,5 +35,5 @@
     "L4_BENCHMARK",
     "L5_REAL_E2E"
   ],
-  "compiler_digest": "2140a8b0c8f965b3fcc59e89a74b3ae4050fb996d3541c8334b5d7ee05429901"
+  "compiler_digest": "16433c22c735df65053328db2a0590995136178c57d6c28f37dda69bc47151af"
 }
