@@ -118,7 +118,7 @@ def get_system_telemetry() -> Dict[str, Any]:
     """Probes complete truthful system runtime telemetry."""
     from .generation import get_active_generation
     return {
-        "os": "NEURONIX OS (Declarative NixOS Substrate)",
+        "os": "Neuronix OS",
         "kernel": os.uname().release if hasattr(os, "uname") else "Linux",
         "generation": get_active_generation(),
         "cpu": get_cpu_info(),

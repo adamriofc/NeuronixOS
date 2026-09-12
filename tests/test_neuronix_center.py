@@ -204,10 +204,28 @@ class TestNeuronixCenterGUI(unittest.TestCase):
             self.assertFalse(app.is_busy)
             self.assertEqual(str(app.btn_upgrade.cget("state")), "normal")
 
-            # Verify Treeview configuration
+            # Verify Treeview configuration and Generation Record heading
             self.assertIn("entry", app.gen_tree["columns"])
+            self.assertEqual(app.gen_tree.heading("entry")["text"], "Generation Record")
+
+            # Verify OS display strictly formats to Neuronix OS (no NixOS)
+            app._apply_telemetry_results({"os": "NEURONIX OS (Declarative NixOS Substrate)"}, [], 0.01)
+            self.assertEqual(app.ov_os_val.cget("text"), "Neuronix OS")
+            app._apply_telemetry_results({"os": "NEURONIX OS (NixOS)"}, [], 0.01)
+            self.assertEqual(app.ov_os_val.cget("text"), "Neuronix OS")
+            app._apply_telemetry_results({"os": "Neuronix OS"}, [], 0.01)
+            self.assertEqual(app.ov_os_val.cget("text"), "Neuronix OS")
         finally:
             root.destroy()
+
+    def test_zero_em_dashes(self):
+        # Invariant: zero em-dashes in conductor
+        center_py = os.path.join(repo_root, "packages/neuronix-center/neuronix_center.py")
+        with open(center_py, "rb") as f:
+            content = f.read()
+        em_dash_bytes = bytes([0xE2, 0x80, 0x94])
+        self.assertNotIn(em_dash_bytes, content)
+        self.assertNotIn(chr(8212).encode("utf-8"), content)
 
 
 class TestNeuronixCenterCLI(unittest.TestCase):

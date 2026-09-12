@@ -64,20 +64,20 @@ SPACE_2XL = 32  # major section
 # Palette: Clean neutrals, zero neon / fluorescent slop
 # Dark Theme (Ghostty deep neutral & Tokyo Night / Arc-Darker slate)
 DARK_PALETTE = {
-    "bg_app": "#16161e",          # Ghostty deep backdrop (translucent, rich dark)
-    "bg_header": "#13141c",       # Refined titlebar / header
-    "bg_card": "#1f2335",         # Arc-Darker / Tokyo Night elevated card surface
-    "bg_card_alt": "#1a1b26",     # Inset container / surface alt
-    "bg_card_hover": "#292e42",   # Hover state for card/subtle elements
+    "bg_app": "#13141c",          # Deep surface backdrop (Ghostty translucent glass)
+    "bg_header": "#16161e",       # Sleek Tokyo 50 header surface
+    "bg_card": "#1a1b26",         # Tokyo Night elevated card surface
+    "bg_card_alt": "#16161e",     # Inset container / surface alt
+    "bg_card_hover": "#24283b",   # Hover state for card/subtle elements
     "fg_primary": "#c0caf5",      # Crisp Tokyo off-white text (never neon, easy on eyes)
     "fg_secondary": "#a9b1d6",    # Tokyo secondary body
-    "fg_muted": "#787c99",        # Legible muted Tokyo slate
-    "border": "#2b3046",          # Crisp hairline border (no double borders)
-    "border_subtle": "#212536",   # Hairline subtle border
+    "fg_muted": "#565f89",        # Legible muted Tokyo slate
+    "border": "#292e42",          # Hairline card border (no double borders)
+    "border_subtle": "#1f2335",   # Hairline subtle border
     "btn_bg": "#24283b",          # Button surface
     "btn_hover": "#2f354f",       # Button hover
     "btn_active": "#3b4261",      # Button pressed
-    "accent": "#7aa2f7",          # Tokyo Night / Arc blue
+    "accent": "#7aa2f7",          # Tokyo Night / Wayland active accent
     "accent_hover": "#89b4fa",    # Tokyo light blue
     "status_healthy": "#73daca",  # Tokyo teal green / emerald
     "status_working": "#7aa2f7",  # Tokyo sky blue
@@ -302,7 +302,7 @@ def get_system_telemetry():
     if HAS_CORE:
         return core_telemetry()
     telemetry = {
-        "os": "NEURONIX OS (Declarative NixOS Substrate)",
+        "os": "Neuronix OS",
         "kernel": os.uname().release,
         "generation": "Unknown",
         "cpu": "Unknown Processor",
@@ -466,7 +466,10 @@ def run_cli_mode(args):
     print("=" * 64)
     print(f"  CONDUCTOR CONTROL SURFACE & SYSTEM HUB (v{VERSION})")
     print("=" * 64)
-    print(f"  ● Operating System : {telemetry.get('os', 'NEURONIX OS')}")
+    os_name = telemetry.get('os', 'Neuronix OS')
+    if not os_name or "Neuronix" in str(os_name) or "NEURONIX" in str(os_name) or "NixOS" in str(os_name):
+        os_name = "Neuronix OS"
+    print(f"  ● Operating System : {os_name}")
     print(f"  ● Kernel Version   : {telemetry.get('kernel', 'Linux')}")
     print(f"  ● Active Generation: {gen_display}")
     print(f"  ● Processor (CPU)  : {telemetry.get('cpu', 'Unknown')}")
@@ -581,7 +584,7 @@ class NeuronixControlCenterApp:
 
         # Ghostty-inspired subtle window translucency on Wayland/X11 compositors
         try:
-            self.root.wm_attributes("-alpha", 0.92)
+            self.root.wm_attributes("-alpha", 0.90)
         except Exception:
             pass
 
@@ -903,7 +906,7 @@ class NeuronixControlCenterApp:
 
         self.refresh_btn = ttk.Button(
             right_box,
-            text="Refresh",
+            text="⟳ Refresh",
             command=self.refresh_telemetry
         )
         self.refresh_btn.pack(side="left")
@@ -973,16 +976,16 @@ class NeuronixControlCenterApp:
         act_frame.columnconfigure(2, weight=1)
         act_frame.columnconfigure(3, weight=1)
 
-        self.btn_upgrade = ttk.Button(act_frame, text="Staged Upgrade", command=self.on_upgrade, style="Toolbar.TButton")
+        self.btn_upgrade = ttk.Button(act_frame, text="▲ Staged Upgrade", command=self.on_upgrade, style="Toolbar.TButton")
         self.btn_upgrade.grid(row=0, column=0, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        self.btn_rollback = ttk.Button(act_frame, text="Rollback", command=self.on_rollback, style="Toolbar.TButton")
+        self.btn_rollback = ttk.Button(act_frame, text="↺ Rollback", command=self.on_rollback, style="Toolbar.TButton")
         self.btn_rollback.grid(row=0, column=1, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        self.btn_doctor = ttk.Button(act_frame, text="Doctor Diagnostics", command=self.on_doctor, style="Toolbar.TButton")
+        self.btn_doctor = ttk.Button(act_frame, text="◆ Diagnostics", command=self.on_doctor, style="Toolbar.TButton")
         self.btn_doctor.grid(row=0, column=2, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
-        self.btn_terminal = ttk.Button(act_frame, text="Terminal Shell", command=self.launch_shell, style="Toolbar.TButton")
+        self.btn_terminal = ttk.Button(act_frame, text="❯_ Terminal", command=self.launch_shell, style="Toolbar.TButton")
         self.btn_terminal.grid(row=0, column=3, padx=SPACE_XS, pady=SPACE_SM, sticky="ew")
 
     def _setup_system_tab(self):
@@ -1009,7 +1012,7 @@ class NeuronixControlCenterApp:
         tree_inner.columnconfigure(0, weight=1)
 
         self.gen_tree = ttk.Treeview(tree_inner, columns=("entry",), show="headings", selectmode="browse")
-        self.gen_tree.heading("entry", text="Nix Generation Record", anchor="w")
+        self.gen_tree.heading("entry", text="Generation Record", anchor="w")
         self.gen_tree.column("entry", width=360, minwidth=240, stretch=True, anchor="w")
         self.gen_tree.grid(row=0, column=0, sticky="nsew")
 
@@ -1038,13 +1041,13 @@ class NeuronixControlCenterApp:
             justify="left"
         ).pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_XS))
 
-        self.btn_maint_upgrade = ttk.Button(maint_card, text="Prepare Staged Upgrade", command=self.on_upgrade)
+        self.btn_maint_upgrade = ttk.Button(maint_card, text="▲ Prepare Staged Upgrade", command=self.on_upgrade)
         self.btn_maint_upgrade.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        self.btn_maint_rollback = ttk.Button(maint_card, text="Atomic Rollback", command=self.on_rollback)
+        self.btn_maint_rollback = ttk.Button(maint_card, text="↺ Atomic Rollback", command=self.on_rollback)
         self.btn_maint_rollback.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        self.btn_maint_diet = ttk.Button(maint_card, text="Storage Diet (GC & TRIM)", command=self.on_diet)
+        self.btn_maint_diet = ttk.Button(maint_card, text="◈ Storage Diet (GC & TRIM)", command=self.on_diet)
         self.btn_maint_diet.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        self.btn_maint_update = ttk.Button(maint_card, text="Check Upstream Updates", command=self.on_check_update)
+        self.btn_maint_update = ttk.Button(maint_card, text="⟳ Check Upstream Updates", command=self.on_check_update)
         self.btn_maint_update.pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
 
         # Status feedback display
@@ -1082,11 +1085,11 @@ class NeuronixControlCenterApp:
         def launch_stack(stack):
             launch_in_terminal(nrx_bin + ["dev", stack], parent_window=self.root)
 
-        ttk.Button(dev_card, text="AI System", command=lambda: launch_in_terminal(["opencode"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(dev_card, text="Python Substrate (uv)", command=lambda: launch_stack("python")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(dev_card, text="Rust Substrate (cargo)", command=lambda: launch_stack("rust")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(dev_card, text="Node.js Substrate (pnpm)", command=lambda: launch_stack("node")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(dev_card, text="AI Substrate (PyTorch)", command=lambda: launch_stack("ai")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="✦ AI System", command=lambda: launch_in_terminal(["opencode"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="◆ Python Substrate (uv)", command=lambda: launch_stack("python")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="◆ Rust Substrate (cargo)", command=lambda: launch_stack("rust")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="◆ Node.js Substrate (pnpm)", command=lambda: launch_stack("node")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(dev_card, text="◆ AI Substrate (PyTorch)", command=lambda: launch_stack("ai")).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
 
         # Right: Tools & Catalog
         tools_card = tk.Frame(self.tab_developer, bg=p["bg_card"], bd=0, highlightthickness=1, highlightbackground=p["border"], highlightcolor=p["border"])
@@ -1095,10 +1098,10 @@ class NeuronixControlCenterApp:
         tk.Label(tools_card, text="Diagnostic & System Tools", font=self.font_section, bg=p["bg_card"], fg=p["fg_primary"]).pack(anchor="w", padx=SPACE_MD, pady=(SPACE_SM, SPACE_XS))
         tk.Label(tools_card, text="Host inspection, app catalog, and interactive onboarding.", font=self.font_caption, bg=p["bg_card"], fg=p["fg_muted"], wraplength=280, justify="left").pack(anchor="w", padx=SPACE_MD, pady=(0, SPACE_SM))
 
-        ttk.Button(tools_card, text="Terminal Shell (Ctrl+T)", command=self.launch_shell).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(tools_card, text="System Doctor (Ctrl+D)", command=self.on_doctor).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(tools_card, text="Curated Apps (Quickstart)", command=self.on_quickstart).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
-        ttk.Button(tools_card, text="Launch Welcome Tour", command=lambda: launch_in_terminal(nrx_bin + ["welcome"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="❯_ Terminal Shell (Ctrl+T)", command=self.launch_shell).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="◆ System Doctor (Ctrl+D)", command=self.on_doctor).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="◈ Curated Apps (Quickstart)", command=self.on_quickstart).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
+        ttk.Button(tools_card, text="▲ Launch Welcome Tour", command=lambda: launch_in_terminal(nrx_bin + ["welcome"], parent_window=self.root)).pack(fill="x", padx=SPACE_MD, pady=SPACE_XS)
 
     def _setup_advanced_tab(self):
         """Advanced: Cryptographic StateRoot, provenance, and storage contracts."""
@@ -1148,7 +1151,7 @@ class NeuronixControlCenterApp:
         act_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, SPACE_XS))
         act_frame.columnconfigure(0, weight=1)
 
-        ttk.Button(act_frame, text="Copy Diagnostics to Clipboard", command=self._copy_diagnostics, style="Toolbar.TButton").grid(row=0, column=0, padx=SPACE_MD, pady=SPACE_SM, sticky="ew")
+        ttk.Button(act_frame, text="⎘ Copy Diagnostics to Clipboard", command=self._copy_diagnostics, style="Toolbar.TButton").grid(row=0, column=0, padx=SPACE_MD, pady=SPACE_SM, sticky="ew")
 
     def _build_footer(self):
         """Footer: Live telemetry source disclaimer and keyboard shortcuts hint."""
@@ -1250,9 +1253,9 @@ class NeuronixControlCenterApp:
         self.is_refreshing = False
 
         # Update Overview card labels with sanitized lengths and formatting
-        os_raw = tel.get("os", "NEURONIX OS")
-        if "Declarative NixOS" in str(os_raw):
-            os_display = "NEURONIX OS (NixOS)"
+        os_raw = tel.get("os", "Neuronix OS")
+        if not os_raw or "Neuronix" in str(os_raw) or "NEURONIX" in str(os_raw) or "NixOS" in str(os_raw):
+            os_display = "Neuronix OS"
         else:
             os_display = clean_display_text(os_raw, 28)
         self.ov_os_val.configure(text=os_display)
@@ -1419,10 +1422,14 @@ class NeuronixControlCenterApp:
         else:
             gen_str = str(gen) if gen else "N/A"
 
+        os_name = tel.get('os', 'Neuronix OS')
+        if not os_name or "Neuronix" in str(os_name) or "NEURONIX" in str(os_name) or "NixOS" in str(os_name):
+            os_name = "Neuronix OS"
+
         lines = [
             f"Conductor System Diagnostics (v{VERSION})",
             "--------------------------------------------------",
-            f"OS             : {tel.get('os', 'NEURONIX OS')}",
+            f"OS             : {os_name}",
             f"Kernel         : {tel.get('kernel', 'Linux')}",
             f"Generation     : {gen_str}",
             f"CPU            : {tel.get('cpu', 'N/A')}",
