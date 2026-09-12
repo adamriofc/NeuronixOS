@@ -37,7 +37,7 @@
           },
           "storage": {
             "mount_type": "HOST_PASSTHROUGH",
-            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "workspace_bind": "/home/adamrofc/Projects/NeuronixOS",
             "auto_vaporize_on_exit": true
           },
           "network": {
@@ -101,7 +101,7 @@
           },
           "storage": {
             "mount_type": "MEMFD_VOLATILE_RAM",
-            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "workspace_bind": "/home/adamrofc/Projects/NeuronixOS",
             "auto_vaporize_on_exit": true
           },
           "network": {
@@ -165,7 +165,7 @@
           },
           "storage": {
             "mount_type": "MEMFD_VOLATILE_RAM",
-            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "workspace_bind": "/home/adamrofc/Projects/NeuronixOS",
             "auto_vaporize_on_exit": true
           },
           "network": {
@@ -229,7 +229,7 @@
           },
           "storage": {
             "mount_type": "MEMFD_VOLATILE_RAM",
-            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "workspace_bind": "/home/adamrofc/Projects/NeuronixOS",
             "auto_vaporize_on_exit": true
           },
           "network": {
@@ -293,7 +293,7 @@
           },
           "storage": {
             "mount_type": "MEMFD_VOLATILE_RAM",
-            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "workspace_bind": "/home/adamrofc/Projects/NeuronixOS",
             "auto_vaporize_on_exit": true
           },
           "network": {
@@ -353,7 +353,7 @@
           },
           "storage": {
             "mount_type": "MEMFD_VOLATILE_RAM",
-            "workspace_bind": "/home/adamrofc/.gemini/antigravity/scratch/NeuronixOS",
+            "workspace_bind": "/home/adamrofc/Projects/NeuronixOS",
             "auto_vaporize_on_exit": true
           },
           "network": {
