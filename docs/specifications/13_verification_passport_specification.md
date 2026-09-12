@@ -75,7 +75,7 @@ A conforming NEURONIX VERIFICATION PASSPORT adheres strictly to schema version `
     "distribution": "NEURONIX OS",
     "release_version": "1.0.5",
     "release_tag": "v1.0.5",
-    "commit_sha": "b6909967d41fcf26d6d4a06687f1245df04259c6",
+    "commit_sha": "36ea5b3b631c5e08ccd3482797be4685bf0f9a70",
     "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
     "proof_engine_version": "1.1.0"
   },

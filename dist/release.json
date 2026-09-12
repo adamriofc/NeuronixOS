@@ -2,7 +2,7 @@
   "distribution": "NEURONIX OS",
   "version": "1.0.5",
   "release_tag": "v1.0.5",
-  "commit": "b6909967d41fcf26d6d4a06687f1245df04259c6",
+  "commit": "36ea5b3b631c5e08ccd3482797be4685bf0f9a70",
   "nixpkgs_commit": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
   "nixpkgs_url": "github:NixOS/nixpkgs/3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
   "state_version": "24.11",
@@ -23,5 +23,5 @@
     "slsa_provenance_predicate": "https://slsa.dev/provenance/v1",
     "build_reproducibility": "deterministic_two_build_identical"
   },
-  "created_at": "2026-09-12T04:56:19Z"
+  "created_at": "2026-09-12T06:27:18Z"
 }
