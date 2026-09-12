@@ -55,7 +55,7 @@
 - [Command-Line Reference (neuronix)](#command-line-reference-neuronix)
 - [Core System Components](#core-system-components)
   - [1. Declarative Calamares Installation Engine](#1-declarative-calamares-installation-engine)
-  - [2. System Control Center (neuronix-center)](#2-system-control-center-neuronix-center)
+  - [2. System Control Center (Conductor)](#2-system-control-center-conductor)
   - [3. Isolated Development Environments (neuronix dev)](#3-isolated-development-environments-neuronix-dev)
   - [4. In-Memory Micro-VM Simulation (neuronix sandbox)](#4-in-memory-micro-vm-simulation-neuronix-sandbox)
   - [5. Model Context Protocol (MCP) Server](#5-model-context-protocol-mcp-server)
@@ -508,20 +508,58 @@ The graphical installer functions as a declarative flake generator ([ADR-002](do
 - Formats target storage using the Btrfs subvolume layout (`@`, `@nix`, `@home`, `@snapshots`, `@swap`).
 - Runs `nixos-install --flake /mnt/etc/nixos#neuronix-desktop`, producing a fully declarative system installation upon first boot.
 
-### 2. System Control Center (neuronix center)
-The official graphical desktop control surface and administration hub engineered under the "Quiet Systems UI" doctrine (native, calm, compact, obvious, and keyboard-first with zero AI slop):
+### 2. System Control Center (Conductor)
+The official graphical desktop control surface and administration hub engineered under the "Quiet Systems UI" doctrine with an authentic Ghostty and GNOME Wayland Tokyo 50 aesthetic (native, calm, compact, translucent, and keyboard-first with pure-text buttons and zero AI slop):
 
+#### Conductor Operational Surfaces & Visual States
+
+##### 1. Overview Surface
 <p align="center">
-  <img src="docs/assets/neuronix_center_overview.png" alt="NEURONIX Control Center - Quiet Systems UI" width="90%">
+  <img src="docs/assets/neuronix_center_overview.png" alt="Conductor - Overview Surface" width="90%">
 </p>
 
-- **Progressive Disclosure Architecture (4 Clean Tab Surfaces):**
-  - **Overview:** Calm system substrate summary (OS, kernel release, active generation, Btrfs ZSTD:3 mount) and real hardware telemetry (CPU, RAM, GPU, battery ceiling) alongside immediate primary actions (`Staged Upgrade`, `Rollback`, `Doctor`, `Terminal`).
-  - **System:** Interactive generation timeline (`Treeview`), staged system upgrades, atomic generational rollback with precision duration tracking (`time.monotonic`), and store maintenance (garbage collection and TRIM).
-  - **Developer:** Quick launch access to hermetic isolated developer shells (`python`, `rust`, `node`, `ai`), OpenCode AI system copilot, interactive terminal shells, and system diagnostics.
-  - **Advanced:** Cryptographic StateRoot Merkle commitment verification, offline verification passport status (`1384/1384 Green`), evidence graph lineage traversal, Btrfs subvolume contracts (`@`, `@nix`, `@home`, `@snapshots`, `@swap`), and clipboard diagnostic exporter.
-- **Responsive & Accessible Geometry:** Dynamic resizable window (`minsize(600, 420)`, preferred `720x520`) with fluid grid/pack weight expansion, explicit spacing tokens (4, 8, 12, 16, 24, 32), and semantic typography scale following desktop accessibility settings.
-- **Theme Awareness & Quiet Status States:** Automatic detection of system dark/light appearance using a calm, high-contrast palette with 4 quiet status indicators (`● Healthy`, `● Working`, `● Attention`, `● Error`) without fluorescent glows or decorative clutter.
+* **Function:** Real-time operating system substrate summary (Neuronix OS, kernel release, active generation state, root filesystem utilization) and live hardware telemetry (CPU model, physical memory, display adapter, battery charge ceiling) with direct one-click action triggers (`Staged Upgrade`, `Rollback`, `Diagnostics`, `Terminal`).
+
+##### 2. System Generation Timeline
+<p align="center">
+  <img src="docs/assets/neuronix_center_system.png" alt="Conductor - System Generation Timeline" width="90%">
+</p>
+
+* **Function:** Inspects declarative NixOS generation records via an interactive Treeview with dual horizontal and vertical scrollbars. Houses declarative maintenance operations including atomic rollback, staged upgrade preparation, and storage hygiene (`Storage Diet` garbage collection and TRIM).
+
+##### 3. Modular Developer Stacks & Diagnostics
+<p align="center">
+  <img src="docs/assets/neuronix_center_developer.png" alt="Conductor - Developer Stacks & Diagnostics" width="90%">
+</p>
+
+* **Function:** Provides instant, isolated access to hermetic development environments (`AI System`, `Python Substrate (uv)`, `Rust Substrate (cargo)`, `Node.js Substrate (pnpm)`, `AI Substrate (PyTorch)`) and diagnostic utilities (`Terminal Shell`, `System Doctor`, `Curated Apps`, `Launch Welcome Tour`).
+
+##### 4. Cryptographic Provenance & Storage Contracts
+<p align="center">
+  <img src="docs/assets/neuronix_center_advanced.png" alt="Conductor - Advanced Cryptographic Provenance" width="90%">
+</p>
+
+* **Function:** High-assurance cryptographic audit surface displaying the Merkle StateRoot commitment, offline verification passport status (1,384/1,384 verified), directed evidence lineage graph, Btrfs subvolume layouts (`@`, `@nix`, `@home`, `@snapshots`, `@swap`), kernel memory policies, and one-click diagnostic clipboard export.
+
+##### 5. Active Mutation State (Working)
+<p align="center">
+  <img src="docs/assets/neuronix_center_working.png" alt="Conductor - Active Mutation State" width="90%">
+</p>
+
+* **Function:** Displays calm blue status feedback (`● Staging System Upgrade...`) while background operations execute asynchronously. Enforces strict mutex locking (`is_busy`) across all action buttons to eliminate race conditions and prevent concurrent state transitions.
+
+##### 6. Advisory & Maintenance State (Attention)
+<p align="center">
+  <img src="docs/assets/neuronix_center_attention.png" alt="Conductor - Attention & Advisory State" width="90%">
+</p>
+
+* **Function:** Non-intrusive amber indicator (`● Attention: Updates Pending`) signaling available upstream channels or advisory maintenance recommendations without jarring notification popups.
+
+#### Key Architectural Invariants & Features
+- **Progressive Disclosure Architecture (4 Clean Tab Surfaces):** Logical workflow separation across Overview, System, Developer, and Advanced surfaces without visual clutter.
+- **Responsive & Accessible Geometry:** Dynamic resizable window (`minsize(640, 440)`, default `720x520`, centered on screen) with fluid grid/pack weight expansion, explicit spacing tokens (4, 8, 12, 16, 24, 32), and semantic typography scale following desktop accessibility settings.
+- **Theme Awareness & Translucent Dark Mode:** Automatic detection of desktop dark/light appearance (GTK, KDE Plasma, GNOME GSettings) with deep Tokyo Night and Arc-Darker palettes (`#13141c`, `#16161e`, `#1a1b26`, `#24283b`) and subtle window alpha translucency (`-alpha 0.90`) for an authentic Ghostty terminal aesthetic.
+- **Pure-Text Button Design:** Clean, modern, typography-first button design free from icon clutter, matching high-end enterprise terminal tools.
 - **Non-Blocking Telemetry Worker:** Asynchronous background worker thread (`threading.Thread` with thread-safe UI event queue) preventing interface freeze during hardware inspection, complemented by gentle 45s auto-refresh and instant on-demand refresh (`F5` or `Ctrl+R`).
 - **Non-Silent Diagnostic Feedback:** Descriptive user-facing dialogs for missing desktop terminal emulators rather than silent process dismissal.
 - **Keyboard-First Navigation:** Full tab order navigation with standard accelerators: `F5` / `Ctrl+R` (Refresh), `Ctrl+T` (Terminal), `Ctrl+U` (Upgrade), `Ctrl+Z` (Rollback), `Ctrl+D` (Doctor), `Ctrl+1..4` (Switch Tabs), and `Ctrl+Q` / `Esc` (Exit).
