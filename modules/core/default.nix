@@ -1,10 +1,29 @@
 { pkgs, lib, ... }:
 
+let
+  versionData = import ../../version.nix;
+in
+
 {
   imports = [
     ./manual.nix
     ./sentinel.nix
   ];
+
+  # Product identity is shared by live and installed systems. NixOS keeps its
+  # own release/build metadata and exposes ID_LIKE=nixos for compatibility.
+  system.nixos = {
+    distroId = "neuronixos";
+    distroName = "NeuronixOS";
+    vendorId = "neuronix";
+    vendorName = "NeuronixOS";
+    extraOSReleaseArgs = {
+      PRETTY_NAME = "NeuronixOS ${versionData.version}";
+      HOME_URL = "https://github.com/adamriofc/NeuronixOS";
+      BUG_REPORT_URL = "https://github.com/adamriofc/NeuronixOS/issues";
+      LOGO = "neuronix";
+    };
+  };
 
   # Konfigurasi Inti Nix & Flakes
   nix.settings = {
@@ -29,6 +48,8 @@
 
   # Lingkungan CLI & Perkakas Esensial Sistem
   environment.systemPackages = with pkgs; [
+    (writeTextDir "share/icons/hicolor/scalable/apps/neuronix.svg"
+      (builtins.readFile ../../artwork/branding/neuronix-badge.svg))
     git
     curl
     wget

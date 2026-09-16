@@ -134,6 +134,17 @@ in
     # Session services below own startup; avoid duplicate legacy welcome windows.
     services.xserver.desktopManager.runXdgAutostartIfNone = false;
     security.polkit.enable = true;
+    # The passwordless live account can launch only this installer action;
+    # installed sessions retain the normal administrator authentication policy.
+    security.polkit.extraConfig = lib.mkIf cfg.live.enable ''
+      polkit.addRule(function(action, subject) {
+        if (action.id === "io.calamares.calamares.pkexec.run" &&
+            subject.local && subject.active &&
+            subject.user === ${builtins.toJSON cfg.live.user}) {
+          return polkit.Result.YES;
+        }
+      });
+    '';
     security.pam.services.swaylock = { };
     fonts.fontconfig.enable = true;
     environment.sessionVariables.TERMINAL = "foot";

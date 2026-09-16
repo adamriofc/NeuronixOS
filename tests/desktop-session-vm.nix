@@ -32,7 +32,7 @@ pkgs.testers.runNixOSTest {
   };
   testScript = ''
     import shlex
-    from test_driver.machine import Machine
+    from test_driver.machine import QemuMachine
 
     def as_user(command: str) -> str:
         return "su - alice -c " + shlex.quote(
@@ -40,7 +40,7 @@ pkgs.testers.runNixOSTest {
             "export SWAYSOCK=/run/user/1000/neuronix-sway.sock; " + command
         )
 
-    def graphical_ready(machine: Machine) -> None:
+    def graphical_ready(machine: QemuMachine) -> None:
         machine.wait_for_file("/run/user/1000/neuronix-sway.sock")
         machine.wait_until_succeeds(as_user(
             "swaymsg -t get_tree | jq -e '.. | objects | select(.app_id? == \"neuronix-conductor\")'"

@@ -77,6 +77,8 @@ let
         (check "Calamares autostart package absent" (!lib.any (package: lib.hasInfix "calamares" package && lib.hasInfix "autostart" package) packages))
         (check "panel installer action limited to live" (builtins.hasAttr "custom/install" (builtins.fromJSON (builtins.unsafeDiscardStringContext cfg.environment.etc."neuronix/waybar/config.json".text)) == expected.live))
         (check "session identity preserved" ((builtins.fromJSON cfg.environment.etc."neuronix/session.json".text).session == "neuronix"))
+        (check "distribution identity preserved" (cfg.system.nixos.distroId == "neuronixos" && cfg.system.nixos.distroName == "NeuronixOS"))
+        (check "installer authorization limited to live" (lib.hasInfix "io.calamares.calamares.pkexec.run" cfg.security.polkit.extraConfig == expected.live))
       ];
     in {
       inherit checks;
