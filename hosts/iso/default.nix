@@ -7,6 +7,15 @@
   isoImage.makeEfiBootable = true;
   isoImage.makeUsbBootable = true;
   boot.zfs.forceImportRoot = false;
+  # Live media boots through iso-image.nix, never the installed-host bootloader.
+  boot.loader.systemd-boot.enable = lib.mkForce false;
+  boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
+  isoImage.edition = "neuronix";
+  neuronix.desktop = {
+    enable = true;
+    live.enable = true;
+    live.user = "nixos";
+  };
 
   # Optimize squashfs compression and live media closure size to stay within 2 GiB asset limits
   isoImage.squashfsCompression = "zstd -Xcompression-level 19 -b 1048576";
@@ -25,19 +34,15 @@
     description = "NEURONIX Live User";
     home = "/home/nixos";
     shell = pkgs.bash;
-    initialHashedPassword = lib.mkForce null;
-    initialPassword = "neuronix";
+    # Live media only. Installed accounts use authenticated greetd login.
+    initialHashedPassword = lib.mkForce "";
   };
   security.sudo.wheelNeedsPassword = false;
 
-  # Auto-login for live session (bypass GDM login screen)
-  services.displayManager.autoLogin = {
-    enable = true;
-    user = "nixos";
-  };
-
-  # Ensure GDM display manager is enabled
-  services.displayManager.gdm.enable = true;
+  # Preserve installer requirements without upstream desktop/autostart packages.
+  security.polkit.enablePkexecWrapper = true;
+  programs.partition-manager.enable = true;
+  i18n.supportedLocales = [ "all" ];
 
   # Paket esensial di sesi Live ISO
   environment.systemPackages = with pkgs; [
@@ -49,14 +54,11 @@
     usbutils
     git
     curl
+    glibcLocales
     (writeShellScriptBin "neuronix-install-engine" ''
       exec ${bash}/bin/bash /etc/calamares/scripts/neuronix-install-engine.sh "$@"
     '')
   ];
-
-  # Ensure GNOME desktop is available for live session
-  services.xserver.enable = true;
-  services.desktopManager.gnome.enable = true;
 
   # Provision declarative Calamares configuration and installation engine into Live Media
   environment.etc."calamares/modules".source = ../../installer/calamares/modules;
@@ -70,15 +72,23 @@
   environment.etc."neuronix/packages".source = ../../packages;
   environment.etc."neuronix/version.nix".source = ../../version.nix;
 
-  # Otomatis menjalankan Calamares Installer saat Live Session dibuka
-  systemd.user.services.autostart-calamares = {
-    description = "Autostart Calamares Installer on Live Session";
-    wantedBy = [ "graphical-session.target" ];
-    serviceConfig = {
-      ExecStart = "${pkgs.calamares}/bin/calamares";
-      Restart = "no";
-    };
-  };
+  # Complete source layout for offline generation of the installed host flake.
+  # Relative module/package references must resolve after leaving the live ISO.
+  environment.etc."neuronix/installer-source/modules".source = ../../modules;
+  environment.etc."neuronix/installer-source/packages".source = ../../packages;
+  environment.etc."neuronix/installer-source/artwork".source = ../../artwork;
+  environment.etc."neuronix/installer-source/docs".source = ../../docs;
+  environment.etc."neuronix/installer-source/bin".source = ../../bin;
+  environment.etc."neuronix/installer-source/data".source = ../../data;
+  environment.etc."neuronix/installer-source/src".source = ../../src;
+  environment.etc."neuronix/installer-source/version.nix".source = ../../version.nix;
+
+  # NEURONIX Artwork & Branding (explicit copy for ISO)
+  environment.etc."neuronix/artwork/wallpaper.svg".source = ../../artwork/wallpapers/neuronix-cyber-neural-dark.svg;
+  environment.etc."neuronix/artwork/logo.png".source = ../../artwork/branding/neuronix-logo.png;
+  environment.etc."neuronix/artwork/symbol.png".source = ../../artwork/branding/neuronix-symbol.png;
+  environment.etc."neuronix/artwork/banner.png".source = ../../artwork/branding/neuronix-banner.png;
+  environment.etc."neuronix/artwork/badge.svg".source = ../../artwork/branding/neuronix-badge.svg;
 
   system.stateVersion = "24.11";
 }

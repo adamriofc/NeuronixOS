@@ -48,6 +48,7 @@
         security = import ./modules/services/security.nix;
         opencode = import ./modules/services/opencode.nix;
         update = import ./modules/services/update.nix;
+        neuronix = import ./modules/desktop/neuronix.nix;
         kde = import ./modules/desktop/kde.nix;
         gnome = import ./modules/desktop/gnome.nix;
         hyprland = import ./modules/desktop/hyprland.nix;
@@ -67,7 +68,7 @@
         specialArgs = { inherit self; };
         modules = [
           ./modules/platform.nix
-          ./modules/desktop/gnome.nix
+          ./modules/desktop/neuronix.nix
           ./hosts/desktop
         ];
       };
@@ -78,22 +79,19 @@
         specialArgs = { inherit self; };
         modules = [
           ./modules/platform.nix
-          ./modules/desktop/gnome.nix
+          ./modules/desktop/neuronix.nix
           ./hosts/desktop
         ];
       };
 
-      # Konfigurasi Live ISO Installer Mandiri
+      # Konfigurasi Live ISO Installer Mandiri (Full NeuronixOS Stack)
       nixosConfigurations."neuronix-iso" = nixpkgs.lib.nixosSystem {
         system = primarySystem;
+        specialArgs = { inherit self; };
         modules = [
-          "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares.nix"
-          ./modules/core
-          ./modules/hardware/firmware.nix
-          ./modules/hardware/audio.nix
-          ./modules/services/memory-shield.nix
-          ./modules/services/storage.nix
-          ./modules/services/network.nix
+          "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-base.nix"
+          ./modules/platform.nix
+          ./modules/desktop/neuronix.nix
           ./hosts/iso
         ];
       };
@@ -125,6 +123,10 @@
       );
 
       # Development Shell hermetis (Multi-Architecture)
+      checks.x86_64-linux.desktop-session = import ./tests/desktop-session-vm.nix {
+        pkgs = pkgsFor primarySystem;
+      };
+
       devShells = forAllSystems (system:
         let
           pkgs = pkgsFor system;

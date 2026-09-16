@@ -78,13 +78,27 @@ The systemd-boot loader presents two primary execution kernels:
 1. **NEURONIX Live (Standard Open-Source):** Boots using open-source kernel graphics drivers (Mesa, Nouveau, Intel Iris, AMDGPU). Recommended for all systems without dedicated NVIDIA hardware.
 2. **NEURONIX Live (NVIDIA Proprietary Drivers):** Boots with pre-packaged proprietary NVIDIA kernel modules. Recommended for laptops and workstations equipped with modern GeForce RTX, GTX, or Quadro graphics.
 
-Both environments boot into a live user session (`neuronix`, passwordless sudo enabled).
+The canonical live environment enters the Neuronix Wayland session through greetd auto-login as `nixos`, with passwordless sudo limited to the live medium. Sway manages windows; Conductor starts in a foot terminal window. GNOME and KDE are optional profiles rather than the default experience.
+
+The panel opens NEURONIX Center for maintenance and provides **Install Neuronix** on live media. Center is separate from Conductor. The session shortcuts below use `Mod` for the Super/Windows key:
+
+| Shortcut | Action |
+| :--- | :--- |
+| `Mod+Return` | Open terminal |
+| `Mod+Shift+c` | Open Conductor |
+| `Mod+c` | Open NEURONIX Center |
+| `Mod+Space` | Open application launcher |
+| `Mod+i` | Open installer (live media only) |
+| `Mod+Shift+l` | Lock session (installed system) |
+| `Mod+Shift+e` | Log out |
 
 ---
 
 ## 4. Calamares Installation Workflow
 
-The Calamares graphical installer initializes automatically upon reaching the live desktop environment.
+Open **Install Neuronix** from the live panel or press `Mod+i` to launch Calamares. The installer is an on-demand application; booting the live medium first opens the Neuronix session and Conductor.
+
+The installation engine accepts `SELECTED_DESKTOP=neuronix` and imports the same canonical session module used by the ISO. KDE, GNOME, and Hyprland modules remain available for manually configured alternative profiles; they are not production installer choices. After installation, greetd authenticates the installed account; the live account auto-login and installer shortcut do not carry over.
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
@@ -129,7 +143,7 @@ For systems targeting traditional non-CoW filesystems (such as legacy magnetic h
 
 ## 5. First-Boot System Verification
 
-After completing installation, reboot the machine and remove the installation media. Log into your account and open a terminal to verify system status:
+After completing installation, reboot the machine and remove the installation media. Authenticate with your installed account at greetd. The canonical Neuronix session opens Conductor in foot with the same panel and workflow as the live session, without its Install action. Open a terminal with `Mod+Return` to verify system status:
 
 ### 1. Inspect System Telemetry
 ```bash
@@ -137,11 +151,17 @@ neuronix status
 ```
 This displays the active system generation, storage utilization, and systemd service status.
 
-### 2. Launch the Graphical Control Center
+### 2. Inspect the Session and Open Center
+Confirm the expected session and compositor:
+```bash
+printf '%s\n' "$XDG_CURRENT_DESKTOP" "$XDG_SESSION_TYPE"
+swaymsg -t get_version
+```
+The desktop identity should include `Neuronix` and the session type should be `wayland`. Open Center from the panel, with `Mod+c`, or from a terminal:
 ```bash
 neuronix-center
 ```
-Use the control center to inspect hardware specifications, monitor memory usage, and access rollback history.
+Use the maintenance GUI to inspect hardware and rollback history. Reopen the independent Conductor terminal surface with `Mod+Shift+c`.
 
 ### 3. Initialize Developer Stacks
 To provision an isolated developer toolchain without altering system configuration, execute:
@@ -168,3 +188,7 @@ If the system encounters an unbootable state following a kernel update:
 2. Select a prior working generation (e.g., `Generation 14`).
 3. Press `Enter` to boot directly into the immutable closure of that generation.
 4. Once booted, activate the generation permanently using `neuronix undo`.
+
+## 7. Graphical Release Qualification
+
+Use the [graphical session qualification runbook](operations/11_graphical_session_qualification.md) to record live boot, installation, authenticated first boot, and rollback on the exact ISO under test. Source checks and installer dry runs verify configuration contracts only. This session correction has no build, VM graphical boot, or physical hardware qualification implied by the documentation; record each as **UNVERIFIED** until corresponding evidence is captured.

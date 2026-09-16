@@ -55,7 +55,7 @@
 - [Command-Line Reference (neuronix)](#command-line-reference-neuronix)
 - [Core System Components](#core-system-components)
   - [1. Declarative Calamares Installation Engine](#1-declarative-calamares-installation-engine)
-  - [2. System Control Center (Conductor)](#2-system-control-center-conductor)
+  - [2. NEURONIX Center (Maintenance GUI)](#2-neuronix-center-maintenance-gui)
   - [3. Isolated Development Environments (neuronix dev)](#3-isolated-development-environments-neuronix-dev)
   - [4. In-Memory Micro-VM Simulation (neuronix sandbox)](#4-in-memory-micro-vm-simulation-neuronix-sandbox)
   - [5. Model Context Protocol (MCP) Server](#5-model-context-protocol-mcp-server)
@@ -104,7 +104,9 @@
 
 ## Overview
 
-NEURONIX OS is an independent, declarative Linux distribution platform based on NixOS. It provides an automated Calamares installation workflow, pre configured hardware and kernel profiles, transactional desktop environments, and developer CLI utilities while maintaining full compatibility with the upstream Nix package ecosystem.
+NEURONIX OS is an independent, declarative Linux distribution platform based on NixOS. The canonical Neuronix session owns the desktop experience while NixOS supplies the kernel, services, package store, and generation management. The same session module is used by live media and installed systems, with Calamares available on demand in the live environment.
+
+The session uses greetd and Sway/Wayland, opening the terminal-first Conductor in a foot window. NEURONIX Center remains a separate maintenance GUI reachable from the panel or keyboard. KDE, GNOME, and Hyprland remain optional compatibility profiles. See [ADR-012](docs/adr/ADR-012-canonical-neuronix-session.md) and the [graphical qualification runbook](docs/operations/11_graphical_session_qualification.md). A passing source or installer contract test does not establish that a new ISO has booted correctly.
 
 ### Release Engineering & Version Truth
 - **Single Source of Truth (`version.nix`):** All components (CLI, GUI Center, MCP Daemon, Calamares installer engine, release manifests, package derivations) read canonical versioning from `version.nix`.
@@ -254,8 +256,8 @@ To ensure empirical truthfulness and eliminate ambiguous claims, all capabilitie
 flowchart TD
     subgraph L1["Layer 1: User Experience (UX)"]
         CAL(["Calamares Declarative Installer"]):::ux
-        CTR["NEURONIX Center GUI & Telemetry"]:::ux
-        DE["KDE Plasma 6 / GNOME / Hyprland"]:::ux
+        CTR["Conductor Terminal Surface / Center Maintenance GUI"]:::ux
+        DE["Neuronix Session (greetd + Sway / Wayland)"]:::ux
         SW["Dual-Layer Software (Nix Core + Flatpak)"]:::ux
     end
 
@@ -506,54 +508,54 @@ The graphical installer functions as a declarative flake generator ([ADR-002](do
 - **Modular Pipeline:** Complete declarative sequence configuration (`welcome`, `locale`, `keyboard`, `partition`, `users`, `summary`, `mount`, `shellprocess@neuronix-engine`, and `finished`) ensures end-to-end setup stability.
 - **Robust User Account Provisioning:** Calamares `users.conf` standardizes default user attributes, wheel administration group bindings, and user shell definitions without runtime crash risks.
 - **Automated Mount Orchestration:** Dedicated `mount.conf` declares swap and EFI system partition mount targets into `/mnt` before dispatching the installation engine.
-- **Hardened Live ISO Environment:** Live media boots into GNOME Wayland with automated GDM user auto-login (`nixos` account with initialized home, shell, and passwordless sudo privileges), preventing session startup crashes.
+- **Canonical Live Session:** Live media selects the Neuronix session through greetd with auto-login for the `nixos` live account. Conductor opens in foot; the live-only Install action launches Calamares when requested. Installed systems use authenticated login to the same session.
 - **Declarative Flake Synthesis:** Writes corresponding `/mnt/etc/nixos/flake.nix` and `configuration.nix` files tailored to the target system.
 - **Resilient Storage Architecture:** Formats target storage using the Btrfs subvolume layout (`@`, `@nix`, `@home`, `@snapshots`, `@swap`).
 - **Hermetic System Deployment:** Runs `nixos-install --flake /mnt/etc/nixos#neuronix-desktop`, producing a fully declarative system installation upon first boot with autonomous network detection and offline fallback support.
 
-### 2. System Control Center (Conductor)
-The official graphical desktop control surface and administration hub engineered under the "Quiet Systems UI" doctrine :
+### 2. NEURONIX Center (Maintenance GUI)
+NEURONIX Center is the existing graphical maintenance utility, available from the Neuronix panel or `Mod+c`. Its screenshots below describe Center; the terminal-first Conductor is a separate application described in [section 32](#32-conductor-operating-surface--zero-idle-capability-runtime-spec-nrx-cnd-018-spec-nrx-cnd-021).
 
-#### Conductor Operational Surfaces & Visual States
+#### Center Operational Surfaces & Visual States
 
 ##### 1. Overview Surface
 <p align="center">
-  <img src="docs/assets/neuronix_center_overview.png" alt="Conductor - Overview Surface" width="90%">
+  <img src="docs/assets/neuronix_center_overview.png" alt="NEURONIX Center - Overview Surface" width="90%">
 </p>
 
 * **Function:** Real time operating system substrate summary (Neuronix OS, kernel release, active generation state, root filesystem utilization) and live hardware telemetry (CPU model, physical memory, display adapter, battery charge ceiling) with direct one-click action triggers (`Staged Upgrade`, `Rollback`, `Diagnostics`, `Terminal`).
 
 ##### 2. System Generation Timeline
 <p align="center">
-  <img src="docs/assets/neuronix_center_system.png" alt="Conductor - System Generation Timeline" width="90%">
+  <img src="docs/assets/neuronix_center_system.png" alt="NEURONIX Center - System Generation Timeline" width="90%">
 </p>
 
 * **Function:** Inspects declarative NixOS generation records via an interactive Treeview with dual horizontal and vertical scrollbars. Houses declarative maintenance operations including atomic rollback, staged upgrade preparation, and storage hygiene (`Storage Diet` garbage collection and TRIM).
 
 ##### 3. Modular Developer Stacks & Diagnostics
 <p align="center">
-  <img src="docs/assets/neuronix_center_developer.png" alt="Conductor - Developer Stacks & Diagnostics" width="90%">
+  <img src="docs/assets/neuronix_center_developer.png" alt="NEURONIX Center - Developer Stacks & Diagnostics" width="90%">
 </p>
 
 * **Function:** Provides instant, isolated access to hermetic development environments (`AI System`, `Python Substrate (uv)`, `Rust Substrate (cargo)`, `Node.js Substrate (pnpm)`, `AI Substrate (PyTorch)`) and diagnostic utilities (`Terminal Shell`, `System Doctor`, `Curated Apps`, `Launch Welcome Tour`).
 
 ##### 4. Cryptographic Provenance & Storage Contracts
 <p align="center">
-  <img src="docs/assets/neuronix_center_advanced.png" alt="Conductor - Advanced Cryptographic Provenance" width="90%">
+  <img src="docs/assets/neuronix_center_advanced.png" alt="NEURONIX Center - Advanced Cryptographic Provenance" width="90%">
 </p>
 
 * **Function:** High assurance cryptographic audit surface displaying the Merkle StateRoot commitment, offline verification passport status (1,384/1,384 verified), directed evidence lineage graph, Btrfs subvolume layouts (`@`, `@nix`, `@home`, `@snapshots`, `@swap`), kernel memory policies, and one click diagnostic clipboard export.
 
 ##### 5. Active Mutation State (Working)
 <p align="center">
-  <img src="docs/assets/neuronix_center_working.png" alt="Conductor - Active Mutation State" width="90%">
+  <img src="docs/assets/neuronix_center_working.png" alt="NEURONIX Center - Active Mutation State" width="90%">
 </p>
 
 * **Function:** Displays calm blue status feedback (`● Staging System Upgrade...`) while background operations execute asynchronously. Enforces strict mutex locking (`is_busy`) across all action buttons to eliminate race conditions and prevent concurrent state transitions.
 
 ##### 6. Advisory & Maintenance State (Attention)
 <p align="center">
-  <img src="docs/assets/neuronix_center_attention.png" alt="Conductor - Attention & Advisory State" width="90%">
+  <img src="docs/assets/neuronix_center_attention.png" alt="NEURONIX Center - Attention & Advisory State" width="90%">
 </p>
 
 * **Function:** Non-intrusive amber indicator (`● Attention: Updates Pending`) signaling available upstream channels or advisory maintenance recommendations without jarring notification popups.
@@ -1356,7 +1358,9 @@ python3 tests/test_semantic_closure.py -v
 ```
 
 ### 32. Conductor Operating Surface & Zero-Idle Capability Runtime (SPEC-NRX-CND-018, SPEC-NRX-CND-021)
-NEURONIX Conductor is the native operating surface and local agent substrate for the NEURONIX platform. Conductor replaces visual complexity with a single, terminal-first window offering maximum capability and zero permanent clutter:
+NEURONIX Conductor is the terminal-first operating surface and local agent substrate for the NEURONIX platform. The current Rust surface is a POSIX TTY application: the canonical graphical session hosts `conductor --interactive` in foot, which supplies its Wayland window. This composition does not turn Conductor itself into a compositor or a standalone graphical terminal emulator. The capability runtime remains separate from the visual process.
+
+`Mod` is the Super/Windows key. The session provides `Mod+Return` for a terminal, `Mod+Shift+c` for Conductor, `Mod+c` for Center, `Mod+Space` for the launcher, and `Mod+Shift+e` to log out. Live media adds `Mod+i` for installation; installed sessions provide `Mod+Shift+l` to lock.
 
 - **Surface Architecture:** One unified window featuring a 95% workspace canvas dedicated to an ultra-fast, native Rust terminal subsystem (`packages/conductor`). A subtle topbar displays `CONDUCTOR [ NEURONIX v1.0.5:gen-X ]` alongside live Vital health status (`VITAL o NOMINAL`) and adaptive workspace tabs:
   - `Tab 1: Terminal` - Full-speed VT100 terminal canvas with 95% screen real estate.
@@ -1468,12 +1472,12 @@ NEURONIX incorporates continuous binary caching across GitHub Actions workflows 
 - **Continuous CI Cache:** Powered by Determinate Systems Magic Nix Cache for instant sub-minute builds without recompilation.
 
 ### Installation Workflow
-1. Boot the target system from the live installation medium (boots directly into live GNOME session via automated GDM autologin).
+1. Boot the target system from the live installation medium into the Neuronix Wayland session, using greetd auto-login for the live account.
 2. Select driver initialization mode (standard open-source drivers or proprietary NVIDIA drivers).
-3. The Calamares installer starts automatically within the Wayland graphical desktop session.
+3. Review the Conductor surface, then open **Install Neuronix** from the live session panel or press `Mod+i` to start Calamares.
 4. Select a partitioning scheme (automated Btrfs ZSTD:3 layout or manual partition mapping).
-5. Configure regional settings, user credentials (provisioned via declarative `users.conf`), and desktop environment (KDE Plasma, GNOME, or Hyprland).
-6. Complete declarative target installation via `neuronix-install-engine` and reboot into the target environment.
+5. Configure regional settings and user credentials. The installer defaults to the canonical Neuronix profile; KDE Plasma, GNOME, and Hyprland remain explicit compatibility choices in the installation engine.
+6. Complete declarative target installation via `neuronix-install-engine` and reboot. Authenticate with the installed account to enter the same Neuronix session; live auto-login and the Install action are absent.
 
 ---
 
@@ -1652,6 +1656,7 @@ Production operations and maintenance procedures are documented in `docs/operati
 - **[08. Active Memory Pressure Shield & ZRAM](docs/operations/08_memory_pressure_and_zram.md):** ZRAM ZSTD configuration and systemd-oomd PSI rules.
 - **[09. Secure Boot and TPM2 Integration](docs/operations/09_secureboot_and_tpm2.md):** Lanzaboote signing and TPM2 LUKS auto-unlocking.
 - **[10. System Diagnostics and Telemetry](docs/operations/10_system_diagnostics_and_telemetry.md):** Privacy-sanitized markdown reports and schema v1 JSON outputs.
+- **[11. Graphical Session Qualification](docs/operations/11_graphical_session_qualification.md):** Evidence for actual live ISO boot, installation, authenticated reboot, and rollback while retaining Neuronix session identity.
 
 ---
 
@@ -1670,6 +1675,7 @@ Formal design choices, invariants, and open governance specifications:
 - **[ADR-009B](docs/adr/ADR-009B-advanced-container-and-sandbox-architecture.md):** Next-Generation Ephemeral Container and Autonomous Hypervisor Architecture
 - **[ADR-010](docs/adr/ADR-010-provable-state-and-causal-lineage.md):** Provable State Engine & Causal Lineage Architecture
 - **[ADR-011](docs/adr/ADR-011-hyperion-adaptive-execution-plane.md):** Hyperion Provable Adaptive Execution Architecture (PAEA)
+- **[ADR-012](docs/adr/ADR-012-canonical-neuronix-session.md):** Canonical Neuronix Session and Live/Installed Experience Parity
 - **[NIP-0001](docs/rfcs/0001-north-star-and-rfc-process.md):** The North Star Thesis and Neuronix Improvement Proposal (RFC) Governance Standard
 - **[NIP-0002](docs/rfcs/0002-provable-state-engine.md):** Provable State Engine & 5-Leaf StateRoot Cryptographic Commitment
 - **[NIP-0003](docs/rfcs/0003-hyperion-adaptive-execution-architecture.md):** Hyperion Adaptive Execution Architecture & Domain Proof Specification

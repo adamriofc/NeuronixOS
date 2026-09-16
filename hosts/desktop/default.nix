@@ -1,6 +1,7 @@
 { pkgs, lib, ... }:
 
 {
+  neuronix.desktop.enable = true;
   networking.hostName = lib.mkDefault "neuronix-box";
 
   # User akun dasar (dikonfigurasi oleh Calamares saat instalasi)

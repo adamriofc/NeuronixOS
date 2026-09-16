@@ -1,0 +1,13 @@
+* {
+  border: none;
+  border-radius: 0;
+  font-family: Inter, sans-serif;
+  font-size: 13px;
+}
+window#waybar { background: #1a1b26; color: #c0caf5; }
+#custom-neuronix { color: #7aa2f7; font-weight: 700; padding: 0 18px; }
+#workspaces button { color: #a9b1d6; padding: 0 10px; }
+#workspaces button.focused { color: #7aa2f7; background: #24283b; }
+#custom-conductor, #custom-center, #custom-terminal, #custom-install,
+#network, #pulseaudio, #battery, #clock, #tray { padding: 0 12px; }
+#custom-install { color: #9ece6a; }

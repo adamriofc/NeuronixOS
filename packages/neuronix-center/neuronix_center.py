@@ -562,7 +562,7 @@ class NeuronixControlCenterApp:
         import tkinter.font as tkfont
 
         self.root = root
-        self.root.title("Conductor")
+        self.root.title("NEURONIX Center")
         
         # Geometry: Resizable with sensible minimum and preferred sizes (compact, centered)
         win_w, win_h = 720, 520

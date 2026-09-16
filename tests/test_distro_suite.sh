@@ -318,7 +318,7 @@ suite_header "8 - Absolute Zero Hardcoded PC Sanitization"
 
 test_sanitization() {
   local count_drive_d
-  count_drive_d=$( (grep -rn "Drive D" "${DISTRO_ROOT}" 2>/dev/null || true) | (grep -v "/tests/" || true) | wc -l )
+  count_drive_d=$( (grep -rn --exclude-dir=.cache "Drive D" "${DISTRO_ROOT}" 2>/dev/null || true) | (grep -v "/tests/" || true) | wc -l )
   if [ "$count_drive_d" -eq 0 ]; then
     log_pass "Zero references to 'Drive D' in Distro/ (100% Clean)"
   else
@@ -326,7 +326,7 @@ test_sanitization() {
   fi
 
   local count_adamrofc
-  count_adamrofc=$( (grep -rn --exclude-dir=target --exclude-dir=__pycache__ --exclude-dir=.git --exclude-dir=tests "/home/adamrofc" "${DISTRO_ROOT}" 2>/dev/null || true) | wc -l )
+  count_adamrofc=$( (grep -rn --exclude-dir=.cache --exclude-dir=target --exclude-dir=__pycache__ --exclude-dir=.git --exclude-dir=tests "/home/adamrofc" "${DISTRO_ROOT}" 2>/dev/null || true) | wc -l )
   if [ "$count_adamrofc" -eq 0 ]; then
     log_pass "Zero hardcoded user paths in Distro/ source files (100% Clean)"
   else
@@ -372,8 +372,8 @@ assert_contains "${DISTRO_ROOT}/installer/calamares/modules/mount.conf" "extraMo
 assert_contains "${DISTRO_ROOT}/installer/calamares/modules/welcome.conf" "knownLanguage: \"id\"" "Calamares welcome module sets known language"
 assert_contains "${DISTRO_ROOT}/installer/calamares/modules/finished.conf" "showRestartButton: true" "Calamares finished module enables restart button"
 assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "home = \"/home/nixos\";" "Live ISO user explicitly defines home directory"
-assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "initialPassword = \"neuronix\";" "Live ISO user sets initial authentication password"
-assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "services.displayManager.autoLogin" "Live ISO enables display manager auto-login"
+assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "initialHashedPassword = lib.mkForce \"\";" "Live ISO account is passwordless"
+assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "live.enable = true;" "Live ISO opts into canonical session auto-login"
 assert_contains "${DISTRO_ROOT}/installer/calamares/settings.conf" "branding-search" "Calamares declares branding-search path"
 assert_contains "${DISTRO_ROOT}/installer/calamares/branding/neuronix/branding.desc" "componentName:  neuronix" "Calamares branding componentName is neuronix"
 assert_contains "${DISTRO_ROOT}/installer/calamares/branding/neuronix/branding.desc" "slideshow:               \"show.qml\"" "Calamares branding defines show.qml slideshow"
@@ -437,7 +437,7 @@ assert_contains "${DISTRO_ROOT}/modules/services/flatpak.nix" "Type = \"oneshot\
 assert_contains "${DISTRO_ROOT}/modules/services/flatpak.nix" "RemainAfterExit = true;" "Flathub provisioning remains after exit"
 assert_contains "${DISTRO_ROOT}/modules/services/flatpak.nix" "after = [ \"network-online.target\" ];" "Flathub provisioning waits for network"
 assert_contains "${DISTRO_ROOT}/modules/hardware/power.nix" "wantedBy = [ \"multi-user.target\" ];" "Battery threshold service targets multi-user"
-assert_contains "${DISTRO_ROOT}/hosts/iso/default.nix" "wantedBy = [ \"graphical-session.target\" ];" "Calamares autostart targets graphical session"
+assert_contains "${DISTRO_ROOT}/modules/desktop/neuronix.nix" "wantedBy = [ \"neuronix-session.target\" ];" "Neuronix graphical services follow the canonical session"
 assert_contains "${DISTRO_ROOT}/modules/services/storage.nix" "interval = \"daily\";" "Auto-TRIM service interval is daily"
 assert_contains "${DISTRO_ROOT}/modules/services/network.nix" "interval = 300;" "Captive portal check interval is 300s"
 

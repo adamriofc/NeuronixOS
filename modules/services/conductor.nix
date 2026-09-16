@@ -1,25 +1,18 @@
-{ config, lib, pkgs, self ? null, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   cfg = config.neuronix.services.conductor;
-  conductorPkg = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? conductor)
-    then self.packages.${pkgs.system}.conductor
-    else pkgs.callPackage ../../packages/conductor { };
-  runtimePkg = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? conductor-runtime)
-    then self.packages.${pkgs.system}.conductor-runtime
-    else pkgs.python3.pkgs.callPackage ../../packages/conductor-runtime {
-      neuronix-core = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? neuronix-core)
-        then self.packages.${pkgs.system}.neuronix-core
-        else pkgs.python3.pkgs.callPackage ../../packages/neuronix-core { };
-    };
-  mcpPkg = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? conductor-mcp)
-    then self.packages.${pkgs.system}.conductor-mcp
-    else pkgs.python3.pkgs.callPackage ../../packages/conductor-mcp {
-      neuronix-core = if self != null && (self ? packages) && (self.packages ? ${pkgs.system}) && (self.packages.${pkgs.system} ? neuronix-core)
-        then self.packages.${pkgs.system}.neuronix-core
-        else pkgs.python3.pkgs.callPackage ../../packages/neuronix-core { };
-      conductor-runtime = runtimePkg;
-    };
+  # Resolve locally so this module also works in installer-generated flakes,
+  # which have no repository `self.packages` or specialArgs.self.
+  corePkg = pkgs.python3.pkgs.callPackage ../../packages/neuronix-core { };
+  conductorPkg = pkgs.callPackage ../../packages/conductor { };
+  runtimePkg = pkgs.python3.pkgs.callPackage ../../packages/conductor-runtime {
+    neuronix-core = corePkg;
+  };
+  mcpPkg = pkgs.python3.pkgs.callPackage ../../packages/conductor-mcp {
+    neuronix-core = corePkg;
+    conductor-runtime = runtimePkg;
+  };
 in
 {
   options.neuronix.services.conductor = {

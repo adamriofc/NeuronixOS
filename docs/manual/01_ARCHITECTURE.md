@@ -19,10 +19,10 @@ NEURONIX OS is an industrial declarative Linux distribution engineered on top of
   │                                                                                 │
 [ LAYER 1: USER EXPERIENCE (UX) ]                               [ LAYER 2: DESKTOP & SYSTEM CORE ]
   ├─ Calamares Declarative Installer Engine                       ├─ Pure Nix Substrate (Immutable /nix/store)
-  ├─ NEURONIX Center (GUI System Hub & Telemetry)                 ├─ 27 Hardware Configuration Pillars
+  ├─ Conductor in foot / Center maintenance GUI                  ├─ 27 Hardware Configuration Pillars
   ├─ Generation Management & Instant Symlink Rollbacks            ├─ Global Dynamic Linker (nix-ld for FHS binaries)
   ├─ Dual-Layer Software Model (Nix Core + Flathub Flatpak)       ├─ Atomic Symlink Pointer Management
-  └─ Desktop Environments: KDE Plasma 6, GNOME 47, Hyprland       └─ Generation-Aware Shell Prompt [Gen #N]
+  └─ Neuronix Session: greetd + Sway / Wayland                  └─ Generation-Aware Shell Prompt [Gen #N]
   │                                                                                 │
   ├─────────────────────────────────────────────────────────────────────────────────┤
   │                                                                                 │
@@ -37,6 +37,12 @@ NEURONIX OS is an industrial declarative Linux distribution engineered on top of
 ```
 
 ---
+
+### Canonical Graphical Session
+
+`modules/desktop/neuronix.nix` supplies the default session for live media, installed x86_64/ARM64 configurations, and installer-generated targets. greetd launches the Neuronix session on Sway/Wayland. The current Conductor Rust application requires a TTY, so foot hosts `conductor --interactive`; NEURONIX Center remains a separate maintenance GUI. The Conductor capability broker continues independently through systemd socket activation.
+
+Live media auto-logs in as `nixos` and offers Calamares on demand. Installed systems authenticate their configured user and expose session locking, without the live Install action. KDE, GNOME, and Hyprland remain explicit compatibility profiles. Kernel, Nix store, control-plane authority, and rollback semantics are unaffected by the session choice. See [ADR-012](../adr/ADR-012-canonical-neuronix-session.md).
 
 ## 3. Formal Proof Class Taxonomy (P0 through P4)
 

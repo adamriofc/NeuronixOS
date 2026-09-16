@@ -17,11 +17,11 @@ NEURONIX is organized into four distinct architectural layers, ensuring clear bo
   │                                                                                 │
 [ LAYER 1: USER EXPERIENCE (UX) ]                               [ LAYER 2: DESKTOP & SYSTEM CORE ]
   ├─ Calamares Graphical Installer (Declarative Generator)        ├─ Pure Nix Substrate (Immutable /nix/store)
-  ├─ NEURONIX Center (GUI System Hub & Telemetry)                 ├─ Hardware Hardening & Compatibility Matrix
+  ├─ Conductor in foot / Center maintenance GUI                  ├─ Hardware Hardening & Compatibility Matrix
   ├─ First-Boot Welcome, Doctor Diagnostics & Quickstart Hub      ├─ Global Dynamic Linker (nix-ld)
   ├─ Declarative Kernel Manager (zen, lts, latest, hardened)      ├─ Atomic Symlink Pointer Management
   ├─ Dual-Layer Software Model (Nix Core + Flathub Flatpak)       └─ Generation-Aware Shell Prompt [Gen #N]
-  └─ Desktop Environments: KDE Plasma 6, GNOME, Hyprland          
+  └─ Neuronix Session: greetd + Sway / Wayland
   │                                                                                 │
   ├─────────────────────────────────────────────────────────────────────────────────┤
   │                                                                                 │
@@ -35,6 +35,14 @@ NEURONIX is organized into four distinct architectural layers, ensuring clear bo
 ```
 
 ---
+
+### Canonical Session Boundary
+
+The default live ISO, installed host configurations, and installer-generated Neuronix profile share `modules/desktop/neuronix.nix`. NixOS supplies the declarative substrate; greetd and Sway/Wayland host the Neuronix experience. foot provides the graphical terminal window required by the current Conductor TTY surface. Center is a distinct maintenance GUI, and Calamares is an on-demand live-only installation action.
+
+Live auto-login is limited to the `nixos` live account. Installed sessions require authentication and support locking. GNOME, KDE, and Hyprland remain explicit compatibility profiles. Session composition does not grant additional control-plane authority or couple agent tasks to the visual process lifetime.
+
+See [ADR-012](../adr/ADR-012-canonical-neuronix-session.md) for the decision and the [graphical qualification runbook](../operations/11_graphical_session_qualification.md) for live-to-installed identity checks. Configuration tests alone do not qualify boot or display behavior.
 
 ## 2. Storage Subsystem & Btrfs Architecture
 

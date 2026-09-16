@@ -1,0 +1,61 @@
+name: Neuronix graphical session
+
+on:
+  push:
+    branches: [main, fix/canonical-neuronix-session]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neuronix-session-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONPATH: ${{ github.workspace }}/packages/neuronix-core:${{ github.workspace }}/packages/conductor-runtime:${{ github.workspace }}/packages/conductor-mcp:${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            max-jobs = 2
+            cores = 2
+      - name: Evaluate official targets and installer output
+        run: |
+          export NIXPKGS_SOURCE="$(nix eval --impure --raw --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.outPath')"
+          bash tests/test_desktop_session.sh
+          python3 -m unittest tests/test_installer_session.py
+      - name: Verify existing Conductor interfaces
+        run: |
+          python3 -m unittest tests/test_conductor_runtime.py tests/test_control_protocol.py tests/test_conductor_mcp.py
+          cargo test --locked --manifest-path packages/conductor/Cargo.toml
+      - name: Boot and exercise the graphical session module
+        run: nix build .#checks.x86_64-linux.desktop-session --print-build-logs --out-link result-session
+      - name: Save graphical test evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuronix-session-vm-${{ github.sha }}
+          path: result-session/
+          retention-days: 7
+      - name: Build candidate ISO without publishing a release
+        run: nix build .#packages.x86_64-linux.iso --print-build-logs --out-link result-iso
+      - name: Checksum candidate ISO
+        run: sha256sum result-iso/iso/*.iso > iso-sha256.txt
+      - name: Save candidate ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuronix-candidate-iso-${{ github.sha }}
+          path: |
+            result-iso/iso/*.iso
+            iso-sha256.txt
+          compression-level: 0
+          retention-days: 7
