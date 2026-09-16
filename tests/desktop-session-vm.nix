@@ -15,7 +15,7 @@ pkgs.testers.runNixOSTest {
         extraGroups = [ "video" "audio" "networkmanager" ];
       };
       environment.systemPackages = [ pkgs.jq ];
-      environment.variables = {
+      environment.sessionVariables = {
         WLR_RENDERER = "pixman";
         SWAYSOCK = "/run/user/1000/neuronix-sway.sock";
       };
@@ -46,7 +46,12 @@ pkgs.testers.runNixOSTest {
             "swaymsg -t get_tree | jq -e '.. | objects | select(.app_id? == \"neuronix-conductor\")'"
         ))
         machine.succeed(as_user("systemctl --user is-active neuronix-panel.service"))
+        machine.wait_until_succeeds(as_user(
+            "systemctl --user is-active neuronix-notifications.service "
+            "neuronix-polkit-agent.service neuronix-network.service neuronix-input-method.service"
+        ))
         machine.succeed(as_user("systemctl --user is-active conductor.socket"))
+        machine.wait_until_succeeds(as_user("conductor --status | grep -F 'Runtime is online and responsive'"))
         machine.succeed(as_user("systemctl --user show-environment | grep XDG_CURRENT_DESKTOP=Neuronix:sway"))
         machine.fail("pgrep -x gnome-shell")
         machine.fail("pgrep -x plasmashell")
@@ -75,6 +80,11 @@ pkgs.testers.runNixOSTest {
     installed.send_chars("test-password\n")
     graphical_ready(installed)
     installed.screenshot("installed-neuronix")
+    installed.succeed(as_user("swaymsg exec 'swaylock -f -c 1a1b26'"))
+    installed.wait_until_succeeds("pgrep -x swaylock")
+    installed.screenshot("installed-locked")
+    installed.send_chars("test-password\n")
+    installed.wait_until_fails("pgrep -x swaylock")
     installed.succeed(as_user("swaymsg exit"))
     installed.wait_until_fails(as_user("systemctl --user is-active neuronix-panel.service"))
     installed.wait_for_text("Welcome to NeuronixOS")

@@ -179,7 +179,7 @@ class TestNeuronixCenterGUI(unittest.TestCase):
         root = tk.Tk()
         try:
             app = neuronix_center.NeuronixControlCenterApp(root)
-            self.assertEqual(root.title(), "Conductor")
+            self.assertEqual(root.title(), "NEURONIX Center")
             self.assertTrue(root.resizable()[0])
             self.assertTrue(root.resizable()[1])
 
