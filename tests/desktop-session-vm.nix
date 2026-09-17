@@ -3,6 +3,7 @@
 pkgs.testers.runNixOSTest {
   name = "neuronix-desktop-session";
   enableOCR = true;
+  globalTimeout = 600;
   nodes = let
     common = { ... }: {
       imports = [ ../modules/desktop/neuronix.nix ];
@@ -67,7 +68,8 @@ pkgs.testers.runNixOSTest {
         machine.execute(as_user("swaymsg exit"))
         machine.wait_until_fails("pgrep -x sway")
         machine.wait_until_fails(as_user("systemctl --user is-active neuronix-panel.service"))
-        machine.wait_for_text("Welcome to NeuronixOS")
+        # Console raster OCR can read the letter O as the digit zero.
+        machine.wait_for_text("Welcome to Neuronix[O0]S", timeout=120)
 
     live.start()
     live.wait_for_unit("greetd.service")
@@ -81,7 +83,7 @@ pkgs.testers.runNixOSTest {
     installed.wait_for_unit("greetd.service")
     installed.fail("pgrep -x sway")
     installed.fail("command -v neuronix-install")
-    installed.wait_for_text("Welcome to NeuronixOS")
+    installed.wait_for_text("Welcome to Neuronix[O0]S", timeout=120)
     installed.send_chars("alice\n")
     installed.wait_for_text("Password")
     installed.send_chars("test-password\n")

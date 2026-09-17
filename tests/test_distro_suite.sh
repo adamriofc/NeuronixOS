@@ -189,7 +189,7 @@ assert_contains "${DISTRO_ROOT}/modules/services/network.nix" "check_network_sta
 assert_contains "${DISTRO_ROOT}/modules/services/printing.nix" "services.printing" "Pilar 22: Driverless AirPrint encoded"
 assert_contains "${DISTRO_ROOT}/modules/services/storage.nix" "ntfs" "Pilar 23: Native NTFS3 filesystem support encoded"
 assert_contains "${DISTRO_ROOT}/modules/hardware/audio.nix" "snd_hda_intel power_save=0" "Pilar 24: ALSA powersave pop fix encoded"
-assert_contains "${DISTRO_ROOT}/installer/calamares/modules/partition.conf" "subvolume: \"@swap\"" "Pilar 25: Dedicated @swap subvolume encoded"
+assert_contains "${DISTRO_ROOT}/installer/calamares/modules/mount.conf" "subvolume: /@swap" "Pilar 25: Dedicated @swap subvolume encoded"
 assert_contains "${DISTRO_ROOT}/modules/hardware/cpu.nix" "updateMicrocode" "Pilar 26: CPU Microcode auto-update encoded"
 assert_contains "${DISTRO_ROOT}/modules/services/security.nix" "programs.gnupg.agent" "Pilar 27: GPG Agent & SSH support encoded"
 
@@ -341,9 +341,9 @@ test_sanitization
 suite_header "9 - Btrfs Subvolume Layout & Mount Invariants"
 
 assert_contains "${DISTRO_ROOT}/installer/calamares/modules/partition.conf" "options: \"compress=zstd:3,noatime,space_cache=v2\"" "Subvolume @ has zstd:3, noatime, and space_cache=v2"
-assert_contains "${DISTRO_ROOT}/installer/calamares/modules/partition.conf" "subvolume: \"@nix\"" "Subvolume @nix is explicitly declared"
-assert_contains "${DISTRO_ROOT}/installer/calamares/modules/partition.conf" "subvolume: \"@home\"" "Subvolume @home is explicitly declared"
-assert_contains "${DISTRO_ROOT}/installer/calamares/modules/partition.conf" "subvolume: \"@snapshots\"" "Subvolume @snapshots is explicitly declared"
+assert_contains "${DISTRO_ROOT}/installer/calamares/modules/mount.conf" "subvolume: /@nix" "Subvolume @nix is explicitly declared"
+assert_contains "${DISTRO_ROOT}/installer/calamares/modules/mount.conf" "subvolume: /@home" "Subvolume @home is explicitly declared"
+assert_contains "${DISTRO_ROOT}/installer/calamares/modules/mount.conf" "subvolume: /@snapshots" "Subvolume @snapshots is explicitly declared"
 assert_contains "${DISTRO_ROOT}/installer/calamares/modules/partition.conf" "options: \"nodatacow,noatime\"" "Subvolume @swap has nodatacow (CoW disabled) and noatime"
 assert_contains "${DISTRO_ROOT}/installer/calamares/modules/partition.conf" "efiSystemPartition: \"/boot\"" "EFI system partition is mounted at /boot"
 assert_contains "${DISTRO_ROOT}/installer/calamares/modules/partition.conf" "efiSystemPartitionSize: 1024M" "EFI partition size is allocated to 1.0 GiB (1024M)"

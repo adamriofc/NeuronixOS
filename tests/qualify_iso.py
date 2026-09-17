@@ -156,14 +156,15 @@ class VM:
 
     def find(self, phrase, timeout=120):
         deadline = time.monotonic() + timeout
-        terms = phrase.lower().split()
+        # Console font OCR commonly reads the O in NeuronixOS as zero.
+        terms = phrase.lower().replace("0", "o").split()
         while True:
             words = self.words()
             text = " ".join(word["text"] for word in words)
             self.output.joinpath("current-ocr.txt").write_text(text)
             for index in range(len(words) - len(terms) + 1):
                 group = words[index:index + len(terms)]
-                normalized = [re.sub(r"[^\w-]", "", word["text"]).lower() for word in group]
+                normalized = [re.sub(r"[^\w-]", "", word["text"]).lower().replace("0", "o") for word in group]
                 if normalized == terms:
                     return group
             if time.monotonic() >= deadline:
