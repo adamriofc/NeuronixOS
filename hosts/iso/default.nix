@@ -55,6 +55,7 @@
     git
     curl
     glibcLocales
+    openssl
     (writeShellScriptBin "neuronix-install-engine" ''
       exec ${bash}/bin/bash /etc/calamares/scripts/neuronix-install-engine.sh "$@"
     '')

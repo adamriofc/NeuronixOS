@@ -92,6 +92,37 @@ nixos-generate-config() { echo 'TEST BLOCKED hardware generation' >&2; return 74
         self.assertEqual(manifest["desktop_compositor"], "sway")
         self.assertEqual(manifest["substrate"], "nixos")
 
+    def test_calamares_defers_password_to_target_users_job(self):
+        self.assert_success(self.run_installer(NEURONIX_CALAMARES="1"))
+        config = (self.target / "etc/nixos/configuration.nix").read_text()
+        self.assertIn('initialHashedPassword = "!";', config)
+        self.assertNotIn("test-only-password", config)
+        self.assertNotIn("initialPassword =", config)
+
+    def test_password_with_nix_metacharacters_is_hashed(self):
+        password = 'test"${throw "injected"}\\password'
+        self.assert_success(self.run_installer(TARGET_PASSWORD=password))
+        config = (self.target / "etc/nixos/configuration.nix").read_text()
+        self.assertNotIn(password, config)
+        self.assertIn('initialHashedPassword = "$6$', config)
+        self.assertNotIn("initialPassword =", config)
+
+    def test_installer_preserves_locale_timezone_and_keyboard(self):
+        self.assert_success(self.run_installer(
+            TARGET_TIMEZONE="Asia/Jakarta", TARGET_LOCALE="id_ID.UTF-8/UTF-8",
+            TARGET_KEYBOARD_LAYOUT="us", TARGET_KEYBOARD_VARIANT="intl",
+        ))
+        config = (self.target / "etc/nixos/configuration.nix").read_text()
+        self.assertIn('time.timeZone = "Asia/Jakarta";', config)
+        self.assertIn('i18n.defaultLocale = "id_ID.UTF-8";', config)
+        self.assertIn('layout = "us";', config)
+        self.assertIn('variant = "intl";', config)
+
+    def test_invalid_localization_is_rejected_before_writes(self):
+        result = self.run_installer(TARGET_TIMEZONE='${throw "injected"}')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.target.exists())
+
     def test_payload_contains_local_dependencies(self):
         self.assert_success(self.run_installer())
         config_dir = self.target / "etc/nixos"

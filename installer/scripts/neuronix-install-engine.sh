@@ -11,6 +11,12 @@ TARGET_USER="${TARGET_USER:-neuronix}"
 TARGET_HOSTNAME="${TARGET_HOSTNAME:-neuronix-box}"
 SELECTED_DESKTOP="${SELECTED_DESKTOP:-neuronix}"
 DRY_RUN="${DRY_RUN:-0}"
+TARGET_TIMEZONE="${TARGET_TIMEZONE:-UTC}"
+TARGET_LOCALE="${TARGET_LOCALE:-en_US.UTF-8}"
+# Calamares may retain the /charset suffix from glibc's SUPPORTED list.
+TARGET_LOCALE="${TARGET_LOCALE%%/*}"
+TARGET_KEYBOARD_LAYOUT="${TARGET_KEYBOARD_LAYOUT:-us}"
+TARGET_KEYBOARD_VARIANT="${TARGET_KEYBOARD_VARIANT:-}"
 
 log() {
   echo -e "\033[1;32m[NEURONIX-INSTALLER]\033[0m $*"
@@ -45,6 +51,35 @@ esac
 
 if [[ "$TARGET_ROOT" != /* ]] || [[ "$(realpath -m "$TARGET_ROOT")" == "/" ]]; then
   log_err "TARGET_ROOT must be an absolute target directory other than the running system root."
+  exit 1
+fi
+
+# These values become Nix strings. Accept only locale, timezone and XKB IDs.
+if ! [[ "$TARGET_TIMEZONE" =~ ^[A-Za-z0-9_+/-]+$ ]] ||
+   ! [[ "$TARGET_LOCALE" =~ ^[A-Za-z0-9_.@-]+$ ]] ||
+   ! [[ "$TARGET_KEYBOARD_LAYOUT" =~ ^[a-z0-9_,]+$ ]] ||
+   ! [[ "$TARGET_KEYBOARD_VARIANT" =~ ^[a-zA-Z0-9_,()-]*$ ]]; then
+  log_err "Invalid timezone, locale or keyboard identifier."
+  exit 1
+fi
+
+# Calamares sets the password in the mounted target with its users job after
+# nixos-install creates the account. Never pass that password through a shell
+# command or persist it in the world-readable Nix store.
+if [[ "${NEURONIX_CALAMARES:-0}" == "1" ]]; then
+  PASSWORD_HASH="!"
+elif [[ -n "${TARGET_PASSWORD_HASH:-}" ]]; then
+  PASSWORD_HASH="$TARGET_PASSWORD_HASH"
+elif [[ -n "${TARGET_PASSWORD:-}" ]]; then
+  PASSWORD_HASH=$(printf '%s' "$TARGET_PASSWORD" | openssl passwd -6 -stdin)
+elif [[ "$DRY_RUN" == "1" ]]; then
+  PASSWORD_HASH="!"
+else
+  log_err "A real installation requires TARGET_PASSWORD_HASH, TARGET_PASSWORD, or the Calamares users job."
+  exit 1
+fi
+if ! [[ "$PASSWORD_HASH" =~ ^[A-Za-z0-9./\$!=,+_-]+$ ]]; then
+  log_err "Invalid password hash."
   exit 1
 fi
 
@@ -287,6 +322,13 @@ cat <<CONF_EOF > "$CONFIG_DIR/configuration.nix"
 {
   networking.hostName = "$TARGET_HOSTNAME";
   networking.networkmanager.enable = true;
+  time.timeZone = "$TARGET_TIMEZONE";
+  i18n.defaultLocale = "$TARGET_LOCALE";
+  services.xserver.xkb = {
+    layout = "$TARGET_KEYBOARD_LAYOUT";
+    variant = "$TARGET_KEYBOARD_VARIANT";
+  };
+  console.useXkbConfig = true;
 
   # Enable Flakes & modern Nix CLI
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -337,7 +379,7 @@ cat <<USER_EOF >> "$CONFIG_DIR/configuration.nix"
   # System user account
   users.users.$TARGET_USER = {
     isNormalUser = true;
-    initialPassword = "${TARGET_PASSWORD:-neuronix}";
+    initialHashedPassword = "$PASSWORD_HASH";
     extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
     description = "$TARGET_USER (NEURONIX)";
   };

@@ -183,6 +183,14 @@ in
       client.focused #7aa2f7 #1a1b26 #c0caf5 #7aa2f7 #7aa2f7
       client.unfocused #24283b #1a1b26 #a9b1d6 #24283b #24283b
       input type:touchpad tap enabled
+      # Keep the installer's minimum-size wizard usable beside Conductor.
+      for_window [class="(?i)calamares"] floating enable
+      for_window [app_id="(?i).*calamares.*"] floating enable
+      input * {
+        xkb_layout ${config.services.xserver.xkb.layout}
+        xkb_variant "${config.services.xserver.xkb.variant}"
+        xkb_options "${config.services.xserver.xkb.options}"
+      }
       output * bg /etc/neuronix/artwork/wallpaper.svg fill
       exec ${sessionReady}
 

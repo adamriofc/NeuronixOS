@@ -59,3 +59,37 @@ jobs:
             iso-sha256.txt
           compression-level: 0
           retention-days: 7
+
+  qualify-iso:
+    needs: session
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: neuronix-candidate-iso-${{ github.sha }}
+          path: candidate
+      - name: Prepare disposable VM tooling
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils ovmf tesseract-ocr python3-pil
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Boot actual ISO, install, authenticate, update and roll back
+        run: |
+          iso="$(find candidate -name '*.iso' -type f -print -quit)"
+          test -n "$iso"
+          mkdir -p .cache
+          python3 -u tests/qualify_iso.py --iso "$iso" --output .cache/iso-qualification
+      - name: Save actual ISO qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuronix-iso-evidence-${{ github.sha }}
+          path: |
+            .cache/iso-qualification/*.json
+            .cache/iso-qualification/*.png
+            .cache/iso-qualification/*.log
+            .cache/iso-qualification/*.txt
+          retention-days: 14

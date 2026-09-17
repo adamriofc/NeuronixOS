@@ -8,6 +8,10 @@ Record the Git revision, working-tree changes, ISO SHA-256, Nix build log, VM la
 
 Store images, virtual disks, logs, screenshots, temporary files, and build caches on the designated development drive. A `nix build --out-link` location does not move the Nix store: use a builder whose store and temporary storage are on the approved volume, or the candidate build workflow on GitHub Actions. Do not install Neuronix onto the development host or its disks during qualification.
 
+The `Neuronix graphical session` workflow also runs `tests/qualify_iso.py` on a separate disposable runner. It boots the exact candidate ISO with OVMF/KVM, records screenshots, operates Calamares, removes the ISO, authenticates the installed user, and exercises generation update and rollback. Its `evidence.json` marks only stages actually completed. A root control channel is started through the guest terminal for inspection; the production image has no test backdoor. A failed run is not qualification, and module VM results alone do not replace this ISO gate.
+
+Calamares passes its actual mounted target, username, hostname, locale, timezone and keyboard selection to the engine. Passwords remain in Calamares' users job, which runs inside the target after `nixos-install`; the generated account is locked until that job completes. Direct engine callers must supply a password hash or password for real installations. Plaintext passwords are never written into the generated Nix configuration.
+
 ## 2. Build and VM Preparation
 
 1. Run the relevant source/session contract tests and installer generation tests; save their real outputs.
