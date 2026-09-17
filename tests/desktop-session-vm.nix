@@ -61,13 +61,20 @@ pkgs.testers.runNixOSTest {
             "swaymsg -t get_tree | jq -e '.. | objects | select(.name? == \"NEURONIX Center\")'"
         ))
 
+    def logout(machine: QemuMachine) -> None:
+        # Sway can close its IPC socket before swaymsg receives the exit reply.
+        # Verify the resulting session teardown, not the client exit status.
+        machine.execute(as_user("swaymsg exit"))
+        machine.wait_until_fails("pgrep -x sway")
+        machine.wait_until_fails(as_user("systemctl --user is-active neuronix-panel.service"))
+        machine.wait_for_text("Welcome to NeuronixOS")
+
     live.start()
     live.wait_for_unit("greetd.service")
     graphical_ready(live)
     live.succeed("command -v neuronix-install")
     live.screenshot("live-neuronix")
-    live.succeed(as_user("swaymsg exit"))
-    live.wait_until_fails(as_user("systemctl --user is-active neuronix-panel.service"))
+    logout(live)
     live.shutdown()
 
     installed.start()
@@ -85,9 +92,7 @@ pkgs.testers.runNixOSTest {
     installed.screenshot("installed-locked")
     installed.send_chars("test-password\n")
     installed.wait_until_fails("pgrep -x swaylock")
-    installed.succeed(as_user("swaymsg exit"))
-    installed.wait_until_fails(as_user("systemctl --user is-active neuronix-panel.service"))
-    installed.wait_for_text("Welcome to NeuronixOS")
+    logout(installed)
     installed.shutdown()
   '';
 }
